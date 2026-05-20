@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Kinetic Type & Visual Tools</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body { overflow: hidden; }
+
+/* ============================================================
+   NAVIGATION SYSTEM — Progressive Reveal
+   ============================================================ */
+.tipo-nav {
+  height: 100vh; width: 100vw;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+
+/* Header bar */
+.tipo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; border-bottom: 1px solid var(--border-1);
+  background: var(--bg-1); z-index: 10;
+}
+.tipo-header-logo {
+  font-size: 18px; font-weight: 700; letter-spacing: 4px;
+  color: var(--text-0); cursor: pointer;
+}
+.tipo-breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5);
+}
+.tipo-breadcrumb span { cursor: pointer; transition: color 0.15s; }
+.tipo-breadcrumb span:hover { color: var(--text-0); }
+.tipo-breadcrumb .sep { color: var(--text-6); cursor: default; }
+.tipo-breadcrumb .current { color: var(--text-2); cursor: default; }
+
+/* Main content area */
+.tipo-main {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ============================================================
+   LEVEL 0 — Two big panels (Visual Tools | Kinetic Type)
+   ============================================================ */
+.tipo-level { display: none; width: 100%; height: 100%; }
+.tipo-level.active { display: flex; }
+
+.tipo-split {
+  display: flex; width: 100%; height: 100%;
+}
+.tipo-split-panel {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: flex 0.4s ease, background 0.3s;
+  border-right: 1px solid var(--border-1);
+}
+.tipo-split-panel:last-child { border-right: none; }
+.tipo-split-panel:hover { flex: 1.15; background: rgba(255,255,255,0.02); }
+
+.tipo-split-label {
+  font-size: 28px; font-weight: 700; letter-spacing: 6px;
+  text-transform: uppercase; color: var(--text-0); z-index: 2;
+  transition: transform 0.3s;
+}
+.tipo-split-panel:hover .tipo-split-label { transform: scale(1.05); }
+
+.tipo-split-sub {
+  font-size: 10px; letter-spacing: 3px; color: var(--text-5);
+  text-transform: uppercase; margin-top: 12px; z-index: 2;
+}
+
+/* Animated preview background */
+.tipo-preview-bg {
+  position: absolute; inset: 0; opacity: 0.12;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; pointer-events: none;
+}
+
+/* Dithering preview — animated dot grid */
+.dither-preview {
+  display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px;
+}
+.dither-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text-0);
+  animation: dither-pulse 3s ease-in-out infinite;
+}
+@keyframes dither-pulse {
+  0%, 100% { transform: scale(0.3); opacity: 0.3; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+/* Kinetic preview — spinning letters */
+.kinetic-preview {
+  font-size: 80px; font-weight: 700; letter-spacing: -2px;
+  color: var(--text-0); white-space: nowrap;
+}
+.kinetic-char {
+  display: inline-block;
+  animation: kinetic-wave 4s ease-in-out infinite;
+}
+@keyframes kinetic-wave {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-30px) rotate(-8deg); }
+  75% { transform: translateY(20px) rotate(5deg); }
+}
+
+/* ============================================================
+   LEVEL 1 — Subcategories (3D | 2D | Composition | Animation)
+   ============================================================ */
+.tipo-quad {
+  display: grid; grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr; width: 100%; height: 100%;
+}
+.tipo-quad-panel {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  border-right: 1px solid var(--border-1);
+  border-bottom: 1px solid var(--border-1);
+  transition: background 0.3s;
+}
+.tipo-quad-panel:nth-child(2n) { border-right: none; }
+.tipo-quad-panel:nth-child(n+3) { border-bottom: none; }
+.tipo-quad-panel:hover { background: rgba(255,255,255,0.02); }
+
+.tipo-quad-label {
+  font-size: 20px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--text-0); z-index: 2;
+  transition: transform 0.3s;
+}
+.tipo-quad-panel:hover .tipo-quad-label { transform: scale(1.05); }
+.tipo-quad-sub {
+  font-size: 9px; letter-spacing: 2px; color: var(--text-5);
+  text-transform: uppercase; margin-top: 8px; z-index: 2;
+  text-align: center; line-height: 1.6;
+}
+
+/* Quad animated backgrounds */
+.quad-preview {
+  position: absolute; inset: 0; opacity: 0.08;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; overflow: hidden;
+}
+.quad-preview-text {
+  font-size: 120px; font-weight: 700; color: var(--text-0);
+  white-space: nowrap; letter-spacing: -4px;
+}
+.quad-3d { animation: quad-rotate 8s linear infinite; }
+@keyframes quad-rotate { from { transform: perspective(400px) rotateY(0deg); } to { transform: perspective(400px) rotateY(360deg); } }
+.quad-2d { animation: quad-slide 6s ease-in-out infinite alternate; }
+@keyframes quad-slide { from { transform: translateX(-20%); } to { transform: translateX(20%); } }
+.quad-comp { animation: quad-scale 5s ease-in-out infinite alternate; }
+@keyframes quad-scale { from { transform: scale(0.8) rotate(-5deg); } to { transform: scale(1.2) rotate(5deg); } }
+.quad-anim { animation: quad-bounce 2s ease-in-out infinite; }
+@keyframes quad-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+/* ============================================================
+   LEVEL 2 — Mode list (cards within a category)
+   ============================================================ */
+.tipo-mode-list {
+  width: 100%; height: 100%; overflow-y: auto;
+  padding: 40px; display: flex; flex-direction: column; gap: 12px;
+}
+.tipo-mode-card {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--bg-1); border: 1px solid var(--border-1);
+  border-radius: 8px; padding: 16px 24px;
+  cursor: pointer; transition: all 0.2s;
+  text-decoration: none; color: inherit;
+}
+.tipo-mode-card:hover {
+  border-color: var(--accent); transform: translateX(4px);
+}
+.tipo-mode-card-preview {
+  width: 64px; height: 64px; background: var(--bg-2);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; color: var(--text-4);
+  flex-shrink: 0; overflow: hidden;
+}
+.tipo-mode-card-info { flex: 1; }
+.tipo-mode-card-title {
+  font-size: 14px; font-weight: 600; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-0); margin-bottom: 4px;
+}
+.tipo-mode-card-desc {
+  font-size: 11px; color: var(--text-4); line-height: 1.4;
+}
+.tipo-mode-card-meta {
+  font-size: 9px; color: var(--text-5); letter-spacing: 1px;
+  text-transform: uppercase; margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+<div class="tipo-nav">
+  <!-- HEADER -->
+  <div class="tipo-header">
+    <div class="tipo-header-logo" onclick="goHome()">TIPÓ</div>
+    <div class="tipo-breadcrumb" id="breadcrumb">
+      <span class="current">Home</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="tipo-main">
+
+    <!-- LEVEL 0: Visual Tools | Kinetic Type -->
+    <div class="tipo-level active" id="level0">
+      <div class="tipo-split">
+        <div class="tipo-split-panel" onclick="goVisualTools()">
+          <div class="tipo-preview-bg">
+            <div class="dither-preview" id="ditherGrid"></div>
+          </div>
+          <div class="tipo-split-label">Visual Tools</div>
+          <div class="tipo-split-sub">Dithering &bull; Halftone &bull; Retícula</div>
+        </div>
+        <div class="tipo-split-panel" onclick="goKineticType()">
+          <div class="tipo-preview-bg">
+            <div class="kinetic-preview" id="kineticPreview"></div>
+          </div>
+          <div class="tipo-split-label">Kinetic Type</div>
+          <div class="tipo-split-sub">22 modes &bull; 3D &bull; Animation</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 1a: Visual Tools list -->
+    <div class="tipo-level" id="levelVisual">
+      <div class="tipo-mode-list">
+        <a href="dithering.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview">D</div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Dithering</div>
+            <div class="tipo-mode-card-desc">Transform images & video into SVG-based halftone art. 7-state luminance mapping with 60+ custom shapes.</div>
+            <div class="tipo-mode-card-meta">image &bull; video &bull; webcam &bull; export mp4/png/svg</div>
+          </div>
+        </a>
+        <div class="tipo-mode-card" style="opacity:0.4; cursor:default;">
+          <div class="tipo-mode-card-preview">R</div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Retícula</div>
+            <div class="tipo-mode-card-desc">Advanced halftone grid system with variable dot shapes. Coming soon.</div>
+            <div class="tipo-mode-card-meta">coming soon</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 1b: Kinetic Type categories -->
+    <div class="tipo-level" id="levelKinetic">
+      <div class="tipo-quad">
+        <div class="tipo-quad-panel" onclick="goCategory('3d')">
+          <div class="quad-preview"><div class="quad-preview-text quad-3d">TIPÓ</div></div>
+          <div class="tipo-quad-label">3D</div>
+          <div class="tipo-quad-sub">Cylinder &bull; Field &bull; Stripes &bull; Coil<br>Flag &bull; Cascade &bull; Ribbon &bull; Morisawa</div>
+        </div>
+        <div class="tipo-quad-panel" onclick="goCategory('2d')">
+          <div class="quad-preview"><div class="quad-preview-text quad-2d">TIPÓ</div></div>
+          <div class="tipo-quad-label">2D</div>
+          <div class="tipo-quad-sub">Layers &bull; Danger &bull; String</div>
+        </div>
+        <div class="tipo-quad-panel" onclick="goCategory('composition')">
+          <div class="quad-preview"><div class="quad-preview-text quad-comp">TIPÓ</div></div>
+          <div class="tipo-quad-label">Composition</div>
+          <div class="tipo-quad-sub">Badge &bull; Clutter &bull; Construct</div>
+        </div>
+        <div class="tipo-quad-panel" onclick="goCategory('animation')">
+          <div class="quad-preview"><div class="quad-preview-text quad-anim">TIPÓ</div></div>
+          <div class="tipo-quad-label">Animation</div>
+          <div class="tipo-quad-sub">Snap &bull; Flash &bull; Pow &bull; Crash<br>Vessel &bull; Shine &bull; Boost</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 2: Mode lists per category -->
+    <div class="tipo-level" id="level3d">
+      <div class="tipo-mode-list" id="list3d"></div>
+    </div>
+    <div class="tipo-level" id="level2d">
+      <div class="tipo-mode-list" id="list2d"></div>
+    </div>
+    <div class="tipo-level" id="levelComposition">
+      <div class="tipo-mode-list" id="listComposition"></div>
+    </div>
+    <div class="tipo-level" id="levelAnimation">
+      <div class="tipo-mode-list" id="listAnimation"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// MODE DATA
+// ============================================================
+const MODES = {
+  '3d': [
+    { id: 'cylinder', name: 'Cylinder', desc: 'Text wrapped around a 3D cylinder with wave animations. Rotate, stack, ripple.', meta: '7 presets · 21 controls' },
+    { id: 'field', name: 'Field', desc: 'Grid of letters with wave distortion on X, Y, Z axes. Stretch and offset controls.', meta: '6 presets · 21 controls' },
+    { id: 'stripes', name: 'Stripes', desc: 'Text on colored ribbons weaving through 3D space. Multi-color support.', meta: '10 presets · 13 controls' },
+    { id: 'coil', name: 'Coil', desc: 'Text coiled into spirals, springs, and pretzels. Parametric geometry.', meta: '11 presets · 13 controls' },
+    { id: 'flag', name: 'Flag', desc: 'Text as a waving flag or folded surface. Origami, barber, silos effects.', meta: '13 presets · 17 controls' },
+    { id: 'cascade', name: 'Cascade', desc: 'Cascading letters falling, ticking, running. Grid and pixel gradients.', meta: '11 presets · 8 controls' },
+    { id: 'ribbon', name: 'Ribbon', desc: 'Text flowing on 3D ribbon paths. Streamers, terraces, snakes.', meta: '12 presets · 15 controls' },
+    { id: 'morisawa', name: 'Morisawa', desc: 'Japanese-inspired generative typography. Moon, bridge, flux loops.', meta: '9 presets · 6 controls' },
+  ],
+  '2d': [
+    { id: 'layers', name: 'Layers', desc: 'Stacked layers of text with spiral and space effects.', meta: '7 presets · 5 controls' },
+    { id: 'danger', name: 'Danger', desc: 'Distorted text with danger/warning aesthetics.', meta: '7 presets · 7 controls' },
+    { id: 'string', name: 'String', desc: 'Text as particles and strings. Physics-based movement.', meta: '7 presets · particle system' },
+  ],
+  'composition': [
+    { id: 'badge', name: 'Badge', desc: 'Typographic badges and seals. Deep customization with 41 controls.', meta: '11 font presets · 41 controls' },
+    { id: 'clutter', name: 'Clutter', desc: 'Organized chaos. Rings, clouds, cosmic, sphere sub-modes.', meta: '5 sub-modes' },
+    { id: 'construct', name: 'Construct', desc: 'Modular type construction. Cloud, scribble, zigzag, gradient, box.', meta: '5 sub-modes' },
+  ],
+  'animation': [
+    { id: 'snap', name: 'Snap', desc: 'Elastic snap animations with kinetic letter/word/group classes.', meta: 'advanced animation' },
+    { id: 'flash', name: 'Flash', desc: '18 sub-animations: sun, cloud, twist, halo, grid, starburst, shutters, and more.', meta: '18 sub-modes!' },
+    { id: 'pow', name: 'Pow', desc: 'Letter explosions with mouse interaction. Clouds and spurs.', meta: '2 presets · interactive' },
+    { id: 'crash', name: 'Crash', desc: 'Physics-based letter collisions with debris and boundaries.', meta: 'physics engine' },
+    { id: 'crashclock', name: 'Crash Clock', desc: 'Clock mechanism with crashing letters and particles.', meta: 'physics + time' },
+    { id: 'vessel', name: 'Vessel', desc: 'Letters in containers with easing curves. Sine, bounce, elastic.', meta: '7 easing types' },
+    { id: 'shine', name: 'Shine', desc: 'Radiant spoke animations with easing and timing controls.', meta: '7 easing types · 14 controls' },
+    { id: 'boost', name: 'Boost', desc: 'Tumble and zoom with multi-language support including Arabic.', meta: '11 controls · multilingual' },
+  ],
+};
+
+const CATEGORY_NAMES = { '3d': '3D', '2d': '2D', 'composition': 'Composition', 'animation': 'Animation' };
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+let navHistory = [];
+
+function showLevel(id) {
+  document.querySelectorAll('.tipo-level').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateBreadcrumb(path) {
+  const bc = document.getElementById('breadcrumb');
+  let html = '<span onclick="goHome()">Home</span>';
+  path.forEach((item, i) => {
+    html += '<span class="sep">/</span>';
+    if (i < path.length - 1) {
+      html += `<span onclick="${item.action}">${item.label}</span>`;
+    } else {
+      html += `<span class="current">${item.label}</span>`;
+    }
+  });
+  bc.innerHTML = html;
+}
+
+function goHome() {
+  navHistory = [];
+  showLevel('level0');
+  updateBreadcrumb([]);
+}
+
+function goVisualTools() {
+  navHistory = [{ label: 'Visual Tools', action: 'goVisualTools()' }];
+  showLevel('levelVisual');
+  updateBreadcrumb(navHistory);
+}
+
+function goKineticType() {
+  navHistory = [{ label: 'Kinetic Type', action: 'goKineticType()' }];
+  showLevel('levelKinetic');
+  updateBreadcrumb(navHistory);
+}
+
+function goCategory(cat) {
+  const levelId = cat === '3d' ? 'level3d' : cat === '2d' ? 'level2d' :
+    cat === 'composition' ? 'levelComposition' : 'levelAnimation';
+
+  navHistory = [
+    { label: 'Kinetic Type', action: 'goKineticType()' },
+    { label: CATEGORY_NAMES[cat], action: `goCategory('${cat}')` },
+  ];
+
+  buildModeList(cat);
+  showLevel(levelId);
+  updateBreadcrumb(navHistory);
+}
+
+function buildModeList(cat) {
+  const listId = cat === '3d' ? 'list3d' : cat === '2d' ? 'list2d' :
+    cat === 'composition' ? 'listComposition' : 'listAnimation';
+  const list = document.getElementById(listId);
+  if (list.children.length > 0) return; // already built
+
+  const modes = MODES[cat];
+  list.innerHTML = modes.map(m => `
+    <a href="${m.id}.html" class="tipo-mode-card">
+      <div class="tipo-mode-card-preview">${m.name[0]}</div>
+      <div class="tipo-mode-card-info">
+        <div class="tipo-mode-card-title">${m.name}</div>
+        <div class="tipo-mode-card-desc">${m.desc}</div>
+        <div class="tipo-mode-card-meta">${m.meta}</div>
+      </div>
+    </a>
+  `).join('');
+}
+
+// ============================================================
+// ANIMATED PREVIEWS
+// ============================================================
+
+// Dithering dot grid
+function buildDitherGrid() {
+  const grid = document.getElementById('ditherGrid');
+  let html = '';
+  for (let i = 0; i < 24 * 16; i++) {
+    const delay = (Math.sin(i * 0.3) * 1.5 + Math.cos(i * 0.1) * 1).toFixed(2);
+    const scale = (0.3 + Math.random() * 0.7).toFixed(2);
+    html += `<div class="dither-dot" style="animation-delay:${delay}s; animation-duration:${2 + Math.random() * 3}s;"></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// Kinetic type preview
+function buildKineticPreview() {
+  const el = document.getElementById('kineticPreview');
+  const word = 'TIPÓ';
+  el.innerHTML = word.split('').map((ch, i) =>
+    `<span class="kinetic-char" style="animation-delay:${i * 0.3}s">${ch}</span>`
+  ).join('');
+}
+
+// ============================================================
+// KEYBOARD NAV
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (navHistory.length >= 2) {
+      // Go up one level
+      const prev = navHistory[navHistory.length - 2];
+      eval(prev.action);
+    } else if (navHistory.length === 1) {
+      goHome();
+    }
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+buildDitherGrid();
+buildKineticPreview();
+</script>
+
+</body>
+</html>

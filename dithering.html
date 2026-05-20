@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced SVG Dithering Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #e0e0e0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #1a1a1a; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+  /* CONTROL PANEL */
+  #controlPanel {
+    width: 320px; min-width: 320px; background: #111; border-right: 1px solid #222;
+    overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px;
+  }
+  #controlPanel h1 { font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: #fff; padding-bottom: 10px; border-bottom: 1px solid #333; }
+  .section { display: flex; flex-direction: column; gap: 8px; }
+  .section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 600; margin-bottom: 4px; }
+  label { font-size: 12px; color: #aaa; display: flex; align-items: center; gap: 8px; }
+  label.checkbox-label { cursor: pointer; user-select: none; }
+  label.checkbox-label input[type="checkbox"] { accent-color: #4af; width: 16px; height: 16px; }
+
+  select, input[type="file"] {
+    background: #1a1a1a; border: 1px solid #333; color: #ddd; padding: 8px 10px;
+    border-radius: 4px; font-size: 12px; width: 100%; outline: none;
+  }
+  select:hover, input[type="file"]:hover { border-color: #555; }
+
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 4px; background: #333;
+    border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; background: #fff;
+    border-radius: 50%; cursor: pointer;
+  }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-row input[type="range"] { flex: 1; }
+  .range-value { font-size: 11px; color: #666; min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  input[type="color"] {
+    -webkit-appearance: none; border: 1px solid #333; width: 40px; height: 28px;
+    border-radius: 4px; cursor: pointer; background: none; padding: 2px;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+  /* State rows */
+  .state-row {
+    background: #1a1a1a; border: 1px solid #282828; border-radius: 6px;
+    padding: 10px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .state-header { display: flex; justify-content: space-between; align-items: center; }
+  .state-label { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+  .state-sublabel { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+  .state-controls { display: flex; align-items: center; gap: 8px; }
+  .state-preview {
+    width: 32px; height: 32px; background: #222; border: 1px solid #333;
+    border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .state-preview svg, .state-preview img { width: 100%; height: 100%; object-fit: contain; }
+  .state-file-btn {
+    background: #222; border: 1px solid #333; color: #aaa; padding: 5px 10px;
+    border-radius: 3px; font-size: 10px; cursor: pointer; flex: 1; text-align: center;
+  }
+  .state-file-btn:hover { background: #2a2a2a; border-color: #555; }
+  .state-file-input { display: none; }
+
+  /* Hex color display */
+  .hex-display {
+    font-size: 9px; font-family: monospace; color: #555; cursor: pointer;
+    padding: 2px 5px; border-radius: 3px; transition: all 0.15s; user-select: all;
+  }
+  .hex-display:hover { color: #fff; background: #333; }
+  .hex-copied { color: #4af !important; }
+
+  /* Color palettes */
+  .palette-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .palette-chip {
+    display: flex; align-items: center; gap: 4px; background: #1a1a1a;
+    border: 1px solid #282828; border-radius: 20px; padding: 4px 10px 4px 4px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .palette-chip:hover { border-color: #4af; }
+  .palette-chip-name { font-size: 9px; color: #aaa; letter-spacing: 0.5px; }
+  .palette-dots { display: flex; gap: 1px; }
+  .palette-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Shape Library Modal */
+  #shapeModal {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+  }
+  #shapeModal.open { display: flex; }
+  .modal-content {
+    background: #151515; border: 1px solid #333; border-radius: 12px;
+    width: 640px; max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; border-bottom: 1px solid #282828;
+  }
+  .modal-header h2 { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #fff; }
+  .modal-close { background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .modal-close:hover { color: #fff; }
+  .modal-tabs {
+    display: flex; border-bottom: 1px solid #282828; padding: 0 20px;
+  }
+  .modal-tab {
+    padding: 10px 16px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: #666; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .modal-tab:hover { color: #aaa; }
+  .modal-tab.active { color: #fff; border-bottom-color: #4af; }
+  .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+  /* Shape Grid */
+  .shape-category { margin-bottom: 16px; }
+  .shape-category-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #555; margin-bottom: 8px; }
+  .shape-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px;
+  }
+  .shape-item {
+    width: 56px; height: 56px; background: #1a1a1a; border: 1px solid #282828;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; padding: 8px;
+  }
+  .shape-item:hover { border-color: #4af; background: #1e1e2a; }
+  .shape-item svg { width: 100%; height: 100%; }
+
+  /* Text to SVG */
+  .text-svg-section { display: flex; flex-direction: column; gap: 12px; }
+  .text-svg-input {
+    background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px;
+    border-radius: 6px; font-size: 28px; text-align: center; outline: none;
+    font-family: inherit; width: 100%;
+  }
+  .text-svg-input:focus { border-color: #4af; }
+  .text-svg-input::placeholder { color: #333; }
+  .font-select-row { display: flex; gap: 8px; align-items: center; }
+  .font-select-row select { flex: 1; }
+  .text-preview-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px;
+    min-height: 80px;
+  }
+  .text-char-item {
+    height: 64px; background: #1a1a1a; border: 1px solid #282828;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; font-size: 32px; color: #fff;
+  }
+  .text-char-item:hover { border-color: #4af; background: #1e1e2a; }
+
+  /* Preset row */
+  .preset-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-chip {
+    background: #1a1a1a; border: 1px solid #282828; border-radius: 20px;
+    padding: 6px 14px; font-size: 10px; letter-spacing: 1px; color: #aaa;
+    cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+  }
+  .preset-chip:hover { border-color: #4af; color: #fff; }
+
+  /* Buttons */
+  .btn {
+    background: #fff; color: #000; border: none; padding: 10px 16px;
+    border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;
+    letter-spacing: 1px; text-transform: uppercase; text-align: center;
+  }
+  .btn:hover { background: #ddd; }
+  .btn-secondary { background: #222; color: #fff; border: 1px solid #333; }
+  .btn-secondary:hover { background: #333; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  /* CANVAS AREA */
+  #canvasArea {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: #0a0a0a; overflow: auto; position: relative;
+  }
+  #outputCanvas { image-rendering: auto; }
+  #hiddenCanvas, #frameCanvas, #sourceVideo { display: none; }
+  #dropZone {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    border: 2px dashed #333; margin: 20px; border-radius: 12px;
+    color: #555; font-size: 14px; letter-spacing: 1px; transition: all 0.2s;
+  }
+  #dropZone.active { border-color: #4af; color: #4af; background: rgba(68,170,255,0.03); }
+  #dropZone.hidden { display: none; }
+  .drop-icon { font-size: 48px; opacity: 0.3; }
+
+  /* Export overlay */
+  #exportStatus {
+    position: fixed; bottom: 20px; right: 20px; background: #222; border: 1px solid #333;
+    padding: 12px 20px; border-radius: 6px; font-size: 12px; display: none; z-index: 100;
+  }
+
+  /* Export progress overlay */
+  #exportProgress {
+    position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+  }
+  #exportProgress.open { display: flex; }
+  .progress-box {
+    background: #151515; border: 1px solid #333; border-radius: 12px;
+    padding: 32px 40px; min-width: 360px; text-align: center;
+  }
+  .progress-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #fff; margin-bottom: 16px; }
+  .progress-bar-track {
+    width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-bar-fill {
+    height: 100%; background: #4af; border-radius: 3px; width: 0%; transition: width 0.3s;
+  }
+  .progress-info { font-size: 11px; color: #888; font-family: monospace; }
+
+  /* FPS counter */
+  #fpsCounter {
+    position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7);
+    color: #4f4; font-size: 11px; padding: 4px 8px; border-radius: 3px;
+    font-family: monospace; display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- CONTROL PANEL -->
+<div id="controlPanel">
+  <h1>Control Panel</h1>
+
+  <!-- 1. MEDIA SOURCE -->
+  <div class="section">
+    <div class="section-title">1. Media Source</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Upload File</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <!-- ASPECT RATIO -->
+  <div class="section">
+    <div class="section-title">Aspect Ratio / Cropping</div>
+    <select id="aspectRatio">
+      <option value="original">Original Aspect Ratio</option>
+      <option value="1:1">1 : 1 (Square)</option>
+    </select>
+  </div>
+
+  <!-- OVERALL SCALE -->
+  <div class="section">
+    <div class="section-title">Overall Scale</div>
+    <div class="range-row">
+      <input type="range" id="overallScale" min="10" max="200" value="100">
+      <span class="range-value" id="overallScaleVal">100%</span>
+    </div>
+  </div>
+
+  <!-- GRID RESOLUTION -->
+  <div class="section">
+    <div class="section-title">Grid Resolution (Scale)</div>
+    <div class="range-row">
+      <input type="range" id="gridResolution" min="4" max="200" value="48">
+      <span class="range-value" id="gridResolutionVal">48</span>
+    </div>
+    <label style="font-size:10px; color:#555;">Scales total pixel dimensions</label>
+  </div>
+
+  <!-- BACKGROUND COLOR -->
+  <div class="section">
+    <div class="section-title">Background Color</div>
+    <div class="range-row">
+      <input type="color" id="bgColor" value="#000000">
+      <span class="range-value" id="bgColorVal">#000000</span>
+    </div>
+  </div>
+
+  <!-- CHECKBOXES -->
+  <div class="section">
+    <label class="checkbox-label">
+      <input type="checkbox" id="fillSolid" checked> Fill SVG Shapes (Solid)
+    </label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="invertMapping"> Quick Invert Mapping
+    </label>
+  </div>
+
+  <!-- SHAPE LIBRARY -->
+  <div class="section">
+    <div class="section-title">Shape Library</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="openShapeLibrary()">Browse Shapes</button>
+      <button class="btn btn-secondary" onclick="openTextToSVG()">Text → Shape</button>
+    </div>
+    <button class="btn btn-secondary" onclick="randomizeShapes()" style="font-size:10px;">Randomize All 7 States</button>
+    <div class="section-title" style="margin-top:8px;">Quick Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('dots')">Dots</span>
+      <span class="preset-chip" onclick="applyPreset('blocks')">Blocks</span>
+      <span class="preset-chip" onclick="applyPreset('organic')">Organic</span>
+      <span class="preset-chip" onclick="applyPreset('bars-h')">Bars H</span>
+      <span class="preset-chip" onclick="applyPreset('bars-v')">Bars V</span>
+      <span class="preset-chip" onclick="applyPreset('mixed')">Mixed</span>
+      <span class="preset-chip" onclick="applyPreset('crosses')">Crosses</span>
+      <span class="preset-chip" onclick="applyPreset('arrows')">Arrows</span>
+      <span class="preset-chip" onclick="applyPreset('stars')">Stars</span>
+    </div>
+  </div>
+
+  <!-- COLOR PALETTES -->
+  <div class="section">
+    <div class="section-title">Color Palettes</div>
+    <div class="palette-grid" id="paletteGrid"></div>
+  </div>
+
+  <!-- 7-STATE MIDTONE MAPPING -->
+  <div class="section">
+    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+      7-State Midtone Mapping
+      <label class="checkbox-label" style="font-size:10px;">
+        <input type="checkbox" id="enableMapping" checked> On
+      </label>
+    </div>
+    <div id="stateContainer"></div>
+  </div>
+
+  <!-- SCALE WITH MIDTONES -->
+  <div class="section">
+    <label class="checkbox-label">
+      <input type="checkbox" id="scaleWithMidtones" checked> Scale Shapes with Midtones
+    </label>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">MIN SIZE (%)</span>
+      <input type="range" id="minScale" min="0" max="100" value="20">
+      <span class="range-value" id="minScaleVal">20%</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">MAX SIZE (%)</span>
+      <input type="range" id="maxScale" min="0" max="100" value="100">
+      <span class="range-value" id="maxScaleVal">100%</span>
+    </div>
+  </div>
+
+  <!-- ROTATION -->
+  <div class="section">
+    <label class="checkbox-label">
+      <input type="checkbox" id="enableRotation"> Enable 90° Snap Rotation
+    </label>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">ROTATION INTERVAL</span>
+      <input type="range" id="rotationInterval" min="1" max="20" value="4">
+      <span class="range-value" id="rotationIntervalVal">4</span>
+    </div>
+    <label style="font-size:9px; color:#444;">Lower = Faster rotation changes</label>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="section" style="margin-top: 10px; border-top: 1px solid #222; padding-top: 16px;">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" onclick="exportSVG()">SVG</button>
+    </div>
+    <div id="videoExportSection" style="display:none; flex-direction:column; gap:8px;">
+      <label style="font-size:10px; color:#666;">VIDEO QUALITY</label>
+      <select id="videoBitrate">
+        <option value="8000000">8 Mbps — Standard</option>
+        <option value="16000000">16 Mbps — High Quality</option>
+      </select>
+      <button class="btn btn-secondary" id="recordBtn" onclick="toggleRecording()">Record Video</button>
+      <div id="recordTimer" style="font-size:11px; color:#f44; text-align:center; display:none; font-family:monospace;"></div>
+    </div>
+  </div>
+
+  <div style="height:40px;"></div>
+</div>
+
+<!-- CANVAS AREA -->
+<div id="canvasArea">
+  <div id="dropZone">
+    <div class="drop-icon">&#9678;</div>
+    Drop image or video here<br>or use the upload button
+  </div>
+  <canvas id="outputCanvas"></canvas>
+  <canvas id="hiddenCanvas"></canvas>
+  <canvas id="frameCanvas"></canvas>
+  <video id="sourceVideo" loop muted playsinline></video>
+  <div id="fpsCounter"></div>
+</div>
+
+<div id="exportStatus"></div>
+
+<!-- EXPORT PROGRESS OVERLAY -->
+<div id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing MP4...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo">Processing frames...</div>
+  </div>
+</div>
+
+<!-- SHAPE LIBRARY MODAL -->
+<div id="shapeModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">Shape Library</h2>
+      <button class="modal-close" onclick="closeShapeModal()">&times;</button>
+    </div>
+    <div class="modal-tabs" id="modalTabs">
+      <div class="modal-tab active" data-tab="library" onclick="switchModalTab('library')">Library</div>
+      <div class="modal-tab" data-tab="text" onclick="switchModalTab('text')">Text → Shape</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE & CONFIG
+// ============================================================
+const STATE_LABELS = [
+  { name: 'STATE 1', sub: 'HIGHLIGHTS', defaultColor: '#ffffff' },
+  { name: 'STATE 2', sub: 'LIGHT MID', defaultColor: '#d4d4d4' },
+  { name: 'STATE 3', sub: 'MID HIGH', defaultColor: '#a0a0a0' },
+  { name: 'STATE 4', sub: 'MIDTONES', defaultColor: '#777777' },
+  { name: 'STATE 5', sub: 'MID LOW', defaultColor: '#555555' },
+  { name: 'STATE 6', sub: 'DARK MID', defaultColor: '#333333' },
+  { name: 'STATE 7', sub: 'SHADOWS (100%)', defaultColor: '#111111' },
+];
+
+// Default SVG shapes for each state (built-in fallbacks)
+const DEFAULT_SHAPES = [
+  // State 1 - Highlight: large filled circle
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="currentColor"/></svg>`,
+  // State 2 - Light Mid: circle with small hole
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="46" fill="currentColor"/><circle cx="50" cy="50" r="10" fill="black"/></svg>`,
+  // State 3 - Mid High: ring
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="44" fill="currentColor"/><circle cx="50" cy="50" r="22" fill="black"/></svg>`,
+  // State 4 - Midtones: rounded square
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="84" height="84" rx="12" fill="currentColor"/></svg>`,
+  // State 5 - Mid Low: smaller rounded square
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="15" width="70" height="70" rx="8" fill="currentColor"/></svg>`,
+  // State 6 - Dark Mid: small diamond
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,10 90,50 50,90 10,50" fill="currentColor"/></svg>`,
+  // State 7 - Shadows: small dot
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="18" fill="currentColor"/></svg>`,
+];
+
+const states = STATE_LABELS.map((s, i) => ({
+  ...s,
+  color: s.defaultColor,
+  svgContent: DEFAULT_SHAPES[i],
+  svgDataURL: null,
+  imgElement: null,
+}));
+
+let sourceImage = null;
+let sourceType = null; // 'image' | 'video' | 'webcam'
+let animFrameId = null;
+let isWebcam = false;
+let webcamStream = null;
+let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+
+// Caches
+let svgImageCache = new Map();
+
+// ============================================================
+// INIT UI
+// ============================================================
+function buildStateUI() {
+  const container = document.getElementById('stateContainer');
+  container.innerHTML = '';
+  states.forEach((state, i) => {
+    const row = document.createElement('div');
+    row.className = 'state-row';
+    row.innerHTML = `
+      <div class="state-header">
+        <div>
+          <div class="state-label">${state.name}</div>
+          <div class="state-sublabel">${state.sub}</div>
+        </div>
+        <div class="state-controls">
+          <div class="state-preview" id="statePreview${i}">
+            ${state.svgContent}
+          </div>
+          <input type="color" value="${state.color}" data-state="${i}"
+                 onchange="updateStateColor(${i}, this.value)">
+          <span class="hex-display" id="stateHex${i}" onclick="copyHex(${i})" title="Click to copy">${state.color}</span>
+        </div>
+      </div>
+      <div class="state-controls" style="gap:6px;">
+        <button class="state-file-btn" onclick="document.getElementById('stateFile${i}').click()">
+          Choose file...
+        </button>
+        <button class="state-file-btn" style="flex:0; padding:5px 8px;" title="Reset to default"
+                onclick="resetState(${i})">&#8634;</button>
+        <input type="file" class="state-file-input" id="stateFile${i}" accept=".svg"
+               onchange="handleStateSVG(${i}, this)">
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function updateStateColor(index, color) {
+  states[index].color = color;
+  const hexEl = document.getElementById(`stateHex${index}`);
+  if (hexEl) hexEl.textContent = color;
+  rebuildSVGCache(index);
+  requestRender();
+}
+
+function copyHex(index) {
+  const hex = states[index].color;
+  navigator.clipboard.writeText(hex).then(() => {
+    const el = document.getElementById(`stateHex${index}`);
+    el.classList.add('hex-copied');
+    const orig = el.textContent;
+    el.textContent = 'copied!';
+    setTimeout(() => { el.textContent = orig; el.classList.remove('hex-copied'); }, 1000);
+  });
+}
+
+function resetState(index) {
+  states[index].svgContent = DEFAULT_SHAPES[index];
+  states[index].color = STATE_LABELS[index].defaultColor;
+  states[index].svgDataURL = null;
+  states[index].imgElement = null;
+  svgImageCache.delete(index);
+  const preview = document.getElementById(`statePreview${index}`);
+  preview.innerHTML = states[index].svgContent;
+  const colorInput = preview.closest('.state-row').querySelector('input[type="color"]');
+  colorInput.value = states[index].color;
+  rebuildSVGCache(index);
+  requestRender();
+}
+
+function handleStateSVG(index, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let svgText = e.target.result;
+    states[index].svgContent = svgText;
+    const preview = document.getElementById(`statePreview${index}`);
+    preview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgText)));
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+    preview.appendChild(img);
+    rebuildSVGCache(index);
+    requestRender();
+  };
+  reader.readAsText(file);
+}
+
+function rebuildSVGCache(index) {
+  svgImageCache.delete(getCacheKey(index, states[index].color));
+  // Pre-build for current color
+  getShapeImage(index, states[index].color);
+}
+
+function getCacheKey(index, color) {
+  return `${index}_${color}`;
+}
+
+function getShapeImage(stateIndex, fillColor) {
+  const key = getCacheKey(stateIndex, fillColor);
+  if (svgImageCache.has(key)) return svgImageCache.get(key);
+
+  let svgText = states[stateIndex].svgContent;
+
+  // Apply color: replace currentColor and any fill attributes
+  const fillSolid = document.getElementById('fillSolid').checked;
+  if (fillSolid) {
+    svgText = svgText.replace(/currentColor/g, fillColor);
+    // Replace fill="..." on shape elements but not on inner cutout shapes
+    // Simple approach: just replace currentColor and leave explicit colors
+  } else {
+    svgText = svgText.replace(/currentColor/g, fillColor);
+  }
+
+  const blob = new Blob([svgText], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.src = url;
+
+  // Store promise-like; use immediately if loaded
+  const entry = { img, loaded: false };
+  img.onload = () => { entry.loaded = true; URL.revokeObjectURL(url); };
+  svgImageCache.set(key, entry);
+  return entry;
+}
+
+// ============================================================
+// MEDIA INPUT
+// ============================================================
+const fileInput = document.getElementById('fileInput');
+const sourceVideo = document.getElementById('sourceVideo');
+const dropZone = document.getElementById('dropZone');
+const canvasArea = document.getElementById('canvasArea');
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+});
+
+canvasArea.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+canvasArea.addEventListener('dragleave', () => { dropZone.classList.remove('active'); });
+canvasArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+
+function loadFile(file) {
+  stopWebcam();
+  stopAnimation();
+  if (file.type.startsWith('image/')) {
+    sourceType = 'image';
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      dropZone.classList.add('hidden');
+      document.getElementById('videoExportSection').style.display = 'none';
+      requestRender();
+    };
+    img.src = URL.createObjectURL(file);
+  } else if (file.type.startsWith('video/')) {
+    sourceType = 'video';
+    sourceVideo.src = URL.createObjectURL(file);
+    sourceVideo.onloadeddata = () => {
+      sourceImage = sourceVideo;
+      sourceVideo.play();
+      dropZone.classList.add('hidden');
+      document.getElementById('videoExportSection').style.display = 'flex';
+      startAnimation();
+    };
+  }
+}
+
+function toggleWebcam() {
+  if (isWebcam) {
+    stopWebcam();
+    return;
+  }
+  stopAnimation();
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      sourceVideo.srcObject = stream;
+      sourceVideo.play();
+      sourceType = 'webcam';
+      sourceImage = sourceVideo;
+      isWebcam = true;
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = '#f44';
+      dropZone.classList.add('hidden');
+      document.getElementById('videoExportSection').style.display = 'flex';
+      startAnimation();
+    })
+    .catch(err => console.error('Webcam error:', err));
+}
+
+function stopWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+  }
+  isWebcam = false;
+  document.getElementById('webcamBtn').textContent = 'Webcam';
+  document.getElementById('webcamBtn').style.borderColor = '#333';
+}
+
+// ============================================================
+// RENDERING ENGINE
+// ============================================================
+const outputCanvas = document.getElementById('outputCanvas');
+const outCtx = outputCanvas.getContext('2d');
+const hiddenCanvas = document.getElementById('hiddenCanvas');
+const hidCtx = hiddenCanvas.getContext('2d');
+const frameCanvas = document.getElementById('frameCanvas');
+const frameCtx = frameCanvas.getContext('2d');
+
+let renderPending = false;
+
+function requestRender() {
+  if (!renderPending) {
+    renderPending = true;
+    requestAnimationFrame(() => { renderPending = false; render(); });
+  }
+}
+
+function startAnimation() {
+  const fpsEl = document.getElementById('fpsCounter');
+  fpsEl.style.display = 'block';
+  let lastTime = performance.now();
+  let frameCount = 0;
+
+  function loop(now) {
+    frameCount++;
+    if (now - lastTime >= 1000) {
+      fpsEl.textContent = `${frameCount} FPS`;
+      frameCount = 0;
+      lastTime = now;
+    }
+    render();
+    maybeCaptureMP4Frame();
+    animFrameId = requestAnimationFrame(loop);
+  }
+  animFrameId = requestAnimationFrame(loop);
+}
+
+function stopAnimation() {
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  document.getElementById('fpsCounter').style.display = 'none';
+}
+
+function render() {
+  if (!sourceImage) return;
+
+  const gridRes = parseInt(document.getElementById('gridResolution').value);
+  const aspectMode = document.getElementById('aspectRatio').value;
+  const bgColor = document.getElementById('bgColor').value;
+  const invertMapping = document.getElementById('invertMapping').checked;
+  const enableMap = document.getElementById('enableMapping').checked;
+  const scaleWithMid = document.getElementById('scaleWithMidtones').checked;
+  const minScalePct = parseInt(document.getElementById('minScale').value) / 100;
+  const maxScalePct = parseInt(document.getElementById('maxScale').value) / 100;
+  const enableRot = document.getElementById('enableRotation').checked;
+  const rotInterval = parseInt(document.getElementById('rotationInterval').value);
+  const overallScale = parseInt(document.getElementById('overallScale').value) / 100;
+
+  // Source dimensions
+  let srcW, srcH;
+  if (sourceType === 'image') {
+    srcW = sourceImage.naturalWidth || sourceImage.width;
+    srcH = sourceImage.naturalHeight || sourceImage.height;
+  } else {
+    srcW = sourceImage.videoWidth || 640;
+    srcH = sourceImage.videoHeight || 480;
+  }
+  if (srcW === 0 || srcH === 0) return;
+
+  // Aspect ratio crop
+  let cropW = srcW, cropH = srcH, cropX = 0, cropY = 0;
+  if (aspectMode === '1:1') {
+    const minDim = Math.min(srcW, srcH);
+    cropW = minDim; cropH = minDim;
+    cropX = (srcW - minDim) / 2;
+    cropY = (srcH - minDim) / 2;
+  }
+
+  // Grid columns/rows
+  const aspectR = cropW / cropH;
+  const cols = gridRes;
+  const rows = Math.round(cols / aspectR);
+
+  // Draw source to hidden canvas at grid resolution to sample pixels
+  hiddenCanvas.width = cols;
+  hiddenCanvas.height = rows;
+  hidCtx.drawImage(sourceImage, cropX, cropY, cropW, cropH, 0, 0, cols, rows);
+  const pixelData = hidCtx.getImageData(0, 0, cols, rows).data;
+
+  // Output canvas size
+  const cellSize = Math.max(4, Math.round(12 * overallScale));
+  const outW = cols * cellSize;
+  const outH = rows * cellSize;
+  outputCanvas.width = outW;
+  outputCanvas.height = outH;
+  outputCanvas.style.maxWidth = '100%';
+  outputCanvas.style.maxHeight = '100%';
+
+  // Background
+  outCtx.fillStyle = bgColor;
+  outCtx.fillRect(0, 0, outW, outH);
+
+  // Render each cell
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const idx = (y * cols + x) * 4;
+      const r = pixelData[idx];
+      const g = pixelData[idx + 1];
+      const b = pixelData[idx + 2];
+
+      // Luminance (perceived)
+      let lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255; // 0=dark, 1=bright
+      if (invertMapping) lum = 1 - lum;
+
+      // Map luminance to state (0-6)
+      // State 1 = highlight (high lum), State 7 = shadow (low lum)
+      let stateIdx = Math.floor((1 - lum) * 7);
+      if (stateIdx > 6) stateIdx = 6;
+      if (stateIdx < 0) stateIdx = 0;
+
+      if (!enableMap) {
+        // Simple grayscale squares
+        const gray = Math.round(lum * 255);
+        outCtx.fillStyle = `rgb(${gray},${gray},${gray})`;
+        outCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        continue;
+      }
+
+      // Scale factor based on midtone
+      let scale = 1;
+      if (scaleWithMid) {
+        // Brighter = larger, darker = smaller (or inverted)
+        scale = minScalePct + lum * (maxScalePct - minScalePct);
+      }
+
+      const state = states[stateIdx];
+      const shapeEntry = getShapeImage(stateIdx, state.color);
+
+      if (shapeEntry && shapeEntry.loaded && shapeEntry.img.complete) {
+        const sz = cellSize * scale;
+        const offset = (cellSize - sz) / 2;
+
+        outCtx.save();
+        const cx = x * cellSize + cellSize / 2;
+        const cy = y * cellSize + cellSize / 2;
+        outCtx.translate(cx, cy);
+
+        // Rotation
+        if (enableRot) {
+          const rotIndex = Math.floor(((x + y * rotInterval) % 4));
+          outCtx.rotate(rotIndex * Math.PI / 2);
+        }
+
+        outCtx.drawImage(shapeEntry.img, -sz / 2, -sz / 2, sz, sz);
+        outCtx.restore();
+      } else {
+        // Fallback: colored square
+        const sz = cellSize * scale;
+        const offset = (cellSize - sz) / 2;
+        outCtx.fillStyle = state.color;
+        outCtx.fillRect(x * cellSize + offset, y * cellSize + offset, sz, sz);
+      }
+    }
+  }
+}
+
+// ============================================================
+// CONTROL BINDINGS
+// ============================================================
+function bindRange(id, valId, suffix = '') {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    valEl.textContent = el.value + suffix;
+    requestRender();
+  });
+}
+
+bindRange('overallScale', 'overallScaleVal', '%');
+bindRange('gridResolution', 'gridResolutionVal');
+bindRange('minScale', 'minScaleVal', '%');
+bindRange('maxScale', 'maxScaleVal', '%');
+bindRange('rotationInterval', 'rotationIntervalVal');
+
+document.getElementById('bgColor').addEventListener('input', (e) => {
+  document.getElementById('bgColorVal').textContent = e.target.value;
+  requestRender();
+});
+
+['fillSolid', 'invertMapping', 'enableMapping', 'scaleWithMidtones', 'enableRotation'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (id === 'fillSolid') { svgImageCache.clear(); states.forEach((_, i) => rebuildSVGCache(i)); }
+    requestRender();
+  });
+});
+
+document.getElementById('aspectRatio').addEventListener('change', requestRender);
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportPNG() {
+  if (!sourceImage) return;
+  render();
+  const link = document.createElement('a');
+  link.download = 'dithered-output.png';
+  link.href = outputCanvas.toDataURL('image/png');
+  link.click();
+  showStatus('PNG exported');
+}
+
+function exportSVG() {
+  if (!sourceImage) return;
+  render();
+
+  const gridRes = parseInt(document.getElementById('gridResolution').value);
+  const aspectMode = document.getElementById('aspectRatio').value;
+  const bgColor = document.getElementById('bgColor').value;
+  const invertMapping = document.getElementById('invertMapping').checked;
+  const scaleWithMid = document.getElementById('scaleWithMidtones').checked;
+  const minScalePct = parseInt(document.getElementById('minScale').value) / 100;
+  const maxScalePct = parseInt(document.getElementById('maxScale').value) / 100;
+  const enableRot = document.getElementById('enableRotation').checked;
+  const rotInterval = parseInt(document.getElementById('rotationInterval').value);
+
+  let srcW, srcH;
+  if (sourceType === 'image') {
+    srcW = sourceImage.naturalWidth; srcH = sourceImage.naturalHeight;
+  } else {
+    srcW = sourceImage.videoWidth; srcH = sourceImage.videoHeight;
+  }
+
+  let cropW = srcW, cropH = srcH, cropX = 0, cropY = 0;
+  if (aspectMode === '1:1') {
+    const m = Math.min(srcW, srcH);
+    cropW = m; cropH = m; cropX = (srcW - m) / 2; cropY = (srcH - m) / 2;
+  }
+
+  const cols = gridRes;
+  const rows = Math.round(cols / (cropW / cropH));
+  const cellSize = 12;
+
+  hiddenCanvas.width = cols; hiddenCanvas.height = rows;
+  hidCtx.drawImage(sourceImage, cropX, cropY, cropW, cropH, 0, 0, cols, rows);
+  const px = hidCtx.getImageData(0, 0, cols, rows).data;
+
+  let svgParts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${cols * cellSize}" height="${rows * cellSize}" viewBox="0 0 ${cols * cellSize} ${rows * cellSize}">`];
+  svgParts.push(`<rect width="100%" height="100%" fill="${bgColor}"/>`);
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const idx = (y * cols + x) * 4;
+      let lum = (0.299 * px[idx] + 0.587 * px[idx+1] + 0.114 * px[idx+2]) / 255;
+      if (invertMapping) lum = 1 - lum;
+      let si = Math.floor((1 - lum) * 7);
+      si = Math.max(0, Math.min(6, si));
+
+      let scale = 1;
+      if (scaleWithMid) scale = minScalePct + lum * (maxScalePct - minScalePct);
+
+      const sz = cellSize * scale;
+      const cx = x * cellSize + cellSize / 2;
+      const cy = y * cellSize + cellSize / 2;
+      let rot = 0;
+      if (enableRot) rot = Math.floor((x + y * rotInterval) % 4) * 90;
+
+      const state = states[si];
+      // Simple SVG export: use circles/rects as approximation
+      svgParts.push(`<g transform="translate(${cx},${cy}) rotate(${rot})">`);
+      svgParts.push(`<circle r="${sz/2 * 0.9}" fill="${state.color}"/>`);
+      svgParts.push(`</g>`);
+    }
+  }
+  svgParts.push('</svg>');
+
+  const blob = new Blob([svgParts.join('\n')], { type: 'image/svg+xml' });
+  const link = document.createElement('a');
+  link.download = 'dithered-output.svg';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  showStatus('SVG exported');
+}
+
+const MP4_FPS = 30;
+let mp4Muxer = null;
+let mp4Encoder = null;
+let mp4FrameCount = 0;
+let mp4RecordStart = 0;
+let mp4LastCaptureTime = -1;
+let mp4EncW = 0;
+let mp4EncH = 0;
+const recordCanvas = document.createElement('canvas');
+const recordCtx = recordCanvas.getContext('2d');
+
+async function toggleRecording() {
+  const btn = document.getElementById('recordBtn');
+  if (!isRecording) {
+    await startRecording(btn);
+  } else {
+    await stopRecording(btn);
+  }
+}
+
+async function startRecording(btn) {
+  const hasMp4 = typeof VideoEncoder !== 'undefined' && typeof Mp4Muxer !== 'undefined' && Mp4Muxer.Muxer;
+  const selectedBitrate = parseInt(document.getElementById('videoBitrate').value);
+  const bitrateLabel = selectedBitrate >= 16000000 ? '16 Mbps' : '8 Mbps';
+
+  if (hasMp4) {
+    // --- Direct MP4 recording with back-pressure control ---
+    const w = outputCanvas.width;
+    const h = outputCanvas.height;
+    const encW = w + (w % 2);
+    const encH = h + (h % 2);
+    mp4EncW = encW;
+    mp4EncH = encH;
+    recordCanvas.width = encW;
+    recordCanvas.height = encH;
+
+    const target = new Mp4Muxer.ArrayBufferTarget();
+    mp4Muxer = new Mp4Muxer.Muxer({
+      target,
+      video: { codec: 'avc', width: encW, height: encH },
+      fastStart: 'in-memory',
+    });
+
+    mp4Encoder = new VideoEncoder({
+      output: (chunk, meta) => { mp4Muxer.addVideoChunk(chunk, meta); },
+      error: (e) => console.error('VideoEncoder error:', e),
+    });
+
+    // Use baseline profile for faster encoding
+    mp4Encoder.configure({
+      codec: 'avc1.42001f',
+      width: encW,
+      height: encH,
+      bitrate: selectedBitrate,
+      framerate: MP4_FPS,
+      latencyMode: 'realtime',
+    });
+
+    mp4FrameCount = 0;
+    mp4RecordStart = performance.now();
+    mp4LastCaptureTime = -1;
+    isRecording = true;
+
+    btn.textContent = '⏹ Stop Recording';
+    btn.style.borderColor = '#f44';
+    document.getElementById('videoBitrate').disabled = true;
+    showStatus(`Recording MP4 (${bitrateLabel})...`);
+    startRecordTimer();
+  } else {
+    // --- WebM fallback ---
+    const stream = outputCanvas.captureStream(MP4_FPS);
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: MediaRecorder.isTypeSupported('video/webm; codecs=vp9') ? 'video/webm; codecs=vp9' : 'video/webm',
+      videoBitsPerSecond: selectedBitrate,
+    });
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.start(100);
+    isRecording = true;
+
+    btn.textContent = '⏹ Stop Recording';
+    btn.style.borderColor = '#f44';
+    document.getElementById('videoBitrate').disabled = true;
+    showStatus(`Recording WebM (${bitrateLabel})...`);
+    startRecordTimer();
+  }
+}
+
+// Called from render loop — captures current canvas state with real-time timestamps
+// This ensures the video plays back at real-world speed regardless of render performance
+function maybeCaptureMP4Frame() {
+  if (!isRecording || !mp4Encoder) return;
+
+  // Back-pressure: skip if encoder queue is backed up
+  if (mp4Encoder.encodeQueueSize > 10) return;
+
+  const now = performance.now();
+  const elapsedMs = now - mp4RecordStart;
+
+  // Throttle: at most one frame per ~16ms (60fps capture ceiling)
+  if (mp4LastCaptureTime >= 0 && (elapsedMs - mp4LastCaptureTime) < 16) return;
+
+  mp4LastCaptureTime = elapsedMs;
+
+  // Use real elapsed time as timestamp — this is the key to constant playback speed
+  const timestampUs = Math.round(elapsedMs * 1000); // ms → microseconds
+
+  // Draw outputCanvas onto fixed-size recordCanvas
+  recordCtx.fillStyle = '#000';
+  recordCtx.fillRect(0, 0, mp4EncW, mp4EncH);
+  recordCtx.drawImage(outputCanvas, 0, 0, mp4EncW, mp4EncH);
+
+  const frame = new VideoFrame(recordCanvas, {
+    timestamp: timestampUs,
+  });
+
+  const keyFrame = mp4FrameCount % 60 === 0; // keyframe every ~2s at 30fps
+  mp4Encoder.encode(frame, { keyFrame });
+  frame.close();
+  mp4FrameCount++;
+}
+
+async function stopRecording(btn) {
+  isRecording = false;
+  stopRecordTimer();
+
+  if (mp4Encoder) {
+    // --- Finalize MP4 ---
+    btn.textContent = 'Finalizing...';
+
+    const progressEl = document.getElementById('exportProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressInfo = document.getElementById('progressInfo');
+    const progressTitle = document.getElementById('progressTitle');
+    progressEl.classList.add('open');
+    progressTitle.textContent = 'Finalizing MP4...';
+    progressBar.style.width = '30%';
+
+    const totalFrames = mp4FrameCount;
+    const videoDuration = (totalFrames / MP4_FPS).toFixed(1);
+    progressInfo.textContent = `Flushing ${totalFrames} frames (${videoDuration}s)...`;
+
+    const flushStart = performance.now();
+    const progTimer = setInterval(() => {
+      const el = ((performance.now() - flushStart) / 1000).toFixed(1);
+      progressInfo.textContent = `Flushing ${totalFrames} frames (${videoDuration}s)... ${el}s`;
+    }, 200);
+
+    await mp4Encoder.flush();
+    clearInterval(progTimer);
+
+    progressBar.style.width = '80%';
+    progressInfo.textContent = 'Closing encoder...';
+    mp4Encoder.close();
+    mp4Encoder = null;
+
+    progressBar.style.width = '90%';
+    progressInfo.textContent = 'Muxing MP4...';
+    await new Promise(r => setTimeout(r, 30));
+
+    mp4Muxer.finalize();
+    const buffer = mp4Muxer.target.buffer;
+    mp4Muxer = null;
+
+    progressBar.style.width = '100%';
+    const blob = new Blob([buffer], { type: 'video/mp4' });
+    const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+    const totalTime = ((performance.now() - flushStart) / 1000).toFixed(1);
+    progressInfo.textContent = `Done! ${videoDuration}s, ${sizeMB} MB (took ${totalTime}s)`;
+
+    downloadBlob(blob, 'dithered-output.mp4');
+    showStatus(`MP4 exported (${videoDuration}s, ${sizeMB} MB)`);
+
+    setTimeout(() => { progressEl.classList.remove('open'); }, 2500);
+  } else if (mediaRecorder) {
+    // --- Finalize WebM ---
+    btn.textContent = 'Processing...';
+    await new Promise(resolve => { mediaRecorder.onstop = resolve; mediaRecorder.stop(); });
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+    downloadBlob(blob, 'dithered-output.webm');
+    showStatus(`WebM exported (${sizeMB} MB)`);
+  }
+
+  mp4FrameCount = 0;
+  btn.textContent = 'Record Video';
+  btn.style.borderColor = '#333';
+  document.getElementById('videoBitrate').disabled = false;
+}
+
+function downloadBlob(blob, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+}
+
+// --- Record Timer ---
+let recordTimerInterval = null;
+function startRecordTimer() {
+  const el = document.getElementById('recordTimer');
+  el.style.display = 'block';
+  const start = Date.now();
+  recordTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const sec = String(elapsed % 60).padStart(2, '0');
+    el.textContent = `● REC  ${min}:${sec}`;
+  }, 250);
+}
+function stopRecordTimer() {
+  clearInterval(recordTimerInterval);
+  document.getElementById('recordTimer').style.display = 'none';
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('exportStatus');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2000);
+}
+
+// ============================================================
+// SHAPE LIBRARY — 50+ Built-in Shapes
+// ============================================================
+const SHAPE_LIBRARY = {
+  'Geometric': {
+    'Circle': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="46" fill="currentColor"/></svg>`,
+    'Circle SM': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="30" fill="currentColor"/></svg>`,
+    'Circle XS': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="16" fill="currentColor"/></svg>`,
+    'Ring': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="44" fill="currentColor"/><circle cx="50" cy="50" r="24" fill="black"/></svg>`,
+    'Ring Thin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="44" fill="currentColor"/><circle cx="50" cy="50" r="36" fill="black"/></svg>`,
+    'Square': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="88" height="88" fill="currentColor"/></svg>`,
+    'Square SM': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="20" width="60" height="60" fill="currentColor"/></svg>`,
+    'Square XS': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="32" y="32" width="36" height="36" fill="currentColor"/></svg>`,
+    'Rounded Sq': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="88" height="88" rx="16" fill="currentColor"/></svg>`,
+    'Rounded SM': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="18" y="18" width="64" height="64" rx="12" fill="currentColor"/></svg>`,
+    'Diamond': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 96,50 50,96 4,50" fill="currentColor"/></svg>`,
+    'Diamond SM': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,18 82,50 50,82 18,50" fill="currentColor"/></svg>`,
+    'Triangle': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,6 96,94 4,94" fill="currentColor"/></svg>`,
+    'Triangle Down': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="4,6 96,6 50,94" fill="currentColor"/></svg>`,
+    'Hexagon': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="currentColor"/></svg>`,
+    'Octagon': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="30,4 70,4 96,30 96,70 70,96 30,96 4,70 4,30" fill="currentColor"/></svg>`,
+  },
+  'Bars & Lines': {
+    'Bar H Full': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="10" width="100" height="80" fill="currentColor"/></svg>`,
+    'Bar H Med': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="20" width="100" height="60" fill="currentColor"/></svg>`,
+    'Bar H Thin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="35" width="100" height="30" fill="currentColor"/></svg>`,
+    'Bar H XThin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="42" width="100" height="16" fill="currentColor"/></svg>`,
+    'Bar V Full': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="0" width="80" height="100" fill="currentColor"/></svg>`,
+    'Bar V Med': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="0" width="60" height="100" fill="currentColor"/></svg>`,
+    'Bar V Thin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="35" y="0" width="30" height="100" fill="currentColor"/></svg>`,
+    'Bar V XThin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="42" y="0" width="16" height="100" fill="currentColor"/></svg>`,
+    'Stripes H': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="5" width="100" height="18" fill="currentColor"/><rect x="0" y="41" width="100" height="18" fill="currentColor"/><rect x="0" y="77" width="100" height="18" fill="currentColor"/></svg>`,
+    'Stripes V': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="0" width="18" height="100" fill="currentColor"/><rect x="41" y="0" width="18" height="100" fill="currentColor"/><rect x="77" y="0" width="18" height="100" fill="currentColor"/></svg>`,
+    'Grid': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="40" width="100" height="20" fill="currentColor"/><rect x="40" y="0" width="20" height="100" fill="currentColor"/></svg>`,
+  },
+  'Crosses & Stars': {
+    'Cross': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="35" y="6" width="30" height="88" fill="currentColor"/><rect x="6" y="35" width="88" height="30" fill="currentColor"/></svg>`,
+    'Cross Thin': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="44" y="6" width="12" height="88" fill="currentColor"/><rect x="6" y="44" width="88" height="12" fill="currentColor"/></svg>`,
+    'X': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="10" x2="90" y2="90" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><line x1="90" y1="10" x2="10" y2="90" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
+    'Star 4': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,2 60,40 98,50 60,60 50,98 40,60 2,50 40,40" fill="currentColor"/></svg>`,
+    'Star 6': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 62,34 96,27 72,50 96,73 62,66 50,96 38,66 4,73 28,50 4,27 38,34" fill="currentColor"/></svg>`,
+    'Star 5': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 61,38 97,38 68,60 79,94 50,72 21,94 32,60 3,38 39,38" fill="currentColor"/></svg>`,
+    'Asterisk': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><line x1="50" y1="6" x2="50" y2="94" stroke="currentColor" stroke-width="14" stroke-linecap="round"/><line x1="10" y1="27" x2="90" y2="73" stroke="currentColor" stroke-width="14" stroke-linecap="round"/><line x1="10" y1="73" x2="90" y2="27" stroke="currentColor" stroke-width="14" stroke-linecap="round"/></svg>`,
+    'Sparkle': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 4 C52 40 60 48 96 50 C60 52 52 60 50 96 C48 60 40 52 4 50 C40 48 48 40 50 4Z" fill="currentColor"/></svg>`,
+  },
+  'Organic': {
+    'Blob': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="46" ry="38" fill="currentColor"/></svg>`,
+    'Blob V': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="38" ry="46" fill="currentColor"/></svg>`,
+    'Leaf': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 6 C80 6 94 30 94 55 C94 80 75 94 50 94 C25 94 6 80 6 55 C6 30 20 6 50 6Z" fill="currentColor"/></svg>`,
+    'Drop': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 6 C50 6 88 50 88 68 C88 88 70 96 50 96 C30 96 12 88 12 68 C12 50 50 6 50 6Z" fill="currentColor"/></svg>`,
+    'Heart': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 88 C20 68 4 52 4 36 C4 20 16 8 32 8 C42 8 48 14 50 18 C52 14 58 8 68 8 C84 8 96 20 96 36 C96 52 80 68 50 88Z" fill="currentColor"/></svg>`,
+    'Moon': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 C30 14 14 40 22 70 C30 92 58 100 80 90 C52 96 24 78 20 50 C16 28 32 8 60 6Z" fill="currentColor"/></svg>`,
+    'Spiral': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 10 A40 40 0 0 1 90 50 A35 35 0 0 1 55 85 A30 30 0 0 1 20 55 A25 25 0 0 1 45 30 A18 18 0 0 1 68 48" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/></svg>`,
+    'Wave': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 50 C16 20 33 20 50 50 C67 80 84 80 100 50 L100 100 L0 100Z" fill="currentColor"/></svg>`,
+  },
+  'Arrows & Symbols': {
+    'Arrow Up': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,6 90,56 66,56 66,94 34,94 34,56 10,56" fill="currentColor"/></svg>`,
+    'Arrow Right': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="94,50 44,10 44,34 6,34 6,66 44,66 44,90" fill="currentColor"/></svg>`,
+    'Chevron Up': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polyline points="10,70 50,20 90,70" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    'Chevron Rt': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polyline points="30,10 80,50 30,90" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    'Eye': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M4 50 C20 24 35 16 50 16 C65 16 80 24 96 50 C80 76 65 84 50 84 C35 84 20 76 4 50Z" fill="currentColor"/><circle cx="50" cy="50" r="16" fill="black"/></svg>`,
+    'Lightning': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="58,4 20,56 46,56 42,96 80,44 54,44" fill="currentColor"/></svg>`,
+    'Minus': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="38" width="84" height="24" rx="4" fill="currentColor"/></svg>`,
+    'Slash': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><line x1="76" y1="8" x2="24" y2="92" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>`,
+    'Backslash': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><line x1="24" y1="8" x2="76" y2="92" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>`,
+  },
+  'Fun & Icons': {
+    'Smiley': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="46" fill="currentColor"/><circle cx="34" cy="38" r="7" fill="black"/><circle cx="66" cy="38" r="7" fill="black"/><path d="M28 60 Q50 82 72 60" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/></svg>`,
+    'Smiley Wink': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="46" fill="currentColor"/><circle cx="34" cy="38" r="7" fill="black"/><line x1="58" y1="38" x2="74" y2="38" stroke="black" stroke-width="5" stroke-linecap="round"/><path d="M28 60 Q50 82 72 60" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/></svg>`,
+    'Sad': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="46" fill="currentColor"/><circle cx="34" cy="38" r="7" fill="black"/><circle cx="66" cy="38" r="7" fill="black"/><path d="M28 72 Q50 54 72 72" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/></svg>`,
+    'Skull': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="44" rx="40" ry="38" fill="currentColor"/><ellipse cx="36" cy="40" rx="10" ry="12" fill="black"/><ellipse cx="64" cy="40" rx="10" ry="12" fill="black"/><polygon points="50,56 46,66 54,66" fill="black"/><rect x="32" y="78" width="8" height="16" rx="2" fill="currentColor"/><rect x="46" y="78" width="8" height="16" rx="2" fill="currentColor"/><rect x="60" y="78" width="8" height="16" rx="2" fill="currentColor"/></svg>`,
+    'Ghost': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20 94 L20 44 C20 20 35 6 50 6 C65 6 80 20 80 44 L80 94 L68 82 L56 94 L44 82 L32 94 L20 82Z" fill="currentColor"/><circle cx="38" cy="40" r="7" fill="black"/><circle cx="62" cy="40" r="7" fill="black"/></svg>`,
+    'Alien': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="38" ry="44" fill="currentColor"/><ellipse cx="34" cy="42" rx="14" ry="8" fill="black"/><ellipse cx="66" cy="42" rx="14" ry="8" fill="black"/><ellipse cx="50" cy="66" rx="6" ry="4" fill="black"/></svg>`,
+    'Cat': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="56" r="36" fill="currentColor"/><polygon points="20,30 18,4 40,24" fill="currentColor"/><polygon points="80,30 82,4 60,24" fill="currentColor"/><circle cx="38" cy="48" r="5" fill="black"/><circle cx="62" cy="48" r="5" fill="black"/><polygon points="50,58 47,62 53,62" fill="black"/><line x1="10" y1="52" x2="34" y2="56" stroke="black" stroke-width="2"/><line x1="10" y1="60" x2="34" y2="60" stroke="black" stroke-width="2"/><line x1="90" y1="52" x2="66" y2="56" stroke="black" stroke-width="2"/><line x1="90" y1="60" x2="66" y2="60" stroke="black" stroke-width="2"/></svg>`,
+    'Chicken Leg': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="52" cy="36" rx="32" ry="28" fill="currentColor"/><rect x="44" y="58" width="14" height="30" rx="6" fill="currentColor"/><circle cx="46" cy="92" r="8" fill="currentColor"/><circle cx="58" cy="90" r="7" fill="currentColor"/></svg>`,
+    'Pizza': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 6 L10 90 C28 98 72 98 90 90Z" fill="currentColor"/><circle cx="42" cy="50" r="6" fill="black"/><circle cx="58" cy="64" r="6" fill="black"/><circle cx="50" cy="36" r="5" fill="black"/></svg>`,
+    'Crown': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="6,80 6,36 26,56 50,16 74,56 94,36 94,80" fill="currentColor"/><rect x="6" y="76" width="88" height="14" rx="4" fill="currentColor"/></svg>`,
+    'Flame': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 4 C60 20 82 36 82 60 C82 80 68 96 50 96 C32 96 18 80 18 60 C18 36 40 20 50 4Z" fill="currentColor"/><path d="M50 40 C56 50 66 56 66 68 C66 80 58 88 50 88 C42 88 34 80 34 68 C34 56 44 50 50 40Z" fill="black"/></svg>`,
+    'Mushroom': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="40" rx="44" ry="34" fill="currentColor"/><rect x="38" y="68" width="24" height="28" rx="6" fill="currentColor"/><circle cx="36" cy="34" r="8" fill="black"/><circle cx="62" cy="30" r="6" fill="black"/><circle cx="50" cy="50" r="7" fill="black"/></svg>`,
+    'Paw': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="62" rx="24" ry="20" fill="currentColor"/><circle cx="28" cy="38" r="12" fill="currentColor"/><circle cx="72" cy="38" r="12" fill="currentColor"/><circle cx="18" cy="56" r="10" fill="currentColor"/><circle cx="82" cy="56" r="10" fill="currentColor"/></svg>`,
+    'Music Note': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="34" cy="76" rx="16" ry="12" fill="currentColor"/><rect x="48" y="14" width="6" height="66" fill="currentColor"/><path d="M54 14 L54 8 L86 20 L86 32 L54 24Z" fill="currentColor"/></svg>`,
+    'Cactus': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="40" y="16" width="20" height="78" rx="10" fill="currentColor"/><rect x="12" y="36" width="34" height="14" rx="7" fill="currentColor"/><rect x="12" y="36" width="14" height="30" rx="7" fill="currentColor"/><rect x="54" y="50" width="34" height="14" rx="7" fill="currentColor"/><rect x="74" y="44" width="14" height="26" rx="7" fill="currentColor"/></svg>`,
+    'Bomb': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="58" r="36" fill="currentColor"/><rect x="46" y="18" width="8" height="16" rx="3" fill="currentColor"/><path d="M54 20 C60 10 70 6 76 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="78" cy="8" r="5" fill="currentColor"/></svg>`,
+  },
+  'Halftone': {
+    'Dot 2x2': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="20" fill="currentColor"/><circle cx="72" cy="72" r="20" fill="currentColor"/></svg>`,
+    'Dot 4': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="16" fill="currentColor"/><circle cx="75" cy="25" r="16" fill="currentColor"/><circle cx="25" cy="75" r="16" fill="currentColor"/><circle cx="75" cy="75" r="16" fill="currentColor"/></svg>`,
+    'Checker': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="50" height="50" fill="currentColor"/><rect x="50" y="50" width="50" height="50" fill="currentColor"/></svg>`,
+    'Checker Inv': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="50" y="0" width="50" height="50" fill="currentColor"/><rect x="0" y="50" width="50" height="50" fill="currentColor"/></svg>`,
+    'Corner TL': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="60" height="60" fill="currentColor"/></svg>`,
+    'Corner BR': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="40" y="40" width="60" height="60" fill="currentColor"/></svg>`,
+    'Half Top': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="100" height="50" fill="currentColor"/></svg>`,
+    'Half Left': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="50" height="100" fill="currentColor"/></svg>`,
+    'Semicircle': `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M4 50 A46 46 0 0 1 96 50Z" fill="currentColor"/></svg>`,
+  },
+};
+
+// Flatten library for easy access
+function getAllShapes() {
+  const all = [];
+  for (const [cat, shapes] of Object.entries(SHAPE_LIBRARY)) {
+    for (const [name, svg] of Object.entries(shapes)) {
+      all.push({ name, svg, category: cat });
+    }
+  }
+  return all;
+}
+
+// Shape presets (indices into flattened shape list or direct SVG)
+const PRESETS = {
+  'classic': [
+    SHAPE_LIBRARY['Geometric']['Circle'],
+    SHAPE_LIBRARY['Geometric']['Ring'],
+    SHAPE_LIBRARY['Geometric']['Rounded Sq'],
+    SHAPE_LIBRARY['Geometric']['Rounded SM'],
+    SHAPE_LIBRARY['Geometric']['Diamond SM'],
+    SHAPE_LIBRARY['Geometric']['Circle SM'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+  'dots': [
+    SHAPE_LIBRARY['Geometric']['Circle'],
+    SHAPE_LIBRARY['Geometric']['Circle'],
+    SHAPE_LIBRARY['Geometric']['Circle'],
+    SHAPE_LIBRARY['Geometric']['Circle SM'],
+    SHAPE_LIBRARY['Geometric']['Circle SM'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+  'blocks': [
+    SHAPE_LIBRARY['Geometric']['Square'],
+    SHAPE_LIBRARY['Geometric']['Square'],
+    SHAPE_LIBRARY['Geometric']['Square SM'],
+    SHAPE_LIBRARY['Geometric']['Square SM'],
+    SHAPE_LIBRARY['Geometric']['Rounded SM'],
+    SHAPE_LIBRARY['Geometric']['Square XS'],
+    SHAPE_LIBRARY['Geometric']['Square XS'],
+  ],
+  'organic': [
+    SHAPE_LIBRARY['Organic']['Blob'],
+    SHAPE_LIBRARY['Organic']['Leaf'],
+    SHAPE_LIBRARY['Organic']['Drop'],
+    SHAPE_LIBRARY['Organic']['Heart'],
+    SHAPE_LIBRARY['Organic']['Moon'],
+    SHAPE_LIBRARY['Organic']['Spiral'],
+    SHAPE_LIBRARY['Organic']['Wave'],
+  ],
+  'bars-h': [
+    SHAPE_LIBRARY['Bars & Lines']['Bar H Full'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H Full'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H Med'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H Med'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H Thin'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H XThin'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar H XThin'],
+  ],
+  'bars-v': [
+    SHAPE_LIBRARY['Bars & Lines']['Bar V Full'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V Full'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V Med'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V Med'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V Thin'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V XThin'],
+    SHAPE_LIBRARY['Bars & Lines']['Bar V XThin'],
+  ],
+  'mixed': [
+    SHAPE_LIBRARY['Geometric']['Circle'],
+    SHAPE_LIBRARY['Geometric']['Rounded Sq'],
+    SHAPE_LIBRARY['Geometric']['Diamond'],
+    SHAPE_LIBRARY['Geometric']['Hexagon'],
+    SHAPE_LIBRARY['Crosses & Stars']['Cross'],
+    SHAPE_LIBRARY['Geometric']['Triangle'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+  'crosses': [
+    SHAPE_LIBRARY['Crosses & Stars']['Cross'],
+    SHAPE_LIBRARY['Crosses & Stars']['Cross'],
+    SHAPE_LIBRARY['Crosses & Stars']['Cross Thin'],
+    SHAPE_LIBRARY['Crosses & Stars']['Cross Thin'],
+    SHAPE_LIBRARY['Crosses & Stars']['X'],
+    SHAPE_LIBRARY['Crosses & Stars']['Asterisk'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+  'arrows': [
+    SHAPE_LIBRARY['Arrows & Symbols']['Arrow Up'],
+    SHAPE_LIBRARY['Arrows & Symbols']['Arrow Right'],
+    SHAPE_LIBRARY['Arrows & Symbols']['Chevron Up'],
+    SHAPE_LIBRARY['Arrows & Symbols']['Chevron Rt'],
+    SHAPE_LIBRARY['Arrows & Symbols']['Lightning'],
+    SHAPE_LIBRARY['Arrows & Symbols']['Slash'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+  'stars': [
+    SHAPE_LIBRARY['Crosses & Stars']['Star 5'],
+    SHAPE_LIBRARY['Crosses & Stars']['Star 6'],
+    SHAPE_LIBRARY['Crosses & Stars']['Star 4'],
+    SHAPE_LIBRARY['Crosses & Stars']['Sparkle'],
+    SHAPE_LIBRARY['Crosses & Stars']['Asterisk'],
+    SHAPE_LIBRARY['Geometric']['Diamond SM'],
+    SHAPE_LIBRARY['Geometric']['Circle XS'],
+  ],
+};
+
+// Track which state we're assigning a shape to
+let shapeTargetState = null;
+
+function openShapeLibrary(targetState) {
+  shapeTargetState = targetState !== undefined ? targetState : null;
+  const modal = document.getElementById('shapeModal');
+  modal.classList.add('open');
+  switchModalTab('library');
+}
+
+function openTextToSVG(targetState) {
+  shapeTargetState = targetState !== undefined ? targetState : null;
+  const modal = document.getElementById('shapeModal');
+  modal.classList.add('open');
+  switchModalTab('text');
+}
+
+function closeShapeModal() {
+  document.getElementById('shapeModal').classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.getElementById('shapeModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('shapeModal')) closeShapeModal();
+});
+
+function switchModalTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  if (tab === 'library') renderLibraryTab();
+  else if (tab === 'text') renderTextTab();
+}
+
+function renderLibraryTab() {
+  const body = document.getElementById('modalBody');
+  const isAllStates = shapeTargetState === null;
+  let html = '';
+
+  if (isAllStates) {
+    html += `<p style="font-size:11px; color:#666; margin-bottom:12px;">Click a shape to assign it. You'll be asked which state to assign to.</p>`;
+  } else {
+    html += `<p style="font-size:11px; color:#4af; margin-bottom:12px;">Assigning to STATE ${shapeTargetState + 1}. Click a shape to apply.</p>`;
+  }
+
+  for (const [category, shapes] of Object.entries(SHAPE_LIBRARY)) {
+    html += `<div class="shape-category"><div class="shape-category-title">${category}</div><div class="shape-grid">`;
+    for (const [name, svg] of Object.entries(shapes)) {
+      const escaped = svg.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      html += `<div class="shape-item" title="${name}" onclick="selectLibraryShape('${escaped}')">${svg}</div>`;
+    }
+    html += `</div></div>`;
+  }
+  body.innerHTML = html;
+}
+
+function selectLibraryShape(svgHtml) {
+  // Unescape
+  const svg = svgHtml.replace(/&quot;/g, '"');
+  if (shapeTargetState !== null) {
+    applyShapeToState(shapeTargetState, svg);
+    closeShapeModal();
+  } else {
+    // Prompt: which state?
+    const stateIdx = prompt('Assign to which state? (1-7, or "all" for all states)', '1');
+    if (!stateIdx) return;
+    if (stateIdx.toLowerCase() === 'all') {
+      for (let i = 0; i < 7; i++) applyShapeToState(i, svg);
+    } else {
+      const idx = parseInt(stateIdx) - 1;
+      if (idx >= 0 && idx < 7) applyShapeToState(idx, svg);
+    }
+    closeShapeModal();
+  }
+}
+
+function applyShapeToState(index, svgContent) {
+  states[index].svgContent = svgContent;
+  svgImageCache.delete(getCacheKey(index, states[index].color));
+  rebuildSVGCache(index);
+
+  const preview = document.getElementById(`statePreview${index}`);
+  if (preview) {
+    preview.innerHTML = svgContent;
+    // Apply currentColor preview color
+    const svgEl = preview.querySelector('svg');
+    if (svgEl) svgEl.style.color = states[index].color;
+  }
+  requestRender();
+}
+
+function applyPreset(presetName) {
+  const shapes = PRESETS[presetName];
+  if (!shapes) return;
+  for (let i = 0; i < 7 && i < shapes.length; i++) {
+    applyShapeToState(i, shapes[i]);
+  }
+}
+
+function randomizeShapes() {
+  const all = getAllShapes();
+  for (let i = 0; i < 7; i++) {
+    const rand = all[Math.floor(Math.random() * all.length)];
+    applyShapeToState(i, rand.svg);
+  }
+}
+
+// ============================================================
+// TEXT TO SVG
+// ============================================================
+const TEXT_FONTS = [
+  { name: 'Sans-serif (System)', value: '-apple-system, BlinkMacSystemFont, sans-serif' },
+  { name: 'Serif (Georgia)', value: 'Georgia, "Times New Roman", serif' },
+  { name: 'Mono (Courier)', value: '"Courier New", monospace' },
+  { name: 'Impact', value: 'Impact, "Arial Black", sans-serif' },
+  { name: 'Cursive', value: 'cursive' },
+  { name: 'Fantasy', value: 'fantasy' },
+];
+
+let textFontIndex = 0;
+let textWeight = 'bold';
+
+function renderTextTab() {
+  const body = document.getElementById('modalBody');
+  const isAllStates = shapeTargetState === null;
+
+  let html = `<div class="text-svg-section">`;
+  if (isAllStates) {
+    html += `<p style="font-size:11px; color:#666;">Type characters below. Click any to assign to a state.</p>`;
+  } else {
+    html += `<p style="font-size:11px; color:#4af;">Assigning to STATE ${shapeTargetState + 1}. Click a character.</p>`;
+  }
+  html += `
+    <input class="text-svg-input" id="textInput" type="text" placeholder="Type characters..." maxlength="30" value="ABCDEFG" oninput="updateTextPreview()">
+    <div class="font-select-row">
+      <select id="fontSelect" onchange="textFontIndex=this.selectedIndex; updateTextPreview();">
+        ${TEXT_FONTS.map((f, i) => `<option value="${i}" ${i===textFontIndex?'selected':''}>${f.name}</option>`).join('')}
+      </select>
+      <select id="weightSelect" onchange="textWeight=this.value; updateTextPreview();">
+        <option value="normal">Regular</option>
+        <option value="bold" selected>Bold</option>
+        <option value="900">Black</option>
+        <option value="300">Light</option>
+      </select>
+    </div>
+    <div class="shape-category-title">Click a character to use as shape</div>
+    <div class="text-preview-grid" id="textPreviewGrid"></div>
+    <button class="btn btn-secondary" onclick="assignTextToAll()" style="margin-top:8px;">Assign first 7 chars to all states</button>
+  </div>`;
+  body.innerHTML = html;
+  updateTextPreview();
+}
+
+function updateTextPreview() {
+  const input = document.getElementById('textInput');
+  if (!input) return;
+  const chars = input.value.split('');
+  const grid = document.getElementById('textPreviewGrid');
+  const font = TEXT_FONTS[textFontIndex].value;
+
+  grid.innerHTML = chars.map((ch, i) => {
+    return `<div class="text-char-item" style="font-family:${font}; font-weight:${textWeight};" onclick="selectTextChar('${ch.replace(/'/g,"\\'")}', ${i})">${ch}</div>`;
+  }).join('');
+}
+
+// Rasterize character to a canvas, then trace to SVG path data
+// This avoids font rendering issues when SVG <text> is used as Image source
+function charToSVG(char) {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+
+  const font = TEXT_FONTS[textFontIndex].value;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${textWeight} 90px ${font}`;
+  ctx.fillText(char, size / 2, size / 2 + 4);
+
+  // Get pixel data and build SVG rectangles (bitmap trace)
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const px = imgData.data;
+  const step = 4; // sample every 4px for a grid of 32x32
+  let rects = '';
+  const cellW = (100 / (size / step)).toFixed(2);
+  const cellH = (100 / (size / step)).toFixed(2);
+
+  for (let y = 0; y < size; y += step) {
+    for (let x = 0; x < size; x += step) {
+      // Average brightness in this cell
+      let sum = 0, count = 0;
+      for (let dy = 0; dy < step && y + dy < size; dy++) {
+        for (let dx = 0; dx < step && x + dx < size; dx++) {
+          const idx = ((y + dy) * size + (x + dx)) * 4;
+          sum += px[idx]; // red channel (grayscale)
+          count++;
+        }
+      }
+      if (sum / count > 100) {
+        const sx = ((x / size) * 100).toFixed(2);
+        const sy = ((y / size) * 100).toFixed(2);
+        rects += `<rect x="${sx}" y="${sy}" width="${cellW}" height="${cellH}" fill="currentColor"/>`;
+      }
+    }
+  }
+
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+}
+
+function selectTextChar(char) {
+  const svg = charToSVG(char);
+  if (shapeTargetState !== null) {
+    applyShapeToState(shapeTargetState, svg);
+    closeShapeModal();
+  } else {
+    const stateIdx = prompt('Assign to which state? (1-7, or "all")', '1');
+    if (!stateIdx) return;
+    if (stateIdx.toLowerCase() === 'all') {
+      for (let i = 0; i < 7; i++) applyShapeToState(i, svg);
+    } else {
+      const idx = parseInt(stateIdx) - 1;
+      if (idx >= 0 && idx < 7) applyShapeToState(idx, svg);
+    }
+    closeShapeModal();
+  }
+}
+
+function assignTextToAll() {
+  const input = document.getElementById('textInput');
+  if (!input || !input.value) return;
+  const chars = input.value.split('');
+  for (let i = 0; i < 7; i++) {
+    // Cycle through available chars if less than 7
+    const char = chars[i % chars.length];
+    applyShapeToState(i, charToSVG(char));
+  }
+  closeShapeModal();
+}
+
+// ============================================================
+// UPDATE STATE UI — Add library button to each state row
+// ============================================================
+const _origBuildStateUI = buildStateUI;
+buildStateUI = function() {
+  _origBuildStateUI();
+  // Add a "browse" button to each state row
+  document.querySelectorAll('.state-row').forEach((row, i) => {
+    const ctrlRow = row.querySelectorAll('.state-controls')[1];
+    if (ctrlRow) {
+      const browseBtn = document.createElement('button');
+      browseBtn.className = 'state-file-btn';
+      browseBtn.style.cssText = 'flex:0; padding:5px 8px;';
+      browseBtn.title = 'Browse shape library';
+      browseBtn.innerHTML = '&#9881;';
+      browseBtn.onclick = () => openShapeLibrary(i);
+      ctrlRow.insertBefore(browseBtn, ctrlRow.firstChild);
+    }
+  });
+};
+
+// ============================================================
+// COLOR PALETTES
+// ============================================================
+const COLOR_PALETTES = [
+  { name: 'Grayscale', bg: '#000000', colors: ['#ffffff','#d4d4d4','#a0a0a0','#777777','#555555','#333333','#111111'] },
+  { name: 'Mono White', bg: '#000000', colors: ['#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff'] },
+  { name: 'Neon Green', bg: '#000000', colors: ['#39ff14','#32e612','#2bcc10','#24b30e','#1d990c','#16800a','#0f6608'] },
+  { name: 'Neon Cyan', bg: '#0a0a1a', colors: ['#00ffff','#00e5e5','#00cccc','#00b3b3','#009999','#007f7f','#006666'] },
+  { name: 'Neon Pink', bg: '#0a0a0a', colors: ['#ff00ff','#e600e6','#cc00cc','#b300b3','#990099','#800080','#660066'] },
+  { name: 'Electric Blue', bg: '#000000', colors: ['#4488ff','#3d7ae6','#366dcc','#2f5fb3','#285299','#214480','#1a3766'] },
+  { name: 'Sunset', bg: '#1a0a00', colors: ['#ffdd00','#ffaa00','#ff7700','#ff4400','#dd2200','#aa1100','#770800'] },
+  { name: 'Ocean', bg: '#020c1b', colors: ['#64ffda','#4dd8b0','#36b186','#1f8a5c','#086332','#004d26','#00361a'] },
+  { name: 'Lava', bg: '#0a0000', colors: ['#ffe066','#ffcc33','#ff9900','#ff6600','#ee3300','#cc1100','#880000'] },
+  { name: 'Candy', bg: '#1a0020', colors: ['#ff6ec7','#ff44aa','#ff1a8d','#e6007a','#cc0066','#990052','#66003d'] },
+  { name: 'Forest', bg: '#050a05', colors: ['#90ee90','#6dcc6d','#4aaa4a','#278827','#156615','#0a440a','#052205'] },
+  { name: 'Royal Purple', bg: '#08000f', colors: ['#d8b4fe','#c084fc','#a855f7','#8b5cf6','#7c3aed','#6d28d9','#5b21b6'] },
+  { name: 'Fire & Ice', bg: '#000000', colors: ['#00eeff','#3399ff','#6644ff','#9933cc','#cc2299','#ff1166','#ff0033'] },
+  { name: 'Amber', bg: '#0a0800', colors: ['#fbbf24','#f59e0b','#d97706','#b45309','#92400e','#78350f','#5c2d0e'] },
+  { name: 'Blood', bg: '#0a0000', colors: ['#fca5a5','#f87171','#ef4444','#dc2626','#b91c1c','#991b1b','#7f1d1d'] },
+  { name: 'Retro', bg: '#1a1a2e', colors: ['#e6db74','#f92672','#66d9ef','#a6e22e','#fd971f','#ae81ff','#75715e'] },
+  { name: 'Vaporwave', bg: '#0d0221', colors: ['#ff71ce','#ff9b71','#ffcf48','#b6ff48','#48ffcf','#71b6ff','#ce71ff'] },
+  { name: 'Matrix', bg: '#000a00', colors: ['#00ff41','#00e639','#00cc32','#00b32b','#009924','#00801d','#006616'] },
+  { name: 'Gold', bg: '#0a0800', colors: ['#ffd700','#e6c200','#ccad00','#b39800','#998300','#806e00','#665800'] },
+  { name: 'B&W Invert', bg: '#ffffff', colors: ['#000000','#222222','#444444','#666666','#888888','#aaaaaa','#cccccc'] },
+  { name: 'Poster Blue', bg: '#0033cc', colors: ['#ffffff','#ccddff','#99bbff','#6699ff','#3377ff','#1155dd','#0033aa'] },
+  { name: 'Poster Red', bg: '#cc0000', colors: ['#ffffff','#ffcccc','#ff9999','#ff6666','#ff3333','#dd1111','#aa0000'] },
+  { name: 'Duotone Y/B', bg: '#000033', colors: ['#ffee00','#ddcc00','#bbaa00','#998800','#776600','#554400','#332200'] },
+  { name: 'Duotone P/G', bg: '#002200', colors: ['#ff00ff','#dd00dd','#bb00bb','#990099','#770077','#550055','#330033'] },
+];
+
+function buildPaletteUI() {
+  const grid = document.getElementById('paletteGrid');
+  grid.innerHTML = COLOR_PALETTES.map((p, i) => {
+    const dots = p.colors.slice(0, 7).map(c => `<div class="palette-dot" style="background:${c}"></div>`).join('');
+    return `<div class="palette-chip" onclick="applyPalette(${i})" title="${p.name}">
+      <div class="palette-dots">${dots}</div>
+      <span class="palette-chip-name">${p.name}</span>
+    </div>`;
+  }).join('');
+}
+
+function applyPalette(index) {
+  const p = COLOR_PALETTES[index];
+  // Set background color
+  document.getElementById('bgColor').value = p.bg;
+  document.getElementById('bgColorVal').textContent = p.bg;
+  // Set state colors
+  for (let i = 0; i < 7 && i < p.colors.length; i++) {
+    states[i].color = p.colors[i];
+    svgImageCache.delete(getCacheKey(i, states[i].color));
+    rebuildSVGCache(i);
+    // Update UI
+    const row = document.querySelectorAll('.state-row')[i];
+    if (row) {
+      const colorInput = row.querySelector('input[type="color"]');
+      if (colorInput) colorInput.value = p.colors[i];
+      const hexEl = document.getElementById(`stateHex${i}`);
+      if (hexEl) hexEl.textContent = p.colors[i];
+    }
+  }
+  requestRender();
+  showStatus(`Palette: ${p.name}`);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildStateUI();
+buildPaletteUI();
+// Pre-build all SVG caches
+states.forEach((_, i) => rebuildSVGCache(i));
+</script>
+</body>
+</html>
