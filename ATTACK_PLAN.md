@@ -11,9 +11,10 @@ Landing page (index.html) como hub central.
 - [x] Criar `shared/style.css` — dark theme unificado (design system completo)
 - [x] Criar `shared/recorder.js` — sistema de gravacao MP4 reutilizavel (classe TipoRecorder)
 - [ ] Criar `shared/ui.js` — sliders, panels, dropdowns compartilhados
-- [x] Criar `index.html` — landing page com grid de todos os 23 modos
+- [x] Criar `index.html` — landing page com navegacao progressiva + animacoes preview
 - [ ] Migrar `dithering.html` pra usar shared CSS/JS
-- [ ] Setup Git repo
+- [x] Setup Git repo (github.com/damelchert/tipo)
+- [x] Deploy Vercel
 
 ### FASE 1 — Modos Simples (3D basico, p5.js WEBGL)
 Estes usam a mesma base: p5.js WEBGL + keyboardEngine

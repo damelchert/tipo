@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Cylinder</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- CONTROL PANEL -->
+<div class="tipo-panel" id="panel">
+  <h1>Cylinder <a href="index.html" class="back-link">TIPÓ HOME</a></h1>
+
+  <!-- TEXT INPUT -->
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <!-- CYLINDER -->
+  <div class="section">
+    <div class="section-title">Cylinder</div>
+    <div class="range-row"><span class="range-label">Radius</span><input type="range" id="radius" min="0" max="1000" value="250"><span class="range-value" id="radiusVal">250</span></div>
+    <div class="range-row"><span class="range-label">Count</span><input type="range" id="stackNum" min="1" max="30" value="1"><span class="range-value" id="stackNumVal">1</span></div>
+    <div class="range-row"><span class="range-label">Rotate</span><input type="range" id="rRotate" min="-100" max="100" value="-5"><span class="range-value" id="rRotateVal">-5</span></div>
+    <div class="range-row"><span class="range-label">Offset</span><input type="range" id="rOffset" min="0" max="157" value="0"><span class="range-value" id="rOffsetVal">0</span></div>
+  </div>
+
+  <!-- WAVE -->
+  <div class="section">
+    <div class="section-title">Wave</div>
+    <div class="range-row"><span class="range-label">Count</span><input type="range" id="waveCount" min="0" max="10" value="2"><span class="range-value" id="waveCountVal">2</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="waveSpeed" min="0" max="100" value="0"><span class="range-value" id="waveSpeedVal">0</span></div>
+    <div class="range-row"><span class="range-label">Latitude</span><input type="range" id="waveLat" min="0" max="200" value="0"><span class="range-value" id="waveLatVal">0</span></div>
+    <div class="range-row"><span class="range-label">Longitude</span><input type="range" id="waveLong" min="0" max="80" value="0"><span class="range-value" id="waveLongVal">0</span></div>
+    <div class="range-row"><span class="range-label">Ripple</span><input type="range" id="waveRipple" min="0" max="100" value="0"><span class="range-value" id="waveRippleVal">0</span></div>
+    <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="waveXScale" min="0" max="80" value="0"><span class="range-value" id="waveXScaleVal">0</span></div>
+    <div class="range-row"><span class="range-label">Y-Scale</span><input type="range" id="waveYScale" min="0" max="100" value="0"><span class="range-value" id="waveYScaleVal">0</span></div>
+  </div>
+
+  <!-- TYPE -->
+  <div class="section">
+    <div class="section-title">Type</div>
+    <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="typeX" min="0" max="100" value="20"><span class="range-value" id="typeXVal">20</span></div>
+    <div class="range-row"><span class="range-label">Y-Scale</span><input type="range" id="typeY" min="0" max="100" value="40"><span class="range-value" id="typeYVal">40</span></div>
+    <div class="range-row"><span class="range-label">Weight</span><input type="range" id="typeWeight" min="0" max="100" value="20" step="1"><span class="range-value" id="typeWeightVal">2.0</span></div>
+  </div>
+
+  <!-- TWEAK -->
+  <div class="section">
+    <div class="section-title">Tweak Rotation</div>
+    <label style="font-size:9px; color:var(--text-6);">Smooth form after Latitude/Ripple adjust</label>
+    <div class="range-row"><span class="range-label">X Rotation</span><input type="range" id="tweakX" min="0" max="45" value="0"><span class="range-value" id="tweakXVal">0</span></div>
+    <div class="range-row"><span class="range-label">Y Rotation</span><input type="range" id="tweakY" min="0" max="45" value="0"><span class="range-value" id="tweakYVal">0</span></div>
+    <div class="range-row"><span class="range-label">Z Rotation</span><input type="range" id="tweakZ" min="0" max="45" value="0"><span class="range-value" id="tweakZVal">0</span></div>
+  </div>
+
+  <!-- COLOR -->
+  <div class="section">
+    <div class="section-title">Color</div>
+    <div class="range-row">
+      <span class="range-label">Type</span>
+      <input type="color" id="typeColor" value="#000000">
+    </div>
+    <div class="range-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#ffffff">
+    </div>
+  </div>
+
+  <!-- PRESETS -->
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('simple')">Simple</span>
+      <span class="preset-chip" onclick="applyPreset('jellyfish')">Jellyfish</span>
+      <span class="preset-chip" onclick="applyPreset('crown')">Crown</span>
+      <span class="preset-chip" onclick="applyPreset('complex')">Complex</span>
+      <span class="preset-chip" onclick="applyPreset('weave')">Weave</span>
+      <span class="preset-chip" onclick="applyPreset('zebra')">Zebra</span>
+      <span class="preset-chip" onclick="applyPreset('hoops')">Hoops</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+    </div>
+  </div>
+
+  <!-- CAMERA -->
+  <div class="section">
+    <div class="section-title">Camera</div>
+    <div class="range-row"><span class="range-label">X Rotation</span><input type="range" id="camX" min="-180" max="180" value="15"><span class="range-value" id="camXVal">15</span></div>
+    <div class="range-row"><span class="range-label">Y Rotation</span><input type="range" id="camY" min="-180" max="180" value="0"><span class="range-value" id="camYVal">0</span></div>
+    <div class="range-row"><span class="range-label">Z Rotation</span><input type="range" id="camZ" min="-180" max="180" value="0"><span class="range-value" id="camZVal">0</span></div>
+    <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="camZoom" min="-500" max="500" value="0"><span class="range-value" id="camZoomVal">0</span></div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+
+  <div style="height:40px;"></div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvasContainer"></div>
+
+<!-- PROGRESS -->
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — CYLINDER MODE
+// ============================================================
+let font;
+let recorder;
+let stackHeightAdjust = 0;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() {
+  font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf');
+}
+
+function setup() {
+  const container = document.getElementById('canvasContainer');
+  const c = createCanvas(container.offsetWidth, container.offsetHeight, WEBGL);
+  c.parent('canvasContainer');
+  textFont(font);
+  frameRate(30);
+
+  // Setup recorder
+  const cnv = document.querySelector('#canvasContainer canvas');
+  recorder = new TipoRecorder(cnv);
+  recorder.setTimerElement(document.getElementById('recTimer'));
+  recorder.onProgress = (p) => {
+    document.getElementById('progressBar').style.width = p.percent + '%';
+    document.getElementById('progressInfo').textContent =
+      p.phase === 'done' ? `Done! ${p.duration}s, ${p.sizeMB} MB` :
+      p.phase === 'muxing' ? 'Muxing MP4...' :
+      `Flushing ${p.frames} frames... ${p.elapsed || ''}s`;
+  };
+
+  // Bind all sliders
+  document.querySelectorAll('input[type="range"]').forEach(el => {
+    const valEl = document.getElementById(el.id + 'Val');
+    if (valEl) {
+      el.addEventListener('input', () => {
+        let v = el.value;
+        if (el.id === 'rOffset') v = (v / 100).toFixed(2);
+        else if (el.id === 'typeWeight') v = (v / 10).toFixed(1);
+        else v = Number(v);
+        valEl.textContent = v;
+      });
+    }
+  });
+}
+
+function windowResized() {
+  const container = document.getElementById('canvasContainer');
+  resizeCanvas(container.offsetWidth, container.offsetHeight);
+}
+
+function val(id) { return Number(document.getElementById(id).value); }
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  el.value = v;
+  const valEl = document.getElementById(id + 'Val');
+  if (valEl) {
+    if (id === 'rOffset') valEl.textContent = (v / 100).toFixed(2);
+    else if (id === 'typeWeight') valEl.textContent = (v / 10).toFixed(1);
+    else valEl.textContent = v;
+  }
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const r = val('radius');
+  const stacks = val('stackNum');
+  const rot = val('rRotate');
+  const offset = val('rOffset') / 100;
+  const wCount = val('waveCount');
+  const wSpeed = val('waveSpeed');
+  const wLat = val('waveLat');
+  const wLong = val('waveLong');
+  const wRipple = val('waveRipple');
+  const wXScale = val('waveXScale');
+  const wYScale = val('waveYScale');
+  const tX = val('typeX');
+  const tY = val('typeY');
+  const tWeight = val('typeWeight') / 10;
+  const trkX = val('tweakX');
+  const trkY = val('tweakY');
+  const trkZ = val('tweakZ');
+  const cX = val('camX');
+  const cY = val('camY');
+  const cZ = val('camZ');
+  const cZoom = val('camZoom');
+
+  const sHeight = (tY + wYScale / 2) + 5 + stackHeightAdjust;
+  const pieSlice = TWO_PI / txt.length;
+  const waveOffset = TWO_PI / txt.length * wCount;
+
+  const typeC = document.getElementById('typeColor').value;
+  const strkColor = color(typeC);
+  const bkgdStrokeColor = lerpColor(strkColor, color(bgC), 0.75);
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+
+  push();
+  // Camera
+  translate(0, 0, cZoom);
+  rotateX(radians(cX));
+  rotateY(radians(cY));
+  rotateZ(radians(cZ));
+
+  // Center stack
+  translate(0, -(stacks - 1) * sHeight / 2);
+
+  // Global rotation
+  rotateY(frameCount * (rot / 1000));
+
+  for (let i = 0; i < txt.length * stacks; i++) {
+    const ringSpot = i % txt.length;
+    const stackIdx = floor(i / txt.length);
+    const ch = txt.charAt(ringSpot);
+
+    // Wave stretchers
+    let strY = 0, strX = 0;
+    const wavePhase = ringSpot * waveOffset + frameCount * (wSpeed / 1000);
+    if (stackIdx % 2 === 1) {
+      strY = map(sin(wavePhase), -1, 1, 0, wYScale);
+    } else {
+      strY = map(sin(wavePhase + PI), -1, 1, 0, wYScale);
+    }
+    strX = map(sin(stackIdx * waveOffset + frameCount * (wSpeed / 1000)), -1, 1, 0, wXScale);
+
+    push();
+    // Stack transforms
+    rotateY(stackIdx * offset);
+    translate(0, stackIdx * sHeight);
+    // Ring position
+    rotateY(ringSpot * pieSlice);
+    translate(0, 0, r);
+
+    // Longitude
+    if (wLong !== 0) {
+      const longer = sin(stackIdx * waveOffset + frameCount * (wSpeed / 1000)) * wLong;
+      translate(0, 0, longer);
+    }
+    // Ripple (Z axis)
+    if (wRipple !== 0) {
+      const ripple = sin(wavePhase) * wRipple;
+      translate(0, ripple, 0);
+    }
+    // Latitude (wave)
+    if (wLat !== 0) {
+      const waver = sin(wavePhase) * wLat;
+      translate(0, 0, waver);
+    }
+    // Tweak rotations
+    if (trkY !== 0) rotateY(cos(wavePhase) * -radians(trkY));
+    if (trkX !== 0) rotateX(cos(wavePhase) * -radians(trkX));
+
+    // Longitude y-rotation fix
+    if (wLong !== 0) {
+      const preLong = sin((stackIdx - 1) * waveOffset + frameCount * (wSpeed / 1000)) * wLong;
+      const postLong = sin((stackIdx + 1) * waveOffset + frameCount * (wSpeed / 1000)) * wLong;
+      const longAdj = atan2(sHeight * 2, (preLong - postLong));
+      rotateX(longAdj - HALF_PI);
+    }
+
+    if (trkZ !== 0) rotateZ(cos(wavePhase) * radians(trkZ));
+
+    // Draw letter
+    const lw = tX + strX;
+    const lh = tY + strY;
+    const fontSize = max(lh, 4);
+
+    // Outer surface (front)
+    if (prideMode) {
+      fill(prideColors[stackIdx % 6]);
+    } else {
+      fill(strkColor);
+    }
+    textSize(fontSize);
+    const charW = textWidth(ch) || 1;
+    push();
+    scale(lw / charW, 1, 1);
+    text(ch, 0, 0);
+    pop();
+
+    // Inner surface (slightly behind, lighter)
+    push();
+    translate(0, 0, -1);
+    if (prideMode) {
+      fill(lerpColor(color(prideColors[stackIdx % 6]), color(bgC), 0.75));
+    } else {
+      fill(bkgdStrokeColor);
+    }
+    textSize(fontSize);
+    scale(lw / charW, 1, 1);
+    text(ch, 0, 0);
+    pop();
+
+    pop();
+  }
+  pop();
+
+  // Capture frame for recording
+  if (recorder) recorder.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function resetAll() {
+  stackHeightAdjust = 0;
+  prideMode = false;
+  setVal('radius', 250); setVal('stackNum', 1); setVal('rRotate', -5); setVal('rOffset', 0);
+  setVal('waveCount', 2); setVal('waveSpeed', 0); setVal('waveLat', 0); setVal('waveLong', 0);
+  setVal('waveRipple', 0); setVal('waveXScale', 0); setVal('waveYScale', 0);
+  setVal('typeX', 20); setVal('typeY', 40); setVal('typeWeight', 20);
+  setVal('tweakX', 0); setVal('tweakY', 0); setVal('tweakZ', 0);
+  setVal('camX', 15); setVal('camY', 0); setVal('camZ', 0); setVal('camZoom', 0);
+  document.getElementById('typeColor').value = '#000000';
+  document.getElementById('bgColor').value = '#ffffff';
+}
+
+const PRESETS = {
+  simple: () => {
+    resetAll();
+    setVal('radius', 185); setVal('stackNum', 8); setVal('rRotate', -10);
+    setVal('rOffset', 20); setVal('waveSpeed', 75); setVal('waveLat', 41);
+    setVal('tweakX', 24); setVal('tweakY', 27); setVal('camX', 20);
+  },
+  jellyfish: () => {
+    resetAll();
+    setVal('radius', 200); setVal('stackNum', 6); setVal('rOffset', 15);
+    setVal('waveCount', 3); setVal('waveSpeed', 100); setVal('waveLong', 80);
+    setVal('waveXScale', 23); setVal('typeX', 13); setVal('typeY', 64);
+    setVal('typeWeight', 5); setVal('camX', 25);
+    document.getElementById('typeColor').value = '#ffffff';
+    document.getElementById('bgColor').value = '#000000';
+  },
+  crown: () => {
+    resetAll();
+    setVal('stackNum', 3); setVal('rRotate', -5); setVal('waveCount', 4);
+    setVal('waveSpeed', 50); setVal('waveRipple', 21); setVal('waveYScale', 76);
+    setVal('typeX', 30); setVal('typeWeight', 30);
+    setVal('waveXScale', 0); setVal('camZoom', -500);
+  },
+  complex: () => {
+    resetAll();
+    setVal('radius', 178); setVal('stackNum', 11); setVal('rRotate', 0);
+    setVal('rOffset', 16); setVal('waveCount', 6); setVal('waveSpeed', 75);
+    setVal('waveLat', 10); setVal('waveLong', 31); setVal('typeX', 16);
+    setVal('typeY', 40); setVal('typeWeight', 20);
+    setVal('tweakX', 15); setVal('tweakY', 35);
+    setVal('camX', -34); setVal('camY', 10); setVal('camZ', 25);
+    document.getElementById('bgColor').value = '#000000';
+    document.getElementById('typeColor').value = '#ffffff';
+  },
+  weave: () => {
+    resetAll();
+    stackHeightAdjust = 30;
+    setVal('radius', 110); setVal('stackNum', 7); setVal('rRotate', 15);
+    setVal('rOffset', 62); setVal('waveCount', 5); setVal('waveSpeed', 30);
+    setVal('waveRipple', 15); setVal('typeX', 12); setVal('typeY', 19);
+    setVal('typeWeight', 10); setVal('tweakZ', 33); setVal('camX', 15);
+  },
+  zebra: () => {
+    resetAll();
+    stackHeightAdjust = 10;
+    setVal('radius', 110); setVal('stackNum', 7); setVal('rRotate', 20);
+    setVal('rOffset', 30); setVal('waveCount', 2); setVal('waveSpeed', 30);
+    setVal('waveLat', 15); setVal('waveRipple', 15); setVal('waveYScale', 33);
+    setVal('typeX', 12); setVal('typeY', 19); setVal('typeWeight', 10);
+    setVal('tweakX', 9); setVal('tweakY', 24); setVal('tweakZ', 22);
+    setVal('camX', 15);
+    document.getElementById('bgColor').value = '#000000';
+    document.getElementById('typeColor').value = '#ffffff';
+  },
+  hoops: () => {
+    resetAll();
+    stackHeightAdjust = 30;
+    setVal('radius', 110); setVal('stackNum', 7); setVal('rRotate', 15);
+    setVal('rOffset', 62); setVal('waveCount', 1); setVal('waveSpeed', 100);
+    setVal('waveRipple', 58); setVal('typeX', 12); setVal('typeY', 19);
+    setVal('typeWeight', 15); setVal('tweakZ', 28); setVal('camX', -10);
+    document.getElementById('bgColor').value = '#000000';
+    document.getElementById('typeColor').value = '#ffffff';
+  },
+  pride: () => {
+    setVal('stackNum', 6);
+    prideMode = true;
+  },
+};
+
+function applyPreset(name) {
+  PRESETS[name]();
+  // Highlight active preset
+  document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function savePNG() {
+  saveCanvas('tipo-cylinder', 'png');
+  showToast('PNG saved');
+}
+
+async function toggleRec() {
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    const prog = document.getElementById('exportProgress');
+    prog.classList.add('open');
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    showToast(`MP4 exported (${result.sizeMB} MB)`);
+    setTimeout(() => prog.classList.remove('open'), 2000);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+  }
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 2500);
+}
+</script>
+</body>
+</html>
