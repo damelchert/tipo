@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Coil</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Coil <span style="display:flex;gap:8px;"><a href="index.html" class="back-link">HOME</a><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ " placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('wide')">Wide</span>
+      <span class="preset-chip" onclick="applyPreset('super')">Super</span>
+      <span class="preset-chip" onclick="applyPreset('amoeba')">Amoeba</span>
+      <span class="preset-chip" onclick="applyPreset('spacer')">Spacer</span>
+      <span class="preset-chip" onclick="applyPreset('kitty')">Kitty</span>
+      <span class="preset-chip" onclick="applyPreset('hourglass')">Hourglass</span>
+      <span class="preset-chip" onclick="applyPreset('star')">Star</span>
+      <span class="preset-chip" onclick="applyPreset('zztar')">ZZtar</span>
+      <span class="preset-chip" onclick="applyPreset('pretzel')">Pretzel</span>
+      <span class="preset-chip" onclick="applyPreset('lemniscate')">Lemniscate</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Type</div>
+    <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="typeX" min="0" max="100" value="7"><span class="range-value" id="typeXVal">7</span></div>
+    <div class="range-row"><span class="range-label">Y-Scale</span><input type="range" id="typeY" min="0" max="100" value="20"><span class="range-value" id="typeYVal">20</span></div>
+    <div class="range-row"><span class="range-label">Weight</span><input type="range" id="typeWeight" min="0" max="50" value="20"><span class="range-value" id="typeWeightVal">2.0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ribbon</div>
+    <div class="range-row"><span class="range-label">Count</span><input type="range" id="ribCount" min="0" max="400" value="40"><span class="range-value" id="ribCountVal">40</span></div>
+    <div class="range-row"><span class="range-label">Size</span><input type="range" id="ribSize" min="-10" max="50" value="10"><span class="range-value" id="ribSizeVal">10</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="hideRibbons"> Hide ribbons (text only)</label>
+    <label class="checkbox-label"><input type="checkbox" id="flatCaps"> Flat caps</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Spiral</div>
+    <div class="range-row"><span class="range-label">Radius</span><input type="range" id="radius" min="0" max="250" value="30"><span class="range-value" id="radiusVal">3.0</span></div>
+    <div class="range-row"><span class="range-label">Spacing</span><input type="range" id="spacing" min="0" max="50" value="10"><span class="range-value" id="spacingVal">10</span></div>
+    <div class="range-row"><span class="range-label">Start</span><input type="range" id="spiralStart" min="0" max="200" value="50"><span class="range-value" id="spiralStartVal">50</span></div>
+    <div class="range-row"><span class="range-label">Spin</span><input type="range" id="spin" min="0" max="10" value="1"><span class="range-value" id="spinVal">1</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wave</div>
+    <div class="range-row"><span class="range-label">Size</span><input type="range" id="waveSize" min="0" max="200" value="0"><span class="range-value" id="waveSizeVal">0</span></div>
+    <div class="range-row"><span class="range-label">Count</span><input type="range" id="waveCount" min="0" max="12" value="2"><span class="range-value" id="waveCountVal">2</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="waveSpeed" min="0" max="10" value="1"><span class="range-value" id="waveSpeedVal">1</span></div>
+    <div class="range-row"><span class="range-label">Slope</span><input type="range" id="slope" min="0" max="31" value="10"><span class="range-value" id="slopeVal">1.0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="color-row"><input type="color" id="c1" value="#ff0000"><label>1</label>
+      <input type="color" id="c2" value="#ffff00"><label>2</label>
+      <input type="color" id="c3" value="#0000ff"><label>3</label></div>
+    <div class="color-row"><input type="color" id="c4" value="#ffffff"><label>4</label>
+      <input type="color" id="c5" value="#000000"><label>5</label></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="4"><span class="range-value" id="numColorsVal">4</span></div>
+    <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#000000"></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  c.parent('canvasContainer');
+  textFont(font);
+  pixelDensity(1);
+
+  recorder = new TipoRecorder(document.querySelector('#canvasContainer canvas'));
+  recorder.setTimerElement(document.getElementById('recTimer'));
+  recorder.onProgress = (p) => {
+    document.getElementById('progressBar').style.width = p.percent + '%';
+    document.getElementById('progressInfo').textContent = p.phase === 'done' ? `Done! ${p.duration}s, ${p.sizeMB} MB` : `Flushing ${p.frames} frames...`;
+  };
+
+  document.querySelectorAll('input[type="range"]').forEach(el => {
+    const valEl = document.getElementById(el.id + 'Val');
+    if (valEl) el.addEventListener('input', () => {
+      let v = el.value;
+      if (el.id === 'typeWeight') v = (v/10).toFixed(1);
+      else if (el.id === 'radius') v = (v/10).toFixed(1);
+      else if (el.id === 'slope') v = (v/10).toFixed(1);
+      else v = Number(v);
+      valEl.textContent = v;
+    });
+  });
+}
+
+function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
+
+function val(id) { return Number(document.getElementById(id).value); }
+function chk(id) { return document.getElementById(id).checked; }
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  if (el.type === 'checkbox') { el.checked = v; return; }
+  el.value = v;
+  const valEl = document.getElementById(id + 'Val');
+  if (valEl) {
+    if (id === 'typeWeight') valEl.textContent = (v/10).toFixed(1);
+    else if (id === 'radius') valEl.textContent = (v/10).toFixed(1);
+    else if (id === 'slope') valEl.textContent = (v/10).toFixed(1);
+    else valEl.textContent = v;
+  }
+}
+function col(id) { return document.getElementById(id).value; }
+
+function sinEng(angle, count, speed, slopeN) {
+  const s = sin(frameCount * speed + angle * count);
+  const sign = s >= 0 ? 1 : -1;
+  return sign * (1 - pow(1 - abs(s), slopeN));
+}
+
+function getRibColor(k) {
+  if (prideMode) return prideColors[k % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  return c[k % n];
+}
+function getTxtColor(k) {
+  if (prideMode) return prideColors[(k + 3) % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  if (n === 1) return document.getElementById('bgColor').value;
+  return c[(k + 1) % n];
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = (document.getElementById('textInput').value || 'TIPÓ') + ' ';
+  const tX = val('typeX'), tY = val('typeY'), tW = val('typeWeight') / 10;
+  const ribN = val('ribCount'), ribSz = val('ribSize');
+  const hideRib = chk('hideRibbons'), flatCap = chk('flatCaps');
+  const rad = val('radius') / 10;
+  const trk = val('spacing'), sStart = val('spiralStart'), spn = val('spin');
+  const wSz = val('waveSize'), wCnt = val('waveCount');
+  const wSpd = val('waveSpeed'), slp = val('slope') / 10;
+
+  const radAdj = map(rad, 0, 50, tY / 6, tY * 2);
+  const tracking = map(trk, 0, 50, tX * 3 / 14, tX * 4);
+
+  noFill();
+
+  push();
+  translate(width / 2, height / 2);
+  rotate(frameCount * -(spn / 200));
+
+  for (let k = 0; k < ribN; k++) {
+    // Ribbon
+    if (!hideRib) {
+      const ribC = getRibColor(k);
+      stroke(ribC);
+      strokeWeight(tY + ribSz);
+      if (flatCap) strokeCap(SQUARE); else strokeCap(ROUND);
+      strokeJoin(ROUND);
+      beginShape();
+      for (let i = sStart + txt.length * k - 1; i <= sStart + txt.length + txt.length * k; i++) {
+        const polarX = -radAdj * sqrt(tracking * i) * cos(sqrt(tracking * i));
+        const polarY = -radAdj * sqrt(tracking * i) * sin(sqrt(tracking * i));
+        const echo = atan2(polarY, polarX);
+        const theWave = sinEng(echo, wCnt, wSpd / 100, slp) * wSz;
+        const waveX = theWave * cos(echo);
+        const waveY = theWave * sin(echo);
+        vertex(polarX + waveX, polarY + waveY);
+      }
+      endShape();
+    }
+
+    // Text
+    const txtC = hideRib ? getRibColor(k) : getTxtColor(k);
+    fill(txtC);
+    noStroke();
+    textSize(tY * 0.7);
+    textAlign(CENTER, CENTER);
+
+    for (let i = sStart + txt.length * k; i < sStart + txt.length + txt.length * k; i++) {
+      const letterIdx = (i - sStart) % txt.length;
+      const ch = txt.charAt(letterIdx);
+
+      const polarX = -radAdj * sqrt(tracking * i) * cos(sqrt(tracking * i));
+      const polarY = -radAdj * sqrt(tracking * i) * sin(sqrt(tracking * i));
+
+      // Pre/post for rotation
+      const preX = -radAdj * sqrt(tracking * (i - 1)) * cos(sqrt(tracking * (i - 1)));
+      const preY = -radAdj * sqrt(tracking * (i - 1)) * sin(sqrt(tracking * (i - 1)));
+      const postX = -radAdj * sqrt(tracking * (i + 1)) * cos(sqrt(tracking * (i + 1)));
+      const postY = -radAdj * sqrt(tracking * (i + 1)) * sin(sqrt(tracking * (i + 1)));
+
+      const echo = atan2(polarY, polarX);
+      const theWave = sinEng(echo, wCnt, wSpd / 100, slp) * wSz;
+      const waveX = theWave * cos(echo);
+      const waveY = theWave * sin(echo);
+
+      const preEcho = atan2(preY, preX);
+      const preWave = sinEng(preEcho, wCnt, wSpd / 100, slp) * wSz;
+      const postEcho = atan2(postY, postX);
+      const postWave = sinEng(postEcho, wCnt, wSpd / 100, slp) * wSz;
+
+      const delta = atan2(
+        (postY + postWave * sin(postEcho)) - (preY + preWave * sin(preEcho)),
+        (postX + postWave * cos(postEcho)) - (preX + preWave * cos(preEcho))
+      );
+
+      push();
+      translate(polarX + waveX, polarY + waveY);
+      rotate(delta);
+      text(ch, 0, 0);
+      pop();
+    }
+    noFill();
+  }
+  pop();
+
+  if (recorder) recorder.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function resetAll() {
+  prideMode = false;
+  setVal('typeX',7); setVal('typeY',20); setVal('typeWeight',20);
+  setVal('ribCount',40); setVal('ribSize',10);
+  setVal('hideRibbons',false); setVal('flatCaps',false);
+  setVal('radius',30); setVal('spacing',10); setVal('spiralStart',50); setVal('spin',1);
+  setVal('waveSize',0); setVal('waveCount',2); setVal('waveSpeed',1); setVal('slope',10);
+  setVal('numColors',4);
+  document.getElementById('c1').value='#ff0000'; document.getElementById('c2').value='#ffff00';
+  document.getElementById('c3').value='#0000ff'; document.getElementById('c4').value='#ffffff';
+  document.getElementById('c5').value='#000000'; document.getElementById('bgColor').value='#000000';
+  document.getElementById('textInput').value='TIPÓ ';
+}
+
+const PRESETS = {
+  wide: () => { resetAll();
+    setVal('typeX',18);setVal('typeY',10);setVal('typeWeight',20);
+    setVal('ribCount',100);setVal('ribSize',15);setVal('flatCaps',true);
+    setVal('radius',150);setVal('spacing',2);setVal('spiralStart',40);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0000ff';
+    document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#000000';
+    document.getElementById('bgColor').value='#ffffff';
+  },
+  super: () => { resetAll();
+    setVal('typeX',11);setVal('typeY',68);setVal('typeWeight',15);
+    setVal('ribCount',40);setVal('ribSize',25);setVal('flatCaps',true);
+    setVal('radius',10);setVal('spacing',4);setVal('spiralStart',6);
+    document.getElementById('bgColor').value='#0000ff';
+    document.getElementById('textInput').value='*SUPER*';
+  },
+  amoeba: () => { resetAll();
+    setVal('typeX',9);setVal('typeY',14);setVal('typeWeight',15);
+    setVal('ribCount',25);setVal('ribSize',22);setVal('flatCaps',true);
+    setVal('radius',60);setVal('spacing',10);setVal('spiralStart',32);
+    setVal('waveSize',100);setVal('numColors',3);
+    document.getElementById('c1').value='#ffff00';document.getElementById('c2').value='#ff0000';
+    document.getElementById('c3').value='#011993';
+    document.getElementById('bgColor').value='#ffffff';
+  },
+  spacer: () => { resetAll();
+    setVal('typeX',5);setVal('typeY',50);setVal('typeWeight',25);
+    setVal('ribCount',110);setVal('ribSize',-10);setVal('hideRibbons',true);
+    setVal('radius',35);setVal('spacing',1);setVal('spiralStart',22);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffffff';
+    document.getElementById('textInput').value='SPACE *';
+  },
+  kitty: () => { resetAll();
+    setVal('typeX',6);setVal('typeY',23);setVal('typeWeight',15);
+    setVal('ribCount',217);setVal('ribSize',9);
+    setVal('radius',15);setVal('spacing',5);setVal('spiralStart',5);setVal('spin',0);
+    document.getElementById('c1').value='#0433FF';document.getElementById('c2').value='#FFFB00';
+    document.getElementById('c3').value='#FF2F92';document.getElementById('c4').value='#ffffff';
+    document.getElementById('bgColor').value='#FF7E79';
+    document.getElementById('textInput').value='Hello?';
+  },
+  hourglass: () => { resetAll();
+    setVal('typeX',2);setVal('typeY',36);setVal('typeWeight',20);
+    setVal('ribCount',337);setVal('ribSize',30);
+    setVal('radius',30);setVal('spacing',3);setVal('spiralStart',96);
+    setVal('waveSize',83);setVal('waveSpeed',4);setVal('slope',31);
+    document.getElementById('bgColor').value='#D9D9D9';
+    document.getElementById('textInput').value=' ';
+  },
+  star: () => { resetAll();
+    setVal('typeX',7);setVal('typeY',20);setVal('typeWeight',20);
+    setVal('ribCount',230);setVal('ribSize',0);
+    setVal('radius',45);setVal('spacing',0);setVal('spiralStart',122);setVal('spin',2);
+    setVal('waveSize',25);setVal('waveCount',5);setVal('waveSpeed',0);
+    document.getElementById('bgColor').value='#ffff00';
+    document.getElementById('textInput').value='------------';
+  },
+  zztar: () => { resetAll();
+    setVal('typeX',5);setVal('typeY',12);setVal('typeWeight',20);
+    setVal('ribCount',400);setVal('ribSize',43);
+    setVal('radius',125);setVal('spacing',0);setVal('spiralStart',30);
+    setVal('waveSize',31);setVal('waveCount',6);setVal('waveSpeed',7);setVal('numColors',5);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#FF9300';
+    document.getElementById('c3').value='#ffff00';document.getElementById('c4').value='#00ff00';
+    document.getElementById('c5').value='#0000ff';
+    document.getElementById('bgColor').value='#ff0000';
+    document.getElementById('textInput').value=' ';
+  },
+  pretzel: () => { resetAll();
+    setVal('typeX',4);setVal('typeY',20);setVal('typeWeight',20);
+    setVal('ribCount',400);setVal('ribSize',31);
+    setVal('radius',30);setVal('spacing',1);setVal('spiralStart',0);
+    setVal('waveSize',200);setVal('waveCount',1);setVal('waveSpeed',3);
+    document.getElementById('bgColor').value='#0000ff';
+    document.getElementById('textInput').value=' ';
+  },
+  lemniscate: () => { resetAll();
+    setVal('typeX',4);setVal('typeY',9);setVal('typeWeight',20);
+    setVal('ribCount',400);setVal('ribSize',50);setVal('flatCaps',true);
+    setVal('radius',0);setVal('spacing',21);setVal('spiralStart',84);
+    setVal('waveSize',200);setVal('waveCount',2);setVal('waveSpeed',3);
+    document.getElementById('textInput').value=' ';
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) {
+  PRESETS[name]();
+  document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+  if (event && event.target) event.target.classList.add('active');
+}
+
+function savePNG() { saveCanvas('tipo-coil', 'png'); showToast('PNG saved'); }
+async function toggleRec() {
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording'; btn.style.borderColor = 'var(--red)';
+  } else {
+    document.getElementById('exportProgress').classList.add('open');
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    showToast(`MP4 exported (${result.sizeMB} MB)`);
+    setTimeout(() => document.getElementById('exportProgress').classList.remove('open'), 2000);
+    btn.textContent = 'Record MP4'; btn.style.borderColor = '';
+  }
+}
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 2500);
+}
+</script>
+</body>
+</html>
