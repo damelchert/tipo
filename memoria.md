@@ -23,6 +23,9 @@
   layers.html                  — kinetic type: layers (FUNCIONAL)
   danger.html                  — kinetic type: danger (FUNCIONAL)
   string.html                  — kinetic type: string (FUNCIONAL)
+  badge.html                   — kinetic type: badge (FUNCIONAL)
+  clutter.html                 — kinetic type: clutter (FUNCIONAL)
+  construct.html               — kinetic type: construct (FUNCIONAL)
   shared/
     style.css                  — design system (#99E0D2 section titles, swap btn, etc)
     recorder.js                — classe TipoRecorder (MP4 recording)

@@ -40,9 +40,9 @@ Landing page (index.html) como hub central.
 - [x] **STRING** — 5 sliders, 8 presets (Vote, Dream-ager, Tracks, Juicy, Guts, Spiral, Wave, Pride)
 
 ### FASE 4 — Modos Composicao (jQuery UI)
-- [ ] **BADGE** — 41 sliders, 11 font presets
-- [ ] **CLUTTER** — jQuery UI, sub-modes (ring, cloud, cosmic, sphere, grfx)
-- [ ] **CONSTRUCT** — jQuery UI, sub-modes (cloud, scribble, zigzag, gradient, box)
+- [x] **BADGE** — Simplified: strip, ring, tunnel, spread layers. 15 controls, 9 presets
+- [x] **CLUTTER** — 6 sub-modes (ring, cloud, cosmic, sphere, scatter, vortex). 5 controls, 7 presets
+- [x] **CONSTRUCT** — 6 sub-modes (cloud, scribble, zigzag, gradient, box, matrix). 5 controls, 7 presets
 
 ### FASE 5 — Modos Animacao Avancada
 - [ ] **SNAP** — kineticLetter/Word/Group classes

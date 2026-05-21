@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Construct</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Construct <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('cloudMode')">Cloud</span>
+      <span class="preset-chip" onclick="applyPreset('scribble')">Scribble</span>
+      <span class="preset-chip" onclick="applyPreset('zigzag')">Zigzag</span>
+      <span class="preset-chip" onclick="applyPreset('gradient')">Gradient</span>
+      <span class="preset-chip" onclick="applyPreset('box')">Box</span>
+      <span class="preset-chip" onclick="applyPreset('matrix')">Matrix</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Layout</div>
+    <div class="range-row"><span class="range-label">Strip Height</span><input type="range" id="stripHeight" min="20" max="200" value="60"><span class="range-value" id="stripHeightVal">60</span></div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="1" max="30" value="8"><span class="range-value" id="columnsVal">8</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="20" value="6"><span class="range-value" id="rowsVal">6</span></div>
+    <div class="range-row"><span class="range-label">Padding</span><input type="range" id="padding" min="0" max="100" value="40"><span class="range-value" id="paddingVal">40</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="speed" min="0" max="100" value="20"><span class="range-value" id="speedVal">20</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mode</div>
+    <select id="mode" style="width:100%;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+      <option value="cloud">Cloud</option>
+      <option value="scribble">Scribble</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="gradient">Gradient</option>
+      <option value="box">Box</option>
+      <option value="matrix">Matrix</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="color-row"><input type="color" id="c1" value="#ff0000"><label>1</label>
+      <input type="color" id="c2" value="#0000ff"><label>2</label>
+      <input type="color" id="c3" value="#ffff00"><label>3</label></div>
+    <div class="color-section-row">
+      <span class="range-label">Text</span>
+      <input type="color" id="typeColor" value="#ffffff">
+      <button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button>
+      <input type="color" id="bgColor" value="#000000">
+      <span class="range-label">Bg</span>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — CONSTRUCT MODE
+// Modular text construction: cloud, scribble, zigzag,
+// gradient, box, matrix sub-modes.
+// ============================================================
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+  c.parent('canvasContainer');
+  textFont(font);
+  pixelDensity(1);
+  TipoUI.init({ mode: 'construct', formatters: {} });
+  recorder = TipoUI.recorder;
+}
+
+function windowResized() {
+  resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+}
+
+function val(id) { return TipoUI.val(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function col(id) { return TipoUI.col(id); }
+
+function getColor(i) {
+  if (prideMode) return prideColors[i % 6];
+  return [col('c1'), col('c2'), col('c3')][i % 3];
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  const txtC = document.getElementById('typeColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const sH = val('stripHeight');
+  const cols = val('columns');
+  const rws = val('rows');
+  const pad = val('padding') / 100;
+  const spd = val('speed') / 100;
+  const mode = document.getElementById('mode').value;
+
+  const cellW = (width - 60) / cols;
+  const cellH = (height - 60) / rws;
+  const padX = cellW * pad * 0.3;
+  const padY = cellH * pad * 0.3;
+
+  push();
+  translate(30, 30);
+
+  for (let row = 0; row < rws; row++) {
+    for (let col2 = 0; col2 < cols; col2++) {
+      const idx = row * cols + col2;
+      const ch = txt.charAt(idx % txt.length);
+      const x = col2 * cellW;
+      const y = row * cellH;
+      const c = getColor(idx);
+
+      push();
+      translate(x + cellW / 2, y + cellH / 2);
+
+      switch (mode) {
+        case 'cloud': {
+          // Soft blob background + centered text
+          const blobR = min(cellW, cellH) * 0.4;
+          const wobble = sin(frameCount * spd + idx * 0.7) * 5;
+          noStroke();
+          fill(color(c + '60'));
+          ellipse(wobble, sin(frameCount * spd * 0.7 + idx) * 3, blobR * 2, blobR * 1.6);
+          fill(txtC);
+          textSize(sH * 0.5);
+          textAlign(CENTER, CENTER);
+          text(ch, wobble, 0);
+          break;
+        }
+        case 'scribble': {
+          // Chaotic bezier lines + text
+          stroke(c);
+          strokeWeight(1.5);
+          noFill();
+          const amp = min(cellW, cellH) * 0.3;
+          beginShape();
+          for (let s = 0; s < 8; s++) {
+            const sx = sin(frameCount * spd + idx + s * 1.3) * amp;
+            const sy = cos(frameCount * spd * 0.8 + idx + s * 1.7) * amp;
+            curveVertex(sx, sy);
+          }
+          endShape();
+          noStroke();
+          fill(txtC);
+          textSize(sH * 0.4);
+          textAlign(CENTER, CENTER);
+          text(ch, 0, 0);
+          break;
+        }
+        case 'zigzag': {
+          // Zigzag pattern + text
+          stroke(c);
+          strokeWeight(2);
+          noFill();
+          const zH = cellH * 0.3;
+          const zW = cellW * 0.8;
+          const phase = frameCount * spd + idx * 0.5;
+          beginShape();
+          for (let z = 0; z < 6; z++) {
+            const zx = -zW / 2 + (z / 5) * zW;
+            const zy = (z % 2 === 0 ? -1 : 1) * zH * sin(phase + z);
+            vertex(zx, zy);
+          }
+          endShape();
+          noStroke();
+          fill(txtC);
+          textSize(sH * 0.5);
+          textAlign(CENTER, CENTER);
+          text(ch, 0, 0);
+          break;
+        }
+        case 'gradient': {
+          // Gradient filled rect + text
+          noStroke();
+          const steps = 10;
+          for (let g = 0; g < steps; g++) {
+            const gt = g / steps;
+            const gc = lerpColor(color(c), color(bgC), gt + sin(frameCount * spd + idx) * 0.2);
+            fill(gc);
+            const gw = cellW * 0.8 * (1 - gt);
+            const gh = cellH * 0.8 * (1 - gt);
+            rect(-gw / 2, -gh / 2, gw, gh);
+          }
+          fill(txtC);
+          textSize(sH * 0.5);
+          textAlign(CENTER, CENTER);
+          text(ch, 0, 0);
+          break;
+        }
+        case 'box': {
+          // Bordered box + text
+          const boxW = cellW - padX * 2;
+          const boxH = cellH - padY * 2;
+          const pulse = 1 + sin(frameCount * spd + idx) * 0.05;
+          stroke(c);
+          strokeWeight(2);
+          noFill();
+          rect(-boxW / 2 * pulse, -boxH / 2 * pulse, boxW * pulse, boxH * pulse);
+          noStroke();
+          fill(txtC);
+          textSize(sH * 0.5);
+          textAlign(CENTER, CENTER);
+          text(ch, 0, 0);
+          break;
+        }
+        case 'matrix': {
+          // Falling characters
+          noStroke();
+          const fallY = ((frameCount * spd * 30 + idx * 17) % (cellH * 1.5)) - cellH * 0.25;
+          const alpha = map(fallY, -cellH * 0.25, cellH * 0.75, 255, 50);
+          const mc = color(c);
+          mc.setAlpha(alpha);
+          fill(mc);
+          textSize(sH * 0.4);
+          textAlign(CENTER, CENTER);
+          text(ch, sin(idx * 3.7) * cellW * 0.2, fallY - cellH / 2);
+          break;
+        }
+      }
+
+      pop();
+    }
+  }
+  pop();
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  setVal('stripHeight',60);setVal('columns',8);setVal('rows',6);setVal('padding',40);setVal('speed',20);
+  document.getElementById('mode').value='cloud';
+  document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#0000ff';document.getElementById('c3').value='#ffff00';
+  document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
+}
+
+const PRESETS = {
+  cloudMode: () => { resetAll(); document.getElementById('mode').value='cloud';
+    setVal('columns',6);setVal('rows',4);setVal('stripHeight',80);setVal('speed',15);
+    document.getElementById('c1').value='#0096ff';document.getElementById('c2').value='#ff85ff';document.getElementById('c3').value='#00fdff';
+  },
+  scribble: () => { resetAll(); document.getElementById('mode').value='scribble';
+    setVal('columns',5);setVal('rows',4);setVal('stripHeight',70);setVal('speed',25);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#000000';document.getElementById('c3').value='#ffff00';
+    document.getElementById('bgColor').value='#ffffff';document.getElementById('typeColor').value='#000000';
+  },
+  zigzag: () => { resetAll(); document.getElementById('mode').value='zigzag';
+    setVal('columns',7);setVal('rows',5);setVal('stripHeight',60);setVal('speed',20);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#0000ff';document.getElementById('c3').value='#00ff00';
+  },
+  gradient: () => { resetAll(); document.getElementById('mode').value='gradient';
+    setVal('columns',4);setVal('rows',3);setVal('stripHeight',90);setVal('speed',10);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffff00';document.getElementById('c3').value='#0000ff';
+    document.getElementById('bgColor').value='#000000';
+  },
+  box: () => { resetAll(); document.getElementById('mode').value='box';
+    setVal('columns',6);setVal('rows',5);setVal('stripHeight',50);setVal('padding',60);setVal('speed',15);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ffffff';document.getElementById('c3').value='#ffffff';
+    document.getElementById('bgColor').value='#000000';
+  },
+  matrix: () => { resetAll(); document.getElementById('mode').value='matrix';
+    setVal('columns',12);setVal('rows',8);setVal('stripHeight',30);setVal('speed',40);
+    document.getElementById('c1').value='#00ff00';document.getElementById('c2').value='#00cc00';document.getElementById('c3').value='#009900';
+    document.getElementById('bgColor').value='#000000';
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>
