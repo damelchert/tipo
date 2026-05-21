@@ -55,10 +55,10 @@ Landing page (index.html) como hub central.
 - [x] **BOOST** — Letter-by-letter directional reveal with overshoot, 5 presets
 
 ### FASE 6 — Polish & Deploy
-- [ ] Responsividade basica
-- [ ] Favicon + meta tags
-- [ ] README.md publico
-- [ ] Dominio custom (tipo.tools ou tipo.app)
+- [x] Responsividade basica (mobile panel toggle via CSS media query)
+- [x] Favicon + meta tags (SVG favicon + description + theme-color em todas as 24 paginas)
+- [x] README.md publico
+- [ ] Dominio custom (tipo.tools ou tipo.app) — acao do Daniel
 
 ## Padrao de UI (aplicar em TODAS as paginas novas)
 - Section titles em #99E0D2
