@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Vessel</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="tipo-panel" id="panel">
+  <h1>Vessel <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+  <div class="section"><div class="section-title">Text</div><input type="text" id="textInput" value="TIPÓ" placeholder="Type here..."></div>
+  <div class="section"><div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('smooth')">Smooth</span>
+      <span class="preset-chip" onclick="applyPreset('elastic')">Elastic</span>
+      <span class="preset-chip" onclick="applyPreset('snappy')">Snappy</span>
+      <span class="preset-chip" onclick="applyPreset('jelly')">Jelly</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+  <div class="section"><div class="section-title">Animation</div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="20" max="300" value="80"><span class="range-value" id="fontSizeVal">80</span></div>
+    <div class="range-row"><span class="range-label">Easing</span><input type="range" id="easing" min="0" max="6" value="0"><span class="range-value" id="easingVal">0</span></div>
+    <div class="range-row"><span class="range-label">Duration</span><input type="range" id="duration" min="30" max="300" value="90"><span class="range-value" id="durationVal">90</span></div>
+    <div class="range-row"><span class="range-label">Pause</span><input type="range" id="pause" min="0" max="60" value="15"><span class="range-value" id="pauseVal">15</span></div>
+  </div>
+  <div class="section"><div class="section-title">Color</div>
+    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#ffffff"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#000000"><span class="range-label">Bg</span></div>
+  </div>
+  <div class="section section-divider"><div class="section-title">Export</div><div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button><button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button></div><div class="record-timer" id="recTimer"></div></div>
+  <div style="height:40px;"></div>
+</div>
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
+<div class="tipo-toast" id="toast"></div>
+<script>
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+const easingNames = ['Sine','Cubic','Circ','Expo','Back','Bounce','Elastic'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  c.parent('canvasContainer'); textFont(font); pixelDensity(1);
+  TipoUI.init({ mode: 'vessel', formatters: { easing: v => easingNames[v] } }); recorder = TipoUI.recorder;
+}
+function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
+function val(id) { return TipoUI.val(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+
+function easeSine(t) { return -(cos(PI*t)-1)/2; }
+function easeCubic(t) { return t<0.5?4*t*t*t:1-pow(-2*t+2,3)/2; }
+function easeCirc(t) { return t<0.5?(1-sqrt(1-pow(2*t,2)))/2:(sqrt(1-pow(-2*t+2,2))+1)/2; }
+function easeExpo(t) { if(t===0||t===1)return t; return t<0.5?pow(2,20*t-10)/2:(2-pow(2,-20*t+10))/2; }
+function easeBack(t) { const c=2.5949095; return t<0.5?(pow(2*t,2)*((c+1)*2*t-c))/2:(pow(2*t-2,2)*((c+1)*(2*t-2)+c)+2)/2; }
+function easeBounce(t) {
+  function bo(x) { const n=7.5625,d=2.75; if(x<1/d)return n*x*x; if(x<2/d)return n*(x-=1.5/d)*x+0.75; if(x<2.5/d)return n*(x-=2.25/d)*x+0.9375; return n*(x-=2.625/d)*x+0.984375; }
+  return t<0.5?(1-bo(1-2*t))/2:(1+bo(2*t-1))/2;
+}
+function easeElastic(t) { const c=(2*PI)/4.5; if(t===0||t===1)return t; return t<0.5?-(pow(2,20*t-10)*sin((20*t-11.125)*c))/2:pow(2,-20*t+10)*sin((20*t-11.125)*c)/2+1; }
+const easings = [easeSine,easeCubic,easeCirc,easeExpo,easeBack,easeBounce,easeElastic];
+
+function draw() {
+  background(document.getElementById('bgColor').value);
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const fSize = val('fontSize');
+  const easeIdx = val('easing');
+  const dur = val('duration');
+  const pauseLen = val('pause');
+  const txtC = document.getElementById('typeColor').value;
+  const cycle = dur + pauseLen;
+  const t = (frameCount % (cycle*2));
+  const easeFn = easings[easeIdx];
+
+  let progress;
+  if (t < dur) progress = easeFn(t / dur);
+  else if (t < cycle) progress = 1;
+  else if (t < cycle + dur) progress = easeFn(1 - (t - cycle) / dur);
+  else progress = 0;
+
+  textSize(fSize); textAlign(CENTER, CENTER);
+  const tw = textWidth(txt);
+  const th = fSize;
+  const padX = fSize * 0.6;
+  const padY = fSize * 0.4;
+
+  // Morph between tight and wide
+  const minW = tw + padX;
+  const maxW = tw + padX * 4;
+  const minH = th + padY;
+  const maxH = th + padY * 4;
+  const minR = 4;
+  const maxR = fSize * 0.6;
+
+  const w = lerp(minW, maxW, progress);
+  const h = lerp(maxH, minH, progress);
+  const r = lerp(minR, maxR, progress);
+
+  const cx = width/2, cy = height/2;
+
+  // Container
+  noFill();
+  if (prideMode) {
+    const pi = floor(frameCount/30) % 6;
+    stroke(prideColors[pi]);
+  } else { stroke(txtC); }
+  strokeWeight(2);
+  rectMode(CENTER);
+  rect(cx, cy, w, h, r);
+
+  // Text
+  noStroke();
+  if (prideMode) {
+    for (let i = 0; i < txt.length; i++) {
+      fill(prideColors[i % 6]);
+      const xp = cx - tw/2 + textWidth(txt.substring(0,i)) + textWidth(txt.charAt(i))/2;
+      text(txt.charAt(i), xp, cy);
+    }
+  } else { fill(txtC); text(txt, cx, cy); }
+
+  TipoUI.captureFrame();
+}
+
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+function resetAll() { prideMode = false; setVal('fontSize',80);setVal('easing',0);setVal('duration',90);setVal('pause',15); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; }
+const PRESETS = {
+  smooth: () => { resetAll(); setVal('easing',0);setVal('duration',120);setVal('pause',20); },
+  elastic: () => { resetAll(); setVal('easing',6);setVal('duration',60);setVal('fontSize',100); },
+  snappy: () => { resetAll(); setVal('easing',3);setVal('duration',30);setVal('pause',30);setVal('fontSize',120); document.getElementById('bgColor').value='#1a1a1a'; },
+  jelly: () => { resetAll(); setVal('easing',5);setVal('duration',80);setVal('fontSize',90); document.getElementById('bgColor').value='#200030'; },
+  pride: () => { prideMode = true; },
+};
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body></html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Shine</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="tipo-panel" id="panel">
+  <h1>Shine <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+  <div class="section"><div class="section-title">Text</div><input type="text" id="textInput" value="TIPÓ" placeholder="Type here..."></div>
+  <div class="section"><div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('glow')">Glow</span>
+      <span class="preset-chip" onclick="applyPreset('burst')">Burst</span>
+      <span class="preset-chip" onclick="applyPreset('subtle')">Subtle</span>
+      <span class="preset-chip" onclick="applyPreset('wild')">Wild</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+  <div class="section"><div class="section-title">Animation</div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="20" max="300" value="80"><span class="range-value" id="fontSizeVal">80</span></div>
+    <div class="range-row"><span class="range-label">Spoke Count</span><input type="range" id="spokeCount" min="4" max="120" value="24"><span class="range-value" id="spokeCountVal">24</span></div>
+    <div class="range-row"><span class="range-label">Spoke Length</span><input type="range" id="spokeLen" min="10" max="100" value="50"><span class="range-value" id="spokeLenVal">50</span></div>
+    <div class="range-row"><span class="range-label">Rotation Speed</span><input type="range" id="rotSpeed" min="0" max="100" value="20"><span class="range-value" id="rotSpeedVal">20</span></div>
+    <div class="range-row"><span class="range-label">Scatter</span><input type="range" id="scatter" min="0" max="100" value="0"><span class="range-value" id="scatterVal">0</span></div>
+  </div>
+  <div class="section"><div class="section-title">Color</div>
+    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#ffffff"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#000000"><span class="range-label">Bg</span></div>
+  </div>
+  <div class="section section-divider"><div class="section-title">Export</div><div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button><button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button></div><div class="record-timer" id="recTimer"></div></div>
+  <div style="height:40px;"></div>
+</div>
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
+<div class="tipo-toast" id="toast"></div>
+<script>
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight, WEBGL);
+  c.parent('canvasContainer'); textFont(font); pixelDensity(1);
+  TipoUI.init({ mode: 'shine', formatters: {} }); recorder = TipoUI.recorder;
+}
+function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
+function val(id) { return TipoUI.val(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+
+function draw() {
+  const bgVal = document.getElementById('bgColor').value;
+  background(bgVal);
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const fSize = val('fontSize');
+  const spokes = val('spokeCount');
+  const sLen = val('spokeLen') / 100 * min(width, height) * 0.5;
+  const rSpd = val('rotSpeed') * 0.0005;
+  const scat = val('scatter') * 0.3;
+  const txtC = document.getElementById('typeColor').value;
+  const rot = frameCount * rSpd;
+
+  // Draw spokes
+  push();
+  rotateZ(rot);
+  for (let i = 0; i < spokes; i++) {
+    const angle = (TWO_PI / spokes) * i;
+    const scatterX = scat > 0 ? sin(frameCount*0.02 + i*1.7)*scat : 0;
+    const scatterY = scat > 0 ? cos(frameCount*0.03 + i*2.3)*scat : 0;
+    const len = sLen + sin(frameCount*0.03 + i*0.5) * sLen*0.2;
+    const alpha = map(sin(frameCount*0.05 + i), -1, 1, 80, 220);
+
+    if (prideMode) {
+      const col = color(prideColors[i % 6]);
+      col.setAlpha(alpha);
+      stroke(col);
+    } else {
+      const col = color(txtC);
+      col.setAlpha(alpha);
+      stroke(col);
+    }
+    strokeWeight(1);
+    const x1 = cos(angle) * fSize*0.1 + scatterX;
+    const y1 = sin(angle) * fSize*0.1 + scatterY;
+    const x2 = cos(angle) * len + scatterX;
+    const y2 = sin(angle) * len + scatterY;
+    line(x1, y1, x2, y2);
+  }
+  pop();
+
+  // Draw text
+  textSize(fSize); textAlign(CENTER, CENTER); noStroke();
+  if (prideMode) {
+    for (let i = 0; i < txt.length; i++) {
+      fill(prideColors[i % 6]);
+      const xp = (i - (txt.length-1)/2) * fSize * 0.6;
+      text(txt.charAt(i), xp, 0);
+    }
+  } else {
+    fill(txtC);
+    text(txt, 0, 0);
+  }
+  TipoUI.captureFrame();
+}
+
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+function resetAll() { prideMode = false; setVal('fontSize',80);setVal('spokeCount',24);setVal('spokeLen',50);setVal('rotSpeed',20);setVal('scatter',0); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; }
+const PRESETS = {
+  glow: () => { resetAll(); setVal('spokeCount',60);setVal('spokeLen',40);setVal('rotSpeed',10);setVal('fontSize',100); },
+  burst: () => { resetAll(); setVal('spokeCount',80);setVal('spokeLen',90);setVal('rotSpeed',40);setVal('fontSize',60); document.getElementById('bgColor').value='#0a0000'; },
+  subtle: () => { resetAll(); setVal('spokeCount',12);setVal('spokeLen',30);setVal('rotSpeed',5);setVal('fontSize',120); },
+  wild: () => { resetAll(); setVal('spokeCount',100);setVal('spokeLen',80);setVal('rotSpeed',70);setVal('scatter',80);setVal('fontSize',70); document.getElementById('bgColor').value='#100020'; },
+  pride: () => { prideMode = true; },
+};
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body></html>

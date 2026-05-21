@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Pow</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="tipo-panel" id="panel">
+  <h1>Pow <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+  <div class="section"><div class="section-title">Text</div><input type="text" id="textInput" value="TIPÓ" placeholder="Type here..."></div>
+  <div class="section"><div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('bomb')">Bomb</span>
+      <span class="preset-chip" onclick="applyPreset('gentle')">Gentle</span>
+      <span class="preset-chip" onclick="applyPreset('dense')">Dense</span>
+      <span class="preset-chip" onclick="applyPreset('micro')">Micro</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+  <div class="section"><div class="section-title">Animation</div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="20" max="300" value="80"><span class="range-value" id="fontSizeVal">80</span></div>
+    <div class="range-row"><span class="range-label">Blast Strength</span><input type="range" id="blast" min="1" max="100" value="50"><span class="range-value" id="blastVal">50</span></div>
+    <div class="range-row"><span class="range-label">Detail</span><input type="range" id="detail" min="10" max="200" value="80"><span class="range-value" id="detailVal">80</span></div>
+    <div class="range-row"><span class="range-label">Particle Size</span><input type="range" id="pSize" min="2" max="40" value="10"><span class="range-value" id="pSizeVal">10</span></div>
+  </div>
+  <div class="section"><div class="section-title">Color</div>
+    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#ffffff"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#000000"><span class="range-label">Bg</span></div>
+  </div>
+  <div class="section section-divider"><div class="section-title">Export</div><div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button><button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button></div><div class="record-timer" id="recTimer"></div></div>
+  <div style="height:40px;"></div>
+</div>
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
+<div class="tipo-toast" id="toast"></div>
+<script>
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+let particles = [];
+let lastTxt = '', lastDetail = 0;
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  c.parent('canvasContainer'); textFont(font); pixelDensity(1);
+  TipoUI.init({ mode: 'pow', formatters: {} }); recorder = TipoUI.recorder;
+}
+function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
+function val(id) { return TipoUI.val(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+
+function initParticles(txt, count) {
+  particles = [];
+  for (let i = 0; i < count; i++) {
+    const ci = i % txt.length;
+    const homeX = width/2 + (ci - (txt.length-1)/2) * val('fontSize') * 0.6;
+    const homeY = height/2;
+    const angle = random(TWO_PI);
+    particles.push({ ch: txt.charAt(ci), hx: homeX, hy: homeY, x: homeX, y: homeY, vx: cos(angle), vy: sin(angle), angle: angle, ci: ci });
+  }
+  lastTxt = txt; lastDetail = count;
+}
+
+function draw() {
+  background(document.getElementById('bgColor').value);
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const fSize = val('fontSize');
+  const blastStr = val('blast') * 5;
+  const count = val('detail');
+  const ps = val('pSize');
+  const txtC = document.getElementById('typeColor').value;
+
+  if (txt !== lastTxt || count !== lastDetail) initParticles(txt, count);
+  if (particles.length === 0) initParticles(txt, count);
+
+  const cycle = 180;
+  const t = (frameCount % cycle) / cycle;
+  const explode = t < 0.5;
+  const phase = explode ? t * 2 : (t - 0.5) * 2;
+  const ease = explode ? pow(phase, 0.3) : 1 - pow(1 - phase, 3);
+
+  textSize(ps); textAlign(CENTER, CENTER); noStroke();
+
+  for (let p of particles) {
+    const dx = cos(p.angle) * blastStr * ease;
+    const dy = sin(p.angle) * blastStr * ease;
+    if (explode) {
+      p.x = p.hx + dx; p.y = p.hy + dy;
+    } else {
+      p.x = p.hx + cos(p.angle) * blastStr * (1 - ease);
+      p.y = p.hy + sin(p.angle) * blastStr * (1 - ease);
+    }
+    const alpha = explode ? map(ease, 0, 1, 255, 120) : map(ease, 0, 1, 120, 255);
+    const col = prideMode ? color(prideColors[p.ci % 6]) : color(txtC);
+    col.setAlpha(alpha);
+    fill(col);
+    text(p.ch, p.x, p.y);
+  }
+
+  // Draw main text when assembled
+  if (!explode && phase > 0.7) {
+    textSize(fSize); textAlign(CENTER, CENTER);
+    const a = map(phase, 0.7, 1, 0, 255);
+    const mc = prideMode ? color(prideColors[0]) : color(txtC);
+    mc.setAlpha(a); fill(mc);
+    if (prideMode) {
+      for (let i = 0; i < txt.length; i++) {
+        fill(color(prideColors[i % 6]));
+        text(txt.charAt(i), width/2 + (i-(txt.length-1)/2)*fSize*0.6, height/2);
+      }
+    } else { text(txt, width/2, height/2); }
+  }
+  TipoUI.captureFrame();
+}
+
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+function resetAll() { prideMode = false; setVal('fontSize',80);setVal('blast',50);setVal('detail',80);setVal('pSize',10); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; particles=[]; }
+const PRESETS = {
+  bomb: () => { resetAll(); setVal('blast',100);setVal('detail',150);setVal('fontSize',120); },
+  gentle: () => { resetAll(); setVal('blast',15);setVal('detail',40);setVal('pSize',20); },
+  dense: () => { resetAll(); setVal('detail',200);setVal('pSize',6);setVal('blast',40); },
+  micro: () => { resetAll(); setVal('pSize',4);setVal('detail',180);setVal('blast',30);setVal('fontSize',60); document.getElementById('bgColor').value='#111133'; },
+  pride: () => { prideMode = true; },
+};
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body></html>

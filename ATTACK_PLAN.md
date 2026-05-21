@@ -45,14 +45,14 @@ Landing page (index.html) como hub central.
 - [x] **CONSTRUCT** — 6 sub-modes (cloud, scribble, zigzag, gradient, box, matrix). 5 controls, 7 presets
 
 ### FASE 5 — Modos Animacao Avancada
-- [ ] **SNAP** — kineticLetter/Word/Group classes
-- [ ] **FLASH** — 18 sub-animacoes! (riseSun, cloud, arcer, snap, split, bend, shutters, slotMachine, bugEyes, twist, halo, grid, starburst, box, blank)
-- [ ] **POW** — Explosao, mouse interaction, 4 classes
-- [ ] **CRASH** — Physics, collision, debris, 7 classes
-- [ ] **CRASH CLOCK** — Relogio + crash, particles
-- [ ] **VESSEL** — Easing curves (Sine, Cubic, Circ, Expo, Back, Bounce, Elastic)
-- [ ] **SHINE** — Spoke class, easing curves
-- [ ] **BOOST** — Suporte arabe, tumble/zoom animations
+- [x] **SNAP** — Kinetic letter stagger animation, 4 presets
+- [x] **FLASH** — 8 cycling text effects (scale, shear, rotate, split, slide, fade, zoom), 5 presets
+- [x] **POW** — Explosive particle text, radial scatter + reassemble, 5 presets
+- [x] **CRASH** — Physics falling text with p5.js vectors, bounce/gravity, 5 presets
+- [x] **CRASH CLOCK** — Real-time clock with falling numbers, circular boundary, 5 presets
+- [x] **VESSEL** — Morphing container with 7 easing types, 5 presets
+- [x] **SHINE** — Radial light spokes from text center (WEBGL), 5 presets
+- [x] **BOOST** — Letter-by-letter directional reveal with overshoot, 5 presets
 
 ### FASE 6 — Polish & Deploy
 - [ ] Responsividade basica
