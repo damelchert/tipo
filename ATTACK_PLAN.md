@@ -10,7 +10,7 @@ Landing page (index.html) como hub central.
 ### FASE 0 — Infraestrutura ✅
 - [x] Criar `shared/style.css` — design system (#99E0D2, swap btn, color-section-row)
 - [x] Criar `shared/recorder.js` — classe TipoRecorder (MP4 + WebM fallback)
-- [ ] Criar `shared/ui.js` — sliders, panels, dropdowns compartilhados
+- [x] Criar `shared/ui.js` — TipoUI: sliders, presets, export, recorder, formatters
 - [x] Criar `index.html` — landing page com navegacao progressiva + hash routing
 - [ ] Migrar `dithering.html` pra usar shared CSS/JS
 - [x] Setup Git repo (github.com/damelchert/tipo)

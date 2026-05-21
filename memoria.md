@@ -19,6 +19,7 @@
   shared/
     style.css                  — design system (#99E0D2 section titles, swap btn, etc)
     recorder.js                — classe TipoRecorder (MP4 recording)
+    ui.js                      — TipoUI: sliders, presets, export, recorder init, formatters
   assets/
     fonts/IBMPlexMono-Regular.ttf
   tipo_vault/
