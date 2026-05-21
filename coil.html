@@ -57,7 +57,7 @@
   <div class="section">
     <div class="section-title">Ribbon</div>
     <div class="range-row"><span class="range-label">Count</span><input type="range" id="ribCount" min="0" max="400" value="40"><span class="range-value" id="ribCountVal">40</span></div>
-    <div class="range-row"><span class="range-label">Size</span><input type="range" id="ribSize" min="-10" max="50" value="10"><span class="range-value" id="ribSizeVal">10</span></div>
+    <div class="range-row"><span class="range-label">Size</span><input type="range" id="ribSize" min="-10" max="80" value="25"><span class="range-value" id="ribSizeVal">25</span></div>
     <label class="checkbox-label"><input type="checkbox" id="hideRibbons"> Hide ribbons (text only)</label>
     <label class="checkbox-label"><input type="checkbox" id="flatCaps"> Flat caps</label>
   </div>
@@ -288,7 +288,7 @@ function swapColors() {
 function resetAll() {
   prideMode = false;
   setVal('typeX',7); setVal('typeY',20); setVal('typeWeight',20);
-  setVal('ribCount',40); setVal('ribSize',10);
+  setVal('ribCount',40); setVal('ribSize',25);
   setVal('hideRibbons',false); setVal('flatCaps',false);
   setVal('radius',30); setVal('spacing',10); setVal('spiralStart',50); setVal('spin',1);
   setVal('waveSize',0); setVal('waveCount',2); setVal('waveSpeed',1); setVal('slope',10);
