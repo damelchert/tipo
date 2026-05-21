@@ -22,7 +22,7 @@
 <body>
 
 <div class="tipo-panel" id="panel">
-  <h1>Coil <span style="display:flex;gap:8px;"><a href="index.html" class="back-link">HOME</a><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a></span></h1>
+  <h1>Coil <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
     <div class="section-title">Text</div>
@@ -86,7 +86,11 @@
     <div class="color-row"><input type="color" id="c4" value="#ffffff"><label>4</label>
       <input type="color" id="c5" value="#000000"><label>5</label></div>
     <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="4"><span class="range-value" id="numColorsVal">4</span></div>
-    <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#000000"></div>
+    <div class="color-section-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#000000">
+      <button class="swap-btn" onclick="swapColors()" title="Swap color 1 with background">&#8646;</button>
+    </div>
   </div>
 
   <div class="section section-divider">
@@ -275,6 +279,12 @@ function draw() {
 // ============================================================
 // PRESETS
 // ============================================================
+function swapColors() {
+  const c = document.getElementById('c1');
+  const bg = document.getElementById('bgColor');
+  const tmp = c.value; c.value = bg.value; bg.value = tmp;
+}
+
 function resetAll() {
   prideMode = false;
   setVal('typeX',7); setVal('typeY',20); setVal('typeWeight',20);

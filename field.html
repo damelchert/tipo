@@ -19,7 +19,7 @@
 <body>
 
 <div class="tipo-panel" id="panel">
-  <h1>Field <span style="display:flex;gap:8px;"><a href="index.html" class="back-link">HOME</a><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a></span></h1>
+  <h1>Field <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
     <div class="section-title">Text</div>
@@ -38,6 +38,17 @@
       <span class="preset-chip" onclick="applyPreset('harlequin')">Harlequin</span>
       <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
       <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Color</div>
+    <div class="color-section-row">
+      <span class="range-label">Type</span>
+      <input type="color" id="typeColor" value="#000000">
+      <button class="swap-btn" onclick="swapColors()" title="Swap colors">&#8646;</button>
+      <input type="color" id="bgColor" value="#ffffff">
+      <span class="range-label">Bg</span>
     </div>
   </div>
 
@@ -76,12 +87,6 @@
     <div class="range-row"><span class="range-label">X Str Wave</span><input type="range" id="ampXStr" min="0" max="100" value="0"><span class="range-value" id="ampXStrVal">0</span></div>
     <label class="checkbox-label"><input type="checkbox" id="ampXStrOff"> Offset</label>
     <div class="range-row"><span class="range-label">Y Str Wave</span><input type="range" id="ampYStr" min="0" max="100" value="0"><span class="range-value" id="ampYStrVal">0</span></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Color</div>
-    <div class="range-row"><span class="range-label">Type</span><input type="color" id="typeColor" value="#000000"></div>
-    <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#ffffff"></div>
   </div>
 
   <div class="section">
@@ -282,6 +287,12 @@ function draw() {
 // ============================================================
 // PRESETS
 // ============================================================
+function swapColors() {
+  const tc = document.getElementById('typeColor');
+  const bg = document.getElementById('bgColor');
+  const tmp = tc.value; tc.value = bg.value; bg.value = tmp;
+}
+
 function resetAll() {
   prideMode = false;
   setVal('columns',33); setVal('rows',7); setVal('tracking',5); setVal('lineSpace',5);

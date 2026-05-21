@@ -20,7 +20,7 @@
 
 <!-- CONTROL PANEL -->
 <div class="tipo-panel" id="panel">
-  <h1>Cylinder <span style="display:flex;gap:8px;"><a href="index.html" class="back-link">HOME</a><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a></span></h1>
+  <h1>Cylinder <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <!-- TEXT INPUT -->
   <div class="section">
@@ -41,6 +41,18 @@
       <span class="preset-chip" onclick="applyPreset('hoops')">Hoops</span>
       <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
       <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <!-- COLOR (right after presets for quick access) -->
+  <div class="section">
+    <div class="section-title">Color</div>
+    <div class="color-section-row">
+      <span class="range-label">Type</span>
+      <input type="color" id="typeColor" value="#000000">
+      <button class="swap-btn" onclick="swapColors()" title="Swap colors">&#8646;</button>
+      <input type="color" id="bgColor" value="#ffffff">
+      <span class="range-label">Bg</span>
     </div>
   </div>
 
@@ -80,19 +92,6 @@
     <div class="range-row"><span class="range-label">X Rotation</span><input type="range" id="tweakX" min="0" max="45" value="0"><span class="range-value" id="tweakXVal">0</span></div>
     <div class="range-row"><span class="range-label">Y Rotation</span><input type="range" id="tweakY" min="0" max="45" value="0"><span class="range-value" id="tweakYVal">0</span></div>
     <div class="range-row"><span class="range-label">Z Rotation</span><input type="range" id="tweakZ" min="0" max="45" value="0"><span class="range-value" id="tweakZVal">0</span></div>
-  </div>
-
-  <!-- COLOR -->
-  <div class="section">
-    <div class="section-title">Color</div>
-    <div class="range-row">
-      <span class="range-label">Type</span>
-      <input type="color" id="typeColor" value="#000000">
-    </div>
-    <div class="range-row">
-      <span class="range-label">Background</span>
-      <input type="color" id="bgColor" value="#ffffff">
-    </div>
   </div>
 
   <!-- CAMERA -->
@@ -341,6 +340,14 @@ function draw() {
 // ============================================================
 // PRESETS
 // ============================================================
+function swapColors() {
+  const tc = document.getElementById('typeColor');
+  const bg = document.getElementById('bgColor');
+  const tmp = tc.value;
+  tc.value = bg.value;
+  bg.value = tmp;
+}
+
 function resetAll() {
   stackHeightAdjust = 0;
   prideMode = false;
