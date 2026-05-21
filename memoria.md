@@ -10,11 +10,14 @@
 ## Estrutura de Arquivos
 ```
 /tipo/
-  index.html                   — landing page (navegação progressiva)
+  index.html                   — landing page (navegação progressiva com hash routing)
   dithering.html               — SVG dithering tool (FUNCIONAL)
   cylinder.html                — kinetic type: cylinder (FUNCIONAL)
+  field.html                   — kinetic type: field (FUNCIONAL)
+  stripes.html                 — kinetic type: stripes (FUNCIONAL)
+  coil.html                    — kinetic type: coil (FUNCIONAL)
   shared/
-    style.css                  — design system (CSS variables, dark theme)
+    style.css                  — design system (#99E0D2 section titles, swap btn, etc)
     recorder.js                — classe TipoRecorder (MP4 recording)
   assets/
     fonts/IBMPlexMono-Regular.ttf
@@ -26,9 +29,9 @@
       spacetype_reverse_engineering.md
     outputs/                   — exports de teste
   projeto.md                   — visão do produto
-  memoria.md                   — este arquivo
+  memoria.md                   — este arquivo (UNICO arquivo de memória)
   ATTACK_PLAN.md               — plano fase-a-fase
-  .gitignore                   — exclui node_modules, vault, squads
+  .gitignore                   — exclui node_modules, vault, squads, package files
 ```
 
 ## Decisões Técnicas
@@ -37,7 +40,8 @@
 |---------|---------|
 | HTML puro sem build tools | Simplicidade, zero setup, deploy direto |
 | Multi-page static site | Cada modo independente, performance, fácil manter |
-| p5.js WEBGL pra kinetic type | 3D nativo no browser, mesmo que o original |
+| p5.js WEBGL pra kinetic type 3D | 3D nativo no browser |
+| p5.js 2D pra stripes/coil | Sem overhead de WEBGL pra modos 2D |
 | mp4-muxer UMD via CDN | Funciona sem npm/webpack, carrega sync |
 | Back-pressure via encodeQueueSize | Evita travar render loop |
 | Real-time timestamps | Velocidade constante independente de performance |
@@ -47,42 +51,79 @@
 | fill() em vez de stroke() no WEBGL | p5.js text() em WEBGL renderiza como geometria preenchida |
 | .ttf em vez de .otf/.woff2 pra p5.js | loadFont() precisa de TTF ou OTF real (não WOFF) |
 
+## Padrões de UI (aplicar em todas as páginas)
+- Section titles em **#99E0D2** (cor accent)
+- **Presets logo abaixo do campo Text** (primeiro contato do usuário)
+- **Botão Reset** vermelho no final dos presets
+- **Color pickers + Swap button** logo após presets
+- **Swap button** (&#8646;) inverte type/bg colors com 1 clique
+- **Header:** Nome do modo + nav links (KINETIC TYPE | HOME) — menu anterior à esquerda, HOME à direita
+- **Dithering header:** VISUAL TOOLS | HOME
+- Todos os presets usam **TIPÓ** como texto default (nunca sobrescrever com texto custom)
+- MP4 recording + PNG export em todas as páginas
+- Texto default: TIPÓ (sempre)
+
 ---
 
 ## 2026-05-20
 
-### Cylinder — Primeiro Kinetic Type Mode (FUNCIONAL)
+### Fase 1 Completa — 4 Kinetic Type Modes
+
+**Cylinder** (FUNCIONAL)
 - 21 controles: Cylinder (radius, count, rotate, offset), Wave (count, speed, latitude, longitude, ripple, x/y scale), Type (x/y scale, weight), Tweak (x/y/z rotation), Camera (x/y/z rotation, zoom)
-- 8 presets: Simple, Jellyfish, Crown, Complex, Weave, Zebra, Hoops, Pride
-- MP4 recording via TipoRecorder compartilhado
-- PNG export via p5.js saveCanvas
-- Dark UI Tipó com shared CSS
-- **Bug fix:** fonte .otf baixou como HTML (GitHub redirect). Resolvido baixando .ttf do Google Fonts GitHub
-- **Bug fix:** text() em WEBGL precisa de fill() não stroke(). Mudado de noFill()+stroke() pra fill()+noStroke()
+- 8 presets + Reset: Simple, Jellyfish, Crown, Complex, Weave, Zebra, Hoops, Pride
+- Bug fix: fonte .otf baixou como HTML → .ttf do Google Fonts GitHub
+- Bug fix: text() WEBGL precisa fill() não stroke()
+
+**Field** (FUNCIONAL)
+- 21 controles: Grid (columns, rows, tracking, line space), Type (x/y scale, weight), Wave (speed, x/y freq), Amplitude (z/x/y axis, z smooth, x stretch, x/y stretch wave, offsets), Camera
+- 7 presets + Reset: Stacks, Bricks, Simple Z, Complex Z, Zebra, Harlequin, Pride
+- Auto-rotation to follow Z surface (rotateY/rotateX based on neighboring Z values)
+- Full text toggle (fill entire grid or single text run)
+
+**Stripes** (FUNCIONAL)
+- 13 controles + 5 color slots: Type (x/y scale, weight, tracking), Ribbon (count, x/y space, size, offset), Wave (size, speed, wavelength, slope)
+- 11 presets + Reset: Marquee, Subway, Wow, Stacks, Old Sea, Color Sea, Simple Wave, Simple Wave 2, Not So Weird, Racer, Pride
+- 2D mode (sem WEBGL) — colored ribbons with text auto-rotating to follow curve
+- Shadow layer behind each ribbon
+- sinEngine with adjustable slope for square/round wave shapes
+
+**Coil** (FUNCIONAL)
+- 13 controles + 5 color slots: Type (x/y scale, weight), Ribbon (count, size, hide, flat caps), Spiral (radius, spacing, start, spin), Wave (size, count, speed, slope)
+- 11 presets + Reset: Wide, Super, Amoeba, Spacer, Kitty, Hourglass, Star, ZZtar, Pretzel, Lemniscate, Pride
+- Archimedean spiral with radial wave distortion
+- Thicker ribbons (ribSize default 25, max 80) for solid spiral look
+
+### UI Polish (aplicado em todas as páginas)
+- Section titles: #99E0D2 accent color
+- Presets movidos pra logo abaixo do Text input
+- Botão Reset vermelho no final dos presets
+- Color pickers + Swap button após presets (Cylinder, Field) / na seção Colors (Stripes, Coil)
+- Header nav: KINETIC TYPE (esquerda) | HOME (direita)
+- Dithering: VISUAL TOOLS (esquerda) | HOME (direita)
+- Todos presets mantêm TIPÓ como texto (corrigido: *SUPER*, SPACE *, Hello?, etc → TIPÓ)
 
 ### Infraestrutura & Deploy
-- Git repo criado: github.com/damelchert/tipo
-- Deploy Vercel configurado (auto-deploy on push)
-- shared/style.css — design system completo (CSS variables, panels, buttons, sliders, modals, cards, landing)
-- shared/recorder.js — classe TipoRecorder reutilizável (MP4 + WebM fallback, back-pressure, progress)
-- Landing page com navegação progressiva: Home → Visual Tools / Kinetic Type → subcategorias → modos
+- Git repo: github.com/damelchert/tipo
+- Deploy: Vercel (auto-deploy on push)
+- shared/style.css — design system com CSS variables, swap-btn, color-section-row
+- shared/recorder.js — classe TipoRecorder reutilizável
+- Landing page: navegação progressiva com hash routing (#kinetic, #visual, #3d, etc)
+- Keyboard nav: ESC/Backspace volta nível
 
 ### Naming & Branding
-- Nome definido: **Tipó**
-- Brand squad consultado — 40+ sugestões em EN e PT-BR
-- Decisão: nome em português, curto, universal
+- Nome definido: **Tipó** (brand-squad consultado, 40+ sugestões)
 
 ### Engenharia Reversa — Space Type Generator (COMPLETA)
-- 22 modos mapeados com todos os parâmetros e presets (~150 presets totais)
-- 98 arquivos baixados (75 JS + 22 HTML + 1 CSS = ~1MB)
-- 3 versões do keyboardEngine (font engine procedural)
-- Stack: p5.js + jQuery UI + CCapture.js + h264-mp4-encoder
-- 25+ fontes identificadas
-- Docs em `tipo_vault/knowledge/spacetype_reverse_engineering.md`
+- 22 modos, ~150 presets, 98 arquivos (75 JS + 22 HTML + 1 CSS)
+- Docs: `tipo_vault/knowledge/spacetype_reverse_engineering.md`
+- Source: `tipo_vault/knowledge/spacetype_src/`
 
 ### Organização
-- Pasta renomeada: `dithering tool` → `tipo`
-- Vault renomeado: `dithering_vault` → `tipo_vault`
+- Pasta: `dithering tool` → `tipo`
+- Vault: `dithering_vault` → `tipo_vault`
+- Unificado memoria.md (deletado PROJECT_MEMORY.md duplicado)
+- Deletados templates vazios do vault (MEMORIA.md, PROJECT.md)
 
 ---
 
@@ -97,17 +138,13 @@
 - 7-State Midtone Mapping (highlights → shadows) com SVG customizado por state
 - Grid resolution, overall scale, aspect ratio (original/1:1), background color
 - Fill solid, invert mapping, scale with midtones, 90° snap rotation
-- Shape Library: 60+ shapes em 7 categorias (geometric, bars, crosses, organic, arrows, fun/icons, halftone)
-- Text-to-Shape: bitmap trace (rasteriza → lê pixels → SVG com mini-rects)
-- 10 shape presets + 24 color palettes
-- Hex color copiável (click to copy)
+- Shape Library: 60+ shapes em 7 categorias
+- Text-to-Shape: bitmap trace
+- 10 shape presets + 24 color palettes + hex copiável
 - Export: PNG, SVG, MP4 (8/16 Mbps)
 
-**Gravação de Vídeo (4 iterações):**
-- v1: MediaRecorder WebM → formato ruim
-- v2: WebCodecs direto → travava vídeo
-- v3: Record + convert → lento (Infinity duration bug)
-- v4 (FINAL): MP4 em tempo real, back-pressure control, real-time timestamps, recordCanvas fixo, progress bar, timer visual
+**Gravação de Vídeo (4 iterações até chegar na v4 final):**
+- v4: MP4 em tempo real, back-pressure control, real-time timestamps, recordCanvas fixo, progress bar, timer visual
 
 **Problemas resolvidos:**
 1. CDN bloqueado em file:// → UMD script tag

@@ -7,22 +7,20 @@ Landing page (index.html) como hub central.
 
 ## Ordem de Implementacao
 
-### FASE 0 — Infraestrutura (PRIMEIRO)
-- [x] Criar `shared/style.css` — dark theme unificado (design system completo)
-- [x] Criar `shared/recorder.js` — sistema de gravacao MP4 reutilizavel (classe TipoRecorder)
+### FASE 0 — Infraestrutura ✅
+- [x] Criar `shared/style.css` — design system (#99E0D2, swap btn, color-section-row)
+- [x] Criar `shared/recorder.js` — classe TipoRecorder (MP4 + WebM fallback)
 - [ ] Criar `shared/ui.js` — sliders, panels, dropdowns compartilhados
-- [x] Criar `index.html` — landing page com navegacao progressiva + animacoes preview
+- [x] Criar `index.html` — landing page com navegacao progressiva + hash routing
 - [ ] Migrar `dithering.html` pra usar shared CSS/JS
 - [x] Setup Git repo (github.com/damelchert/tipo)
-- [x] Deploy Vercel
+- [x] Deploy Vercel (auto-deploy on push)
 
-### FASE 1 — Modos Simples (3D basico, p5.js WEBGL)
-Estes usam a mesma base: p5.js WEBGL + keyboardEngine
-
-- [ ] **CYLINDER** — 21 sliders, 7 presets (Simple, Jellyfish, Crown, Complex, Weave, Zebra, Hoops)
-- [ ] **FIELD** — 21 sliders, 6 presets (Stacks, Bricks, Simple Z, Complex Z, Zebra, Harlequin)  
-- [ ] **COIL** — 13 sliders, 11 presets (Wide, Super, Amoeba, Spacer, Kitty, Hourglass, Star, ZZtar, Pretzel, Lemniscate)
-- [ ] **STRIPES** — 13 sliders, 10 presets (Marquee, Subway, Wow, Stacks, Old Sea, Color Sea, Simple Wave, Simple Wave 2, Not So Weird, Racer)
+### FASE 1 — Modos Core (p5.js) ✅
+- [x] **CYLINDER** — 21 controles, 8 presets + Reset, p5.js WEBGL, fill() text rendering
+- [x] **FIELD** — 21 controles, 7 presets + Reset, p5.js WEBGL, Z-surface auto-rotation
+- [x] **STRIPES** — 13 controles + 5 colors, 11 presets + Reset, p5.js 2D, ribbon shadows
+- [x] **COIL** — 13 controles + 5 colors, 11 presets + Reset, p5.js 2D, Archimedean spiral
 
 ### FASE 2 — Modos 3D Intermediarios
 - [ ] **FLAG** — 17 sliders, 13 presets (A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case)
@@ -53,29 +51,19 @@ Estes usam a mesma base: p5.js WEBGL + keyboardEngine
 ### FASE 6 — Polish & Deploy
 - [ ] Responsividade basica
 - [ ] Favicon + meta tags
-- [ ] Git push
-- [ ] Deploy (GitHub Pages ou Netlify)
 - [ ] README.md publico
+- [ ] Dominio custom (tipo.tools ou tipo.app)
 
-## Shared Features (todas as paginas)
-- Dark UI theme
-- Text input field
-- Color pickers (type color + background)
-- Preset buttons
-- PRIDE mode (rainbow colors)
-- MP4 recording + export
-- PNG screenshot
-- Mode selector dropdown (navega entre modos)
-- Full screen toggle
-
-## Estimativa
-- Fase 0: fundacao
-- Fase 1: 4 modos core
-- Fase 2: 4 modos intermediarios
-- Fase 3: 3 modos 2D
-- Fase 4: 3 modos composicao
-- Fase 5: 8 modos avancados
-- Fase 6: polish + deploy
+## Padrao de UI (aplicar em TODAS as paginas novas)
+- Section titles em #99E0D2
+- Presets logo abaixo do campo Text
+- Botao Reset vermelho no final dos presets
+- Color pickers + Swap button apos presets
+- Header: NomeDoModo + KINETIC TYPE (esq) | HOME (dir)
+- Dithering: VISUAL TOOLS (esq) | HOME (dir)
+- Texto default: TIPÓ (nunca sobrescrever nos presets)
+- MP4 recording + PNG export
+- p5.js WEBGL pra 3D, p5.js 2D pra modos planos
 
 ## Referencias
 - Space Type Generator source: `tipo_vault/knowledge/spacetype_src/`
