@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-23 ferramentas no total: 1 dithering + 22 kinetic type modes.
+28 ferramentas no total: 6 visual tools + 22 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 
@@ -59,6 +59,21 @@ Landing page (index.html) como hub central.
 - [x] Favicon + meta tags (SVG favicon + description + theme-color em todas as 24 paginas)
 - [x] README.md publico
 - [ ] Dominio custom (tipo.tools ou tipo.app) — acao do Daniel
+
+### VISUAL TOOLS ✅
+- [x] **DITHERING** — SVG dithering, 7-state luminance, 60+ shapes, MP4/PNG/SVG export
+- [x] **RETÍCULA** — Halftone grid, 5 shapes (circle/square/diamond/cross/line), 6 presets
+- [x] **GLITCH** — RGB shift, slicing, noise, scanlines, 6 presets, animated MP4
+- [x] **DUOTONE** — 2-color mapping (shadow+highlight), 5 presets
+- [x] **GRAIN** — Film grain overlay, density/size/opacity, 5 presets
+- [x] **ASCII** — Image to ASCII art, 3 charsets, 5 presets
+
+### BACKLOG — Pontas Soltas
+- [ ] Migrar `dithering.html` pra usar shared CSS/JS (funcional mas isolado)
+- [ ] Landing page: mini-previews animados por modo individual nos cards
+- [ ] Dominio custom (tipo.tools ou tipo.app) — acao do Daniel
+- [ ] Refinamento Fase 2 (FLAG font engine, CASCADE/RIBBON/MORISAWA ajustes visuais)
+- [ ] Refinamento Fases 3-5 (ajustes visuais para match com Space Type Generator)
 
 ## Padrao de UI (aplicar em TODAS as paginas novas)
 - Section titles em #99E0D2

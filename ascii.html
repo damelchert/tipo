@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipo — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipo — ASCII</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+</style>
+</head>
+<body>
+<div class="tipo-panel" id="panel">
+  <h1>ASCII <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section"><div class="section-title">Image</div>
+    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Upload Image</button>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <div style="font-size:10px;color:var(--text-5);text-align:center;">or drag &amp; drop onto canvas</div>
+  </div>
+
+  <div class="section"><div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('dense')">Dense</span>
+      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
+      <span class="preset-chip" onclick="applyPreset('colorMode')">Color</span>
+      <span class="preset-chip" onclick="applyPreset('matrix')">Matrix</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section"><div class="section-title">Resolution</div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="10" max="200" value="80"><span class="range-value" id="columnsVal">80</span></div>
+  </div>
+
+  <div class="section"><div class="section-title">Character Set</div>
+    <select id="charset">
+      <option value="standard">Standard ( .:-=+*#%@)</option>
+      <option value="blocks">Blocks</option>
+      <option value="minimal">Minimal (.oO@)</option>
+    </select>
+  </div>
+
+  <div class="section"><div class="section-title">Color</div>
+    <label class="checkbox-label"><input type="checkbox" id="useOriginalColor" checked> Original Colors</label>
+    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="monoColor" value="#00ff00"></div>
+    <div class="color-section-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#000000"></div>
+  </div>
+
+  <div class="section section-divider"><div class="section-title">Export</div>
+    <div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+<div id="canvasContainer"></div>
+<div class="tipo-toast" id="toast"></div>
+<script>
+let font, sourceImg = null;
+
+const CHARSETS = {
+  standard: ' .:-=+*#%@',
+  blocks: ' \u2591\u2592\u2593\u2588',
+  minimal: ' .oO@'
+};
+
+function createDefaultImage() {
+  const g = createGraphics(640, 480);
+  for (let y = 0; y < 480; y++) {
+    const t = y / 480;
+    g.stroke(lerpColor(color('#ff6600'), color('#000033'), t));
+    g.line(0, y, 640, y);
+  }
+  g.textSize(60); g.fill(255); g.textAlign(CENTER, CENTER);
+  g.text('DROP IMAGE', 320, 240);
+  return g;
+}
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  c.parent('canvasContainer');
+  textFont(font);
+  pixelDensity(1);
+  sourceImg = createDefaultImage();
+  TipoUI.init({ mode: 'ascii', formatters: {} });
+
+  document.getElementById('fileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      loadImage(url, img => { sourceImg = img; });
+    }
+  });
+
+  const container = document.getElementById('canvasContainer');
+  container.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      loadImage(url, img => { sourceImg = img; });
+    }
+  });
+  container.addEventListener('dragover', e => e.preventDefault());
+}
+
+function windowResized() {
+  resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+}
+
+function val(id) { return TipoUI.val(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+  if (!sourceImg) return;
+
+  const cols = val('columns');
+  const charsetKey = document.getElementById('charset').value;
+  const chars = CHARSETS[charsetKey];
+  const useColor = document.getElementById('useOriginalColor').checked;
+  const monoC = color(document.getElementById('monoColor').value);
+
+  // Calculate cell size based on canvas width and columns
+  const cellW = width / cols;
+  const cellH = cellW * 1.6; // monospace aspect ratio
+  const rows = floor(height / cellH);
+  const fontSize = cellW * 1.2;
+
+  textSize(fontSize);
+  textAlign(CENTER, CENTER);
+  noStroke();
+
+  // Create a temporary copy at reduced resolution for sampling
+  sourceImg.loadPixels();
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      // Map cell to source image coordinates
+      const sx = floor(map(col, 0, cols, 0, sourceImg.width));
+      const sy = floor(map(row, 0, rows, 0, sourceImg.height));
+
+      // Sample pixel
+      const idx = (sy * sourceImg.width + sx) * 4;
+      const r = sourceImg.pixels[idx] || 0;
+      const g = sourceImg.pixels[idx + 1] || 0;
+      const b = sourceImg.pixels[idx + 2] || 0;
+
+      // Brightness
+      const bright = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+
+      // Pick character
+      const charIdx = floor(bright * (chars.length - 1));
+      const ch = chars.charAt(constrain(charIdx, 0, chars.length - 1));
+
+      if (ch === ' ') continue;
+
+      // Color
+      if (useColor) {
+        fill(r, g, b);
+      } else {
+        fill(monoC);
+      }
+
+      text(ch, col * cellW + cellW / 2, row * cellH + cellH / 2);
+    }
+  }
+
+  TipoUI.captureFrame();
+}
+
+function resetAll() {
+  setVal('columns', 80);
+  document.getElementById('charset').value = 'standard';
+  document.getElementById('useOriginalColor').checked = true;
+  document.getElementById('monoColor').value = '#00ff00';
+  document.getElementById('bgColor').value = '#000000';
+}
+
+const PRESETS = {
+  classic: () => { resetAll(); setVal('columns', 80); },
+  dense: () => { resetAll(); setVal('columns', 160); document.getElementById('charset').value = 'standard'; },
+  minimal: () => { resetAll(); setVal('columns', 60); document.getElementById('charset').value = 'minimal'; },
+  colorMode: () => { resetAll(); setVal('columns', 100); document.getElementById('useOriginalColor').checked = true; },
+  matrix: () => { resetAll(); setVal('columns', 90); document.getElementById('useOriginalColor').checked = false; document.getElementById('monoColor').value = '#00ff00'; document.getElementById('bgColor').value = '#000a00'; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body></html>

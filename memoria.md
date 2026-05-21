@@ -12,6 +12,11 @@
 /tipo/
   index.html                   — landing page (navegação progressiva com hash routing)
   dithering.html               — SVG dithering tool (FUNCIONAL)
+  reticula.html                — halftone grid system (FUNCIONAL)
+  glitch.html                  — digital distortion effects (FUNCIONAL)
+  duotone.html                 — two-color image mapping (FUNCIONAL)
+  grain.html                   — film grain texture overlay (FUNCIONAL)
+  ascii.html                   — ASCII character art converter (FUNCIONAL)
   cylinder.html                — kinetic type: cylinder (FUNCIONAL)
   field.html                   — kinetic type: field (FUNCIONAL)
   stripes.html                 — kinetic type: stripes (FUNCIONAL)
@@ -112,6 +117,22 @@
 - 11 presets + Reset: Wide, Super, Amoeba, Spacer, Kitty, Hourglass, Star, ZZtar, Pretzel, Lemniscate, Pride
 - Archimedean spiral with radial wave distortion
 - Thicker ribbons (ribSize default 25, max 80) for solid spiral look
+
+## 2026-05-21
+
+### Visual Tools — 5 Novas Ferramentas
+- **Retícula** — Halftone grid: imagem → grid de dots/shapes com tamanho proporcional à luminosidade. 5 shapes (circle, square, diamond, cross, line), rotação angular, 6 presets
+- **Glitch** — Distorção digital: RGB channel shift, horizontal slicing, pixel noise, scanlines. 6 presets (Subtle, VHS, Corrupt, RGB Split, Scanlines, Chaos). Animado com export MP4
+- **Duotone** — Mapeamento de imagem para 2 cores (shadow + highlight). Contraste, brilho, threshold. 5 presets (Midnight, Sunset, Ocean, Forest, Neon)
+- **Grain** — Textura de film grain sobre imagens. Densidade, tamanho, opacidade, mono/color. 5 presets (Film, Heavy, Subtle, Vintage, Color Noise)
+- **ASCII** — Conversor de imagem para arte ASCII. Resolução variável, 3 charsets, cor original ou mono. 5 presets (Classic, Dense, Minimal, Color, Matrix)
+
+### Landing Page — Animações melhoradas
+- Quadrante 3D: perspective cylinder spin com wave scaling
+- Quadrante 2D: wave distortion com skew + stretch
+- Quadrante Composition: orbital circular com scale pulse
+- Quadrante Animation: snap/flash/explode sequence
+- Kinetic preview: staggered multi-effect morph com color
 
 ### Fase 2 Completa — 4 Kinetic Type Modes (3D Intermediários)
 
