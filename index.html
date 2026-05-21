@@ -452,6 +452,19 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 buildDitherGrid();
 buildKineticPreview();
+
+// Handle hash navigation (e.g. index.html#kinetic, #visual, #3d, #2d, etc.)
+function handleHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash === 'kinetic') goKineticType();
+  else if (hash === 'visual') goVisualTools();
+  else if (hash === '3d') goCategory('3d');
+  else if (hash === '2d') goCategory('2d');
+  else if (hash === 'composition') goCategory('composition');
+  else if (hash === 'animation') goCategory('animation');
+}
+handleHash();
+window.addEventListener('hashchange', handleHash);
 </script>
 
 </body>
