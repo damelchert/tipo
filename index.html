@@ -95,19 +95,24 @@ body { overflow: hidden; }
   50% { transform: scale(1); opacity: 1; }
 }
 
-/* Kinetic preview — spinning letters */
+/* Kinetic preview — staggered multi-effect letters */
 .kinetic-preview {
-  font-size: 80px; font-weight: 700; letter-spacing: -2px;
+  font-size: 90px; font-weight: 700; letter-spacing: -4px;
   color: var(--text-0); white-space: nowrap;
+  perspective: 600px;
 }
 .kinetic-char {
   display: inline-block;
-  animation: kinetic-wave 4s ease-in-out infinite;
+  animation: kinetic-morph 6s cubic-bezier(0.4,0,0.2,1) infinite;
 }
-@keyframes kinetic-wave {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-30px) rotate(-8deg); }
-  75% { transform: translateY(20px) rotate(5deg); }
+@keyframes kinetic-morph {
+  0% { transform: translateY(60px) scaleX(0.3) rotateX(90deg); opacity: 0; }
+  15% { transform: translateY(0) scaleX(1) rotateX(0deg); opacity: 1; }
+  40% { transform: translateY(0) scaleX(1) rotateX(0deg); opacity: 1; }
+  55% { transform: translateY(-20px) scaleX(1.3) scaleY(0.7); }
+  70% { transform: translateY(0) scaleX(1) scaleY(1); }
+  85% { transform: translateY(0) scaleX(0.5) rotateY(180deg); opacity: 1; }
+  100% { transform: translateY(-80px) scaleX(0.1) rotateY(360deg); opacity: 0; }
 }
 
 /* ============================================================
@@ -142,22 +147,65 @@ body { overflow: hidden; }
 
 /* Quad animated backgrounds */
 .quad-preview {
-  position: absolute; inset: 0; opacity: 0.08;
+  position: absolute; inset: 0; opacity: 0.1;
   display: flex; align-items: center; justify-content: center;
   pointer-events: none; overflow: hidden;
 }
 .quad-preview-text {
-  font-size: 120px; font-weight: 700; color: var(--text-0);
-  white-space: nowrap; letter-spacing: -4px;
+  font-size: 140px; font-weight: 700; color: var(--text-0);
+  white-space: nowrap; letter-spacing: -6px;
 }
-.quad-3d { animation: quad-rotate 8s linear infinite; }
-@keyframes quad-rotate { from { transform: perspective(400px) rotateY(0deg); } to { transform: perspective(400px) rotateY(360deg); } }
-.quad-2d { animation: quad-slide 6s ease-in-out infinite alternate; }
-@keyframes quad-slide { from { transform: translateX(-20%); } to { transform: translateX(20%); } }
-.quad-comp { animation: quad-scale 5s ease-in-out infinite alternate; }
-@keyframes quad-scale { from { transform: scale(0.8) rotate(-5deg); } to { transform: scale(1.2) rotate(5deg); } }
-.quad-anim { animation: quad-bounce 2s ease-in-out infinite; }
-@keyframes quad-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+/* 3D: perspective cylinder spin + wave */
+.quad-3d {
+  animation: quad-3d-spin 10s linear infinite;
+  transform-style: preserve-3d;
+}
+@keyframes quad-3d-spin {
+  0% { transform: perspective(300px) rotateY(0deg) rotateX(10deg) scaleY(1); }
+  25% { transform: perspective(300px) rotateY(90deg) rotateX(-5deg) scaleY(1.3); }
+  50% { transform: perspective(300px) rotateY(180deg) rotateX(10deg) scaleY(0.7); }
+  75% { transform: perspective(300px) rotateY(270deg) rotateX(-5deg) scaleY(1.3); }
+  100% { transform: perspective(300px) rotateY(360deg) rotateX(10deg) scaleY(1); }
+}
+
+/* 2D: wave distortion + stretch */
+.quad-2d {
+  animation: quad-2d-wave 5s ease-in-out infinite;
+}
+@keyframes quad-2d-wave {
+  0% { transform: scaleX(1) skewX(0deg) translateX(0); }
+  25% { transform: scaleX(1.4) skewX(-8deg) translateX(-15%); }
+  50% { transform: scaleX(0.6) skewX(12deg) translateX(10%); }
+  75% { transform: scaleX(1.3) skewX(-5deg) translateX(-5%); }
+  100% { transform: scaleX(1) skewX(0deg) translateX(0); }
+}
+
+/* Composition: circular orbit + scale pulse */
+.quad-comp {
+  animation: quad-comp-orbit 8s ease-in-out infinite;
+}
+@keyframes quad-comp-orbit {
+  0% { transform: rotate(0deg) scale(0.8); }
+  25% { transform: rotate(90deg) scale(1.2); }
+  50% { transform: rotate(180deg) scale(0.6); }
+  75% { transform: rotate(270deg) scale(1.4); }
+  100% { transform: rotate(360deg) scale(0.8); }
+}
+
+/* Animation: snap/flash/explode sequence */
+.quad-anim {
+  animation: quad-anim-snap 3s cubic-bezier(0.4,0,0.2,1) infinite;
+}
+@keyframes quad-anim-snap {
+  0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+  15% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+  30% { transform: scale(1) rotate(0deg); }
+  60% { transform: scale(1) rotate(0deg); }
+  70% { transform: scale(1.5) rotate(10deg); opacity: 1; }
+  85% { transform: scale(3) rotate(-5deg); opacity: 0; letter-spacing: 40px; }
+  100% { transform: scale(0) rotate(-20deg); opacity: 0; }
+}
 
 /* ============================================================
    LEVEL 2 — Mode list (cards within a category)
@@ -256,12 +304,12 @@ body { overflow: hidden; }
     <div class="tipo-level" id="levelKinetic">
       <div class="tipo-quad">
         <div class="tipo-quad-panel" onclick="goCategory('3d')">
-          <div class="quad-preview"><div class="quad-preview-text quad-3d">TIPÓ</div></div>
+          <div class="quad-preview"><div class="quad-preview-text quad-3d">TIPÓ TIPÓ TIPÓ</div></div>
           <div class="tipo-quad-label">3D</div>
           <div class="tipo-quad-sub">Cylinder &bull; Field &bull; Stripes &bull; Coil<br>Flag &bull; Cascade &bull; Ribbon &bull; Morisawa</div>
         </div>
         <div class="tipo-quad-panel" onclick="goCategory('2d')">
-          <div class="quad-preview"><div class="quad-preview-text quad-2d">TIPÓ</div></div>
+          <div class="quad-preview"><div class="quad-preview-text quad-2d">TIPÓ TIPÓ</div></div>
           <div class="tipo-quad-label">2D</div>
           <div class="tipo-quad-sub">Layers &bull; Danger &bull; String</div>
         </div>
@@ -273,7 +321,7 @@ body { overflow: hidden; }
         <div class="tipo-quad-panel" onclick="goCategory('animation')">
           <div class="quad-preview"><div class="quad-preview-text quad-anim">TIPÓ</div></div>
           <div class="tipo-quad-label">Animation</div>
-          <div class="tipo-quad-sub">Snap &bull; Flash &bull; Pow &bull; Crash<br>Vessel &bull; Shine &bull; Boost</div>
+          <div class="tipo-quad-sub">Snap &bull; Flash &bull; Pow &bull; Crash<br>Crash Clock &bull; Vessel &bull; Shine &bull; Boost</div>
         </div>
       </div>
     </div>
@@ -430,7 +478,7 @@ function buildKineticPreview() {
   const el = document.getElementById('kineticPreview');
   const word = 'TIPÓ';
   el.innerHTML = word.split('').map((ch, i) =>
-    `<span class="kinetic-char" style="animation-delay:${i * 0.3}s">${ch}</span>`
+    `<span class="kinetic-char" style="animation-delay:${i * 0.5}s; color:hsl(${i*60+200},70%,65%)">${ch}</span>`
   ).join('');
 }
 
