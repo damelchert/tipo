@@ -16,6 +16,10 @@
   field.html                   — kinetic type: field (FUNCIONAL)
   stripes.html                 — kinetic type: stripes (FUNCIONAL)
   coil.html                    — kinetic type: coil (FUNCIONAL)
+  flag.html                    — kinetic type: flag (FUNCIONAL — precisa refinamento)
+  cascade.html                 — kinetic type: cascade (FUNCIONAL)
+  ribbon.html                  — kinetic type: ribbon (FUNCIONAL)
+  morisawa.html                — kinetic type: morisawa (FUNCIONAL)
   shared/
     style.css                  — design system (#99E0D2 section titles, swap btn, etc)
     recorder.js                — classe TipoRecorder (MP4 recording)
@@ -94,6 +98,17 @@
 - 11 presets + Reset: Wide, Super, Amoeba, Spacer, Kitty, Hourglass, Star, ZZtar, Pretzel, Lemniscate, Pride
 - Archimedean spiral with radial wave distortion
 - Thicker ribbons (ribSize default 25, max 80) for solid spiral look
+
+### Fase 2 — Primeiro modo: Flag
+
+**Flag** (FUNCIONAL)
+- 17 controles: Type (x/y scale, weight, rows, padding, ribbon depth, text-only toggle), Wave (x/y/z size, offset, speed, row offset, slope), Camera (x/y/z rotation, zoom)
+- 14 presets + Reset: A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case, Pride
+- 3D waving flag surface — text on deformable quad grid, per-corner wave deformation
+- sinEngine with slope easing, multi-color cycling by row, ribbon depth with back face
+- Padding = lerp corners toward center (shrink cells)
+- Auto-rotation of text to follow deformed surface normal
+- First mode to use TipoUI.init() from shared/ui.js
 
 ### UI Polish (aplicado em todas as páginas)
 - Section titles: #99E0D2 accent color

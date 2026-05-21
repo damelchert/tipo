@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Flag</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Flag <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('banner')">A Banner</span>
+      <span class="preset-chip" onclick="applyPreset('twist')">A Twist</span>
+      <span class="preset-chip" onclick="applyPreset('folds')">Folds</span>
+      <span class="preset-chip" onclick="applyPreset('flatSea')">Flat Sea</span>
+      <span class="preset-chip" onclick="applyPreset('barber')">Barber</span>
+      <span class="preset-chip" onclick="applyPreset('silos')">Silos</span>
+      <span class="preset-chip" onclick="applyPreset('mystery')">Mystery</span>
+      <span class="preset-chip" onclick="applyPreset('colaWave')">Cola Waves</span>
+      <span class="preset-chip" onclick="applyPreset('origami')">Origami</span>
+      <span class="preset-chip" onclick="applyPreset('crane')">Origami 2</span>
+      <span class="preset-chip" onclick="applyPreset('bw')">B&W</span>
+      <span class="preset-chip" onclick="applyPreset('newsprint')">Newsprint</span>
+      <span class="preset-chip" onclick="applyPreset('edge')">Edge Case</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Type</div>
+    <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="typeX" min="0" max="150" value="20"><span class="range-value" id="typeXVal">20</span></div>
+    <div class="range-row"><span class="range-label">Y-Scale</span><input type="range" id="typeY" min="0" max="150" value="50"><span class="range-value" id="typeYVal">50</span></div>
+    <div class="range-row"><span class="range-label">Weight</span><input type="range" id="typeWeight" min="0" max="40" value="20"><span class="range-value" id="typeWeightVal">2.0</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="30" value="6"><span class="range-value" id="rowsVal">6</span></div>
+    <div class="range-row"><span class="range-label">Padding</span><input type="range" id="padding" min="0" max="100" value="30"><span class="range-value" id="paddingVal">30</span></div>
+    <div class="range-row"><span class="range-label">Ribbon Depth</span><input type="range" id="ribDepth" min="0" max="100" value="20"><span class="range-value" id="ribDepthVal">2.0</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="textOnly"> Text only (no ribbons)</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wave</div>
+    <div class="range-row"><span class="range-label">X Size</span><input type="range" id="waveX" min="0" max="200" value="95"><span class="range-value" id="waveXVal">95</span></div>
+    <div class="range-row"><span class="range-label">Y Size</span><input type="range" id="waveY" min="0" max="200" value="20"><span class="range-value" id="waveYVal">20</span></div>
+    <div class="range-row"><span class="range-label">Z Size</span><input type="range" id="waveZ" min="0" max="200" value="50"><span class="range-value" id="waveZVal">50</span></div>
+    <div class="range-row"><span class="range-label">Offset</span><input type="range" id="offset" min="0" max="78" value="30"><span class="range-value" id="offsetVal">0.30</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="speed" min="0" max="50" value="3"><span class="range-value" id="speedVal">0.03</span></div>
+    <div class="range-row"><span class="range-label">Row Offset</span><input type="range" id="rowOffset" min="0" max="314" value="37"><span class="range-value" id="rowOffsetVal">0.37</span></div>
+    <div class="range-row"><span class="range-label">Slope</span><input type="range" id="slope" min="0" max="31" value="10"><span class="range-value" id="slopeVal">1.0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Camera</div>
+    <div class="range-row"><span class="range-label">X Rotation</span><input type="range" id="camX" min="-90" max="90" value="-50"><span class="range-value" id="camXVal">-50</span></div>
+    <div class="range-row"><span class="range-label">Y Rotation</span><input type="range" id="camY" min="-90" max="90" value="65"><span class="range-value" id="camYVal">65</span></div>
+    <div class="range-row"><span class="range-label">Z Rotation</span><input type="range" id="camZ" min="-90" max="90" value="11"><span class="range-value" id="camZVal">11</span></div>
+    <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="camZoom" min="-500" max="500" value="-40"><span class="range-value" id="camZoomVal">-40</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="color-row"><input type="color" id="c1" value="#f5f5f5"><label>1</label>
+      <input type="color" id="c2" value="#000000"><label>2</label>
+      <input type="color" id="c3" value="#ff0000"><label>3</label></div>
+    <div class="color-row"><input type="color" id="c4" value="#ffff00"><label>4</label>
+      <input type="color" id="c5" value="#000000"><label>5</label></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="2"><span class="range-value" id="numColorsVal">2</span></div>
+    <div class="color-section-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#ffffff">
+      <button class="swap-btn" onclick="swapColors()" title="Swap color 1 with background">&#8646;</button>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — FLAG MODE
+// 3D waving flag surface with text on deformable grid.
+// Faithful to Space Type Generator: stroke text on padded corners,
+// filled ribbon on unpadded corners behind (Z = -typePush).
+// ============================================================
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight,
+    WEBGL
+  );
+  c.parent('canvasContainer');
+  textFont(font);
+  frameRate(30);
+
+  TipoUI.init({
+    mode: 'flag',
+    formatters: {
+      typeWeight: { div: 10, decimals: 1 },
+      ribDepth: { div: 10, decimals: 1 },
+      offset: { div: 100, decimals: 2 },
+      speed: { div: 100, decimals: 2 },
+      rowOffset: { div: 100, decimals: 2 },
+      slope: { div: 10, decimals: 1 }
+    }
+  });
+  recorder = TipoUI.recorder;
+}
+
+function windowResized() {
+  resizeCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+}
+
+function val(id) { return TipoUI.val(id); }
+function chk(id) { return TipoUI.chk(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function col(id) { return TipoUI.col(id); }
+
+// Wave engine — same as original sinEngine
+function sinEng(aCount, aLength, bCount, bLength, spd, slopeN) {
+  const s = sin(frameCount * spd + aCount * aLength + bCount * bLength);
+  const sign = s >= 0 ? 1 : -1;
+  return sign * (1 - pow(1 - abs(s), slopeN));
+}
+
+// Color cycling by row
+function getRibColor(j) {
+  if (prideMode) return prideColors[j % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  return c[j % n];
+}
+function getTxtColor(j) {
+  if (prideMode) return prideColors[(j + 3) % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  if (n === 1) return document.getElementById('bgColor').value;
+  return c[(j + 1) % n];
+}
+
+// Draw a character using line segments between interpolated corner points.
+// This makes the text deform with the quad surface, like the original.
+function drawChar(ch, TL, TR, BR, BL, sw) {
+  // Pre-compute interpolation points
+  const Lhalf = p5.Vector.lerp(TL, BL, 0.5);
+  const Rhalf = p5.Vector.lerp(TR, BR, 0.5);
+  const Thalf = p5.Vector.lerp(TL, TR, 0.5);
+  const Bhalf = p5.Vector.lerp(BL, BR, 0.5);
+  const Lthird = p5.Vector.lerp(TL, BL, 1/3);
+  const L2third = p5.Vector.lerp(TL, BL, 2/3);
+  const Rthird = p5.Vector.lerp(TR, BR, 1/3);
+  const R2third = p5.Vector.lerp(TR, BR, 2/3);
+  const Tthird = p5.Vector.lerp(TL, TR, 1/3);
+  const T2third = p5.Vector.lerp(TL, TR, 2/3);
+  const Bthird = p5.Vector.lerp(BL, BR, 1/3);
+  const B2third = p5.Vector.lerp(BL, BR, 2/3);
+  const Lquad = p5.Vector.lerp(TL, BL, 0.25);
+  const L3quad = p5.Vector.lerp(TL, BL, 0.75);
+  const Rquad = p5.Vector.lerp(TR, BR, 0.25);
+  const R3quad = p5.Vector.lerp(TR, BR, 0.75);
+  const Tquad = p5.Vector.lerp(TL, TR, 0.25);
+  const T3quad = p5.Vector.lerp(TL, TR, 0.75);
+  const Bquad = p5.Vector.lerp(BL, BR, 0.25);
+  const B3quad = p5.Vector.lerp(BL, BR, 0.75);
+
+  // Interior points via bilinear interpolation
+  function bilinear(u, v) {
+    const top = p5.Vector.lerp(TL, TR, u);
+    const bot = p5.Vector.lerp(BL, BR, u);
+    return p5.Vector.lerp(top, bot, v);
+  }
+
+  strokeWeight(sw);
+
+  const c = ch.toUpperCase();
+
+  // Line helper
+  function L(a, b) {
+    line(a.x, a.y, a.z, b.x, b.y, b.z);
+  }
+
+  switch(c) {
+    case 'A':
+      L(BL, Thalf);
+      L(Thalf, BR);
+      L(Lhalf, Rhalf);
+      break;
+    case 'B':
+      L(TL, BL);
+      L(TL, Thalf);
+      L(Thalf, Rhalf);
+      L(Rhalf, Lhalf);
+      L(Lhalf, Bhalf);
+      L(Bhalf, BL);
+      break;
+    case 'C':
+      L(TR, TL);
+      L(TL, BL);
+      L(BL, BR);
+      break;
+    case 'D':
+      L(TL, BL);
+      L(TL, T2third);
+      L(T2third, R2third);
+      L(R2third, BL);
+      break;
+    case 'E':
+      L(TR, TL);
+      L(TL, BL);
+      L(BL, BR);
+      L(Lhalf, Rhalf);
+      break;
+    case 'F':
+      L(TR, TL);
+      L(TL, BL);
+      L(Lhalf, Rhalf);
+      break;
+    case 'G':
+      L(TR, TL);
+      L(TL, BL);
+      L(BL, BR);
+      L(BR, Rhalf);
+      L(Rhalf, bilinear(0.5, 0.5));
+      break;
+    case 'H':
+      L(TL, BL);
+      L(TR, BR);
+      L(Lhalf, Rhalf);
+      break;
+    case 'I':
+      L(TL, TR);
+      L(BL, BR);
+      L(Thalf, Bhalf);
+      break;
+    case 'J':
+      L(TL, TR);
+      L(Thalf, Bhalf);
+      L(Bhalf, BL);
+      break;
+    case 'K':
+      L(TL, BL);
+      L(TR, Lhalf);
+      L(Lhalf, BR);
+      break;
+    case 'L':
+      L(TL, BL);
+      L(BL, BR);
+      break;
+    case 'M':
+      L(BL, TL);
+      L(TL, bilinear(0.5, 0.5));
+      L(bilinear(0.5, 0.5), TR);
+      L(TR, BR);
+      break;
+    case 'N':
+      L(BL, TL);
+      L(TL, BR);
+      L(BR, TR);
+      break;
+    case 'O':
+      L(TL, TR);
+      L(TR, BR);
+      L(BR, BL);
+      L(BL, TL);
+      break;
+    case 'P':
+      L(BL, TL);
+      L(TL, TR);
+      L(TR, Rhalf);
+      L(Rhalf, Lhalf);
+      break;
+    case 'Q':
+      L(TL, TR);
+      L(TR, BR);
+      L(BR, BL);
+      L(BL, TL);
+      L(bilinear(0.5, 0.5), BR);
+      break;
+    case 'R':
+      L(BL, TL);
+      L(TL, TR);
+      L(TR, Rhalf);
+      L(Rhalf, Lhalf);
+      L(Lhalf, BR);
+      break;
+    case 'S':
+      L(TR, TL);
+      L(TL, Lhalf);
+      L(Lhalf, Rhalf);
+      L(Rhalf, BR);
+      L(BR, BL);
+      break;
+    case 'T':
+      L(TL, TR);
+      L(Thalf, Bhalf);
+      break;
+    case 'U':
+      L(TL, BL);
+      L(BL, BR);
+      L(BR, TR);
+      break;
+    case 'V':
+      L(TL, Bhalf);
+      L(Bhalf, TR);
+      break;
+    case 'W':
+      L(TL, BL);
+      L(BL, bilinear(0.5, 0.5));
+      L(bilinear(0.5, 0.5), BR);
+      L(BR, TR);
+      break;
+    case 'X':
+      L(TL, BR);
+      L(TR, BL);
+      break;
+    case 'Y':
+      L(TL, bilinear(0.5, 0.5));
+      L(TR, bilinear(0.5, 0.5));
+      L(bilinear(0.5, 0.5), Bhalf);
+      break;
+    case 'Z':
+      L(TL, TR);
+      L(TR, BL);
+      L(BL, BR);
+      break;
+    // Numbers
+    case '0': case 'O':
+      L(TL, TR); L(TR, BR); L(BR, BL); L(BL, TL);
+      break;
+    case '1':
+      L(Tthird, Thalf); L(Thalf, Bhalf);
+      break;
+    case '2':
+      L(TL, TR); L(TR, Rhalf); L(Rhalf, Lhalf); L(Lhalf, BL); L(BL, BR);
+      break;
+    case '3':
+      L(TL, TR); L(TR, BR); L(BR, BL); L(Lhalf, Rhalf);
+      break;
+    case '4':
+      L(TL, Lhalf); L(Lhalf, Rhalf); L(TR, BR);
+      break;
+    case '5':
+      L(TR, TL); L(TL, Lhalf); L(Lhalf, Rhalf); L(Rhalf, BR); L(BR, BL);
+      break;
+    case '6':
+      L(TR, TL); L(TL, BL); L(BL, BR); L(BR, Rhalf); L(Rhalf, Lhalf);
+      break;
+    case '7':
+      L(TL, TR); L(TR, BL);
+      break;
+    case '8':
+      L(TL, TR); L(TR, BR); L(BR, BL); L(BL, TL); L(Lhalf, Rhalf);
+      break;
+    case '9':
+      L(Rhalf, Lhalf); L(Lhalf, TL); L(TL, TR); L(TR, BR); L(BR, BL);
+      break;
+    // Punctuation
+    case '-':
+      L(Lhalf, Rhalf);
+      break;
+    case '/':
+      L(BL, TR);
+      break;
+    case '\\':
+      L(TL, BR);
+      break;
+    case '.':
+      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
+      break;
+    case ',':
+      L(bilinear(0.5, 0.7), bilinear(0.4, 0.95));
+      break;
+    case '!':
+      L(Thalf, bilinear(0.5, 0.65));
+      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
+      break;
+    case '?':
+      L(TL, TR); L(TR, Rhalf); L(Rhalf, bilinear(0.5, 0.5));
+      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
+      break;
+    case '*':
+      L(Thalf, Bhalf); L(Lhalf, Rhalf);
+      L(bilinear(0.2, 0.2), bilinear(0.8, 0.8));
+      L(bilinear(0.8, 0.2), bilinear(0.2, 0.8));
+      break;
+    case ':':
+      L(bilinear(0.4, 0.3), bilinear(0.6, 0.3));
+      L(bilinear(0.4, 0.7), bilinear(0.6, 0.7));
+      break;
+    case '\'': case '\u2019':
+      L(bilinear(0.5, 0.1), bilinear(0.5, 0.35));
+      break;
+    case '"': case '\u201C': case '\u201D':
+      L(bilinear(0.35, 0.1), bilinear(0.35, 0.35));
+      L(bilinear(0.65, 0.1), bilinear(0.65, 0.35));
+      break;
+    case '(':
+      L(Tthird, Lhalf); L(Lhalf, Bthird);
+      break;
+    case ')':
+      L(T2third, Rhalf); L(Rhalf, B2third);
+      break;
+    case '+':
+      L(Thalf, Bhalf); L(Lhalf, Rhalf);
+      break;
+    case '=':
+      L(Lthird, Rthird); L(L2third, R2third);
+      break;
+    case '&':
+      L(TR, Lthird); L(Lthird, Rthird); L(Rthird, BL); L(BL, BR);
+      break;
+    case '#':
+      L(bilinear(0.35, 0), bilinear(0.35, 1));
+      L(bilinear(0.65, 0), bilinear(0.65, 1));
+      L(bilinear(0, 0.35), bilinear(1, 0.35));
+      L(bilinear(0, 0.65), bilinear(1, 0.65));
+      break;
+    case ' ':
+      break; // space — nothing to draw
+    default:
+      // Unknown character: draw a dot
+      L(bilinear(0.4, 0.4), bilinear(0.6, 0.6));
+      break;
+  }
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const tX = val('typeX'), tY = val('typeY');
+  const tW = val('typeWeight') / 10;
+  const rws = val('rows');
+  const pad = val('padding') / 100;
+  const typePush = val('ribDepth') / 10;
+  const txtOnly = chk('textOnly');
+
+  // Match original mapping: xWave slider 0-200 mapped to 0-2.5*typeX
+  // yWave slider 0-200 but original maps 0-100 to 0-2*typeY (doubles range)
+  const wX = map(val('waveX'), 0, 200, 0, 2.5 * tX);
+  const wY = map(val('waveY'), 0, 100, 0, 2 * tY);
+  const wZ = val('waveZ');
+  const off = val('offset') / 100;
+  const spd = -val('speed') / 100;
+  const rOff = val('rowOffset') / 100;
+  const slp = val('slope') / 10;
+
+  push();
+  translate(0, 0, val('camZoom'));
+  rotateX(radians(val('camX')));
+  rotateY(radians(val('camY')));
+  rotateZ(radians(val('camZ')));
+
+  // Center the grid
+  translate(-tX * txt.length / 2, -tY * rws / 2);
+
+  for (let j = 0; j < rws; j++) {
+    const ribC = getRibColor(j);
+    const txtC = txtOnly ? ribC : getTxtColor(j);
+
+    for (let i = 0; i < txt.length; i++) {
+      const ch = txt.charAt(i);
+
+      // Wave deformation for 4 corners
+      const wTL = sinEng(i, off, j, rOff, spd, slp);
+      const wTR = sinEng(i + 1, off, j, rOff, spd, slp);
+      const wBR = sinEng(i + 1, off, j + 1, rOff, spd, slp);
+      const wBL = sinEng(i, off, j + 1, rOff, spd, slp);
+
+      // UNPADDED box corners (relative to cell — grid offset via translate)
+      const TLbox = createVector(wTL * wX, wTL * wY, wTL * wZ);
+      const TRbox = createVector(tX + wTR * wX, wTR * wY, wTR * wZ);
+      const BRbox = createVector(tX + wBR * wX, tY + wBR * wY, wBR * wZ);
+      const BLbox = createVector(wBL * wX, tY + wBL * wY, wBL * wZ);
+
+      // PADDED corners (for text) — shrink toward center
+      const ctr = p5.Vector.lerp(
+        p5.Vector.lerp(TLbox, TRbox, 0.5),
+        p5.Vector.lerp(BLbox, BRbox, 0.5),
+        0.5
+      );
+      const TL = p5.Vector.lerp(TLbox, ctr, pad);
+      const TR = p5.Vector.lerp(TRbox, ctr, pad);
+      const BR = p5.Vector.lerp(BRbox, ctr, pad);
+      const BL = p5.Vector.lerp(BLbox, ctr, pad);
+
+      push();
+      translate(tX * i, tY * j);
+      // Center the cell at origin (same as original: translate(-typeX/2, -typeY/2))
+      translate(-tX / 2, -tY / 2);
+
+      // 1. DRAW TEXT (stroke, on padded corners, at Z=0)
+      noFill();
+      stroke(txtC);
+      drawChar(ch, TL, TR, BR, BL, tW);
+
+      // 2. DRAW RIBBON (fill, on unpadded corners, at Z=-typePush)
+      if (!txtOnly) {
+        translate(0, 0, -typePush);
+        fill(ribC);
+        noStroke();
+        beginShape();
+        vertex(TLbox.x, TLbox.y, TLbox.z);
+        vertex(TRbox.x, TRbox.y, TRbox.z);
+        vertex(BRbox.x, BRbox.y, BRbox.z);
+        vertex(BLbox.x, BLbox.y, BLbox.z);
+        vertex(TLbox.x, TLbox.y, TLbox.z);
+        endShape();
+
+        // 3. BACK FACE (at Z=-typePush-1)
+        translate(0, 0, -1);
+        fill(txtC);
+        beginShape();
+        vertex(TLbox.x, TLbox.y, TLbox.z);
+        vertex(TRbox.x, TRbox.y, TRbox.z);
+        vertex(BRbox.x, BRbox.y, BRbox.z);
+        vertex(BLbox.x, BLbox.y, BLbox.z);
+        vertex(TLbox.x, TLbox.y, TLbox.z);
+        endShape();
+      }
+      pop();
+    }
+  }
+  pop();
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('c1', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  setVal('typeX', 20); setVal('typeY', 50); setVal('typeWeight', 20);
+  setVal('rows', 6); setVal('padding', 30); setVal('ribDepth', 20);
+  setVal('textOnly', false);
+  setVal('waveX', 95); setVal('waveY', 20); setVal('waveZ', 50);
+  setVal('offset', 30); setVal('speed', 3); setVal('rowOffset', 37); setVal('slope', 10);
+  setVal('camX', -50); setVal('camY', 65); setVal('camZ', 11); setVal('camZoom', -40);
+  setVal('numColors', 2);
+  document.getElementById('c1').value = '#f5f5f5';
+  document.getElementById('c2').value = '#000000';
+  document.getElementById('c3').value = '#ff0000';
+  document.getElementById('c4').value = '#ffff00';
+  document.getElementById('c5').value = '#000000';
+  document.getElementById('bgColor').value = '#ffffff';
+}
+
+const PRESETS = {
+  banner: () => { resetAll();
+    setVal('typeX',20);setVal('typeY',40);setVal('typeWeight',10);
+    setVal('rows',1);setVal('padding',20);setVal('ribDepth',0);
+    setVal('waveX',0);setVal('waveY',0);setVal('waveZ',70);
+    setVal('offset',30);setVal('speed',2);setVal('rowOffset',0);
+    setVal('camX',-25);setVal('camY',-75);setVal('camZ',-10);setVal('camZoom',-150);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff0000';
+    document.getElementById('bgColor').value='#00fdff';
+  },
+  twist: () => { resetAll();
+    setVal('typeX',30);setVal('typeY',50);setVal('typeWeight',20);
+    setVal('rows',1);setVal('padding',70);setVal('ribDepth',40);
+    setVal('waveX',0);setVal('waveY',0);setVal('waveZ',30);
+    setVal('offset',30);setVal('speed',2);setVal('rowOffset',314);
+    setVal('camX',-45);setVal('camY',37);setVal('camZ',-15);setVal('camZoom',-120);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#000000';
+    document.getElementById('bgColor').value='#0000ff';
+  },
+  folds: () => { resetAll();
+    setVal('typeX',45);setVal('typeY',70);setVal('typeWeight',30);
+    setVal('rows',8);setVal('padding',20);setVal('ribDepth',85);
+    setVal('waveX',0);setVal('waveY',0);setVal('waveZ',90);
+    setVal('offset',21);setVal('speed',2);setVal('rowOffset',255);
+    setVal('camX',51);setVal('camY',37);setVal('camZ',-28);setVal('camZoom',-300);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0000ff';
+    document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffff00';
+    document.getElementById('c5').value='#000000';
+    document.getElementById('bgColor').value='#ffff00';
+  },
+  flatSea: () => { resetAll();
+    setVal('typeX',25);setVal('typeY',45);setVal('typeWeight',20);
+    setVal('rows',12);setVal('padding',40);setVal('ribDepth',40);
+    setVal('waveX',0);setVal('waveY',200);setVal('waveZ',75);
+    setVal('offset',11);setVal('speed',8);setVal('rowOffset',196);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',0);setVal('camZoom',-500);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff0000';
+    document.getElementById('c3').value='#0000ff';document.getElementById('c4').value='#ffff00';
+    document.getElementById('c5').value='#000000';
+    document.getElementById('bgColor').value='#000000';
+  },
+  barber: () => { resetAll();
+    setVal('typeX',20);setVal('typeY',40);setVal('typeWeight',15);
+    setVal('rows',15);setVal('padding',20);setVal('ribDepth',20);
+    setVal('waveX',0);setVal('waveY',30);setVal('waveZ',0);
+    setVal('offset',30);setVal('speed',7);setVal('rowOffset',213);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',-30);setVal('camZoom',-150);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0000ff';
+    document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#000000';
+    document.getElementById('bgColor').value='#d6d6d6';
+  },
+  silos: () => { resetAll();
+    setVal('typeX',15);setVal('typeY',43);setVal('typeWeight',15);
+    setVal('rows',7);setVal('padding',20);setVal('ribDepth',80);
+    setVal('waveX',0);setVal('waveY',0);setVal('waveZ',200);
+    setVal('slope',31);setVal('offset',37);setVal('speed',10);setVal('rowOffset',0);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',0);setVal('camZoom',-90);
+    setVal('numColors',3);
+    document.getElementById('c1').value='#ffff00';document.getElementById('c2').value='#0000ff';
+    document.getElementById('c3').value='#ff0000';
+    document.getElementById('bgColor').value='#ffffff';
+  },
+  mystery: () => { resetAll();
+    setVal('typeX',25);setVal('typeY',45);setVal('typeWeight',20);
+    setVal('rows',15);setVal('padding',27);setVal('ribDepth',0);setVal('textOnly',true);
+    setVal('waveX',0);setVal('waveY',71);setVal('waveZ',73);
+    setVal('offset',22);setVal('speed',8);setVal('rowOffset',196);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',0);setVal('camZoom',-500);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#000000';
+    document.getElementById('bgColor').value='#ffffff';
+  },
+  colaWave: () => { resetAll();
+    setVal('typeX',35);setVal('typeY',100);setVal('typeWeight',30);
+    setVal('rows',4);setVal('padding',43);setVal('ribDepth',0);
+    setVal('waveX',0);setVal('waveY',150);setVal('waveZ',0);
+    setVal('offset',19);setVal('speed',2);setVal('rowOffset',28);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',0);setVal('camZoom',-500);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff0000';
+    document.getElementById('c3').value='#d6d6d6';document.getElementById('c4').value='#0000ff';
+    document.getElementById('bgColor').value='#ff0000';
+  },
+  origami: () => { resetAll();
+    setVal('typeX',87);setVal('typeY',83);setVal('typeWeight',30);
+    setVal('rows',18);setVal('padding',43);setVal('ribDepth',100);
+    setVal('waveX',0);setVal('waveY',0);setVal('waveZ',75);
+    setVal('offset',21);setVal('speed',12);setVal('rowOffset',314);
+    setVal('camX',42);setVal('camY',20);setVal('camZ',-23);setVal('camZoom',-500);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff0000';
+    document.getElementById('c3').value='#ffff00';document.getElementById('c4').value='#0000ff';
+    document.getElementById('bgColor').value='#011993';
+  },
+  crane: () => { resetAll();
+    setVal('typeX',12);setVal('typeY',40);setVal('typeWeight',17);
+    setVal('rows',10);setVal('padding',40);setVal('ribDepth',30);
+    setVal('waveX',115);setVal('waveY',0);setVal('waveZ',32);
+    setVal('slope',8);setVal('offset',20);setVal('speed',3);setVal('rowOffset',247);
+    setVal('camX',40);setVal('camY',0);setVal('camZ',0);setVal('camZoom',0);
+    setVal('numColors',3);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0000ff';
+    document.getElementById('c3').value='#ff0000';
+    document.getElementById('bgColor').value='#0000ff';
+  },
+  bw: () => { resetAll();
+    setVal('typeX',17);setVal('typeY',43);setVal('typeWeight',20);
+    setVal('rows',10);setVal('padding',28);setVal('ribDepth',20);
+    setVal('waveX',200);setVal('waveY',55);setVal('waveZ',0);
+    setVal('offset',30);setVal('speed',6);setVal('rowOffset',30);
+    setVal('camX',30);setVal('camY',30);setVal('camZ',0);setVal('camZoom',-250);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#000000';
+    document.getElementById('bgColor').value='#000000';
+  },
+  newsprint: () => { resetAll();
+    setVal('typeX',42);setVal('typeY',48);setVal('typeWeight',20);
+    setVal('rows',16);setVal('padding',48);setVal('ribDepth',40);
+    setVal('waveX',200);setVal('waveY',200);setVal('waveZ',83);
+    setVal('slope',31);setVal('offset',11);setVal('speed',8);setVal('rowOffset',196);
+    setVal('camX',0);setVal('camY',0);setVal('camZ',0);setVal('camZoom',-500);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#000000';
+    document.getElementById('bgColor').value='#5e5e5e';
+  },
+  edge: () => { resetAll();
+    setVal('typeX',40);setVal('typeY',70);setVal('typeWeight',20);
+    setVal('rows',5);setVal('padding',20);setVal('ribDepth',0);setVal('textOnly',true);
+    setVal('waveX',200);setVal('waveY',0);setVal('waveZ',0);
+    setVal('slope',5);setVal('offset',42);setVal('speed',2);setVal('rowOffset',46);
+    setVal('camX',0);setVal('camY',11);setVal('camZ',30);setVal('camZoom',-500);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#ffffff';
+    document.getElementById('bgColor').value='#000000';
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>

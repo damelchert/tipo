@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Cascade</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Cascade <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('checker')">Checker</span>
+      <span class="preset-chip" onclick="applyPreset('cascade')">Cascade</span>
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('mosaic')">Mosaic</span>
+      <span class="preset-chip" onclick="applyPreset('ticker')">Ticker</span>
+      <span class="preset-chip" onclick="applyPreset('run')">Run</span>
+      <span class="preset-chip" onclick="applyPreset('salmon')">Salmon</span>
+      <span class="preset-chip" onclick="applyPreset('grid')">Grid</span>
+      <span class="preset-chip" onclick="applyPreset('webArt')">Web Art</span>
+      <span class="preset-chip" onclick="applyPreset('sparkle')">Sparkle</span>
+      <span class="preset-chip" onclick="applyPreset('pixelGradient')">Pixel Gradient</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Type</div>
+    <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="typeX" min="0" max="100" value="20"><span class="range-value" id="typeXVal">20</span></div>
+    <div class="range-row"><span class="range-label">Weight</span><input type="range" id="typeWeight" min="0" max="50" value="20"><span class="range-value" id="typeWeightVal">2.0</span></div>
+    <div class="range-row"><span class="range-label">Tracking</span><input type="range" id="tracking" min="0" max="100" value="10"><span class="range-value" id="trackingVal">10</span></div>
+    <div class="range-row"><span class="range-label">Line Space</span><input type="range" id="lineSpace" min="0" max="100" value="20"><span class="range-value" id="lineSpaceVal">20</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Grid</div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="2" max="100" value="14" step="2"><span class="range-value" id="rowsVal">14</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="mirror" checked> Mirror</label>
+    <label class="checkbox-label"><input type="checkbox" id="gradient"> Gradient mode</label>
+    <label class="checkbox-label"><input type="checkbox" id="textOnly"> Text only (no ribbons)</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wave</div>
+    <div class="range-row"><span class="range-label">Length</span><input type="range" id="waveLen" min="0" max="100" value="13"><span class="range-value" id="waveLenVal">0.13</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="waveSpeed" min="0" max="10" value="1"><span class="range-value" id="waveSpeedVal">1</span></div>
+    <div class="range-row"><span class="range-label">Slope</span><input type="range" id="slope" min="0" max="31" value="10"><span class="range-value" id="slopeVal">1.0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="color-row"><input type="color" id="c1" value="#ffffff"><label>1</label>
+      <input type="color" id="c2" value="#000000"><label>2</label>
+      <input type="color" id="c3" value="#ff0000"><label>3</label></div>
+    <div class="color-row"><input type="color" id="c4" value="#ffff00"><label>4</label>
+      <input type="color" id="c5" value="#000000"><label>5</label></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="2"><span class="range-value" id="numColorsVal">2</span></div>
+    <div class="color-section-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#000000">
+      <button class="swap-btn" onclick="swapColors()" title="Swap color 1 with background">&#8646;</button>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — CASCADE MODE
+// Animated vertical text stacking with wave-controlled row heights.
+// Rows cascade with sine-based phase offsets per character.
+// ============================================================
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+  c.parent('canvasContainer');
+  textFont(font);
+  pixelDensity(1);
+
+  TipoUI.init({
+    mode: 'cascade',
+    formatters: {
+      typeWeight: { div: 10, decimals: 1 },
+      waveLen: { div: 100, decimals: 2 },
+      slope: { div: 10, decimals: 1 }
+    }
+  });
+  recorder = TipoUI.recorder;
+}
+
+function windowResized() {
+  resizeCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+}
+
+function val(id) { return TipoUI.val(id); }
+function chk(id) { return TipoUI.chk(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function col(id) { return TipoUI.col(id); }
+
+// Wave engine — same as original sinEngine
+function sinEng(aCount, aLength, bCount, bLength, spd, slopeN) {
+  const s = sin(-frameCount * spd + aCount * aLength + bCount * bLength);
+  const sign = s >= 0 ? 1 : -1;
+  return sign * (1 - pow(1 - abs(s), slopeN));
+}
+
+// Color cycling by row
+function getRibColor(row) {
+  if (prideMode) return prideColors[row % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  return c[row % n];
+}
+function getTxtColor(row) {
+  if (prideMode) return prideColors[(row + 3) % 6];
+  const n = val('numColors');
+  const c = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  if (n === 1) return document.getElementById('bgColor').value;
+  return c[(row + 1) % n];
+}
+
+// Gradient color interpolation
+function getGradientColors(row, rws) {
+  const n = val('numColors');
+  const colors = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  const t = rws > 1 ? row / (rws - 1) : 0;
+
+  if (n <= 1) return { rib: colors[0], txt: colors[0] };
+
+  // Interpolate through all active colors
+  const segments = n - 1;
+  const segIdx = min(floor(t * segments), segments - 1);
+  const segT = (t * segments) - segIdx;
+  const ribC = lerpColor(color(colors[segIdx]), color(colors[segIdx + 1]), segT);
+  // Text color = previous segment color
+  const txtC = color(colors[segIdx]);
+
+  return { rib: ribC, txt: txtC };
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const tX = val('typeX');
+  const tW = val('typeWeight') / 10;
+  const trk = val('tracking');
+  const lineSpc = val('lineSpace') / 100;
+  const rws = val('rows');
+  const isMirror = chk('mirror');
+  const isGradient = chk('gradient');
+  const txtOnly = chk('textOnly');
+
+  const wLen = val('waveLen') / 100;
+  const wSpd = val('waveSpeed') / 100;
+  const slp = val('slope') / 10;
+
+  const runLen = txt.length;
+  const xSpace = tX + trk;
+
+  // Calculate field height and row block size
+  // Triangular number: rows*(rows+1)/2
+  const yField = height - 50;
+  const step = (rws * rws + rws) / 2;
+  const yBlock = isMirror ? yField / (step * 2) : yField / step;
+  const waveBlock = TWO_PI / rws;
+
+  push();
+  translate(width / 2, height / 2);
+  translate(-(runLen * xSpace) / 2, -yField / 2);
+
+  // ========== RENDER GRID (normal) ==========
+  for (let k = 0; k < runLen; k++) {
+    const ch = txt.charAt(k);
+    push();
+
+    for (let i = 0; i < rws; i++) {
+      // Calculate row height from wave
+      let typeYfig;
+      if (wSpd > 0) {
+        typeYfig = map(sinEng(i, waveBlock, k, wLen, wSpd, slp), -1, 1, yBlock, rws * yBlock);
+      } else {
+        typeYfig = (rws - i) * yBlock;
+      }
+
+      // Apply line spacing
+      const typeY = typeYfig - typeYfig * lineSpc;
+      const ls = typeYfig * lineSpc;
+
+      // Get colors
+      let ribC, txtC;
+      if (isGradient) {
+        const gc = getGradientColors(i, rws);
+        ribC = gc.rib;
+        txtC = gc.txt;
+      } else if (txtOnly) {
+        ribC = null;
+        txtC = getRibColor(i);
+      } else {
+        ribC = getRibColor(i);
+        txtC = getTxtColor(i);
+      }
+
+      push();
+      translate(xSpace * k, 0);
+
+      // Draw ribbon (filled rect)
+      if (!txtOnly && ribC) {
+        fill(ribC);
+        noStroke();
+        rect(-trk / 2, 0, tX + trk, typeYfig);
+      }
+
+      // Draw character
+      translate(0, ls / 2);
+      fill(txtC);
+      noStroke();
+      textSize(typeY * 0.85);
+      textAlign(CENTER, TOP);
+      text(ch, tX / 2, 0);
+      pop();
+
+      translate(0, typeYfig);
+    }
+
+    pop();
+  }
+
+  // ========== RENDER MIRRORED GRID ==========
+  if (isMirror) {
+    push();
+    translate(0, yField / 2);
+
+    for (let m = 0; m < runLen; m++) {
+      const ch = txt.charAt(m);
+      push();
+
+      for (let n = 1; n <= rws; n++) {
+        const ri = rws - n; // Reversed row index
+
+        let typeYfig;
+        if (wSpd > 0) {
+          typeYfig = map(sinEng(ri, waveBlock, m, wLen, wSpd, slp), -1, 1, yBlock, rws * yBlock);
+        } else {
+          typeYfig = n * yBlock;
+        }
+
+        const typeY = typeYfig - typeYfig * lineSpc;
+        const ls = typeYfig * lineSpc;
+
+        let ribC, txtC;
+        if (isGradient) {
+          const gc = getGradientColors(ri, rws);
+          ribC = gc.rib;
+          txtC = gc.txt;
+        } else if (txtOnly) {
+          ribC = null;
+          txtC = getRibColor(ri);
+        } else {
+          ribC = getRibColor(ri);
+          txtC = getTxtColor(ri);
+        }
+
+        push();
+        translate(xSpace * m, 0);
+
+        if (!txtOnly && ribC) {
+          fill(ribC);
+          noStroke();
+          rect(-trk / 2, 0, tX + trk, typeYfig);
+        }
+
+        translate(0, ls / 2);
+        fill(txtC);
+        noStroke();
+        textSize(typeY * 0.85);
+        textAlign(CENTER, TOP);
+        text(ch, tX / 2, 0);
+        pop();
+
+        translate(0, typeYfig);
+      }
+
+      pop();
+    }
+    pop();
+  }
+
+  pop();
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('c1', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  setVal('typeX', 20); setVal('typeWeight', 20);
+  setVal('tracking', 10); setVal('lineSpace', 20);
+  setVal('rows', 14); setVal('mirror', true);
+  setVal('gradient', false); setVal('textOnly', false);
+  setVal('waveLen', 13); setVal('waveSpeed', 1); setVal('slope', 10);
+  setVal('numColors', 2);
+  document.getElementById('c1').value = '#ffffff';
+  document.getElementById('c2').value = '#000000';
+  document.getElementById('c3').value = '#ff0000';
+  document.getElementById('c4').value = '#ffff00';
+  document.getElementById('c5').value = '#000000';
+  document.getElementById('bgColor').value = '#000000';
+}
+
+const PRESETS = {
+  checker: () => { resetAll();
+    setVal('typeX',17);setVal('typeWeight',20);setVal('tracking',10);setVal('lineSpace',20);
+    setVal('rows',18);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',37);setVal('waveSpeed',2);setVal('slope',31);
+    setVal('numColors',2);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#000000';
+    document.getElementById('bgColor').value='#000000';
+  },
+  cascade: () => { resetAll();
+    setVal('typeX',20);setVal('typeWeight',20);setVal('tracking',3);setVal('lineSpace',22);
+    setVal('rows',80);setVal('mirror',false);setVal('gradient',false);setVal('textOnly',true);
+    setVal('waveLen',59);setVal('waveSpeed',2);setVal('slope',15);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#ffffff';
+    document.getElementById('bgColor').value='#0000ff';
+  },
+  classic: () => { resetAll();
+    setVal('typeX',24);setVal('typeWeight',40);setVal('tracking',20);setVal('lineSpace',38);
+    setVal('rows',14);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',36);setVal('waveSpeed',1);setVal('slope',20);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#0000ff';document.getElementById('c2').value='#ffff00';
+    document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffffff';
+    document.getElementById('bgColor').value='#ffff00';
+  },
+  mosaic: () => { resetAll();
+    setVal('typeX',13);setVal('typeWeight',15);setVal('tracking',13);setVal('lineSpace',12);
+    setVal('rows',6);setVal('mirror',false);setVal('gradient',false);setVal('textOnly',true);
+    setVal('waveLen',100);setVal('waveSpeed',3);setVal('slope',31);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#ffffff';
+    document.getElementById('bgColor').value='#000000';
+  },
+  ticker: () => { resetAll();
+    setVal('typeX',20);setVal('typeWeight',20);setVal('tracking',10);setVal('lineSpace',20);
+    setVal('rows',30);setVal('mirror',false);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',100);setVal('waveSpeed',4);setVal('slope',31);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#000000';document.getElementById('c2').value='#4d4d4d';
+    document.getElementById('c3').value='#808080';document.getElementById('c4').value='#cccccc';
+    document.getElementById('c5').value='#ffffff';
+    document.getElementById('bgColor').value='#ffffff';
+  },
+  run: () => { resetAll();
+    setVal('typeX',20);setVal('typeWeight',20);setVal('tracking',10);setVal('lineSpace',10);
+    setVal('rows',14);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',0);setVal('waveSpeed',5);setVal('slope',31);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#000000';
+    document.getElementById('bgColor').value='#ffff00';
+  },
+  salmon: () => { resetAll();
+    setVal('typeX',40);setVal('typeWeight',20);setVal('tracking',0);setVal('lineSpace',0);
+    setVal('rows',14);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',0);setVal('waveSpeed',5);setVal('slope',10);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#ff7e79';
+    document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textInput').value='TIPÓ';
+  },
+  grid: () => { resetAll();
+    setVal('typeX',62);setVal('typeWeight',10);setVal('tracking',0);setVal('lineSpace',0);
+    setVal('rows',18);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',0);setVal('waveSpeed',3);setVal('slope',31);
+    setVal('numColors',1);
+    document.getElementById('c1').value='#ffffff';
+    document.getElementById('bgColor').value='#0000ff';
+    document.getElementById('textInput').value='TIPÓ';
+  },
+  webArt: () => { resetAll();
+    const tX = Math.round((width - 50) / 30);
+    setVal('typeX',tX);setVal('typeWeight',0);setVal('tracking',0);setVal('lineSpace',0);
+    setVal('rows',50);setVal('mirror',true);setVal('gradient',true);setVal('textOnly',false);
+    setVal('waveLen',32);setVal('waveSpeed',1);setVal('slope',31);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#000000';document.getElementById('c2').value='#ffffff';
+    document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffff00';
+    document.getElementById('c5').value='#0000ff';
+    document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textInput').value='TIPÓ';
+  },
+  sparkle: () => { resetAll();
+    setVal('typeX',17);setVal('typeWeight',25);setVal('tracking',4);setVal('lineSpace',0);
+    setVal('rows',20);setVal('mirror',true);setVal('gradient',false);setVal('textOnly',false);
+    setVal('waveLen',25);setVal('waveSpeed',6);setVal('slope',5);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff85ff';
+    document.getElementById('c3').value='#00fdff';document.getElementById('c4').value='#0433ff';
+    document.getElementById('bgColor').value='#0096ff';
+    document.getElementById('textInput').value='TIPÓ';
+  },
+  pixelGradient: () => { resetAll();
+    const tX = Math.round((height - 50) / 20);
+    setVal('typeX',tX);setVal('typeWeight',0);setVal('tracking',0);setVal('lineSpace',0);
+    setVal('rows',46);setVal('mirror',false);setVal('gradient',true);setVal('textOnly',false);
+    setVal('waveLen',28);setVal('waveSpeed',2);setVal('slope',8);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#2cfdfe';document.getElementById('c2').value='#fd8dd7';
+    document.getElementById('c3').value='#fc3692';document.getElementById('c4').value='#103ffb';
+    document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textInput').value='TIPÓ';
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>

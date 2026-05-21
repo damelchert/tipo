@@ -23,10 +23,10 @@ Landing page (index.html) como hub central.
 - [x] **COIL** — 13 controles + 5 colors, 11 presets + Reset, p5.js 2D, Archimedean spiral
 
 ### FASE 2 — Modos 3D Intermediarios
-- [ ] **FLAG** — 17 sliders, 13 presets (A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case)
-- [ ] **CASCADE** — 8 sliders, 11 presets (Checker, Cascade, Classic, Mosaic, Ticker, Run, Salmon, Grid, Web Art, Sparkle, Pixel Gradient)
-- [ ] **RIBBON** — 15 sliders, 12 presets (Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II)
-- [ ] **MORISAWA** — 6 sliders, 9 presets (MOON, Post Space, X, Bridge, Whitney, Beach, Recede, Flux Loop, Scroll)
+- [x] **FLAG** — 17 sliders, 14 presets (A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case, Pride)
+- [x] **CASCADE** — 8 sliders, 12 presets (Checker, Cascade, Classic, Mosaic, Ticker, Run, Salmon, Grid, Web Art, Sparkle, Pixel Gradient, Pride)
+- [x] **RIBBON** — 15 sliders, 13 presets (Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II, Pride)
+- [x] **MORISAWA** — 6 sliders, 8 presets (Moon, Post Space, X, Bridge, Whitney, Beach, Recede, Pride)
 
 ### FASE 3 — Modos 2D
 - [ ] **LAYERS** — 5 sliders, 7 presets (Speed Racer, To Space, Lost Time, Dot Spiral, Be Aggressive, Meat Space)
