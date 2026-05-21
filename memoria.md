@@ -99,6 +99,40 @@
 - Archimedean spiral with radial wave distortion
 - Thicker ribbons (ribSize default 25, max 80) for solid spiral look
 
+### Fase 2 Completa — 4 Kinetic Type Modes (3D Intermediários)
+
+**Flag** (FUNCIONAL — precisa refinamento)
+- 17 controles: Type (x/y scale, weight, rows, padding, ribbon depth, text-only), Wave (x/y/z size, offset, speed, row offset, slope), Camera (x/y/z rotation, zoom)
+- 14 presets + Reset: A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case, Pride
+- 3D waving flag surface — text via font engine vetorial (drawChar com bilinear interpolation nos 4 corners)
+- Ribbon = filled quad unpadded atrás (Z=-typePush), texto = stroke padded na frente
+- sinEngine com slope easing, multi-color cycling por row
+- Nota: font engine vetorial simplificado — precisa refinamento para match exato com Space Type Generator
+
+**Cascade** (FUNCIONAL)
+- 8 controles: Type (x-scale, weight, tracking, line space), Grid (rows, mirror, gradient, text-only), Wave (length, speed, slope)
+- 12 presets + Reset: Checker, Cascade, Classic, Mosaic, Ticker, Run, Salmon, Grid, Web Art, Sparkle, Pixel Gradient, Pride
+- 2D mode (sem WEBGL) — pirâmide de texto com row heights controlados por sinEngine
+- Triangular number formula para distribuição vertical: step = rows*(rows+1)/2
+- Mirror mode duplica grid invertido, gradient mode interpola cores entre rows
+- Presets todos usam TIPÓ como texto default
+
+**Ribbon** (FUNCIONAL)
+- 15 controles: Type (height, tracking, weight), Ribbon (seg space, seg count, depth, stretch, count, z-space, x-space, alternate, back side, text-only, gradient), Animation (speed), Camera (scale, x/y/z rotation)
+- 13 presets + Reset: Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II, Pride
+- 3D WEBGL com projeção ortográfica — path Möbius-like com 4 segmentos (2 retos + 2 curvos)
+- Texto flui ao longo do path como esteira, múltiplas ribbons com z-spacing
+- Gradient color interpolation ao longo da ribbon
+
+**Morisawa** (FUNCIONAL)
+- 6 controles: Rows, Weight, Tracking, Line Space, Matte, Scroll Speed + 3 checkboxes (Mirror, Flip Speed, Row Flux)
+- 8 presets + Reset: Moon, Post Space, X, Bridge, Whitney, Beach, Recede, Pride
+- 2D mode — pirâmide expandindo: row j tem j+1 cópias do texto
+- Cada row scrolla a velocidade diferente: speed * (rows - j) — top = rápido, bottom = lento
+- Flux mode: rows oscilam sinusoidalmente via sinEngine
+- Matte borders para clip de overflow
+- Wrap-around seamless para scroll contínuo
+
 ### Fase 2 — Primeiro modo: Flag
 
 **Flag** (FUNCIONAL)

@@ -28,6 +28,12 @@ Landing page (index.html) como hub central.
 - [x] **RIBBON** — 15 sliders, 13 presets (Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II, Pride)
 - [x] **MORISAWA** — 6 sliders, 8 presets (Moon, Post Space, X, Bridge, Whitney, Beach, Recede, Pride)
 
+### BACKLOG — Refinamento Fase 2
+- [ ] **FLAG** — Implementar font engine vetorial completo (keyboardEngine_corners) para match exato com Space Type
+- [ ] **CASCADE** — Testar todos os presets, ajustar visual para match com original
+- [ ] **RIBBON** — Testar scroll e multi-ribbon, ajustar posicionamento de texto
+- [ ] **MORISAWA** — Testar flux mode e wrap-around, ajustar tracking
+
 ### FASE 3 — Modos 2D
 - [ ] **LAYERS** — 5 sliders, 7 presets (Speed Racer, To Space, Lost Time, Dot Spiral, Be Aggressive, Meat Space)
 - [ ] **DANGER** — 7 sliders, 7 presets (All Yours, Just OK, Not So Good, Cheer, Date, Hopes, Circle)
