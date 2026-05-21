@@ -30,6 +30,24 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('marquee')">Marquee</span>
+      <span class="preset-chip" onclick="applyPreset('subway')">Subway</span>
+      <span class="preset-chip" onclick="applyPreset('wow')">Wow</span>
+      <span class="preset-chip" onclick="applyPreset('stacks')">Stacks</span>
+      <span class="preset-chip" onclick="applyPreset('oldSea')">Old Sea</span>
+      <span class="preset-chip" onclick="applyPreset('colorSea')">Color Sea</span>
+      <span class="preset-chip" onclick="applyPreset('simpleWave')">Simple Wave</span>
+      <span class="preset-chip" onclick="applyPreset('simpleWave2')">Simple Wave 2</span>
+      <span class="preset-chip" onclick="applyPreset('notSoWeird')">Not So Weird</span>
+      <span class="preset-chip" onclick="applyPreset('racer')">Racer</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Type</div>
     <div class="range-row"><span class="range-label">X-Scale</span><input type="range" id="typeX" min="0" max="100" value="20"><span class="range-value" id="typeXVal">20</span></div>
     <div class="range-row"><span class="range-label">Y-Scale</span><input type="range" id="typeY" min="0" max="100" value="40"><span class="range-value" id="typeYVal">40</span></div>
@@ -63,23 +81,6 @@
       <input type="color" id="c5" value="#000000"><label>5</label></div>
     <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="3"><span class="range-value" id="numColorsVal">3</span></div>
     <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#ffffff"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Presets</div>
-    <div class="preset-grid">
-      <span class="preset-chip" onclick="applyPreset('marquee')">Marquee</span>
-      <span class="preset-chip" onclick="applyPreset('subway')">Subway</span>
-      <span class="preset-chip" onclick="applyPreset('wow')">Wow</span>
-      <span class="preset-chip" onclick="applyPreset('stacks')">Stacks</span>
-      <span class="preset-chip" onclick="applyPreset('oldSea')">Old Sea</span>
-      <span class="preset-chip" onclick="applyPreset('colorSea')">Color Sea</span>
-      <span class="preset-chip" onclick="applyPreset('simpleWave')">Simple Wave</span>
-      <span class="preset-chip" onclick="applyPreset('simpleWave2')">Simple Wave 2</span>
-      <span class="preset-chip" onclick="applyPreset('notSoWeird')">Not So Weird</span>
-      <span class="preset-chip" onclick="applyPreset('racer')">Racer</span>
-      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
-    </div>
   </div>
 
   <div class="section section-divider">

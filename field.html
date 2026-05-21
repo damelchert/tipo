@@ -28,6 +28,20 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('stacks')">Stacks</span>
+      <span class="preset-chip" onclick="applyPreset('bricks')">Bricks</span>
+      <span class="preset-chip" onclick="applyPreset('simpleZ')">Simple Z</span>
+      <span class="preset-chip" onclick="applyPreset('complexZ')">Complex Z</span>
+      <span class="preset-chip" onclick="applyPreset('zebra')">Zebra</span>
+      <span class="preset-chip" onclick="applyPreset('harlequin')">Harlequin</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Grid</div>
     <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="1" max="200" value="21"><span class="range-value" id="columnsVal">21</span></div>
     <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="200" value="21"><span class="range-value" id="rowsVal">21</span></div>
@@ -68,19 +82,6 @@
     <div class="section-title">Color</div>
     <div class="range-row"><span class="range-label">Type</span><input type="color" id="typeColor" value="#000000"></div>
     <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#ffffff"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Presets</div>
-    <div class="preset-grid">
-      <span class="preset-chip" onclick="applyPreset('stacks')">Stacks</span>
-      <span class="preset-chip" onclick="applyPreset('bricks')">Bricks</span>
-      <span class="preset-chip" onclick="applyPreset('simpleZ')">Simple Z</span>
-      <span class="preset-chip" onclick="applyPreset('complexZ')">Complex Z</span>
-      <span class="preset-chip" onclick="applyPreset('zebra')">Zebra</span>
-      <span class="preset-chip" onclick="applyPreset('harlequin')">Harlequin</span>
-      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
-    </div>
   </div>
 
   <div class="section">
