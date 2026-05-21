@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — String</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>String <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('vote')">Vote</span>
+      <span class="preset-chip" onclick="applyPreset('dreamer')">Dream-ager</span>
+      <span class="preset-chip" onclick="applyPreset('tracks')">Tracks</span>
+      <span class="preset-chip" onclick="applyPreset('juicy')">Juicy</span>
+      <span class="preset-chip" onclick="applyPreset('guts')">Guts</span>
+      <span class="preset-chip" onclick="applyPreset('spiral')">Spiral</span>
+      <span class="preset-chip" onclick="applyPreset('wave')">Wave</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">String</div>
+    <div class="range-row"><span class="range-label">Strip Height</span><input type="range" id="stripHeight" min="10" max="300" value="70"><span class="range-value" id="stripHeightVal">70</span></div>
+    <div class="range-row"><span class="range-label">Strip Count</span><input type="range" id="stripCount" min="1" max="6" value="1"><span class="range-value" id="stripCountVal">1</span></div>
+    <div class="range-row"><span class="range-label">Points</span><input type="range" id="points" min="3" max="30" value="7"><span class="range-value" id="pointsVal">7</span></div>
+    <div class="range-row"><span class="range-label">Curve</span><input type="range" id="curve" min="0" max="100" value="50"><span class="range-value" id="curveVal">50</span></div>
+    <div class="range-row"><span class="range-label">Randomize</span><input type="range" id="randomize" min="0" max="100" value="30"><span class="range-value" id="randomizeVal">30</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="outline"> Outline mode</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="color-row"><input type="color" id="c1" value="#0f5cbf"><label>1</label>
+      <input type="color" id="c2" value="#25d964"><label>2</label>
+      <input type="color" id="c3" value="#f2b90f"><label>3</label></div>
+    <div class="color-row"><input type="color" id="c4" value="#f24f13"><label>4</label>
+      <input type="color" id="c5" value="#0d0d0d"><label>5</label></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="5"><span class="range-value" id="numColorsVal">5</span></div>
+    <div class="color-section-row">
+      <span class="range-label">Text</span>
+      <input type="color" id="typeColor" value="#ffffff">
+      <button class="swap-btn" onclick="swapColors()" title="Swap text/bg">&#8646;</button>
+      <input type="color" id="bgColor" value="#000000">
+      <span class="range-label">Bg</span>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — STRING MODE
+// Bezier curve ribbons with text texture scrolling.
+// Auto-generated control points with adjustable curve/randomness.
+// ============================================================
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+let textBuffer = null;
+let lastText = '';
+let particles = [];
+let lastPoints = 0;
+let lastRandom = -1;
+const STEPS = 70;
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight,
+    WEBGL
+  );
+  c.parent('canvasContainer');
+  textFont(font);
+  frameRate(30);
+
+  TipoUI.init({
+    mode: 'string',
+    formatters: {}
+  });
+  recorder = TipoUI.recorder;
+
+  generateParticles(7, 50, 30);
+}
+
+function windowResized() {
+  resizeCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+  lastPoints = 0; // Force regeneration
+}
+
+function val(id) { return TipoUI.val(id); }
+function chk(id) { return TipoUI.chk(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function col(id) { return TipoUI.col(id); }
+
+// Generate control points along a path
+function generateParticles(count, curveAmt, randomAmt) {
+  particles = [];
+  const w = width - 100;
+  const h = height - 100;
+  const randF = randomAmt / 100;
+  const curveF = curveAmt / 100;
+
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    // Base path: smooth wave across canvas
+    const x = 50 + t * w;
+    const baseY = height / 2 + sin(t * TWO_PI) * h * 0.2;
+    const y = baseY + (random(-1, 1) * h * 0.3 * randF);
+    const angle = random(-PI, PI) * curveF;
+    const handleLen = (w / count) * 0.5 * (0.5 + curveF);
+
+    particles.push({ x, y, angle, handleLen });
+  }
+}
+
+// Build text texture
+function buildTexture(txt, stripH) {
+  const g = createGraphics(width * 2, stripH);
+  g.background(0, 0, 0, 0);
+  g.fill(255);
+  g.noStroke();
+  g.textFont(font);
+  g.textSize(stripH * 0.7);
+  g.textAlign(LEFT, CENTER);
+  // Repeat text to fill width
+  const measured = g.textWidth(txt + ' ') || 1;
+  const repeats = ceil(g.width / measured) + 1;
+  for (let r = 0; r < repeats; r++) {
+    g.text(txt + ' ', r * measured, stripH / 2);
+  }
+  return g;
+}
+
+// Get gradient color for position along path
+function getGradColor(t) {
+  if (prideMode) return color(prideColors[floor(t * 6) % 6]);
+  const n = val('numColors');
+  const colors = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
+  if (n <= 1) return color(colors[0]);
+  const segments = n - 1;
+  const segIdx = min(floor(t * segments), segments - 1);
+  const segT = (t * segments) - segIdx;
+  return lerpColor(color(colors[segIdx]), color(colors[segIdx + 1]), segT);
+}
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const stripH = val('stripHeight');
+  const stripCnt = val('stripCount');
+  const pts = val('points');
+  const curveAmt = val('curve');
+  const randomAmt = val('randomize');
+  const isOutline = chk('outline');
+  const txtC = document.getElementById('typeColor').value;
+
+  // Regenerate particles if changed
+  if (pts !== lastPoints || randomAmt !== lastRandom) {
+    generateParticles(pts, curveAmt, randomAmt);
+    lastPoints = pts;
+    lastRandom = randomAmt;
+  }
+
+  // Rebuild texture if text changed
+  if (txt !== lastText) {
+    if (textBuffer) textBuffer.remove();
+    textBuffer = buildTexture(txt, stripH);
+    lastText = txt;
+  }
+
+  if (!textBuffer || particles.length < 2) return;
+
+  const heightRatio = textBuffer.width / 2;
+
+  push();
+  translate(-width / 2, -height / 2);
+
+  // Render each strip
+  for (let m = 0; m < stripCnt; m++) {
+    const stripTop = -stripH / 2 + (m * stripH) / stripCnt;
+    const stripBot = -stripH / 2 + ((m + 1) * stripH) / stripCnt;
+    const rSpeed = 0.5 + random() * 1.5; // Random speed per strip
+    let culmDist = 0;
+
+    // For each segment between particles
+    for (let seg = 0; seg < particles.length - 1; seg++) {
+      const p0 = particles[seg];
+      const p1 = particles[seg + 1];
+
+      // Bezier control points from particle handles
+      const hx0 = p0.x + cos(p0.angle) * p0.handleLen;
+      const hy0 = p0.y + sin(p0.angle) * p0.handleLen;
+      const hx1 = p1.x - cos(p1.angle) * p1.handleLen;
+      const hy1 = p1.y - sin(p1.angle) * p1.handleLen;
+
+      // Get color for this segment
+      const segT = seg / (particles.length - 1);
+      const segColor = getGradColor(segT);
+
+      if (isOutline) {
+        // Outline mode: draw stroked bezier
+        noFill();
+        stroke(segColor);
+        strokeWeight(2);
+        bezier(p0.x, p0.y, hx0, hy0, hx1, hy1, p1.x, p1.y);
+      } else {
+        // Textured ribbon along bezier
+        textureMode(NORMAL);
+        texture(textBuffer);
+        noStroke();
+
+        beginShape(TRIANGLE_STRIP);
+        for (let s = 0; s <= STEPS; s++) {
+          const t = s / STEPS;
+
+          // Bezier point
+          const bx = bezierPoint(p0.x, hx0, hx1, p1.x, t);
+          const by = bezierPoint(p0.y, hy0, hy1, p1.y, t);
+
+          // Bezier tangent for perpendicular
+          const tx = bezierTangent(p0.x, hx0, hx1, p1.x, t);
+          const ty = bezierTangent(p0.y, hy0, hy1, p1.y, t);
+          const angle = atan2(ty, tx) - HALF_PI;
+
+          // UV scrolling
+          const u = ((culmDist + frameCount * rSpeed) % heightRatio) / heightRatio;
+
+          // Top and bottom vertices
+          const topX = bx + cos(angle) * stripTop;
+          const topY = by + sin(angle) * stripTop;
+          const botX = bx + cos(angle) * stripBot;
+          const botY = by + sin(angle) * stripBot;
+
+          vertex(botX, botY, 0, u, (m + 1) / stripCnt);
+          vertex(topX, topY, 0, u, m / stripCnt);
+
+          // Track cumulative distance
+          if (s > 0) {
+            const prevBx = bezierPoint(p0.x, hx0, hx1, p1.x, (s - 1) / STEPS);
+            const prevBy = bezierPoint(p0.y, hy0, hy1, p1.y, (s - 1) / STEPS);
+            culmDist += dist(prevBx, prevBy, bx, by);
+          }
+        }
+        endShape();
+      }
+    }
+
+    // Draw text along path in outline mode
+    if (isOutline) {
+      fill(txtC);
+      noStroke();
+      textSize(stripH * 0.5);
+      textAlign(CENTER, CENTER);
+      for (let seg = 0; seg < particles.length - 1; seg++) {
+        const p0 = particles[seg];
+        const p1 = particles[seg + 1];
+        const hx0 = p0.x + cos(p0.angle) * p0.handleLen;
+        const hy0 = p0.y + sin(p0.angle) * p0.handleLen;
+        const hx1 = p1.x - cos(p1.angle) * p1.handleLen;
+        const hy1 = p1.y - sin(p1.angle) * p1.handleLen;
+
+        for (let k = 0; k < txt.length; k++) {
+          const t = (k + frameCount * 0.02) % txt.length / txt.length;
+          const bx = bezierPoint(p0.x, hx0, hx1, p1.x, t);
+          const by = bezierPoint(p0.y, hy0, hy1, p1.y, t);
+          push();
+          translate(bx, by);
+          const tx = bezierTangent(p0.x, hx0, hx1, p1.x, t);
+          const ty = bezierTangent(p0.y, hy0, hy1, p1.y, t);
+          rotate(atan2(ty, tx));
+          text(txt.charAt(k), 0, 0);
+          pop();
+        }
+      }
+    }
+  }
+
+  // Draw particle nodes
+  noStroke();
+  fill(255, 255, 255, 80);
+  for (const p of particles) {
+    ellipse(p.x, p.y, 8, 8);
+  }
+
+  pop();
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  setVal('stripHeight', 70); setVal('stripCount', 1);
+  setVal('points', 7); setVal('curve', 50); setVal('randomize', 30);
+  setVal('outline', false); setVal('numColors', 5);
+  document.getElementById('c1').value = '#0f5cbf';
+  document.getElementById('c2').value = '#25d964';
+  document.getElementById('c3').value = '#f2b90f';
+  document.getElementById('c4').value = '#f24f13';
+  document.getElementById('c5').value = '#0d0d0d';
+  document.getElementById('typeColor').value = '#ffffff';
+  document.getElementById('bgColor').value = '#000000';
+  lastPoints = 0;
+}
+
+const PRESETS = {
+  vote: () => { resetAll();
+    setVal('stripHeight',180);setVal('stripCount',4);setVal('points',7);setVal('curve',60);setVal('randomize',40);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#2955d9';document.getElementById('c2').value='#2793f2';
+    document.getElementById('c3').value='#ffffff';document.getElementById('c4').value='#f23e2e';
+    document.getElementById('c5').value='#000000';
+    document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
+    lastPoints=0;
+  },
+  dreamer: () => { resetAll();
+    setVal('stripHeight',44);setVal('stripCount',2);setVal('points',20);setVal('curve',40);setVal('randomize',50);
+    setVal('outline',true);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#030a8c';document.getElementById('c2').value='#030ba6';
+    document.getElementById('c3').value='#f21d1d';document.getElementById('c4').value='#fcbc1b';
+    document.getElementById('c5').value='#f2c4e6';
+    document.getElementById('typeColor').value='#030a8c';document.getElementById('bgColor').value='#f2c4e6';
+    lastPoints=0;
+  },
+  tracks: () => { resetAll();
+    setVal('stripHeight',60);setVal('stripCount',1);setVal('points',28);setVal('curve',70);setVal('randomize',10);
+    setVal('outline',true);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0d0d0d';
+    document.getElementById('c3').value='#000000';document.getElementById('c4').value='#b7b7b7';
+    document.getElementById('c5').value='#e2e2e2';
+    document.getElementById('typeColor').value='#000000';document.getElementById('bgColor').value='#858585';
+    lastPoints=0;
+  },
+  juicy: () => { resetAll();
+    setVal('stripHeight',100);setVal('stripCount',2);setVal('points',10);setVal('curve',50);setVal('randomize',60);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#0f5cbf';document.getElementById('c2').value='#25d964';
+    document.getElementById('c3').value='#f2b90f';document.getElementById('c4').value='#f24f13';
+    document.getElementById('c5').value='#0d0d0d';
+    document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
+    lastPoints=0;
+  },
+  guts: () => { resetAll();
+    setVal('stripHeight',100);setVal('stripCount',3);setVal('points',28);setVal('curve',60);setVal('randomize',20);
+    setVal('outline',true);
+    setVal('numColors',5);
+    document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ffffff';
+    document.getElementById('c3').value='#f28599';document.getElementById('c4').value='#d94625';
+    document.getElementById('c5').value='#f2ca50';
+    document.getElementById('typeColor').value='#000000';document.getElementById('bgColor').value='#000000';
+    lastPoints=0;
+  },
+  spiral: () => { resetAll();
+    setVal('stripHeight',80);setVal('stripCount',2);setVal('points',15);setVal('curve',80);setVal('randomize',5);
+    setVal('numColors',3);
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffffff';
+    document.getElementById('c3').value='#0000ff';
+    document.getElementById('typeColor').value='#000000';document.getElementById('bgColor').value='#ffffff';
+    lastPoints=0;
+  },
+  wave: () => { resetAll();
+    setVal('stripHeight',120);setVal('stripCount',4);setVal('points',12);setVal('curve',40);setVal('randomize',15);
+    setVal('numColors',4);
+    document.getElementById('c1').value='#000000';document.getElementById('c2').value='#ff0000';
+    document.getElementById('c3').value='#ffff00';document.getElementById('c4').value='#0000ff';
+    document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
+    lastPoints=0;
+  },
+  pride: () => { prideMode = true; lastPoints=0; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>

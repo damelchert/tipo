@@ -20,6 +20,9 @@
   cascade.html                 — kinetic type: cascade (FUNCIONAL)
   ribbon.html                  — kinetic type: ribbon (FUNCIONAL)
   morisawa.html                — kinetic type: morisawa (FUNCIONAL)
+  layers.html                  — kinetic type: layers (FUNCIONAL)
+  danger.html                  — kinetic type: danger (FUNCIONAL)
+  string.html                  — kinetic type: string (FUNCIONAL)
   shared/
     style.css                  — design system (#99E0D2 section titles, swap btn, etc)
     recorder.js                — classe TipoRecorder (MP4 recording)

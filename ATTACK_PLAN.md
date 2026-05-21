@@ -35,9 +35,9 @@ Landing page (index.html) como hub central.
 - [ ] **MORISAWA** — Testar flux mode e wrap-around, ajustar tracking
 
 ### FASE 3 — Modos 2D
-- [ ] **LAYERS** — 5 sliders, 7 presets (Speed Racer, To Space, Lost Time, Dot Spiral, Be Aggressive, Meat Space)
-- [ ] **DANGER** — 7 sliders, 7 presets (All Yours, Just OK, Not So Good, Cheer, Date, Hopes, Circle)
-- [ ] **STRING** — 2 sliders + particles, 7 presets (Vote, Dream-ager, Tracks, Juicy, Yes &, Guts, Eels & wind)
+- [x] **LAYERS** — 5 sliders, 7 presets (Speed Racer, To Space, Lost Time, Dot Spiral, Be Aggressive, Meat Space, Pride)
+- [x] **DANGER** — 7 sliders, 8 presets (All Yours, Just OK, Not So Good, Cheer, Date, Hopes, Circle, Pride)
+- [x] **STRING** — 5 sliders, 8 presets (Vote, Dream-ager, Tracks, Juicy, Guts, Spiral, Wave, Pride)
 
 ### FASE 4 — Modos Composicao (jQuery UI)
 - [ ] **BADGE** — 41 sliders, 11 font presets

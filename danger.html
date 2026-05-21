@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipó — Danger</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Danger <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here... (use | for line breaks)">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('allYours')">All Yours</span>
+      <span class="preset-chip" onclick="applyPreset('justOK')">Just OK</span>
+      <span class="preset-chip" onclick="applyPreset('notSoGood')">Not So Good</span>
+      <span class="preset-chip" onclick="applyPreset('cheer')">Cheer</span>
+      <span class="preset-chip" onclick="applyPreset('date')">Date</span>
+      <span class="preset-chip" onclick="applyPreset('hopes')">Hopes</span>
+      <span class="preset-chip" onclick="applyPreset('circle')">Circle</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Distortion</div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="noiseSpeed" min="1" max="50" value="20"><span class="range-value" id="noiseSpeedVal">20</span></div>
+    <div class="range-row"><span class="range-label">Radius</span><input type="range" id="radiusNoise" min="0" max="100" value="25"><span class="range-value" id="radiusNoiseVal">0.25</span></div>
+    <div class="range-row"><span class="range-label">Complexity</span><input type="range" id="tumult" min="0" max="188" value="63"><span class="range-value" id="tumultVal">6.28</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Grid</div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="1" max="150" value="45"><span class="range-value" id="columnsVal">45</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="150" value="45"><span class="range-value" id="rowsVal">45</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Type</div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="1" max="500" value="170"><span class="range-value" id="fontSizeVal">170</span></div>
+    <div class="range-row"><span class="range-label">Leading</span><input type="range" id="leading" min="0" max="200" value="60"><span class="range-value" id="leadingVal">0.60</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="invert"> Invert colors</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Color</div>
+    <div class="color-section-row">
+      <span class="range-label">Text</span>
+      <input type="color" id="typeColor" value="#000000">
+      <button class="swap-btn" onclick="swapColors()" title="Swap colors">&#8646;</button>
+      <input type="color" id="bgColor" value="#ffffff">
+      <span class="range-label">Bg</span>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — DANGER MODE
+// Perlin noise mesh distortion on text textures.
+// Text rendered to off-screen buffer, then mapped onto
+// animated vertex grid with noise-based displacement.
+// ============================================================
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+let textBuffers = [];
+let lastText = '';
+let lastFontSize = 0;
+let lastLeading = 0;
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight,
+    WEBGL
+  );
+  c.parent('canvasContainer');
+  textFont(font);
+  frameRate(30);
+
+  TipoUI.init({
+    mode: 'danger',
+    formatters: {
+      radiusNoise: { div: 100, decimals: 2 },
+      tumult: { div: 10, decimals: 2 },
+      leading: { div: 100, decimals: 2 }
+    }
+  });
+  recorder = TipoUI.recorder;
+}
+
+function windowResized() {
+  resizeCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
+  lastText = ''; // Force rebuild
+}
+
+function val(id) { return TipoUI.val(id); }
+function chk(id) { return TipoUI.chk(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+
+// Easing function: S-curve
+function easer(step) {
+  return pow(step, 4) / (pow(step, 4) + pow(1 - step, 4));
+}
+
+// Build text textures
+function buildTextures(txt, fSize, ldng) {
+  const lines = txt.split('|');
+  textBuffers = [];
+  for (let z = 0; z < lines.length; z++) {
+    const line = lines[z];
+    const g = createGraphics(width, fSize * 1.3);
+    g.background(255);
+    g.fill(0);
+    g.noStroke();
+    g.textFont(font);
+    g.textSize(fSize);
+    g.textAlign(CENTER, CENTER);
+    g.text(line, g.width / 2, g.height / 2);
+    textBuffers.push(g);
+  }
+}
+
+function draw() {
+  const isInvert = chk('invert');
+  const foreC = isInvert ? '#ffffff' : document.getElementById('typeColor').value;
+  const bgC = isInvert ? '#000000' : document.getElementById('bgColor').value;
+  background(bgC);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const nSpeed = val('noiseSpeed');
+  const radNoise = val('radiusNoise') / 100;
+  const tumult = val('tumult') / 10;
+  const cols = val('columns');
+  const rws = val('rows');
+  const fSize = val('fontSize');
+  const ldng = val('leading') / 100;
+
+  // Rebuild textures if needed
+  if (txt !== lastText || fSize !== lastFontSize || ldng !== lastLeading) {
+    buildTextures(txt, fSize, ldng);
+    lastText = txt;
+    lastFontSize = fSize;
+    lastLeading = ldng;
+  }
+
+  const lines = txt.split('|');
+  const totalH = lines.length * fSize * 1.3 + (lines.length - 1) * fSize * ldng;
+
+  push();
+  translate(-width / 2, -totalH / 2);
+
+  for (let z = 0; z < textBuffers.length; z++) {
+    const stripS = textBuffers[z];
+    if (!stripS) continue;
+
+    push();
+    textureMode(NORMAL);
+    texture(stripS);
+    noStroke();
+
+    const yOff = z * (fSize * 1.3 + fSize * ldng);
+    translate(0, yOff);
+
+    const xSpace = 1.0 / cols;
+    const ySpace = 1.0 / rws;
+    const baseSpot = dist(stripS.width, -stripS.height / 0.5, 0, 0);
+
+    for (let y = 0; y < rws; y++) {
+      beginShape(TRIANGLE_STRIP);
+
+      for (let x = 0; x <= cols; x++) {
+        // Two vertices per column: top and bottom of this row
+        for (let dy = 0; dy <= 1; dy++) {
+          const px = x * xSpace;
+          const py = (y + dy) * ySpace;
+          const screenX = px * stripS.width;
+          const screenY = py * stripS.height;
+
+          // Distance from anchor point
+          const d = dist(screenX, screenY, stripS.width, -stripS.height / 0.5);
+          const distMap = constrain(map(d, 0, baseSpot, 1, 0), 0, 1);
+          const radiusMap = easer(distMap) * radNoise;
+
+          // Perlin noise angle
+          const noiseVal = noise(
+            (screenX - nSpeed * 15 * frameCount) * 0.001,
+            (screenY + z * rws + nSpeed * 5 * frameCount) * 0.001,
+            frameCount * nSpeed * 0.001
+          );
+          const noiseAngle = map(noiseVal, 0, 1, -tumult, tumult);
+
+          // Displaced position
+          const fx = screenX + sin(noiseAngle) * radiusMap * stripS.width;
+          const fy = screenY + cos(noiseAngle) * radiusMap * stripS.height;
+
+          vertex(fx, fy, 0, px, py);
+        }
+      }
+
+      endShape();
+    }
+
+    pop();
+  }
+  pop();
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  setVal('noiseSpeed', 20); setVal('radiusNoise', 25); setVal('tumult', 63);
+  setVal('columns', 45); setVal('rows', 45);
+  setVal('fontSize', 170); setVal('leading', 60); setVal('invert', false);
+  document.getElementById('typeColor').value = '#000000';
+  document.getElementById('bgColor').value = '#ffffff';
+  lastText = '';
+}
+
+const PRESETS = {
+  allYours: () => { resetAll();
+    setVal('noiseSpeed',20);setVal('radiusNoise',80);setVal('tumult',157);
+    setVal('columns',45);setVal('rows',45);setVal('fontSize',85);setVal('leading',75);setVal('invert',false);
+  },
+  justOK: () => { resetAll();
+    setVal('noiseSpeed',12);setVal('radiusNoise',80);setVal('tumult',157);
+    setVal('columns',15);setVal('rows',150);setVal('fontSize',500);setVal('leading',60);setVal('invert',false);
+  },
+  notSoGood: () => { resetAll();
+    setVal('noiseSpeed',10);setVal('radiusNoise',100);setVal('tumult',157);
+    setVal('columns',30);setVal('rows',30);setVal('fontSize',220);setVal('leading',65);setVal('invert',true);
+  },
+  cheer: () => { resetAll();
+    setVal('noiseSpeed',15);setVal('radiusNoise',20);setVal('tumult',126);
+    setVal('columns',40);setVal('rows',50);setVal('fontSize',110);setVal('leading',40);setVal('invert',true);
+  },
+  date: () => { resetAll();
+    setVal('noiseSpeed',15);setVal('radiusNoise',20);setVal('tumult',188);
+    setVal('columns',80);setVal('rows',80);setVal('fontSize',50);setVal('leading',65);setVal('invert',true);
+  },
+  hopes: () => { resetAll();
+    setVal('noiseSpeed',10);setVal('radiusNoise',100);setVal('tumult',94);
+    setVal('columns',25);setVal('rows',25);setVal('fontSize',50);setVal('leading',40);setVal('invert',false);
+  },
+  circle: () => { resetAll();
+    setVal('noiseSpeed',20);setVal('radiusNoise',100);setVal('tumult',63);
+    setVal('columns',30);setVal('rows',150);setVal('fontSize',500);setVal('leading',0);setVal('invert',true);
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>
