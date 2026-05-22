@@ -242,6 +242,32 @@ body { overflow: hidden; }
   font-size: 9px; color: var(--text-5); letter-spacing: 1px;
   text-transform: uppercase; margin-top: 6px;
 }
+
+/* ============================================================
+   MODE PREVIEW ANIMATIONS
+   ============================================================ */
+@keyframes prev-cylinder { from { transform: perspective(200px) rotateY(0deg); } to { transform: perspective(200px) rotateY(360deg); } }
+@keyframes prev-field { 0%,100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-4px) scaleY(1.3); } }
+@keyframes prev-stripe { 0%,100% { transform: translateX(0) scaleX(1); } 50% { transform: translateX(8px) scaleX(0.7); } }
+@keyframes prev-coil { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes prev-flag { 0%,100% { transform: skewY(0deg) scaleX(1); } 25% { transform: skewY(-5deg) scaleX(1.1); } 75% { transform: skewY(5deg) scaleX(0.9); } }
+@keyframes prev-cascade { 0%,100% { transform: scaleY(1); opacity: 1; } 50% { transform: scaleY(2); opacity: 0.6; } }
+@keyframes prev-ribbon { 0%,100% { transform: translateX(0) rotate(0deg); } 50% { transform: translateX(5px) rotate(5deg); } }
+@keyframes prev-mori { from { transform: translateX(20px); } to { transform: translateX(-20px); } }
+@keyframes prev-layers { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(5deg) scale(0.9); } }
+@keyframes prev-danger { 0%,100% { transform: skewX(0deg) scaleX(1); } 25% { transform: skewX(15deg) scaleX(1.2); } 75% { transform: skewX(-10deg) scaleX(0.8); } }
+@keyframes prev-string { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 20; } }
+@keyframes prev-badge { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes prev-clutter { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3px,-3px) scale(1.2); } }
+@keyframes prev-construct { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.7); opacity: 0.5; } }
+@keyframes prev-snap { 0% { transform: translateY(20px) scaleX(0.3); opacity: 0; } 30% { transform: translateY(0) scaleX(1); opacity: 1; } 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-15px); opacity: 0; } }
+@keyframes prev-flash { 0% { transform: scale(0.5); opacity: 0; } 20% { transform: scale(1.2); opacity: 1; } 40% { transform: scale(1) rotate(0deg); } 60% { transform: scale(1) rotate(180deg); } 80% { transform: scale(1.3); } 100% { transform: scale(0.5); opacity: 0; } }
+@keyframes prev-pow { 0%,40% { transform: scale(1); } 50% { transform: scale(2); opacity: 1; } 70% { transform: scale(3); opacity: 0; letter-spacing: 10px; } 100% { transform: scale(0); opacity: 0; } }
+@keyframes prev-crash { 0% { transform: translateY(-20px); } 60% { transform: translateY(10px); } 80% { transform: translateY(-3px); } 100% { transform: translateY(10px); } }
+@keyframes prev-clock { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes prev-vessel { 0%,100% { border-radius: 4px; width: 40px; height: 25px; } 50% { border-radius: 15px; width: 35px; height: 35px; } }
+@keyframes prev-shine { 0%,100% { text-shadow: 0 0 4px currentColor; opacity: 0.7; } 50% { text-shadow: 0 0 15px currentColor, 0 0 30px currentColor; opacity: 1; } }
+@keyframes prev-boost { 0% { transform: translateX(-20px); opacity: 0; } 30% { transform: translateX(3px); opacity: 1; } 50% { transform: translateX(0); } 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(0); opacity: 0.3; } }
 </style>
 </head>
 <body>
@@ -381,34 +407,56 @@ body { overflow: hidden; }
 // ============================================================
 const MODES = {
   '3d': [
-    { id: 'cylinder', name: 'Cylinder', desc: 'Text wrapped around a 3D cylinder with wave animations. Rotate, stack, ripple.', meta: '7 presets · 21 controls' },
-    { id: 'field', name: 'Field', desc: 'Grid of letters with wave distortion on X, Y, Z axes. Stretch and offset controls.', meta: '6 presets · 21 controls' },
-    { id: 'stripes', name: 'Stripes', desc: 'Text on colored ribbons weaving through 3D space. Multi-color support.', meta: '10 presets · 13 controls' },
-    { id: 'coil', name: 'Coil', desc: 'Text coiled into spirals, springs, and pretzels. Parametric geometry.', meta: '11 presets · 13 controls' },
-    { id: 'flag', name: 'Flag', desc: 'Text as a waving flag or folded surface. Origami, barber, silos effects.', meta: '13 presets · 17 controls' },
-    { id: 'cascade', name: 'Cascade', desc: 'Cascading letters falling, ticking, running. Grid and pixel gradients.', meta: '11 presets · 8 controls' },
-    { id: 'ribbon', name: 'Ribbon', desc: 'Text flowing on 3D ribbon paths. Streamers, terraces, snakes.', meta: '12 presets · 15 controls' },
-    { id: 'morisawa', name: 'Morisawa', desc: 'Japanese-inspired generative typography. Moon, bridge, flux loops.', meta: '9 presets · 6 controls' },
+    { id: 'cylinder', name: 'Cylinder', desc: 'Text wrapped around a 3D cylinder with wave animations. Rotate, stack, ripple.', meta: '8 presets · 21 controls',
+      preview: '<div style="font-size:18px;font-weight:700;animation:prev-cylinder 3s linear infinite;transform-style:preserve-3d">T</div>' },
+    { id: 'field', name: 'Field', desc: 'Grid of letters with wave distortion on X, Y, Z axes. Stretch and offset controls.', meta: '7 presets · 21 controls',
+      preview: '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;font-size:10px;font-weight:700"><span style="animation:prev-field .8s ease infinite">T</span><span style="animation:prev-field .8s ease infinite .1s">I</span><span style="animation:prev-field .8s ease infinite .2s">P</span><span style="animation:prev-field .8s ease infinite .3s">Ó</span><span style="animation:prev-field .8s ease infinite .4s">T</span><span style="animation:prev-field .8s ease infinite .5s">I</span></div>' },
+    { id: 'stripes', name: 'Stripes', desc: 'Text on colored ribbons weaving through space. Multi-color support.', meta: '11 presets · 13 controls',
+      preview: '<div style="display:flex;flex-direction:column;gap:3px"><div style="height:4px;width:50px;background:#ff0000;animation:prev-stripe 2s ease-in-out infinite;border-radius:2px"></div><div style="height:4px;width:50px;background:#ffff00;animation:prev-stripe 2s ease-in-out infinite .3s;border-radius:2px"></div><div style="height:4px;width:50px;background:#0000ff;animation:prev-stripe 2s ease-in-out infinite .6s;border-radius:2px"></div></div>' },
+    { id: 'coil', name: 'Coil', desc: 'Text coiled into spirals, springs, and pretzels. Parametric geometry.', meta: '11 presets · 13 controls',
+      preview: '<div style="width:40px;height:40px;border:3px solid var(--text-4);border-radius:50%;animation:prev-coil 4s linear infinite;border-top-color:transparent"></div>' },
+    { id: 'flag', name: 'Flag', desc: 'Text as a waving flag or folded surface. Origami, barber, silos effects.', meta: '14 presets · 17 controls',
+      preview: '<div style="font-size:16px;font-weight:700;animation:prev-flag 2s ease-in-out infinite">FLAG</div>' },
+    { id: 'cascade', name: 'Cascade', desc: 'Cascading letters with wave-controlled row heights. Grid and pixel gradients.', meta: '12 presets · 8 controls',
+      preview: '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;font-size:8px;font-weight:700"><span style="animation:prev-cascade 1.5s ease infinite">T</span><span style="animation:prev-cascade 1.5s ease infinite .2s;font-size:12px">TI</span><span style="animation:prev-cascade 1.5s ease infinite .4s;font-size:16px">TIP</span></div>' },
+    { id: 'ribbon', name: 'Ribbon', desc: 'Text flowing on 3D ribbon paths. Streamers, terraces, snakes.', meta: '13 presets · 15 controls',
+      preview: '<div style="width:50px;height:6px;background:linear-gradient(90deg,#ff0000,#ff9300,#ffff00,#00ff00,#0000ff);border-radius:3px;animation:prev-ribbon 3s ease-in-out infinite"></div>' },
+    { id: 'morisawa', name: 'Morisawa', desc: 'Japanese-inspired generative typography. Moon, bridge, flux loops.', meta: '8 presets · 6 controls',
+      preview: '<div style="font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;line-height:1"><span style="animation:prev-mori 4s linear infinite;letter-spacing:8px">T</span><span style="animation:prev-mori 4s linear infinite .5s;letter-spacing:4px">TI</span><span style="animation:prev-mori 4s linear infinite 1s">TIPÓ</span></div>' },
   ],
   '2d': [
-    { id: 'layers', name: 'Layers', desc: 'Stacked layers of text with spiral and space effects.', meta: '7 presets · 5 controls' },
-    { id: 'danger', name: 'Danger', desc: 'Distorted text with danger/warning aesthetics.', meta: '7 presets · 7 controls' },
-    { id: 'string', name: 'String', desc: 'Text as particles and strings. Physics-based movement.', meta: '7 presets · particle system' },
+    { id: 'layers', name: 'Layers', desc: 'Stacked layers of text with spiral and space effects.', meta: '7 presets · 5 controls',
+      preview: '<div style="position:relative;width:40px;height:40px"><div style="position:absolute;inset:0;border:2px solid var(--text-4);animation:prev-layers 3s ease-in-out infinite"></div><div style="position:absolute;inset:5px;border:2px solid var(--text-5);animation:prev-layers 3s ease-in-out infinite .3s"></div><div style="position:absolute;inset:10px;border:2px solid var(--text-6);animation:prev-layers 3s ease-in-out infinite .6s"></div></div>' },
+    { id: 'danger', name: 'Danger', desc: 'Distorted text with noise-based mesh warping.', meta: '8 presets · 7 controls',
+      preview: '<div style="font-size:16px;font-weight:700;animation:prev-danger 1s ease-in-out infinite">T</div>' },
+    { id: 'string', name: 'String', desc: 'Text on bezier curve ribbons. Adjustable paths and texture scrolling.', meta: '8 presets · 5 controls',
+      preview: '<svg width="50" height="30" viewBox="0 0 50 30"><path d="M5 25 Q15 0 25 15 Q35 30 45 5" fill="none" stroke="currentColor" stroke-width="2" style="animation:prev-string 2s ease-in-out infinite"/></svg>' },
   ],
   'composition': [
-    { id: 'badge', name: 'Badge', desc: 'Typographic badges and seals. Deep customization with 41 controls.', meta: '11 font presets · 41 controls' },
-    { id: 'clutter', name: 'Clutter', desc: 'Organized chaos. Rings, clouds, cosmic, sphere sub-modes.', meta: '5 sub-modes' },
-    { id: 'construct', name: 'Construct', desc: 'Modular type construction. Cloud, scribble, zigzag, gradient, box.', meta: '5 sub-modes' },
+    { id: 'badge', name: 'Badge', desc: 'Circular text composition. Strip, ring, tunnel, spread layers.', meta: '9 presets · 15 controls',
+      preview: '<div style="width:40px;height:40px;border:2px solid var(--text-4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;animation:prev-badge 5s linear infinite">T</div>' },
+    { id: 'clutter', name: 'Clutter', desc: 'Procedural layouts. Ring, cloud, cosmic, sphere, scatter, vortex.', meta: '7 presets · 6 sub-modes',
+      preview: '<div style="position:relative;width:40px;height:40px"><span style="position:absolute;font-size:10px;font-weight:700;animation:prev-clutter 2s ease infinite;top:5px;left:5px">T</span><span style="position:absolute;font-size:8px;animation:prev-clutter 2s ease infinite .3s;top:20px;left:25px">I</span><span style="position:absolute;font-size:12px;animation:prev-clutter 2s ease infinite .6s;top:10px;left:30px">P</span></div>' },
+    { id: 'construct', name: 'Construct', desc: 'Modular text grids. Cloud, scribble, zigzag, gradient, box, matrix.', meta: '7 presets · 6 sub-modes',
+      preview: '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:3px"><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .2s"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .4s"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .6s"></div></div>' },
   ],
   'animation': [
-    { id: 'snap', name: 'Snap', desc: 'Elastic snap animations with kinetic letter/word/group classes.', meta: 'advanced animation' },
-    { id: 'flash', name: 'Flash', desc: '18 sub-animations: sun, cloud, twist, halo, grid, starburst, shutters, and more.', meta: '18 sub-modes!' },
-    { id: 'pow', name: 'Pow', desc: 'Letter explosions with mouse interaction. Clouds and spurs.', meta: '2 presets · interactive' },
-    { id: 'crash', name: 'Crash', desc: 'Physics-based letter collisions with debris and boundaries.', meta: 'physics engine' },
-    { id: 'crashclock', name: 'Crash Clock', desc: 'Clock mechanism with crashing letters and particles.', meta: 'physics + time' },
-    { id: 'vessel', name: 'Vessel', desc: 'Letters in containers with easing curves. Sine, bounce, elastic.', meta: '7 easing types' },
-    { id: 'shine', name: 'Shine', desc: 'Radiant spoke animations with easing and timing controls.', meta: '7 easing types · 14 controls' },
-    { id: 'boost', name: 'Boost', desc: 'Tumble and zoom with multi-language support including Arabic.', meta: '11 controls · multilingual' },
+    { id: 'snap', name: 'Snap', desc: 'Elastic snap with staggered letter choreography.', meta: '5 presets · 4 controls',
+      preview: '<div style="font-size:14px;font-weight:700;display:flex;gap:1px"><span style="animation:prev-snap 1.5s cubic-bezier(.4,0,.2,1) infinite">T</span><span style="animation:prev-snap 1.5s cubic-bezier(.4,0,.2,1) infinite .15s">I</span><span style="animation:prev-snap 1.5s cubic-bezier(.4,0,.2,1) infinite .3s">P</span><span style="animation:prev-snap 1.5s cubic-bezier(.4,0,.2,1) infinite .45s">Ó</span></div>' },
+    { id: 'flash', name: 'Flash', desc: '8 cycling text effects: scale, shear, rotate, split, slide, fade, zoom.', meta: '5 presets · 8 effects',
+      preview: '<div style="font-size:18px;font-weight:700;animation:prev-flash 2s ease-in-out infinite">T</div>' },
+    { id: 'pow', name: 'Pow', desc: 'Explosive particle text. Characters scatter radially and reassemble.', meta: '5 presets · 4 controls',
+      preview: '<div style="font-size:16px;font-weight:700;animation:prev-pow 2s cubic-bezier(.4,0,.2,1) infinite">T</div>' },
+    { id: 'crash', name: 'Crash', desc: 'Physics-based falling text with gravity and bounce.', meta: '5 presets · 4 controls',
+      preview: '<div style="font-size:14px;font-weight:700;animation:prev-crash 2s ease-in infinite">T</div>' },
+    { id: 'crashclock', name: 'Crash Clock', desc: 'Real-time clock with falling numbers in circular boundary.', meta: '5 presets · 4 controls',
+      preview: '<div style="width:36px;height:36px;border:2px solid var(--text-4);border-radius:50%;position:relative"><div style="position:absolute;top:50%;left:50%;width:1px;height:12px;background:var(--text-3);transform-origin:bottom;animation:prev-clock 4s linear infinite"></div><div style="position:absolute;top:50%;left:50%;width:1px;height:8px;background:var(--text-4);transform-origin:bottom;animation:prev-clock 60s linear infinite"></div></div>' },
+    { id: 'vessel', name: 'Vessel', desc: 'Morphing container with 7 easing types around centered text.', meta: '5 presets · 4 controls',
+      preview: '<div style="width:40px;height:25px;border:2px solid var(--text-4);animation:prev-vessel 3s ease-in-out infinite;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">T</div>' },
+    { id: 'shine', name: 'Shine', desc: 'Radial light spokes emanating from text center.', meta: '5 presets · 5 controls',
+      preview: '<div style="font-size:16px;font-weight:700;text-shadow:0 0 8px currentColor;animation:prev-shine 2s ease-in-out infinite">T</div>' },
+    { id: 'boost', name: 'Boost', desc: 'Letter-by-letter directional reveal with overshoot easing.', meta: '5 presets · 4 controls',
+      preview: '<div style="font-size:12px;font-weight:700;display:flex;gap:1px;overflow:hidden"><span style="animation:prev-boost 2s ease infinite">T</span><span style="animation:prev-boost 2s ease infinite .3s">I</span><span style="animation:prev-boost 2s ease infinite .6s">P</span><span style="animation:prev-boost 2s ease infinite .9s">Ó</span></div>' },
   ],
 };
 
@@ -479,7 +527,7 @@ function buildModeList(cat) {
   const modes = MODES[cat];
   list.innerHTML = modes.map(m => `
     <a href="${m.id}.html" class="tipo-mode-card">
-      <div class="tipo-mode-card-preview">${m.name[0]}</div>
+      <div class="tipo-mode-card-preview">${m.preview || m.name[0]}</div>
       <div class="tipo-mode-card-info">
         <div class="tipo-mode-card-title">${m.name}</div>
         <div class="tipo-mode-card-desc">${m.desc}</div>
