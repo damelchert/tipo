@@ -144,6 +144,25 @@ function sinEng(spd, slopeN) {
   return sign * (1 - pow(1 - abs(s), slopeN));
 }
 
+function drawGlyphInBox(ch, x, y, boxW, boxH, strokeC, weight) {
+  if (ch === ' ' || weight <= 0 || boxW <= 0 || boxH <= 0) return;
+
+  textSize(max(boxH * 0.88, 1));
+  const measured = max(textWidth(ch), 1);
+
+  push();
+  translate(x, y);
+  scale(boxW / measured, 1);
+  noFill();
+  stroke(strokeC);
+  strokeWeight(weight);
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  textAlign(LEFT, TOP);
+  text(ch, 0, 0);
+  pop();
+}
+
 function draw() {
   const bgC = document.getElementById('bgColor').value;
   const txtC = document.getElementById('typeColor').value;
@@ -190,21 +209,13 @@ function draw() {
   drawingContext.clip();
 
   // ========== PRIMARY GRID (top half) ==========
-  fill(txtC);
-  noStroke();
-
   let yPos = 0;
   for (let j = 0; j < floor(rws); j++) {
     const copies = j + 1;
     const typeX = xField / (copies * runLen + (copies * runLen - 1) * tracking);
     const track = typeX * tracking;
     const typeY = yBlock * (rws - j);
-    const fontSize = typeY * 0.85;
     const rowColor = prideMode ? prideColors[j % 6] : txtC;
-
-    fill(rowColor);
-    textSize(max(fontSize, 1));
-    textAlign(LEFT, TOP);
 
     const totalW = copies * runLen * typeX + (copies * runLen - 1) * track;
     const scrollOffset = spd > 0 ? -(mover * spd * (rws - j)) % (totalW / copies + track) : 0;
@@ -216,23 +227,12 @@ function draw() {
 
         // Primary position
         let x = xBase + scrollOffset;
-        push();
-        translate(x, yPos);
-        // Scale text to fit typeX
-        const measured = textWidth(ch) || 1;
-        const sx = typeX / measured;
-        scale(sx, 1);
-        text(ch, 0, 0);
-        pop();
+        drawGlyphInBox(ch, x, yPos, typeX, typeY, rowColor, tW);
 
         // Wrap-around copy
         if (spd > 0) {
           const wrapW = totalW / copies + track;
-          push();
-          translate(x + wrapW, yPos);
-          scale(sx, 1);
-          text(ch, 0, 0);
-          pop();
+          drawGlyphInBox(ch, x + wrapW, yPos, typeX, typeY, rowColor, tW);
         }
       }
     }
@@ -249,12 +249,7 @@ function draw() {
       const typeX = xField / (copies * runLen + (copies * runLen - 1) * tracking);
       const track = typeX * tracking;
       const typeY = yBlock * (rws - m);
-      const fontSize = typeY * 0.85;
       const rowColor = prideMode ? prideColors[m % 6] : txtC;
-
-      fill(rowColor);
-      textSize(max(fontSize, 1));
-      textAlign(LEFT, TOP);
 
       yPosM -= typeY + lineSpc;
 
@@ -268,22 +263,11 @@ function draw() {
           const xBase = p * typeX + p * track + n * runLen * typeX + n * runLen * track;
           let x = xBase + scrollOffset;
 
-          const measured = textWidth(ch) || 1;
-          const sx = typeX / measured;
-
-          push();
-          translate(x, yPosM);
-          scale(sx, 1);
-          text(ch, 0, 0);
-          pop();
+          drawGlyphInBox(ch, x, yPosM, typeX, typeY, rowColor, tW);
 
           if (spd > 0) {
             const wrapW = totalW / copies + track;
-            push();
-            translate(x + (isFlipSpeed ? -wrapW : wrapW), yPosM);
-            scale(sx, 1);
-            text(ch, 0, 0);
-            pop();
+            drawGlyphInBox(ch, x + (isFlipSpeed ? -wrapW : wrapW), yPosM, typeX, typeY, rowColor, tW);
           }
         }
       }
@@ -339,7 +323,6 @@ const PRESETS = {
     setVal('mirror',true);setVal('flipSpeed',false);setVal('flux',false);
     document.getElementById('typeColor').value='#000000';
     document.getElementById('bgColor').value='#ffffff';
-    document.getElementById('textInput').value='X';
   },
   bridge: () => { resetAll();
     setVal('rows',7);setVal('typeWeight',40);setVal('tracking',0);

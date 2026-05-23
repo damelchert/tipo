@@ -101,6 +101,10 @@
       <input type="color" id="bgColor" value="#ffffff">
       <button class="swap-btn" onclick="swapColors()" title="Swap color 1 with background">&#8646;</button>
     </div>
+    <div class="color-section-row">
+      <span class="range-label">B-side/Text</span>
+      <input type="color" id="textColor" value="#000000">
+    </div>
   </div>
 
   <div class="section section-divider">
@@ -133,6 +137,8 @@
 let font, recorder;
 let prideMode = false;
 const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+const glyphTextureSize = 192;
+const glyphTextureCache = new Map();
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
@@ -145,6 +151,7 @@ function setup() {
   c.parent('canvasContainer');
   textFont(font);
   frameRate(30);
+  textureMode(NORMAL);
 
   TipoUI.init({
     mode: 'ribbon',
@@ -175,6 +182,60 @@ function chk(id) { return TipoUI.chk(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 function col(id) { return TipoUI.col(id); }
 
+function colorToCss(c) {
+  if (typeof c === 'string') return c;
+  return `rgba(${round(red(c))},${round(green(c))},${round(blue(c))},${alpha(c) / 255})`;
+}
+
+function getGlyphTexture(ch, strokeC, strokePx) {
+  if (ch === ' ') return null;
+  const normalized = ch.normalize('NFC');
+  if (strokePx <= 0) return null;
+
+  const key = `${normalized}|${strokeC}|${strokePx.toFixed(2)}`;
+  if (glyphTextureCache.has(key)) return glyphTextureCache.get(key);
+
+  const g = createGraphics(glyphTextureSize, glyphTextureSize);
+  if (g.canvas && g.canvas.parentNode) g.canvas.parentNode.removeChild(g.canvas);
+  g.pixelDensity(1);
+  g.clear();
+  g.textFont(font);
+  g.textAlign(CENTER, CENTER);
+  g.textSize(glyphTextureSize * 0.66);
+  g.noFill();
+  g.stroke(strokeC);
+  g.strokeWeight(strokePx);
+  g.drawingContext.lineJoin = 'round';
+  g.drawingContext.miterLimit = 2;
+  g.text(normalized, glyphTextureSize / 2, glyphTextureSize * 0.55);
+  glyphTextureCache.set(key, g);
+  return g;
+}
+
+function drawGlyphTexture(ch, glyphW, glyphH, strokeC, weight, mirrored, zOffset) {
+  const strokePx = min(28, max(0, weight / max(glyphH, 1) * glyphTextureSize * 0.9));
+  const tex = getGlyphTexture(ch, colorToCss(strokeC), strokePx);
+  if (!tex) return;
+
+  push();
+  translate(0, 0, zOffset);
+  if (mirrored) scale(-1, 1, 1);
+  noStroke();
+  texture(tex);
+  plane(max(glyphW, 0.5), max(glyphH, 0.5));
+  pop();
+}
+
+function buildRibbonText(text, targetLen) {
+  const raw = text || 'TIPÓ';
+  const unit = raw.trim().length ? raw : 'TIPÓ';
+  if (unit.length >= targetLen) return unit;
+  const spacer = unit.endsWith(' ') ? '' : ' ';
+  let out = '';
+  while (out.length < targetLen) out += unit + spacer;
+  return out;
+}
+
 // Gradient color interpolation based on position along ribbon
 function getGradientColor(pos, total) {
   const n = val('numColors');
@@ -193,12 +254,13 @@ function draw() {
 
   ortho(-width / 2, width / 2, -height / 2, height / 2, -5000, 5000);
 
-  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const baseTxt = document.getElementById('textInput').value || 'TIPÓ';
   const segSpc = val('segSpace');
   const segCnt = val('segCount');
   const tH = val('typeHeight');
   const trk = val('tracking');
   const tW = val('typeWeight') / 10;
+  const textC = col('textColor');
   const spd = val('speed') / 100;
   const dep = val('depth');
   const midStr = val('stretch') / 10;
@@ -214,11 +276,12 @@ function draw() {
   const txtOnly = chk('textOnly');
   const isGrad = chk('gradient');
 
-  const runLen = txt.length;
   const segLen = segCnt * segSpc;
   const radius = segLen / PI;
   const sinStep = PI / segCnt;
   const cycleLen = 2 * segCnt + 2 * segCnt * midStr;
+  const txt = buildRibbonText(baseTxt, ceil(max(baseTxt.length, cycleLen * 2.2)));
+  const runLen = txt.length;
 
   // Scrolling offset
   const yCrawl = (runLen + frameCount * spd) / (segCnt + segCnt * midStr) * radius * 2;
@@ -230,6 +293,7 @@ function draw() {
   rotateX(rotXv);
   rotateY(rotYv);
   rotateZ(rotZv + PI);
+  rectMode(CENTER);
 
   // Center ribbons
   if (isAlt) {
@@ -257,8 +321,6 @@ function draw() {
         const colors = [col('c1'), col('c2'), col('c3'), col('c4'), col('c5')];
         ribC = color(colors[(i - floor(frameCount * spd)) % n]);
       }
-      const txtC = lerpColor(ribC, color(bgC), 0.7);
-
       // Calculate position on 4-segment ribbon path
       let xCenter, yCenter, rot, side, textDirect;
       const segMidLen = segCnt * midStr;
@@ -295,8 +357,6 @@ function draw() {
       // Character dimensions
       const typeX = (segSpc - (trk / 100) * segSpc) * textDirect;
       const typeY = dep - (tH / 100) * dep;
-      const trackAdj = (trk / 100) * segSpc * -textDirect;
-      const heightAdj = (tH / 100) * dep;
 
       push();
       if (isAlt) {
@@ -318,33 +378,16 @@ function draw() {
         if (isBSide) {
           push();
           translate(0, 0, side);
-          fill(txtC); stroke(txtC);
+          fill(textC); stroke(textC);
           rect(0, 0, segSpc, dep);
           pop();
         }
       }
 
       // Draw text
-      push();
-      if (isBSide) {
-        translate(-typeX / 2, -dep / 2 + heightAdj / 2, -3 * side / 2);
-      } else {
-        translate(-typeX / 2, -dep / 2 + heightAdj / 2, 0);
-      }
-
-      noStroke();
-      fill(txtOnly ? ribC : color(bgC));
-      textSize(abs(typeY) * 0.8);
-      textAlign(CENTER, CENTER);
-      if (textDirect === 1) {
-        push();
-        scale(-1, 1);
-        text(ch, -abs(typeX) / 2, abs(typeY) / 2);
-        pop();
-      } else {
-        text(ch, abs(typeX) / 2, abs(typeY) / 2);
-      }
-      pop();
+      const glyphColor = txtOnly && prideMode ? ribC : color(textC);
+      const glyphZ = isBSide ? -3 * side / 2 : -side / 2;
+      drawGlyphTexture(ch, abs(typeX), max(abs(typeY), 0.5), glyphColor, tW, textDirect < 0, glyphZ);
 
       pop();
     }
@@ -376,6 +419,7 @@ function resetAll() {
   document.getElementById('c4').value = '#00ff00';
   document.getElementById('c5').value = '#0000ff';
   document.getElementById('bgColor').value = '#ffffff';
+  document.getElementById('textColor').value = '#000000';
 }
 
 const PRESETS = {
@@ -388,6 +432,7 @@ const PRESETS = {
     document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ff9300';
     document.getElementById('c3').value='#ffff00';document.getElementById('c4').value='#00ff00';
     document.getElementById('c5').value='#0000ff';document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textColor').value='#000000';
   },
   streamers: () => { resetAll();
     setVal('segSpace',23);setVal('segCount',22);setVal('typeHeight',25);setVal('tracking',40);setVal('typeWeight',20);
@@ -398,6 +443,7 @@ const PRESETS = {
     document.getElementById('c1').value='#fffc79';document.getElementById('c2').value='#ff2f92';
     document.getElementById('c3').value='#011993';document.getElementById('c4').value='#0096ff';
     document.getElementById('bgColor').value='#212121';
+    document.getElementById('textColor').value='#ffffff';
   },
   terrace: () => { resetAll();
     setVal('segSpace',14);setVal('segCount',17);setVal('typeHeight',30);setVal('tracking',30);setVal('typeWeight',10);
@@ -406,6 +452,7 @@ const PRESETS = {
     setVal('gradient',false);setVal('backSide',true);
     setVal('numColors',1);
     document.getElementById('c1').value='#ffffff';document.getElementById('bgColor').value='#000000';
+    document.getElementById('textColor').value='#000000';
   },
   link: () => { resetAll();
     setVal('segSpace',17);setVal('segCount',12);setVal('typeHeight',55);setVal('tracking',30);setVal('typeWeight',15);
@@ -415,6 +462,7 @@ const PRESETS = {
     setVal('numColors',3);
     document.getElementById('c1').value='#0096ff';document.getElementById('c2').value='#ff0000';
     document.getElementById('c3').value='#ffff00';document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textColor').value='#000000';
   },
   sea: () => { resetAll();
     setVal('segSpace',11);setVal('segCount',20);setVal('typeHeight',80);setVal('tracking',30);setVal('typeWeight',15);
@@ -425,6 +473,7 @@ const PRESETS = {
     document.getElementById('c1').value='#ffd479';document.getElementById('c2').value='#73fdff';
     document.getElementById('c3').value='#0096ff';document.getElementById('c4').value='#ff8ad8';
     document.getElementById('c5').value='#ff0000';document.getElementById('bgColor').value='#000000';
+    document.getElementById('textColor').value='#005493';
   },
   river: () => { resetAll();
     setVal('segSpace',10);setVal('segCount',20);setVal('typeHeight',64);setVal('tracking',30);setVal('typeWeight',10);
@@ -433,6 +482,7 @@ const PRESETS = {
     setVal('textOnly',true);setVal('gradient',false);
     setVal('numColors',1);
     document.getElementById('c1').value='#ffffff';document.getElementById('bgColor').value='#0000ff';
+    document.getElementById('textColor').value='#ffffff';
   },
   webArt: () => { resetAll();
     setVal('segSpace',10);setVal('segCount',25);setVal('typeHeight',30);setVal('tracking',30);setVal('typeWeight',10);
@@ -443,6 +493,7 @@ const PRESETS = {
     document.getElementById('c1').value='#0000ff';document.getElementById('c2').value='#ffff00';
     document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffff00';
     document.getElementById('c5').value='#0000ff';document.getElementById('bgColor').value='#929292';
+    document.getElementById('textColor').value='#ffffff';
   },
   primary: () => { resetAll();
     setVal('segSpace',10);setVal('segCount',20);setVal('typeHeight',0);setVal('tracking',0);setVal('typeWeight',20);
@@ -453,6 +504,7 @@ const PRESETS = {
     document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#0000ff';
     document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffff00';
     document.getElementById('c5').value='#ffffff';document.getElementById('bgColor').value='#ffffff';
+    document.getElementById('textColor').value='#000000';
   },
   snake: () => { resetAll();
     setVal('segSpace',6);setVal('segCount',33);setVal('typeHeight',0);setVal('tracking',0);setVal('typeWeight',10);
@@ -462,6 +514,7 @@ const PRESETS = {
     setVal('numColors',2);
     document.getElementById('c1').value='#000000';document.getElementById('c2').value='#ffffff';
     document.getElementById('bgColor').value='#000000';
+    document.getElementById('textColor').value='#000000';
   },
   hotCold: () => { resetAll();
     setVal('segSpace',7);setVal('segCount',25);setVal('typeHeight',0);setVal('tracking',0);setVal('typeWeight',0);
@@ -471,6 +524,7 @@ const PRESETS = {
     setVal('numColors',3);
     document.getElementById('c1').value='#000000';document.getElementById('c2').value='#011993';
     document.getElementById('c3').value='#ef577a';document.getElementById('bgColor').value='#000000';
+    document.getElementById('textColor').value='#000000';
   },
   track: () => { resetAll();
     setVal('segSpace',9);setVal('segCount',19);setVal('typeHeight',0);setVal('tracking',100);setVal('typeWeight',20);
@@ -481,6 +535,7 @@ const PRESETS = {
     document.getElementById('c1').value='#000000';document.getElementById('c2').value='#df2519';
     document.getElementById('c3').value='#dcb76e';document.getElementById('c4').value='#094d83';
     document.getElementById('bgColor').value='#000000';
+    document.getElementById('textColor').value='#000000';
   },
   trackII: () => { resetAll();
     setVal('segSpace',13);setVal('segCount',19);setVal('typeHeight',0);setVal('tracking',100);setVal('typeWeight',20);
@@ -489,6 +544,7 @@ const PRESETS = {
     setVal('gradient',false);
     setVal('numColors',1);
     document.getElementById('c1').value='#000000';document.getElementById('bgColor').value='#ff7e79';
+    document.getElementById('textColor').value='#ffffff';
   },
   pride: () => { prideMode = true; },
 };

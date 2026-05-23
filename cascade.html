@@ -196,6 +196,25 @@ function getGradientColors(row, rws) {
   return { rib: ribC, txt: txtC };
 }
 
+function drawGlyphInBox(ch, x, y, boxW, boxH, strokeC, weight) {
+  if (ch === ' ' || weight <= 0 || boxW <= 0 || boxH <= 0) return;
+
+  textSize(max(boxH * 0.88, 1));
+  const measured = max(textWidth(ch), 1);
+
+  push();
+  translate(x, y);
+  scale(boxW / measured, 1);
+  noFill();
+  stroke(strokeC);
+  strokeWeight(weight);
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  textAlign(LEFT, TOP);
+  text(ch, 0, 0);
+  pop();
+}
+
 function draw() {
   const bgC = document.getElementById('bgColor').value;
   background(bgC);
@@ -270,13 +289,8 @@ function draw() {
         rect(-trk / 2, 0, tX + trk, typeYfig);
       }
 
-      // Draw character
-      translate(0, ls / 2);
-      fill(txtC);
-      noStroke();
-      textSize(typeY * 0.85);
-      textAlign(CENTER, TOP);
-      text(ch, tX / 2, 0);
+      // Draw character as stroked type, matching Space Type's weight behavior.
+      drawGlyphInBox(ch, 0, ls / 2, tX, typeY, txtC, tW);
       pop();
 
       translate(0, typeYfig);
@@ -329,12 +343,7 @@ function draw() {
           rect(-trk / 2, 0, tX + trk, typeYfig);
         }
 
-        translate(0, ls / 2);
-        fill(txtC);
-        noStroke();
-        textSize(typeY * 0.85);
-        textAlign(CENTER, TOP);
-        text(ch, tX / 2, 0);
+        drawGlyphInBox(ch, 0, ls / 2, tX, typeY, txtC, tW);
         pop();
 
         translate(0, typeYfig);
@@ -430,7 +439,6 @@ const PRESETS = {
     setVal('numColors',1);
     document.getElementById('c1').value='#ff7e79';
     document.getElementById('bgColor').value='#ffffff';
-    document.getElementById('textInput').value='TIPÓ';
   },
   grid: () => { resetAll();
     setVal('typeX',62);setVal('typeWeight',10);setVal('tracking',0);setVal('lineSpace',0);
@@ -439,7 +447,6 @@ const PRESETS = {
     setVal('numColors',1);
     document.getElementById('c1').value='#ffffff';
     document.getElementById('bgColor').value='#0000ff';
-    document.getElementById('textInput').value='TIPÓ';
   },
   webArt: () => { resetAll();
     const tX = Math.round((width - 50) / 30);
@@ -451,7 +458,6 @@ const PRESETS = {
     document.getElementById('c3').value='#ff0000';document.getElementById('c4').value='#ffff00';
     document.getElementById('c5').value='#0000ff';
     document.getElementById('bgColor').value='#ffffff';
-    document.getElementById('textInput').value='TIPÓ';
   },
   sparkle: () => { resetAll();
     setVal('typeX',17);setVal('typeWeight',25);setVal('tracking',4);setVal('lineSpace',0);
@@ -461,7 +467,6 @@ const PRESETS = {
     document.getElementById('c1').value='#ffffff';document.getElementById('c2').value='#ff85ff';
     document.getElementById('c3').value='#00fdff';document.getElementById('c4').value='#0433ff';
     document.getElementById('bgColor').value='#0096ff';
-    document.getElementById('textInput').value='TIPÓ';
   },
   pixelGradient: () => { resetAll();
     const tX = Math.round((height - 50) / 20);
@@ -472,7 +477,6 @@ const PRESETS = {
     document.getElementById('c1').value='#2cfdfe';document.getElementById('c2').value='#fd8dd7';
     document.getElementById('c3').value='#fc3692';document.getElementById('c4').value='#103ffb';
     document.getElementById('bgColor').value='#ffffff';
-    document.getElementById('textInput').value='TIPÓ';
   },
   pride: () => { prideMode = true; },
 };

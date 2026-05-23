@@ -89,6 +89,33 @@
 
 ---
 
+## 2026-05-23
+
+### Refinamento Ribbon — match Space Type Generator
+- Adicionado controle **B-side/Text** separado no `ribbon.html`, equivalente ao controle B-SIDE/TEXT do STG original
+- `Weight` deixou de ser slider morto: letras agora são renderizadas como textura stroked em p5.Graphics, com peso real e cache por caractere/cor
+- Texto curto (ex: TIPÓ) é repetido internamente para preencher a fita inteira sem sobrescrever o campo Text, mantendo a regra dos presets não alterarem texto customizado
+- `rectMode(CENTER)` aplicado no desenho da ribbon para alinhar com a geometria do STG original
+- Presets atualizados com cores de texto/B-side do STG: Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II
+- Cache de glyph textures remove os canvases auxiliares do DOM para evitar acúmulo de elementos invisíveis
+- Validação: Chrome headless + SwiftShader via CDP, sem erros JS; canvas WebGL ativo, preset Streamers clicado, Weight atualizado, screenshot visual OK
+
+### Refinamento Cascade + Morisawa
+- `cascade.html`: `Weight` deixou de ser slider morto; caracteres agora são desenhados como glyphs stroked/escalados dentro do bloco, mais próximo do keyboardEngine do STG
+- `morisawa.html`: `Weight` também passou a controlar o traço real dos caracteres; visual voltou para leitura de poster tipográfico em contorno, em vez de fonte preenchida
+- Presets que sobrescreviam `textInput` foram limpos para respeitar a regra global: presets não apagam texto customizado e o default continua TIPÓ
+- Validação: Chrome headless via CDP clicou todos os presets de Cascade (12 chips) e Morisawa (8 chips), sem exceções JS; canvas presente e texto preservado como TIPÓ
+
+### CrashClock — Display Particles high-end
+- `crashclock.html` refeito com menu mais próximo do STG: Display (Hours, Hours & Min, Text, Particles), Reset every (Never, 5 sec, Minute), Particles, Clock, Physics e Color
+- Novo modo **Particles** default: centenas de círculos com colisão espacial, containment circular, damping, gravidade vetorial, packing e colisão contra ponteiros/hub
+- Ponteiros agora funcionam como material físico visual: hour/minute empurram as partículas, second hand é fino/accent, hub em camadas
+- Controles adicionados: Count, Min/Max Size, Packing, Scale, Hand Push, Hand Width, Border, Gravity, Angle, Friction, Speed, Bodies/Bg/Hands/Accent
+- Presets novos: Particles, Silk, Dense, Hours, Text, Pride; todos preservam `TIPÓ` e não sobrescrevem texto customizado
+- Validação: screenshot local OK; Chrome headless/CDP clicou 6 presets, alternou 4 displays e 3 reset modes, sem erros JS; canvas ativo e texto preservado
+
+---
+
 ## 2026-05-20
 
 ### Fase 1 Completa — 4 Kinetic Type Modes

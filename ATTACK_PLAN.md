@@ -30,9 +30,9 @@ Landing page (index.html) como hub central.
 
 ### BACKLOG — Refinamento Fase 2
 - [ ] **FLAG** — Implementar font engine vetorial completo (keyboardEngine_corners) para match exato com Space Type
-- [ ] **CASCADE** — Testar todos os presets, ajustar visual para match com original
-- [ ] **RIBBON** — Testar scroll e multi-ribbon, ajustar posicionamento de texto
-- [ ] **MORISAWA** — Testar flux mode e wrap-around, ajustar tracking
+- [ ] **CASCADE** — Refinamento parcial em 2026-05-23: Weight funcional, texto preservado, presets smoke-tested; ainda falta match visual fino com original
+- [x] **RIBBON** — Testado scroll/multi-ribbon; texto agora repete internamente, Weight funciona, B-side/Text separado, geometria centralizada como STG
+- [ ] **MORISAWA** — Refinamento parcial em 2026-05-23: Weight funcional, texto preservado, presets smoke-tested; ainda falta ajuste fino de flux/wrap/tracking
 
 ### FASE 3 — Modos 2D
 - [x] **LAYERS** — 5 sliders, 7 presets (Speed Racer, To Space, Lost Time, Dot Spiral, Be Aggressive, Meat Space, Pride)
@@ -49,7 +49,7 @@ Landing page (index.html) como hub central.
 - [x] **FLASH** — 8 cycling text effects (scale, shear, rotate, split, slide, fade, zoom), 5 presets
 - [x] **POW** — Explosive particle text, radial scatter + reassemble, 5 presets
 - [x] **CRASH** — Physics falling text with p5.js vectors, bounce/gravity, 5 presets
-- [x] **CRASH CLOCK** — Real-time clock with falling numbers, circular boundary, 5 presets
+- [x] **CRASH CLOCK** — Real-time clock + high-end particle display, circular physics, clock hand collisions, 6 presets
 - [x] **VESSEL** — Morphing container with 7 easing types, 5 presets
 - [x] **SHINE** — Radial light spokes from text center (WEBGL), 5 presets
 - [x] **BOOST** — Letter-by-letter directional reveal with overshoot, 5 presets
