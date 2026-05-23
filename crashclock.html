@@ -287,6 +287,7 @@ function createClockTextBodies(includeMinutes) {
       vy: random(-0.4, 0.4),
       r,
       mass: r * r,
+      phase: random(TWO_PI),
       colorIndex: i
     });
   }
@@ -310,6 +311,7 @@ function createFreeTextBodies() {
       vy: random(-1, 1),
       r,
       mass: r * r,
+      phase: random(TWO_PI),
       colorIndex: i
     });
   }
@@ -580,23 +582,28 @@ function resetAll() {
 const PRESETS = {
   particles: () => { resetAll(); },
   silk: () => { resetAll();
-    setVal('particleCount', 430); setVal('particleMin', 6); setVal('particleMax', 30);
-    setVal('packing', 82); setVal('gravity', 4); setVal('friction', 97);
-    document.getElementById('typeColor').value = '#f3b9cf';
-    document.getElementById('handColor').value = '#f1c65b';
+    setVal('particleCount', 300); setVal('particleMin', 10); setVal('particleMax', 58);
+    setVal('packing', 38); setVal('clockScale', 78); setVal('handPush', 24);
+    setVal('gravity', 1); setVal('gravityAngle', -35); setVal('friction', 99); setVal('speed', 72);
+    setVal('border', 18);
+    document.getElementById('typeColor').value = '#ffd6e6';
+    document.getElementById('handColor').value = '#f7d36f';
     document.getElementById('accentColor').value = '#ffffff';
     resetSystem();
   },
   dense: () => { resetAll();
-    setVal('particleCount', 700); setVal('particleMin', 5); setVal('particleMax', 26);
-    setVal('packing', 94); setVal('clockScale', 98); setVal('handPush', 80);
-    setVal('gravity', 16); setVal('friction', 95);
-    document.getElementById('typeColor').value = '#eab0c8';
+    setVal('particleCount', 760); setVal('particleMin', 3); setVal('particleMax', 20);
+    setVal('packing', 100); setVal('clockScale', 104); setVal('handPush', 92);
+    setVal('handWidth', 26); setVal('gravity', 28); setVal('gravityAngle', 115);
+    setVal('friction', 92); setVal('speed', 132); setVal('border', 58);
+    document.getElementById('typeColor').value = '#f0a8c5';
+    document.getElementById('handColor').value = '#ffca3a';
+    document.getElementById('accentColor').value = '#ffffff';
     resetSystem();
   },
   hours: () => { resetAll();
-    setDisplayMode('minutes'); setVal('fontSize', 36); setVal('clockScale', 82);
-    setVal('gravity', 24); setVal('border', 42);
+    setDisplayMode('hours'); setVal('fontSize', 58); setVal('clockScale', 82);
+    setVal('gravity', 20); setVal('handPush', 74); setVal('border', 42);
     document.getElementById('typeColor').value = '#ffffff';
     document.getElementById('handColor').value = '#5080bf';
     document.getElementById('accentColor').value = '#f24535';
@@ -610,7 +617,15 @@ const PRESETS = {
     document.getElementById('accentColor').value = '#f2c14e';
     resetSystem();
   },
-  pride: () => { prideMode = true; resetSystem(); },
+  pride: () => { resetAll();
+    setVal('particleCount', 480); setVal('particleMin', 5); setVal('particleMax', 34);
+    setVal('packing', 86); setVal('clockScale', 90); setVal('handPush', 72);
+    setVal('gravity', 8); setVal('gravityAngle', 70); setVal('border', 52);
+    document.getElementById('handColor').value = '#ffffff';
+    document.getElementById('accentColor').value = '#ffca3a';
+    prideMode = true;
+    resetSystem();
+  },
 };
 
 function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
