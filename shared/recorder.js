@@ -1,6 +1,7 @@
 /* ============================================================
    TIPÓ — Shared MP4 Recorder
    Reusable across all tools. Uses WebCodecs + mp4-muxer.
+   Supports both 2D and WEBGL canvases.
    ============================================================ */
 
 class TipoRecorder {
@@ -18,12 +19,6 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
     this.encW = 0;
     this.encH = 0;
-    this.recordCanvas = document.createElement('canvas');
-    this.recordCtx = this.recordCanvas.getContext('2d');
-
-    // Detect WEBGL canvas (drawImage from WEBGL needs preserveDrawingBuffer)
-    this.isWebGL = !!(canvas.getContext('webgl') || canvas.getContext('webgl2')
-      || canvas.dataset?.webgl);
 
     // Timer
     this.timerInterval = null;
@@ -60,14 +55,6 @@ class TipoRecorder {
     const h = this.canvas.height;
     this.encW = w + (w % 2);
     this.encH = h + (h % 2);
-    this.recordCanvas.width = this.encW;
-    this.recordCanvas.height = this.encH;
-
-    // For WEBGL canvases, try to enable preserveDrawingBuffer
-    try {
-      const gl = this.canvas.getContext('webgl2') || this.canvas.getContext('webgl');
-      if (gl) this.isWebGL = true;
-    } catch(e) {}
 
     const target = new Mp4Muxer.ArrayBufferTarget();
     this.muxer = new Mp4Muxer.Muxer({
@@ -107,7 +94,16 @@ class TipoRecorder {
 
   // Call this every frame from your render loop
   captureFrame() {
-    if (!this.isRecording || !this.encoder) return;
+    if (!this.isRecording) return;
+
+    // WebM mode: MediaRecorder captures automatically, just count frames
+    if (this._mediaRecorder) {
+      this.frameCount++;
+      return;
+    }
+
+    // MP4 mode: encode frame manually
+    if (!this.encoder) return;
     if (this.encoder.encodeQueueSize > 10) return;
 
     const now = performance.now();
@@ -117,15 +113,55 @@ class TipoRecorder {
     this.lastCaptureTime = elapsed;
     const timestampUs = Math.round(elapsed * 1000);
 
-    this.recordCtx.fillStyle = '#000';
-    this.recordCtx.fillRect(0, 0, this.encW, this.encH);
-    this.recordCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+    try {
+      // Create VideoFrame directly from canvas (works for both 2D and WEBGL)
+      const frame = new VideoFrame(this.canvas, {
+        timestamp: timestampUs,
+        alpha: 'discard',
+      });
 
-    const frame = new VideoFrame(this.recordCanvas, { timestamp: timestampUs });
-    const keyFrame = this.frameCount % 60 === 0;
-    this.encoder.encode(frame, { keyFrame });
-    frame.close();
-    this.frameCount++;
+      // If canvas dimensions don't match encoder, scale via intermediate canvas
+      if (this.canvas.width !== this.encW || this.canvas.height !== this.encH) {
+        const scaled = document.createElement('canvas');
+        scaled.width = this.encW;
+        scaled.height = this.encH;
+        const ctx = scaled.getContext('2d');
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, this.encW, this.encH);
+        ctx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+        frame.close();
+
+        const scaledFrame = new VideoFrame(scaled, { timestamp: timestampUs, alpha: 'discard' });
+        const keyFrame = this.frameCount % 60 === 0;
+        this.encoder.encode(scaledFrame, { keyFrame });
+        scaledFrame.close();
+      } else {
+        const keyFrame = this.frameCount % 60 === 0;
+        this.encoder.encode(frame, { keyFrame });
+        frame.close();
+      }
+
+      this.frameCount++;
+    } catch (e) {
+      // Fallback: use drawImage through intermediate canvas
+      try {
+        const buf = document.createElement('canvas');
+        buf.width = this.encW;
+        buf.height = this.encH;
+        const ctx = buf.getContext('2d');
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, this.encW, this.encH);
+        ctx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+
+        const frame = new VideoFrame(buf, { timestamp: timestampUs, alpha: 'discard' });
+        const keyFrame = this.frameCount % 60 === 0;
+        this.encoder.encode(frame, { keyFrame });
+        frame.close();
+        this.frameCount++;
+      } catch (e2) {
+        console.warn('TipoRecorder: frame capture failed', e2);
+      }
+    }
   }
 
   async stop() {
@@ -183,6 +219,8 @@ class TipoRecorder {
 
     const blob = new Blob(this._chunks, { type: 'video/webm' });
     const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+    this._mediaRecorder = null;
+    this._chunks = null;
     this.onStatusChange('idle');
 
     return { blob, filename: 'tipo-export.webm', sizeMB };
