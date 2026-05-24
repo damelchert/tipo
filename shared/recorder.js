@@ -38,8 +38,31 @@ class TipoRecorder {
   async start(bitrate = 8000000) {
     if (this.isRecording) return;
 
-    if (this.hasMp4Support) {
-      this._startMP4(bitrate);
+    // Detect WEBGL canvas — check for existing GL context
+    const isWebGL = !!(this.canvas.__gl ||
+      this.canvas.getContext('webgl2', {failIfMajorPerformanceCaveat: true}) === null ||
+      this.canvas.dataset?.renderer === 'webgl');
+
+    // For WEBGL canvases, use MediaRecorder/captureStream (reliable, no preserveDrawingBuffer needed)
+    // For 2D canvases with VideoEncoder support, use MP4 direct encoding
+    if (this.hasMp4Support && !this._forceWebM) {
+      // Test if drawImage works on this canvas
+      try {
+        const testCtx = document.createElement('canvas').getContext('2d');
+        testCtx.canvas.width = 2;
+        testCtx.canvas.height = 2;
+        testCtx.drawImage(this.canvas, 0, 0, 2, 2);
+        const px = testCtx.getImageData(0, 0, 1, 1).data;
+        // If all pixels are transparent/black on a non-black canvas, drawImage failed
+        if (px[0] === 0 && px[1] === 0 && px[2] === 0 && px[3] === 0) {
+          // WEBGL without preserveDrawingBuffer — fallback to WebM
+          this._startWebM(bitrate);
+        } else {
+          this._startMP4(bitrate);
+        }
+      } catch (e) {
+        this._startWebM(bitrate);
+      }
     } else {
       this._startWebM(bitrate);
     }
@@ -113,55 +136,26 @@ class TipoRecorder {
     this.lastCaptureTime = elapsed;
     const timestampUs = Math.round(elapsed * 1000);
 
-    try {
-      // Create VideoFrame directly from canvas (works for both 2D and WEBGL)
-      const frame = new VideoFrame(this.canvas, {
-        timestamp: timestampUs,
-        alpha: 'discard',
-      });
-
-      // If canvas dimensions don't match encoder, scale via intermediate canvas
-      if (this.canvas.width !== this.encW || this.canvas.height !== this.encH) {
-        const scaled = document.createElement('canvas');
-        scaled.width = this.encW;
-        scaled.height = this.encH;
-        const ctx = scaled.getContext('2d');
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, this.encW, this.encH);
-        ctx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
-        frame.close();
-
-        const scaledFrame = new VideoFrame(scaled, { timestamp: timestampUs, alpha: 'discard' });
-        const keyFrame = this.frameCount % 60 === 0;
-        this.encoder.encode(scaledFrame, { keyFrame });
-        scaledFrame.close();
-      } else {
-        const keyFrame = this.frameCount % 60 === 0;
-        this.encoder.encode(frame, { keyFrame });
-        frame.close();
-      }
-
-      this.frameCount++;
-    } catch (e) {
-      // Fallback: use drawImage through intermediate canvas
-      try {
-        const buf = document.createElement('canvas');
-        buf.width = this.encW;
-        buf.height = this.encH;
-        const ctx = buf.getContext('2d');
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, this.encW, this.encH);
-        ctx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
-
-        const frame = new VideoFrame(buf, { timestamp: timestampUs, alpha: 'discard' });
-        const keyFrame = this.frameCount % 60 === 0;
-        this.encoder.encode(frame, { keyFrame });
-        frame.close();
-        this.frameCount++;
-      } catch (e2) {
-        console.warn('TipoRecorder: frame capture failed', e2);
-      }
+    // Lazy-create the record canvas on first frame
+    if (!this._recCanvas) {
+      this._recCanvas = document.createElement('canvas');
+      this._recCanvas.width = this.encW;
+      this._recCanvas.height = this.encH;
+      this._recCtx = this._recCanvas.getContext('2d');
     }
+
+    // Draw source canvas onto 2D record canvas (works for both 2D and WEBGL
+    // when preserveDrawingBuffer is enabled — which we set in all WEBGL pages)
+    this._recCtx.fillStyle = '#000';
+    this._recCtx.fillRect(0, 0, this.encW, this.encH);
+    this._recCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+
+    // Create VideoFrame from the 2D record canvas (same as dithering.html)
+    const frame = new VideoFrame(this._recCanvas, { timestamp: timestampUs });
+    const keyFrame = this.frameCount % 60 === 0;
+    this.encoder.encode(frame, { keyFrame });
+    frame.close();
+    this.frameCount++;
   }
 
   async stop() {
