@@ -95,26 +95,12 @@ body { overflow: hidden; }
   50% { transform: scale(1); opacity: 1; }
 }
 
-/* Kinetic preview — multi-layer animated typography */
-.kinetic-preview {
-  position: relative; width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
+/* Kinetic preview — video background */
+.kinetic-video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0.25;
 }
-.kinetic-layer {
-  position: absolute;
-  font-weight: 900; color: var(--text-0);
-  white-space: nowrap;
-}
-.kinetic-layer:nth-child(1) { font-size: 200px; opacity: 0.06; animation: k-spin 12s linear infinite; letter-spacing: -8px; }
-.kinetic-layer:nth-child(2) { font-size: 120px; opacity: 0.10; animation: k-wave 4s ease-in-out infinite; }
-.kinetic-layer:nth-child(3) { font-size: 80px; opacity: 0.08; animation: k-shear 5s ease-in-out infinite; letter-spacing: 20px; }
-.kinetic-layer:nth-child(4) { font-size: 160px; opacity: 0.04; animation: k-pulse 3s ease-in-out infinite; }
-.kinetic-layer:nth-child(5) { font-size: 60px; opacity: 0.12; animation: k-snap 2.5s cubic-bezier(.4,0,.2,1) infinite; color: #4488ff; }
-@keyframes k-spin { from { transform: perspective(400px) rotateY(0deg); } to { transform: perspective(400px) rotateY(360deg); } }
-@keyframes k-wave { 0%,100% { transform: scaleX(1) skewX(0deg); } 25% { transform: scaleX(1.4) skewX(-10deg); } 75% { transform: scaleX(0.7) skewX(8deg); } }
-@keyframes k-shear { 0%,100% { transform: skewY(0deg) translateX(0); } 50% { transform: skewY(6deg) translateX(30px); } }
-@keyframes k-pulse { 0%,100% { transform: scale(1); opacity: 0.04; } 50% { transform: scale(1.3); opacity: 0.08; } }
-@keyframes k-snap { 0% { transform: translateY(40px) scaleX(0.2); opacity: 0; } 20% { transform: translateY(-5px) scaleX(1.1); opacity: 0.15; } 40% { transform: translateY(0) scaleX(1); opacity: 0.12; } 80% { opacity: 0.12; } 100% { transform: translateY(-30px); opacity: 0; } }
 
 /* ============================================================
    LEVEL 1 — Subcategories (3D | 2D | Composition | Animation)
@@ -294,13 +280,9 @@ body { overflow: hidden; }
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
-            <div class="kinetic-preview" id="kineticPreview">
-              <div class="kinetic-layer">TIPÓ</div>
-              <div class="kinetic-layer">TIPÓ TIPÓ</div>
-              <div class="kinetic-layer">KINETIC</div>
-              <div class="kinetic-layer">T</div>
-              <div class="kinetic-layer">TIPÓ</div>
-            </div>
+            <video class="kinetic-video" autoplay muted loop playsinline>
+              <source src="assets/kinetic-preview.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="tipo-split-label">Kinetic Type</div>
           <div class="tipo-split-sub">22 modes &bull; 3D &bull; Animation</div>
@@ -576,7 +558,7 @@ function buildDitherGrid() {
 
 // Kinetic type preview
 function buildKineticPreview() {
-  // Kinetic preview is now static HTML with CSS animations
+  // Kinetic preview is now a video background
 }
 
 // ============================================================
