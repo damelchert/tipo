@@ -38,32 +38,17 @@ class TipoRecorder {
   async start(bitrate = 8000000) {
     if (this.isRecording) return;
 
-    // Detect WEBGL canvas — check for existing GL context
-    const isWebGL = !!(this.canvas.__gl ||
-      this.canvas.getContext('webgl2', {failIfMajorPerformanceCaveat: true}) === null ||
-      this.canvas.dataset?.renderer === 'webgl');
+    // Detect WEBGL canvas: check if a 2D context can be obtained.
+    // If canvas already has a WEBGL context, getContext('2d') returns null.
+    const test2d = this.canvas.getContext('2d');
+    const isWebGL = (test2d === null);
 
-    // For WEBGL canvases, use MediaRecorder/captureStream (reliable, no preserveDrawingBuffer needed)
-    // For 2D canvases with VideoEncoder support, use MP4 direct encoding
-    if (this.hasMp4Support && !this._forceWebM) {
-      // Test if drawImage works on this canvas
-      try {
-        const testCtx = document.createElement('canvas').getContext('2d');
-        testCtx.canvas.width = 2;
-        testCtx.canvas.height = 2;
-        testCtx.drawImage(this.canvas, 0, 0, 2, 2);
-        const px = testCtx.getImageData(0, 0, 1, 1).data;
-        // If all pixels are transparent/black on a non-black canvas, drawImage failed
-        if (px[0] === 0 && px[1] === 0 && px[2] === 0 && px[3] === 0) {
-          // WEBGL without preserveDrawingBuffer — fallback to WebM
-          this._startWebM(bitrate);
-        } else {
-          this._startMP4(bitrate);
-        }
-      } catch (e) {
-        this._startWebM(bitrate);
-      }
+    if (this.hasMp4Support && !isWebGL) {
+      // 2D canvas: use direct MP4 encoding (fast, reliable)
+      this._startMP4(bitrate);
     } else {
+      // WEBGL canvas OR no VideoEncoder: use MediaRecorder/captureStream
+      // captureStream works reliably with all canvas types without preserveDrawingBuffer
       this._startWebM(bitrate);
     }
 

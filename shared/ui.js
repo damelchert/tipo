@@ -149,7 +149,7 @@ const TipoUI = {
     this.showToast('PNG saved');
   },
 
-  /** Toggle MP4 recording */
+  /** Toggle MP4/WebM recording */
   async toggleRec() {
     if (!this.recorder) return;
     const btn = document.getElementById('recBtn');
@@ -158,12 +158,15 @@ const TipoUI = {
       btn.textContent = 'Stop Recording';
       btn.style.borderColor = 'var(--red)';
     } else {
+      // Only show progress overlay for MP4 (encoder-based) — WebM stops instantly
+      const isMP4 = !!this.recorder.encoder;
       const prog = document.getElementById('exportProgress');
-      if (prog) prog.classList.add('open');
+      if (isMP4 && prog) prog.classList.add('open');
       const result = await this.recorder.stop();
       TipoRecorder.download(result.blob, result.filename);
-      this.showToast(`MP4 exported (${result.sizeMB} MB)`);
-      setTimeout(() => { if (prog) prog.classList.remove('open'); }, 2000);
+      const ext = result.filename.endsWith('.mp4') ? 'MP4' : 'WebM';
+      this.showToast(`${ext} exported (${result.sizeMB} MB)`);
+      if (prog) prog.classList.remove('open');
       btn.textContent = 'Record MP4';
       btn.style.borderColor = '';
     }
