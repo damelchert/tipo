@@ -1,7 +1,8 @@
 /* ============================================================
    TIPÓ — Shared MP4 Recorder
-   Reusable across all tools. Uses WebCodecs + mp4-muxer.
-   Supports both 2D and WEBGL canvases.
+   Reusable across all tools. Uses WebCodecs + mp4-muxer for 2D,
+   MediaRecorder/captureStream for WEBGL canvases.
+   Always outputs .mp4 when possible.
    ============================================================ */
 
 class TipoRecorder {
@@ -19,6 +20,11 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
     this.encW = 0;
     this.encH = 0;
+
+    // MediaRecorder state
+    this._mediaRecorder = null;
+    this._chunks = null;
+    this._streamFormat = null;
 
     // Timer
     this.timerInterval = null;
@@ -38,18 +44,15 @@ class TipoRecorder {
   async start(bitrate = 8000000) {
     if (this.isRecording) return;
 
-    // Detect WEBGL canvas: check if a 2D context can be obtained.
-    // If canvas already has a WEBGL context, getContext('2d') returns null.
-    const test2d = this.canvas.getContext('2d');
-    const isWebGL = (test2d === null);
+    // Check if canvas is WEBGL (getContext('2d') returns null on WEBGL canvas)
+    const is2D = !!this.canvas.getContext('2d');
 
-    if (this.hasMp4Support && !isWebGL) {
-      // 2D canvas: use direct MP4 encoding (fast, reliable)
+    if (is2D && this.hasMp4Support) {
+      // 2D canvas: direct MP4 encoding via VideoEncoder (best quality)
       this._startMP4(bitrate);
     } else {
-      // WEBGL canvas OR no VideoEncoder: use MediaRecorder/captureStream
-      // captureStream works reliably with all canvas types without preserveDrawingBuffer
-      this._startWebM(bitrate);
+      // WEBGL or no VideoEncoder: use captureStream + MediaRecorder
+      this._startStream(bitrate);
     }
 
     this.isRecording = true;
@@ -89,13 +92,34 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
   }
 
-  _startWebM(bitrate) {
+  _startStream(bitrate) {
     const stream = this.canvas.captureStream(this.fps);
-    const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
-      ? 'video/webm; codecs=vp9' : 'video/webm';
-    this._mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+
+    // Try MP4 first (Chrome 130+), then WebM
+    let mimeType, ext;
+    if (MediaRecorder.isTypeSupported('video/mp4; codecs=avc1')) {
+      mimeType = 'video/mp4; codecs=avc1';
+      ext = 'mp4';
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      mimeType = 'video/mp4';
+      ext = 'mp4';
+    } else if (MediaRecorder.isTypeSupported('video/webm; codecs=vp9')) {
+      mimeType = 'video/webm; codecs=vp9';
+      ext = 'webm';
+    } else {
+      mimeType = 'video/webm';
+      ext = 'webm';
+    }
+
+    this._streamFormat = ext;
+    this._mediaRecorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: bitrate,
+    });
     this._chunks = [];
-    this._mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) this._chunks.push(e.data); };
+    this._mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this._chunks.push(e.data);
+    };
     this._mediaRecorder.start(100);
     this.frameCount = 0;
   }
@@ -104,13 +128,13 @@ class TipoRecorder {
   captureFrame() {
     if (!this.isRecording) return;
 
-    // WebM mode: MediaRecorder captures automatically, just count frames
+    // Stream mode: MediaRecorder captures automatically
     if (this._mediaRecorder) {
       this.frameCount++;
       return;
     }
 
-    // MP4 mode: encode frame manually
+    // MP4 direct mode: encode frame manually
     if (!this.encoder) return;
     if (this.encoder.encodeQueueSize > 10) return;
 
@@ -121,7 +145,7 @@ class TipoRecorder {
     this.lastCaptureTime = elapsed;
     const timestampUs = Math.round(elapsed * 1000);
 
-    // Lazy-create the record canvas on first frame
+    // Lazy-create record canvas
     if (!this._recCanvas) {
       this._recCanvas = document.createElement('canvas');
       this._recCanvas.width = this.encW;
@@ -129,13 +153,10 @@ class TipoRecorder {
       this._recCtx = this._recCanvas.getContext('2d');
     }
 
-    // Draw source canvas onto 2D record canvas (works for both 2D and WEBGL
-    // when preserveDrawingBuffer is enabled — which we set in all WEBGL pages)
     this._recCtx.fillStyle = '#000';
     this._recCtx.fillRect(0, 0, this.encW, this.encH);
     this._recCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
 
-    // Create VideoFrame from the 2D record canvas (same as dithering.html)
     const frame = new VideoFrame(this._recCanvas, { timestamp: timestampUs });
     const keyFrame = this.frameCount % 60 === 0;
     this.encoder.encode(frame, { keyFrame });
@@ -151,7 +172,7 @@ class TipoRecorder {
     if (this.encoder) {
       return this._stopMP4();
     } else if (this._mediaRecorder) {
-      return this._stopWebM();
+      return this._stopStream();
     }
   }
 
@@ -190,19 +211,23 @@ class TipoRecorder {
     return { blob, filename: 'tipo-export.mp4', duration, sizeMB };
   }
 
-  async _stopWebM() {
+  async _stopStream() {
     await new Promise(resolve => {
       this._mediaRecorder.onstop = resolve;
       this._mediaRecorder.stop();
     });
 
-    const blob = new Blob(this._chunks, { type: 'video/webm' });
+    const ext = this._streamFormat || 'webm';
+    const mimeType = ext === 'mp4' ? 'video/mp4' : 'video/webm';
+    const blob = new Blob(this._chunks, { type: mimeType });
     const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+    const duration = (this.frameCount / this.fps).toFixed(1);
+
     this._mediaRecorder = null;
     this._chunks = null;
     this.onStatusChange('idle');
 
-    return { blob, filename: 'tipo-export.webm', sizeMB };
+    return { blob, filename: `tipo-export.${ext}`, duration, sizeMB };
   }
 
   _startTimer() {
@@ -222,7 +247,6 @@ class TipoRecorder {
     if (this.timerEl) this.timerEl.style.display = 'none';
   }
 
-  // Helper: trigger download
   static download(blob, filename) {
     const link = document.createElement('a');
     link.download = filename;
@@ -232,5 +256,4 @@ class TipoRecorder {
   }
 }
 
-// Export for use in pages
 window.TipoRecorder = TipoRecorder;
