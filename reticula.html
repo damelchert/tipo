@@ -27,11 +27,12 @@
   <h1>Retícula <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
-    <div class="section-title">Image</div>
+    <div class="section-title">Source</div>
     <div class="btn-row">
-      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload Image</button>
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
     </div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
   </div>
 
   <div class="section">
@@ -39,20 +40,25 @@
     <div class="preset-grid">
       <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
       <span class="preset-chip" onclick="applyPreset('fine')">Fine</span>
-      <span class="preset-chip" onclick="applyPreset('coarse')">Coarse</span>
-      <span class="preset-chip" onclick="applyPreset('square')">Square</span>
+      <span class="preset-chip" onclick="applyPreset('newspaper')">Newspaper</span>
+      <span class="preset-chip" onclick="applyPreset('pop')">Pop Art</span>
       <span class="preset-chip" onclick="applyPreset('diamond')">Diamond</span>
       <span class="preset-chip" onclick="applyPreset('cross')">Cross</span>
+      <span class="preset-chip" onclick="applyPreset('line')">Line</span>
+      <span class="preset-chip" onclick="applyPreset('text')">Text</span>
+      <span class="preset-chip" onclick="applyPreset('emoji')">Emoji</span>
       <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Grid</div>
-    <div class="range-row"><span class="range-label">Resolution</span><input type="range" id="resolution" min="5" max="100" value="30"><span class="range-value" id="resolutionVal">30</span></div>
-    <div class="range-row"><span class="range-label">Min Size</span><input type="range" id="minSize" min="0" max="100" value="5"><span class="range-value" id="minSizeVal">5</span></div>
-    <div class="range-row"><span class="range-label">Max Size</span><input type="range" id="maxSize" min="0" max="100" value="95"><span class="range-value" id="maxSizeVal">95</span></div>
+    <div class="range-row"><span class="range-label">Resolution</span><input type="range" id="resolution" min="5" max="150" value="40"><span class="range-value" id="resolutionVal">40</span></div>
+    <div class="range-row"><span class="range-label">Min Size</span><input type="range" id="minSize" min="0" max="100" value="2"><span class="range-value" id="minSizeVal">2</span></div>
+    <div class="range-row"><span class="range-label">Max Size</span><input type="range" id="maxSize" min="0" max="100" value="98"><span class="range-value" id="maxSizeVal">98</span></div>
     <div class="range-row"><span class="range-label">Angle</span><input type="range" id="angle" min="0" max="90" value="0"><span class="range-value" id="angleVal">0</span></div>
+    <div class="range-row"><span class="range-label">Contrast</span><input type="range" id="contrast" min="0" max="200" value="100"><span class="range-value" id="contrastVal">100</span></div>
+    <div class="range-row"><span class="range-label">Gap</span><input type="range" id="gap" min="0" max="50" value="0"><span class="range-value" id="gapVal">0</span></div>
   </div>
 
   <div class="section">
@@ -62,9 +68,17 @@
       <option value="square">Square</option>
       <option value="diamond">Diamond</option>
       <option value="cross">Cross</option>
-      <option value="line">Line</option>
+      <option value="line-h">Line (H)</option>
+      <option value="line-v">Line (V)</option>
+      <option value="line-d">Line (Diagonal)</option>
+      <option value="ring">Ring</option>
+      <option value="triangle">Triangle</option>
+      <option value="text">Text Character</option>
+      <option value="emoji">Emoji</option>
     </select>
-    <label class="checkbox-label" style="margin-top:8px"><input type="checkbox" id="invert"> Invert</label>
+    <input type="text" id="charInput" value="T" placeholder="Character for text mode" style="margin-top:6px">
+    <label class="checkbox-label" style="margin-top:6px"><input type="checkbox" id="invert"> Invert brightness</label>
+    <label class="checkbox-label"><input type="checkbox" id="filled" checked> Filled shapes</label>
   </div>
 
   <div class="section">
@@ -77,160 +91,369 @@
       <span class="range-label">Bg</span>
     </div>
     <label class="checkbox-label"><input type="checkbox" id="useOriginal"> Use original colors</label>
+    <label class="checkbox-label"><input type="checkbox" id="multiColor"> Multi-tone (3 colors)</label>
+    <div id="multiColorRow" style="display:none;margin-top:6px">
+      <div class="color-section-row">
+        <span class="range-label">Shadow</span>
+        <input type="color" id="shadowColor" value="#000000">
+        <input type="color" id="midColor" value="#ff0000">
+        <span class="range-label">Mid</span>
+      </div>
+      <div class="color-section-row" style="margin-top:4px">
+        <span class="range-label">Highlight</span>
+        <input type="color" id="highColor" value="#ffffff">
+      </div>
+    </div>
   </div>
 
   <div class="section section-divider">
     <div class="section-title">Export</div>
     <div class="btn-row">
       <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
     </div>
+    <div class="record-timer" id="recTimer"></div>
   </div>
   <div style="height:40px;"></div>
 </div>
 
 <div id="canvasContainer">
-  <div class="drop-hint" id="dropHint">Drop image here</div>
+  <div class="drop-hint" id="dropHint">Drop image or video here</div>
 </div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
 <div class="tipo-toast" id="toast"></div>
 
 <script>
-let font, sourceImg = null;
+// ============================================================
+// TIPÓ — RETÍCULA
+// Professional halftone grid tool.
+// Image + Video + Webcam. 11 shape modes. Multi-tone color.
+// ============================================================
+let font, recorder;
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // 'image' | 'video' | 'webcam'
+let sampleBuffer = null;
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
-  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
   c.parent('canvasContainer');
-  textFont(font); pixelDensity(1); noLoop();
+  textFont(font);
+  pixelDensity(1);
+  noLoop();
+
   TipoUI.init({ mode: 'reticula', formatters: {} });
-  createDefaultImage();
+  recorder = TipoUI.recorder;
+
+  // Create default gradient image
+  createDefault();
   bindInputs();
 }
 
-function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); redraw(); }
+function windowResized() {
+  resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  redraw();
+}
 
 function val(id) { return TipoUI.val(id); }
 function chk(id) { return TipoUI.chk(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 
-function createDefaultImage() {
-  const g = createGraphics(640, 480);
-  for (let y = 0; y < 480; y++) { const t = y/480; g.stroke(lerpColor(color('#ff6600'), color('#000033'), t)); g.line(0,y,640,y); }
-  g.noStroke(); g.fill(255); g.textSize(60); g.textAlign(CENTER,CENTER); g.text('TIPÓ', 320, 200);
-  g.textSize(16); g.text('drop image here', 320, 300);
+function createDefault() {
+  const g = createGraphics(800, 600);
+  for (let y = 0; y < 600; y++) {
+    const t = y / 600;
+    g.stroke(lerpColor(color('#ff6600'), color('#000033'), t));
+    g.line(0, y, 800, y);
+  }
+  g.noStroke(); g.fill(255, 200); g.textSize(80); g.textAlign(CENTER, CENTER);
+  g.text('TIPÓ', 400, 250);
+  g.textSize(18); g.fill(255, 120);
+  g.text('drop image or video', 400, 350);
   sourceImg = g;
-  redraw();
+  sourceType = 'image';
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    sourceType = 'image';
+    if (sourceVideo) { sourceVideo.remove(); sourceVideo = null; }
+    loadImage(URL.createObjectURL(file), img => {
+      sourceImg = img;
+      noLoop(); redraw();
+    });
+  } else if (file.type.startsWith('video/')) {
+    sourceType = 'video';
+    if (sourceVideo) sourceVideo.remove();
+    sourceVideo = createVideo(URL.createObjectURL(file));
+    sourceVideo.hide(); sourceVideo.loop(); sourceVideo.volume(0);
+    sourceImg = null;
+    loop();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    if (sourceVideo) { sourceVideo.remove(); sourceVideo = null; }
+    sourceType = sourceImg ? 'image' : null;
+    noLoop(); redraw();
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      if (sourceVideo) sourceVideo.remove();
+      sourceVideo = createVideo('');
+      sourceVideo.elt.srcObject = stream;
+      sourceVideo.hide();
+      sourceVideo.elt.play();
+      sourceType = 'webcam';
+      loop();
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      document.getElementById('dropHint').style.display = 'none';
+    });
+}
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg;
 }
 
 function bindInputs() {
   document.getElementById('fileInput').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) { loadImage(URL.createObjectURL(file), img => { sourceImg = img; document.getElementById('dropHint').style.display='none'; redraw(); }); }
+    if (e.target.files[0]) handleFile(e.target.files[0]);
   });
   const cc = document.getElementById('canvasContainer');
   cc.addEventListener('dragover', e => e.preventDefault());
   cc.addEventListener('drop', e => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) { loadImage(URL.createObjectURL(file), img => { sourceImg = img; document.getElementById('dropHint').style.display='none'; redraw(); }); }
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
-  document.querySelectorAll('input[type="range"], input[type="checkbox"], input[type="color"], select').forEach(el => el.addEventListener('input', () => redraw()));
+  // Redraw on any control change (for image mode)
+  document.querySelectorAll('input[type="range"], input[type="checkbox"], input[type="color"], select, input[type="text"]').forEach(el => {
+    el.addEventListener('input', () => { if (sourceType === 'image') redraw(); });
+  });
+  // Multi-color toggle
+  document.getElementById('multiColor').addEventListener('change', e => {
+    document.getElementById('multiColorRow').style.display = e.target.checked ? 'block' : 'none';
+    if (sourceType === 'image') redraw();
+  });
 }
 
 function draw() {
-  if (!sourceImg) return;
+  const frame = getCurrentFrame();
+  if (!frame) return;
+
   const bgC = document.getElementById('bgColor').value;
   const dotC = document.getElementById('dotColor').value;
   const useOrig = chk('useOriginal');
+  const multiC = chk('multiColor');
   const inv = chk('invert');
+  const isFilled = chk('filled');
   const res = val('resolution');
   const minS = val('minSize') / 100;
   const maxS = val('maxSize') / 100;
   const ang = radians(val('angle'));
+  const cont = val('contrast') / 100;
+  const gapPx = val('gap');
   const shape = document.getElementById('shape').value;
+  const charIn = document.getElementById('charInput').value || 'T';
 
   background(bgC);
 
-  // Fit image to canvas
-  const scale = min(width / sourceImg.width, height / sourceImg.height);
-  const iw = sourceImg.width * scale;
-  const ih = sourceImg.height * scale;
+  // Get frame dimensions
+  let srcW, srcH;
+  if (frame.width) { srcW = frame.width; srcH = frame.height; }
+  else if (frame.elt) { srcW = frame.elt.videoWidth || frame.width; srcH = frame.elt.videoHeight || frame.height; }
+  if (!srcW || !srcH) return;
+
+  // Fit to canvas
+  const sc = min(width / srcW, height / srcH);
+  const iw = srcW * sc;
+  const ih = srcH * sc;
   const ox = (width - iw) / 2;
   const oy = (height - ih) / 2;
 
-  // Sample source at grid resolution
+  // Sample buffer for brightness
+  if (!sampleBuffer || sampleBuffer.width !== floor(iw) || sampleBuffer.height !== floor(ih)) {
+    if (sampleBuffer) sampleBuffer.remove();
+    sampleBuffer = createGraphics(floor(iw), floor(ih));
+  }
+  sampleBuffer.image(frame, 0, 0, iw, ih);
+  sampleBuffer.loadPixels();
+
   const cellSize = max(width, height) / res;
+  const drawSize = cellSize - gapPx;
 
   push();
-  translate(width/2, height/2);
+  translate(width / 2, height / 2);
   rotate(ang);
-  translate(-width/2, -height/2);
+  translate(-width / 2, -height / 2);
 
-  noStroke();
+  const cols = ceil(width / cellSize) + 4;
+  const rows = ceil(height / cellSize) + 4;
 
-  const cols = ceil(width / cellSize) + 2;
-  const rows = ceil(height / cellSize) + 2;
+  // Multi-color references
+  const shadowC = multiC ? color(document.getElementById('shadowColor').value) : null;
+  const midC = multiC ? color(document.getElementById('midColor').value) : null;
+  const highC = multiC ? color(document.getElementById('highColor').value) : null;
 
-  for (let r = -1; r < rows; r++) {
-    for (let c = -1; c < cols; c++) {
+  for (let r = -2; r < rows; r++) {
+    for (let c = -2; c < cols; c++) {
       const cx = c * cellSize + cellSize / 2;
       const cy = r * cellSize + cellSize / 2;
 
-      // Map to source image coords
-      const sx = map(cx, ox, ox + iw, 0, sourceImg.width);
-      const sy = map(cy, oy, oy + ih, 0, sourceImg.height);
+      // Map to sample buffer coords
+      const sx = floor(cx - ox);
+      const sy = floor(cy - oy);
+      if (sx < 0 || sx >= sampleBuffer.width || sy < 0 || sy >= sampleBuffer.height) continue;
 
-      if (sx < 0 || sx >= sourceImg.width || sy < 0 || sy >= sourceImg.height) continue;
+      const idx = (sy * sampleBuffer.width + sx) * 4;
+      const pr = sampleBuffer.pixels[idx];
+      const pg = sampleBuffer.pixels[idx + 1];
+      const pb = sampleBuffer.pixels[idx + 2];
 
-      const pixel = sourceImg.get(floor(sx), floor(sy));
-      const bright = (red(pixel) * 0.299 + green(pixel) * 0.587 + blue(pixel) * 0.114) / 255;
+      let bright = (pr * 0.299 + pg * 0.587 + pb * 0.114) / 255;
+      // Apply contrast
+      bright = constrain((bright - 0.5) * cont + 0.5, 0, 1);
       const b = inv ? bright : 1 - bright;
-      const dotSize = cellSize * (minS + b * (maxS - minS));
+      const dotSize = drawSize * (minS + b * (maxS - minS));
 
-      if (dotSize < 0.5) continue;
+      if (dotSize < 0.3) continue;
 
+      // Determine color
       if (useOrig) {
-        fill(red(pixel), green(pixel), blue(pixel));
+        fill(pr, pg, pb);
+        stroke(pr, pg, pb);
+      } else if (multiC) {
+        const mc = bright < 0.33 ? lerpColor(shadowC, midC, bright / 0.33) :
+                   bright < 0.66 ? lerpColor(midC, highC, (bright - 0.33) / 0.33) :
+                   highC;
+        fill(mc);
+        stroke(mc);
       } else {
         fill(dotC);
+        stroke(dotC);
       }
 
+      if (isFilled) { noStroke(); } else { noFill(); strokeWeight(max(1, dotSize * 0.15)); }
+
       switch (shape) {
-        case 'circle': ellipse(cx, cy, dotSize, dotSize); break;
-        case 'square': rectMode(CENTER); rect(cx, cy, dotSize, dotSize); break;
-        case 'diamond': push(); translate(cx,cy); rotate(PI/4); rectMode(CENTER); rect(0,0,dotSize*0.7,dotSize*0.7); pop(); break;
-        case 'cross': rectMode(CENTER); rect(cx,cy,dotSize,dotSize*0.25); rect(cx,cy,dotSize*0.25,dotSize); break;
-        case 'line': strokeWeight(dotSize*0.3); stroke(useOrig ? color(red(pixel),green(pixel),blue(pixel)) : dotC); line(cx-dotSize/2,cy,cx+dotSize/2,cy); noStroke(); break;
+        case 'circle':
+          ellipse(cx, cy, dotSize, dotSize);
+          break;
+        case 'square':
+          rectMode(CENTER);
+          rect(cx, cy, dotSize, dotSize);
+          break;
+        case 'diamond':
+          push(); translate(cx, cy); rotate(PI / 4);
+          rectMode(CENTER); rect(0, 0, dotSize * 0.7, dotSize * 0.7);
+          pop(); break;
+        case 'cross':
+          rectMode(CENTER);
+          rect(cx, cy, dotSize, dotSize * 0.2);
+          rect(cx, cy, dotSize * 0.2, dotSize);
+          break;
+        case 'line-h':
+          strokeWeight(max(1, dotSize * 0.4));
+          line(cx - dotSize / 2, cy, cx + dotSize / 2, cy);
+          break;
+        case 'line-v':
+          strokeWeight(max(1, dotSize * 0.4));
+          line(cx, cy - dotSize / 2, cx, cy + dotSize / 2);
+          break;
+        case 'line-d':
+          strokeWeight(max(1, dotSize * 0.3));
+          line(cx - dotSize / 2, cy - dotSize / 2, cx + dotSize / 2, cy + dotSize / 2);
+          break;
+        case 'ring':
+          noFill();
+          strokeWeight(max(1, dotSize * 0.15));
+          ellipse(cx, cy, dotSize, dotSize);
+          break;
+        case 'triangle':
+          noStroke();
+          triangle(cx, cy - dotSize / 2, cx - dotSize / 2, cy + dotSize / 2, cx + dotSize / 2, cy + dotSize / 2);
+          break;
+        case 'text':
+          noStroke();
+          textSize(dotSize * 0.8);
+          textAlign(CENTER, CENTER);
+          text(charIn, cx, cy);
+          break;
+        case 'emoji':
+          noStroke();
+          textSize(dotSize * 0.7);
+          textAlign(CENTER, CENTER);
+          const emojis = ['●', '■', '▲', '◆', '★', '♦', '◉', '⬟'];
+          text(emojis[floor(b * 7.99)], cx, cy);
+          break;
       }
     }
   }
   pop();
+
+  if (recorder) recorder.captureFrame();
 }
 
-function swapC() { TipoUI.swapColors('dotColor','bgColor'); redraw(); }
-function savePNG() { saveCanvas('tipo-reticula','png'); TipoUI.showToast('PNG saved'); }
+// ============================================================
+// EXPORT & PRESETS
+// ============================================================
+function swapC() { TipoUI.swapColors('dotColor', 'bgColor'); if (sourceType === 'image') redraw(); }
+function savePNG() { saveCanvas('tipo-reticula', 'png'); TipoUI.showToast('PNG saved'); }
+async function toggleRec() { await TipoUI.toggleRec(); }
 
 function resetAll() {
-  setVal('resolution',30);setVal('minSize',5);setVal('maxSize',95);setVal('angle',0);
-  setVal('invert',false);setVal('useOriginal',false);
-  document.getElementById('shape').value='circle';
-  document.getElementById('dotColor').value='#000000';document.getElementById('bgColor').value='#ffffff';
-  redraw();
+  setVal('resolution', 40); setVal('minSize', 2); setVal('maxSize', 98);
+  setVal('angle', 0); setVal('contrast', 100); setVal('gap', 0);
+  setVal('invert', false); setVal('filled', true);
+  setVal('useOriginal', false); setVal('multiColor', false);
+  document.getElementById('multiColorRow').style.display = 'none';
+  document.getElementById('shape').value = 'circle';
+  document.getElementById('charInput').value = 'T';
+  document.getElementById('dotColor').value = '#000000';
+  document.getElementById('bgColor').value = '#ffffff';
+  document.getElementById('shadowColor').value = '#000000';
+  document.getElementById('midColor').value = '#ff0000';
+  document.getElementById('highColor').value = '#ffffff';
+  if (sourceType === 'image') redraw();
 }
 
 function applyPreset(name) {
   const P = {
-    classic:()=>{resetAll();},
-    fine:()=>{resetAll();setVal('resolution',60);setVal('minSize',0);setVal('maxSize',80);},
-    coarse:()=>{resetAll();setVal('resolution',12);setVal('maxSize',100);},
-    square:()=>{resetAll();document.getElementById('shape').value='square';setVal('resolution',25);},
-    diamond:()=>{resetAll();document.getElementById('shape').value='diamond';setVal('resolution',20);setVal('angle',45);},
-    cross:()=>{resetAll();document.getElementById('shape').value='cross';setVal('resolution',15);document.getElementById('dotColor').value='#ff0000';},
+    classic: () => { resetAll(); },
+    fine: () => { resetAll(); setVal('resolution', 80); setVal('maxSize', 85); setVal('minSize', 0); },
+    newspaper: () => { resetAll(); setVal('resolution', 50); setVal('angle', 45); setVal('contrast', 130); setVal('gap', 1); },
+    pop: () => { resetAll(); setVal('resolution', 25); setVal('contrast', 150); setVal('useOriginal', true);
+      document.getElementById('bgColor').value = '#ffffff'; },
+    diamond: () => { resetAll(); document.getElementById('shape').value = 'diamond'; setVal('resolution', 30); setVal('angle', 0); },
+    cross: () => { resetAll(); document.getElementById('shape').value = 'cross'; setVal('resolution', 20);
+      document.getElementById('dotColor').value = '#ff0000'; document.getElementById('bgColor').value = '#000000'; },
+    line: () => { resetAll(); document.getElementById('shape').value = 'line-h'; setVal('resolution', 60); setVal('contrast', 120);
+      document.getElementById('dotColor').value = '#ffffff'; document.getElementById('bgColor').value = '#000000'; },
+    text: () => { resetAll(); document.getElementById('shape').value = 'text'; setVal('resolution', 35);
+      document.getElementById('charInput').value = 'TIPÓ'; document.getElementById('bgColor').value = '#000000';
+      document.getElementById('dotColor').value = '#ffffff'; },
+    emoji: () => { resetAll(); document.getElementById('shape').value = 'emoji'; setVal('resolution', 25);
+      document.getElementById('bgColor').value = '#000000'; document.getElementById('dotColor').value = '#ffffff'; },
   };
-  if(P[name]) P[name]();
-  document.querySelectorAll('.preset-chip').forEach(el=>el.classList.remove('active'));
-  if(event&&event.target) event.target.classList.add('active');
-  redraw();
+  if (P[name]) P[name]();
+  document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+  if (event && event.target) event.target.classList.add('active');
+  if (sourceType === 'image') redraw();
 }
 </script>
 </body>

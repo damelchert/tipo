@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-28 ferramentas no total: 6 visual tools + 22 kinetic type modes.
+26 ferramentas no total: 4 visual tools + 22 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 
@@ -61,12 +61,12 @@ Landing page (index.html) como hub central.
 - [ ] Dominio custom (tipo.tools ou tipo.app) — acao do Daniel
 
 ### VISUAL TOOLS ✅
-- [x] **DITHERING** — SVG dithering, 7-state luminance, 60+ shapes, MP4/PNG/SVG export
-- [x] **RETÍCULA** — Halftone grid, 5 shapes (circle/square/diamond/cross/line), 6 presets
-- [x] **GLITCH** — RGB shift, slicing, noise, scanlines, 6 presets, animated MP4
-- [x] **DUOTONE** — 2-color mapping (shadow+highlight), 5 presets
-- [x] **GRAIN** — Film grain overlay, density/size/opacity, 5 presets
-- [x] **ASCII** — Image to ASCII art, 3 charsets, 5 presets
+- [x] **DITHERING** — SVG dithering, 7-state luminance, 60+ shapes, image+video+webcam, MP4/PNG/SVG export
+- [x] **RETÍCULA** — Halftone grid, 11 shapes, multi-tone color, image+video+webcam, 9 presets, MP4/PNG export
+- [x] **GLITCH** — RGB shift, slicing, pixel sort, scanlines, color bleed, noise, image+video+webcam, 8 presets, MP4/PNG
+- [x] **ASCII** — 4 charsets (standard/blocks/braille/custom), 3 color modes, image+video+webcam, 8 presets, MP4/PNG
+- ~~DUOTONE~~ — Removido (muito raso)
+- ~~GRAIN~~ — Removido (muito raso)
 
 ### BACKLOG — Pontas Soltas
 - [ ] Migrar `dithering.html` pra usar shared CSS/JS (funcional mas isolado)

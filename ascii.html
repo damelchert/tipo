@@ -16,189 +16,468 @@
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
   #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
 </style>
 </head>
 <body>
+
 <div class="tipo-panel" id="panel">
   <h1>ASCII <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
-  <div class="section"><div class="section-title">Image</div>
-    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Upload Image</button>
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
-    <div style="font-size:10px;color:var(--text-5);text-align:center;">or drag &amp; drop onto canvas</div>
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
   </div>
 
-  <div class="section"><div class="section-title">Presets</div>
+  <div class="section">
+    <div class="section-title">Presets</div>
     <div class="preset-grid">
       <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
       <span class="preset-chip" onclick="applyPreset('dense')">Dense</span>
-      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
-      <span class="preset-chip" onclick="applyPreset('colorMode')">Color</span>
+      <span class="preset-chip" onclick="applyPreset('blocks')">Blocks</span>
+      <span class="preset-chip" onclick="applyPreset('braille')">Braille</span>
       <span class="preset-chip" onclick="applyPreset('matrix')">Matrix</span>
-      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+      <span class="preset-chip" onclick="applyPreset('colorphoto')">Color Photo</span>
+      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
+      <span class="preset-chip" onclick="applyPreset('poster')">Poster</span>
     </div>
   </div>
 
-  <div class="section"><div class="section-title">Resolution</div>
+  <div class="section">
+    <div class="section-title">Resolution</div>
     <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="10" max="200" value="80"><span class="range-value" id="columnsVal">80</span></div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="4" max="40" value="0"><span class="range-value" id="fontSizeVal">auto</span></div>
   </div>
 
-  <div class="section"><div class="section-title">Character Set</div>
+  <div class="section">
+    <div class="section-title">Character Set</div>
     <select id="charset">
       <option value="standard">Standard ( .:-=+*#%@)</option>
       <option value="blocks">Blocks</option>
-      <option value="minimal">Minimal (.oO@)</option>
+      <option value="braille">Braille</option>
+      <option value="custom">Custom</option>
     </select>
+    <input type="text" id="customChars" value=" .oO@#" placeholder="Custom characters (dark to light)" style="display:none; font-size:12px;">
   </div>
 
-  <div class="section"><div class="section-title">Color</div>
-    <label class="checkbox-label"><input type="checkbox" id="useOriginalColor" checked> Original Colors</label>
-    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="monoColor" value="#00ff00"></div>
-    <div class="color-section-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#000000"></div>
+  <div class="section">
+    <div class="section-title">Appearance</div>
+    <label style="font-size:11px;">Color Mode</label>
+    <select id="colorMode">
+      <option value="original">Original Colors</option>
+      <option value="mono">Monochrome</option>
+      <option value="matrix">Matrix (green)</option>
+    </select>
+    <label style="font-size:11px;">Background</label>
+    <select id="bgMode">
+      <option value="solid">Solid Color</option>
+      <option value="transparent">Transparent</option>
+    </select>
+    <div class="color-section-row">
+      <span class="range-label">BG Color</span>
+      <input type="color" id="bgColor" value="#000000">
+    </div>
+    <div class="color-section-row">
+      <span class="range-label">Mono Color</span>
+      <input type="color" id="monoColor" value="#ffffff">
+    </div>
+    <label class="checkbox-label"><input type="checkbox" id="invertBright"> Invert Brightness</label>
   </div>
 
-  <div class="section section-divider"><div class="section-title">Export</div>
-    <div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button></div>
+  <div class="section">
+    <div class="section-title">Fine Tuning</div>
+    <div class="range-row"><span class="range-label">Line Height</span><input type="range" id="lineHeight" min="5" max="20" value="16"><span class="range-value" id="lineHeightVal">1.6</span></div>
+    <div class="range-row"><span class="range-label">Contrast</span><input type="range" id="contrast" min="0" max="100" value="0"><span class="range-value" id="contrastVal">0</span></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
   </div>
   <div style="height:40px;"></div>
 </div>
-<div id="canvasContainer"></div>
+
+<div id="canvasContainer">
+  <div class="drop-hint" id="dropHint">Drop image or video here</div>
+</div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
 <div class="tipo-toast" id="toast"></div>
+
 <script>
-let font, sourceImg = null;
+let font, recorder;
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // 'image' | 'video' | 'webcam'
+let sampleBuffer = null;
 
 const CHARSETS = {
   standard: ' .:-=+*#%@',
   blocks: ' \u2591\u2592\u2593\u2588',
-  minimal: ' .oO@'
+  braille: ' \u2801\u2803\u2807\u2847\u28C7\u28E7\u28F7\u28FF',
+  custom: null
 };
-
-function createDefaultImage() {
-  const g = createGraphics(640, 480);
-  for (let y = 0; y < 480; y++) {
-    const t = y / 480;
-    g.stroke(lerpColor(color('#ff6600'), color('#000033'), t));
-    g.line(0, y, 640, y);
-  }
-  g.textSize(60); g.fill(255); g.textAlign(CENTER, CENTER);
-  g.text('DROP IMAGE', 320, 240);
-  return g;
-}
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
-  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  const c = createCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
   c.parent('canvasContainer');
   textFont(font);
   pixelDensity(1);
-  sourceImg = createDefaultImage();
-  TipoUI.init({ mode: 'ascii', formatters: {} });
 
-  document.getElementById('fileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      loadImage(url, img => { sourceImg = img; });
+  TipoUI.init({
+    mode: 'ascii',
+    formatters: {
+      lineHeight: { div: 10, decimals: 1 }
     }
   });
+  recorder = TipoUI.recorder;
 
-  const container = document.getElementById('canvasContainer');
-  container.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      loadImage(url, img => { sourceImg = img; });
-    }
-  });
-  container.addEventListener('dragover', e => e.preventDefault());
+  createDefaultImage();
+  bindInputs();
 }
 
 function windowResized() {
-  resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  resizeCanvas(
+    document.getElementById('canvasContainer').offsetWidth,
+    document.getElementById('canvasContainer').offsetHeight
+  );
 }
 
 function val(id) { return TipoUI.val(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 
+function createDefaultImage() {
+  const g = createGraphics(640, 480);
+  // Gradient background
+  for (let y = 0; y < 480; y++) {
+    const t = y / 480;
+    g.stroke(lerpColor(color('#ff6600'), color('#000033'), t));
+    g.line(0, y, 640, y);
+  }
+  g.noStroke();
+  g.fill(255);
+  g.textSize(70);
+  g.textAlign(CENTER, CENTER);
+  g.text('TIPO', 320, 200);
+  g.textSize(16);
+  g.fill(150);
+  g.text('drop image or video here', 320, 310);
+  sourceImg = g;
+  sourceType = 'image';
+}
+
+// --- Source Management ---
+
+function handleFile(file) {
+  if (file.type.startsWith('image/')) {
+    sourceType = 'image';
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    if (sourceVideo) { sourceVideo.remove(); sourceVideo = null; }
+    loadImage(URL.createObjectURL(file), img => {
+      sourceImg = img;
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Webcam';
+      document.getElementById('webcamBtn').style.borderColor = '';
+      noLoop(); redraw();
+    });
+  } else if (file.type.startsWith('video/')) {
+    sourceType = 'video';
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    if (sourceVideo) sourceVideo.remove();
+    sourceVideo = createVideo(URL.createObjectURL(file));
+    sourceVideo.hide();
+    sourceVideo.loop();
+    sourceVideo.volume(0);
+    document.getElementById('dropHint').style.display = 'none';
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    loop();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    if (sourceVideo) { sourceVideo.remove(); sourceVideo = null; }
+    sourceType = null;
+    noLoop();
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    createDefaultImage();
+    redraw();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      if (sourceVideo) sourceVideo.remove();
+      sourceVideo = createVideo('');
+      sourceVideo.elt.srcObject = stream;
+      sourceVideo.hide();
+      sourceVideo.elt.play();
+      sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      loop();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      TipoUI.showToast('Webcam access denied');
+    });
+}
+
+function getCurrentFrame() {
+  if (sourceType === 'video' || sourceType === 'webcam') return sourceVideo;
+  return sourceImg;
+}
+
+function bindInputs() {
+  document.getElementById('fileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
+
+  // Show/hide custom chars input
+  document.getElementById('charset').addEventListener('change', () => {
+    const v = document.getElementById('charset').value;
+    document.getElementById('customChars').style.display = v === 'custom' ? 'block' : 'none';
+    if (sourceType === 'image') redraw();
+  });
+
+  // Redraw on any control change for static images
+  document.querySelectorAll('input[type="range"], select, input[type="checkbox"], input[type="color"], input[type="text"]').forEach(el => {
+    el.addEventListener('input', () => { if (sourceType === 'image') { loop(); setTimeout(() => { if (sourceType === 'image') noLoop(); }, 50); } });
+  });
+
+  const cc = document.getElementById('canvasContainer');
+  cc.addEventListener('dragover', e => { e.preventDefault(); });
+  cc.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+}
+
+// --- Draw Loop ---
+
 function draw() {
-  const bgC = document.getElementById('bgColor').value;
-  background(bgC);
-  if (!sourceImg) return;
+  const frame = getCurrentFrame();
+  if (!frame) return;
+
+  // Check if video is ready
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) {
+    if (sourceVideo.elt.readyState < 2) return;
+  }
 
   const cols = val('columns');
   const charsetKey = document.getElementById('charset').value;
-  const chars = CHARSETS[charsetKey];
-  const useColor = document.getElementById('useOriginalColor').checked;
-  const monoC = color(document.getElementById('monoColor').value);
+  const chars = charsetKey === 'custom'
+    ? (document.getElementById('customChars').value || ' .oO@#')
+    : CHARSETS[charsetKey];
+  const colorModeVal = document.getElementById('colorMode').value;
+  const bgMode = document.getElementById('bgMode').value;
+  const bgC = document.getElementById('bgColor').value;
+  const monoC = document.getElementById('monoColor').value;
+  const invertB = document.getElementById('invertBright').checked;
+  const lineH = val('lineHeight') / 10;
+  const contrastV = val('contrast');
+  const fontSizeRaw = val('fontSize');
 
-  // Calculate cell size based on canvas width and columns
+  // Calculate cell dimensions
   const cellW = width / cols;
-  const cellH = cellW * 1.6; // monospace aspect ratio
+  const fSize = fontSizeRaw === 0 ? max(4, cellW * 1.1) : fontSizeRaw;
+  const cellH = fSize * lineH;
   const rows = floor(height / cellH);
-  const fontSize = cellW * 1.2;
 
-  textSize(fontSize);
+  // Background
+  if (bgMode === 'solid') {
+    background(bgC);
+  } else {
+    clear();
+  }
+
+  // Create off-screen buffer for sampling
+  const fw = frame.width || frame.elt?.videoWidth || 640;
+  const fh = frame.height || frame.elt?.videoHeight || 480;
+
+  if (!sampleBuffer || sampleBuffer.width !== cols || sampleBuffer.height !== rows) {
+    if (sampleBuffer) sampleBuffer.remove();
+    sampleBuffer = createGraphics(cols, rows);
+  }
+  sampleBuffer.image(frame, 0, 0, cols, rows);
+  sampleBuffer.loadPixels();
+
+  // Parse mono color
+  const mc = color(monoC);
+  const mcR = red(mc), mcG = green(mc), mcB = blue(mc);
+
+  textSize(fSize);
   textAlign(CENTER, CENTER);
   noStroke();
 
-  // Create a temporary copy at reduced resolution for sampling
-  sourceImg.loadPixels();
-
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      // Map cell to source image coordinates
-      const sx = floor(map(col, 0, cols, 0, sourceImg.width));
-      const sy = floor(map(row, 0, rows, 0, sourceImg.height));
+      const idx = (row * cols + col) * 4;
+      let r = sampleBuffer.pixels[idx] || 0;
+      let g = sampleBuffer.pixels[idx + 1] || 0;
+      let b = sampleBuffer.pixels[idx + 2] || 0;
 
-      // Sample pixel
-      const idx = (sy * sourceImg.width + sx) * 4;
-      const r = sourceImg.pixels[idx] || 0;
-      const g = sourceImg.pixels[idx + 1] || 0;
-      const b = sourceImg.pixels[idx + 2] || 0;
+      // Brightness with contrast boost
+      let bright = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
 
-      // Brightness
-      const bright = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      // Apply contrast
+      if (contrastV > 0) {
+        const factor = 1 + contrastV / 25;
+        bright = (bright - 0.5) * factor + 0.5;
+        bright = constrain(bright, 0, 1);
+      }
 
-      // Pick character
+      // Invert
+      if (invertB) bright = 1 - bright;
+
+      // Map to character
       const charIdx = floor(bright * (chars.length - 1));
       const ch = chars.charAt(constrain(charIdx, 0, chars.length - 1));
 
-      if (ch === ' ') continue;
+      if (ch === ' ' && bgMode === 'solid') continue;
 
       // Color
-      if (useColor) {
+      if (colorModeVal === 'original') {
         fill(r, g, b);
+      } else if (colorModeVal === 'matrix') {
+        // Green shades mapped to brightness
+        const gv = floor(bright * 255);
+        fill(0, gv, floor(gv * 0.3));
       } else {
-        fill(monoC);
+        // Monochrome: use mono color with brightness as alpha
+        fill(mcR, mcG, mcB, floor(bright * 255));
       }
 
       text(ch, col * cellW + cellW / 2, row * cellH + cellH / 2);
     }
   }
 
+  // Update font size display
+  const fsValEl = document.getElementById('fontSizeVal');
+  if (fsValEl) {
+    fsValEl.textContent = fontSizeRaw === 0 ? 'auto' : fontSizeRaw;
+  }
+
+  // Capture frame for recording
   TipoUI.captureFrame();
+
+  // Static image: stop looping
+  if (sourceType === 'image') noLoop();
 }
+
+// --- Export ---
+
+function savePNG() { saveCanvas('tipo-ascii', 'png'); TipoUI.showToast('PNG saved'); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+
+// --- Presets ---
 
 function resetAll() {
   setVal('columns', 80);
+  setVal('fontSize', 0);
   document.getElementById('charset').value = 'standard';
-  document.getElementById('useOriginalColor').checked = true;
-  document.getElementById('monoColor').value = '#00ff00';
+  document.getElementById('customChars').style.display = 'none';
+  document.getElementById('colorMode').value = 'original';
+  document.getElementById('bgMode').value = 'solid';
   document.getElementById('bgColor').value = '#000000';
+  document.getElementById('monoColor').value = '#ffffff';
+  document.getElementById('invertBright').checked = false;
+  setVal('lineHeight', 16);
+  setVal('contrast', 0);
 }
 
 const PRESETS = {
-  classic: () => { resetAll(); setVal('columns', 80); },
-  dense: () => { resetAll(); setVal('columns', 160); document.getElementById('charset').value = 'standard'; },
-  minimal: () => { resetAll(); setVal('columns', 60); document.getElementById('charset').value = 'minimal'; },
-  colorMode: () => { resetAll(); setVal('columns', 100); document.getElementById('useOriginalColor').checked = true; },
-  matrix: () => { resetAll(); setVal('columns', 90); document.getElementById('useOriginalColor').checked = false; document.getElementById('monoColor').value = '#00ff00'; document.getElementById('bgColor').value = '#000a00'; },
+  classic: () => {
+    resetAll();
+    setVal('columns', 80);
+    document.getElementById('charset').value = 'standard';
+    document.getElementById('colorMode').value = 'mono';
+    document.getElementById('monoColor').value = '#ffffff';
+  },
+  dense: () => {
+    resetAll();
+    setVal('columns', 160);
+    document.getElementById('charset').value = 'standard';
+    document.getElementById('colorMode').value = 'original';
+    setVal('lineHeight', 12);
+  },
+  blocks: () => {
+    resetAll();
+    setVal('columns', 100);
+    document.getElementById('charset').value = 'blocks';
+    document.getElementById('colorMode').value = 'original';
+    setVal('lineHeight', 10);
+  },
+  braille: () => {
+    resetAll();
+    setVal('columns', 120);
+    document.getElementById('charset').value = 'braille';
+    document.getElementById('colorMode').value = 'mono';
+    document.getElementById('monoColor').value = '#ffffff';
+    setVal('lineHeight', 12);
+  },
+  matrix: () => {
+    resetAll();
+    setVal('columns', 90);
+    document.getElementById('charset').value = 'standard';
+    document.getElementById('colorMode').value = 'matrix';
+    document.getElementById('bgColor').value = '#000a00';
+    setVal('contrast', 30);
+  },
+  colorphoto: () => {
+    resetAll();
+    setVal('columns', 140);
+    document.getElementById('charset').value = 'standard';
+    document.getElementById('colorMode').value = 'original';
+    setVal('lineHeight', 12);
+    setVal('contrast', 20);
+  },
+  minimal: () => {
+    resetAll();
+    setVal('columns', 50);
+    document.getElementById('charset').value = 'custom';
+    document.getElementById('customChars').style.display = 'block';
+    document.getElementById('customChars').value = ' .o@';
+    document.getElementById('colorMode').value = 'mono';
+    document.getElementById('monoColor').value = '#cccccc';
+    setVal('lineHeight', 18);
+  },
+  poster: () => {
+    resetAll();
+    setVal('columns', 30);
+    document.getElementById('charset').value = 'blocks';
+    document.getElementById('colorMode').value = 'original';
+    setVal('lineHeight', 10);
+    setVal('contrast', 50);
+  }
 };
 
-function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
-function savePNG() { TipoUI.savePNG(); }
-function showToast(msg) { TipoUI.showToast(msg); }
+function applyPreset(name) {
+  TipoUI.applyPreset(name, PRESETS);
+  loop(); redraw();
+}
 </script>
-</body></html>
+</body>
+</html>
