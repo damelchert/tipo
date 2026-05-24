@@ -8,7 +8,7 @@
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap');
 
-:root {
+:root, :root[data-theme="dark"] {
   --bg-0: #0a0a0a;
   --bg-1: #111111;
   --bg-2: #1a1a1a;
@@ -31,6 +31,47 @@
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   --panel-width: 320px;
 }
+
+:root[data-theme="light"] {
+  --bg-0: #ffffff;
+  --bg-1: #f5f5f5;
+  --bg-2: #ebebeb;
+  --bg-3: #e0e0e0;
+  --border-1: #e0e0e0;
+  --border-2: #cccccc;
+  --border-3: #bbbbbb;
+  --text-0: #000000;
+  --text-1: #1a1a1a;
+  --text-2: #555555;
+  --text-3: #777777;
+  --text-4: #999999;
+  --text-5: #aaaaaa;
+  --text-6: #bbbbbb;
+  --accent: #2266dd;
+  --accent-dim: rgba(34,102,221,0.05);
+  --red: #dd2222;
+  --green: #22aa22;
+}
+
+/* Theme toggle button */
+.tipo-theme-toggle {
+  position: fixed;
+  top: 12px; right: 12px;
+  z-index: 200;
+  width: 32px; height: 32px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 50%;
+  color: var(--text-2);
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-ui);
+  line-height: 1;
+  padding: 0;
+}
+.tipo-theme-toggle:hover { border-color: var(--accent); color: var(--text-0); }
 
 body {
   background: var(--bg-0);

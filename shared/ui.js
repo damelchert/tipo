@@ -42,6 +42,32 @@ const TipoUI = {
 
     // Bind all sliders
     this.bindSliders();
+
+    // Setup theme toggle
+    this.initTheme();
+  },
+
+  /** Initialize theme toggle button and restore saved preference */
+  initTheme() {
+    // Restore saved theme
+    const saved = localStorage.getItem('tipo-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+
+    // Create toggle button if not already present
+    if (!document.querySelector('.tipo-theme-toggle')) {
+      const btn = document.createElement('button');
+      btn.className = 'tipo-theme-toggle';
+      btn.title = 'Toggle light/dark theme';
+      btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+      btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('tipo-theme', next);
+        btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+      });
+      document.body.appendChild(btn);
+    }
   },
 
   /** Format a slider value based on registered formatters */
