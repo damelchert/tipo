@@ -21,6 +21,10 @@ class TipoRecorder {
     this.recordCanvas = document.createElement('canvas');
     this.recordCtx = this.recordCanvas.getContext('2d');
 
+    // Detect WEBGL canvas (drawImage from WEBGL needs preserveDrawingBuffer)
+    this.isWebGL = !!(canvas.getContext('webgl') || canvas.getContext('webgl2')
+      || canvas.dataset?.webgl);
+
     // Timer
     this.timerInterval = null;
     this.timerEl = null;
@@ -58,6 +62,12 @@ class TipoRecorder {
     this.encH = h + (h % 2);
     this.recordCanvas.width = this.encW;
     this.recordCanvas.height = this.encH;
+
+    // For WEBGL canvases, try to enable preserveDrawingBuffer
+    try {
+      const gl = this.canvas.getContext('webgl2') || this.canvas.getContext('webgl');
+      if (gl) this.isWebGL = true;
+    } catch(e) {}
 
     const target = new Mp4Muxer.ArrayBufferTarget();
     this.muxer = new Mp4Muxer.Muxer({

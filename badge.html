@@ -130,6 +130,7 @@ let lastTxt = '', lastRingTxt = '';
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
+  setAttributes('preserveDrawingBuffer', true);
   const c = createCanvas(
     document.getElementById('canvasContainer').offsetWidth,
     document.getElementById('canvasContainer').offsetHeight,

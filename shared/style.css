@@ -248,7 +248,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
    ============================================================ */
 .btn {
   background: var(--text-0);
-  color: #000;
+  color: var(--bg-0);
   border: none;
   padding: 10px 16px;
   border-radius: 4px;
@@ -261,7 +261,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   text-align: center;
   transition: background 0.15s;
 }
-.btn:hover { background: #ddd; }
+.btn:hover { background: var(--text-2); }
 
 .btn-secondary {
   background: var(--bg-3);

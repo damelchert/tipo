@@ -57,6 +57,7 @@ const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 function setup() {
+  setAttributes('preserveDrawingBuffer', true);
   const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight, WEBGL);
   c.parent('canvasContainer'); textFont(font); pixelDensity(1);
   TipoUI.init({ mode: 'shine', formatters: {} }); recorder = TipoUI.recorder;

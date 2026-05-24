@@ -150,6 +150,7 @@ function preload() {
 
 function setup() {
   const container = document.getElementById('canvasContainer');
+  setAttributes('preserveDrawingBuffer', true);
   const c = createCanvas(container.offsetWidth, container.offsetHeight, WEBGL);
   c.parent('canvasContainer');
   textFont(font);
