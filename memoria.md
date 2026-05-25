@@ -6,31 +6,43 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
+- **Total:** 27 ferramentas (5 visual tools + 22 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
 /tipo/
   index.html                   — landing page (navegação progressiva com hash routing)
-  dithering.html               — SVG dithering tool (FUNCIONAL)
-  reticula.html                — halftone grid system (FUNCIONAL)
-  glitch.html                  — digital distortion effects (FUNCIONAL)
-  duotone.html                 — REMOVIDO (muito raso)
-  grain.html                   — REMOVIDO (muito raso)
-  ascii.html                   — ASCII character art converter (FUNCIONAL)
+  
+  # VISUAL TOOLS (5)
+  dithering.html               — SVG dithering tool (FUNCIONAL — gold standard)
+  reticula.html                — halftone grid, 11 shapes, video+webcam+MP4 (FUNCIONAL)
+  glitch.html                  — RGB shift, pixel sort, slicing, video+webcam+MP4 (FUNCIONAL)
+  ascii.html                   — 4 charsets, 3 color modes, video+webcam+MP4 (FUNCIONAL)
+  overlay.html                 — gerador de texturas seamless, 12 patterns, image+video+webcam (FUNCIONAL)
+  
+  # KINETIC TYPE — Fase 1: Core (22)
   cylinder.html                — kinetic type: cylinder (FUNCIONAL)
   field.html                   — kinetic type: field (FUNCIONAL)
   stripes.html                 — kinetic type: stripes (FUNCIONAL)
   coil.html                    — kinetic type: coil (FUNCIONAL)
+  
+  # KINETIC TYPE — Fase 2: 3D Intermediários
   flag.html                    — kinetic type: flag (FUNCIONAL — precisa refinamento)
   cascade.html                 — kinetic type: cascade (FUNCIONAL)
   ribbon.html                  — kinetic type: ribbon (FUNCIONAL)
   morisawa.html                — kinetic type: morisawa (FUNCIONAL)
+  
+  # KINETIC TYPE — Fase 3: 2D
   layers.html                  — kinetic type: layers (FUNCIONAL)
   danger.html                  — kinetic type: danger (FUNCIONAL)
   string.html                  — kinetic type: string (FUNCIONAL)
+  
+  # KINETIC TYPE — Fase 4: Composição
   badge.html                   — kinetic type: badge (FUNCIONAL)
   clutter.html                 — kinetic type: clutter (FUNCIONAL)
   construct.html               — kinetic type: construct (FUNCIONAL)
+  
+  # KINETIC TYPE — Fase 5: Animação
   snap.html                    — kinetic type: snap (FUNCIONAL)
   flash.html                   — kinetic type: flash (FUNCIONAL)
   pow.html                     — kinetic type: pow (FUNCIONAL)
@@ -39,12 +51,21 @@
   vessel.html                  — kinetic type: vessel (FUNCIONAL)
   shine.html                   — kinetic type: shine (FUNCIONAL)
   boost.html                   — kinetic type: boost (FUNCIONAL)
+  
+  # REMOVIDOS
+  duotone.html                 — REMOVIDO (muito raso)
+  grain.html                   — REMOVIDO (muito raso)
+  
+  # SHARED
   shared/
-    style.css                  — design system (#99E0D2 section titles, swap btn, etc)
-    recorder.js                — classe TipoRecorder (MP4 recording)
-    ui.js                      — TipoUI: sliders, presets, export, recorder init, formatters
+    style.css                  — design system (#99E0D2 accent, dark/light theme, responsive)
+    recorder.js                — TipoRecorder (MP4 via VideoEncoder para 2D, WebM via captureStream para WEBGL)
+    ui.js                      — TipoUI: sliders, presets, export, recorder init, formatters, theme toggle
   assets/
     fonts/IBMPlexMono-Regular.ttf
+    favicon.svg                — SVG favicon (T em monospace)
+    kinetic-preview.mp4        — vídeo do Cylinder para landing page
+    preview-3d.mp4             — vídeo preview do quadrante 3D
   tipo_vault/
     knowledge/
       screeshots/              — 23 refs @antoncreations video 1
@@ -55,6 +76,7 @@
   projeto.md                   — visão do produto
   memoria.md                   — este arquivo (UNICO arquivo de memória)
   ATTACK_PLAN.md               — plano fase-a-fase
+  README.md                    — README público
   .gitignore                   — exclui node_modules, vault, squads, package files
 ```
 
@@ -67,200 +89,170 @@
 | p5.js WEBGL pra kinetic type 3D | 3D nativo no browser |
 | p5.js 2D pra stripes/coil | Sem overhead de WEBGL pra modos 2D |
 | mp4-muxer UMD via CDN | Funciona sem npm/webpack, carrega sync |
-| Back-pressure via encodeQueueSize | Evita travar render loop |
+| MP4 via VideoEncoder (2D) | Encoding direto, melhor qualidade |
+| WebM via captureStream (WEBGL) | Única forma confiável de gravar canvas WEBGL |
+| preserveDrawingBuffer nos WEBGL | Necessário pra savePNG funcionar em WEBGL |
 | Real-time timestamps | Velocidade constante independente de performance |
-| RecordCanvas separado | Dimensões fixas durante gravação |
 | Bitmap trace pra text-to-shape | Fontes não carregam em SVG-as-Image |
-| Baseline H.264 + latencyMode realtime | Encoding rápido, flush instantâneo |
 | fill() em vez de stroke() no WEBGL | p5.js text() em WEBGL renderiza como geometria preenchida |
 | .ttf em vez de .otf/.woff2 pra p5.js | loadFont() precisa de TTF ou OTF real (não WOFF) |
+| Dark/Light theme via CSS variables | data-theme="light" no :root, persistido via localStorage |
+| shared/ui.js com TipoUI | Eliminou ~1400 linhas de boilerplate duplicado |
 
 ## Padrões de UI (aplicar em todas as páginas)
-- Section titles em **#99E0D2** (cor accent)
+- Section titles em **#99E0D2** (cor accent) — dark mode
+- Section titles em **preto** — light mode
+- Landing page labels: **#99E0D2** dark, **#000** light
 - **Presets logo abaixo do campo Text** (primeiro contato do usuário)
 - **Botão Reset** vermelho no final dos presets
 - **Color pickers + Swap button** logo após presets
 - **Swap button** (&#8646;) inverte type/bg colors com 1 clique
 - **Header:** Nome do modo + nav links (KINETIC TYPE | HOME) — menu anterior à esquerda, HOME à direita
-- **Dithering header:** VISUAL TOOLS | HOME
+- **Visual Tools header:** VISUAL TOOLS | HOME
 - Todos os presets usam **TIPÓ** como texto default (nunca sobrescrever com texto custom)
 - MP4 recording + PNG export em todas as páginas
 - Texto default: TIPÓ (sempre)
+- **Theme toggle** (☼/☾) no canto superior direito de todas as páginas
+- **Botão .btn** usa `color: var(--bg-0)` pra funcionar em ambos os temas
+
+## Paleta de Cores
+
+| Uso | Dark Mode | Light Mode |
+|-----|-----------|------------|
+| Background | #0a0a0a | #ffffff |
+| Panel | #111111 | #f5f5f5 |
+| Accent (section titles) | #99E0D2 | #99E0D2 |
+| Landing labels | #99E0D2 | #000000 |
+| Card titles | #99E0D2 | #000000 |
+| Accent (links/UI) | #4488ff | #2266dd |
+| Red (reset/rec) | #f44444 | #dd2222 |
+| Text primary | #ffffff | #000000 |
+| Text secondary | #aaaaaa | #555555 |
+
+---
+
+## 2026-05-24 / 2026-05-25
+
+### Visual Tools — Reestruturação completa
+- **Removidos:** Duotone e Grain (muito rasos — não tinham video, webcam, nem profundidade de controle)
+- **Reescritos do zero:** Retícula, Glitch, ASCII — agora com image+video+webcam input, MP4 recording, drag&drop, presets significativos
+  - **Retícula:** 11 shapes, multi-tone color, contrast, angle, gap. 9 presets
+  - **Glitch:** RGB shift, pixel sort, slicing, scanlines, color bleed, noise. 8 presets
+  - **ASCII:** 4 charsets (standard/blocks/braille/custom), 3 color modes. 8 presets
+- **Overlay Generator (NOVO):** Gerador de texturas procedurais seamless tileable
+  - 12 patterns: film grain, fine noise, paper, linen, halftone, grid, crosshatch, scanlines, stipple, concrete, dust & scratches, canvas weave
+  - Image/video/webcam source + live compositing (textura sobre mídia)
+  - 3 exports: PNG composite (resolução original), Tile PNG (seamless), Record MP4
+  - 8 presets: Subtle, Medium, Heavy, Photo Film, Print, Digital, Vintage, Editorial
+  - Blend mode source-over com opacity slider (imagem nunca desaparece)
+  - Double-click randomiza seed
+
+### Gravação MP4 — Fix definitivo
+- **Problema:** Canvas WEBGL com VideoEncoder produzia 0 frames ("Flushing 0 frames" infinito)
+- **Root cause:** drawImage() de canvas WEBGL sem preserveDrawingBuffer retorna pixels vazios
+- **Solução:** Detecção automática — canvas 2D usa VideoEncoder+mp4-muxer (MP4 direto), canvas WEBGL usa MediaRecorder+captureStream (WebM ou MP4 nativo no Chrome 130+)
+- **Resultado:** Animação não trava durante gravação, stop é instantâneo, download imediato
+- preserveDrawingBuffer adicionado em todos os 10 modos WEBGL (pra savePNG funcionar)
+
+### Landing Page — Melhorias visuais
+- **Home:** Painel Kinetic Type agora tem vídeo MP4 real do Cylinder como background (75% opacidade)
+- **Quadrante 3D:** Vídeo MP4 real como background (60% opacidade)
+- **Animações dos 4 quadrantes:** Multi-layer com mais opacidade e drama
+  - 3D: 4 camadas text com 3D rotation, flag wave, accent color
+  - 2D: text distortion + 3 stripe ribbons animados
+  - Composition: 3 anéis orbitais + 4 letras T-I-P-Ó flutuando
+  - Animation: 5 chars com explode, snap, flash, fall, bounce
+- **Mode cards:** Mini-animações CSS únicas por modo (22 @keyframes)
+- **Labels:** #99E0D2 mint no dark mode, preto no light mode
+- **Card titles:** #99E0D2 mint no dark mode, preto no light mode
+
+### Dark/Light Theme
+- CSS variables no shared/style.css: `:root[data-theme="light"]` com paleta completa invertida
+- Toggle button (☼/☾) fixo no canto superior direito, persiste via localStorage
+- Sincroniza entre todas as páginas
+- Dithering: light mode via CSS overrides (panel bg, text, scrollbar, section titles)
+- Botões .btn: cor adaptativa (não mais hardcoded #000)
+
+### Fase 6 — Polish
+- Favicon SVG (T monospace) em todas as 27 páginas
+- Meta tags (description + theme-color) em todas as páginas
+- Responsividade básica: panel colapsável em mobile via CSS media query
+- README.md público
 
 ---
 
 ## 2026-05-23
 
 ### Refinamento Ribbon — match Space Type Generator
-- Adicionado controle **B-side/Text** separado no `ribbon.html`, equivalente ao controle B-SIDE/TEXT do STG original
-- `Weight` deixou de ser slider morto: letras agora são renderizadas como textura stroked em p5.Graphics, com peso real e cache por caractere/cor
-- Texto curto (ex: TIPÓ) é repetido internamente para preencher a fita inteira sem sobrescrever o campo Text, mantendo a regra dos presets não alterarem texto customizado
-- `rectMode(CENTER)` aplicado no desenho da ribbon para alinhar com a geometria do STG original
-- Presets atualizados com cores de texto/B-side do STG: Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II
-- Cache de glyph textures remove os canvases auxiliares do DOM para evitar acúmulo de elementos invisíveis
-- Validação: Chrome headless + SwiftShader via CDP, sem erros JS; canvas WebGL ativo, preset Streamers clicado, Weight atualizado, screenshot visual OK
+- Adicionado controle **B-side/Text** separado no `ribbon.html`
+- `Weight` funcional: letras renderizadas como textura stroked com cache por caractere/cor
+- Texto curto repetido internamente para preencher a fita sem sobrescrever campo Text
+- `rectMode(CENTER)` para alinhar com geometria do STG original
+- Presets atualizados com cores do STG
 
 ### Refinamento Cascade + Morisawa
-- `cascade.html`: `Weight` deixou de ser slider morto; caracteres agora são desenhados como glyphs stroked/escalados dentro do bloco, mais próximo do keyboardEngine do STG
-- `morisawa.html`: `Weight` também passou a controlar o traço real dos caracteres; visual voltou para leitura de poster tipográfico em contorno, em vez de fonte preenchida
-- Presets que sobrescreviam `textInput` foram limpos para respeitar a regra global: presets não apagam texto customizado e o default continua TIPÓ
-- Validação: Chrome headless via CDP clicou todos os presets de Cascade (12 chips) e Morisawa (8 chips), sem exceções JS; canvas presente e texto preservado como TIPÓ
+- `Weight` funcional em ambos — caracteres como glyphs stroked/escalados
+- Presets limpos: não sobrescrevem texto customizado
 
 ### CrashClock — Display Particles high-end
-- `crashclock.html` refeito com menu mais próximo do STG: Display (Hours, Hours & Min, Text, Particles), Reset every (Never, 5 sec, Minute), Particles, Clock, Physics e Color
-- Novo modo **Particles** default: centenas de círculos com colisão espacial, containment circular, damping, gravidade vetorial, packing e colisão contra ponteiros/hub
-- Ponteiros agora funcionam como material físico visual: hour/minute empurram as partículas, second hand é fino/accent, hub em camadas
-- Controles adicionados: Count, Min/Max Size, Packing, Scale, Hand Push, Hand Width, Border, Gravity, Angle, Friction, Speed, Bodies/Bg/Hands/Accent
-- Presets novos: Particles, Silk, Dense, Hours, Text, Pride; todos preservam `TIPÓ` e não sobrescrevem texto customizado
-- Validação: screenshot local OK; Chrome headless/CDP clicou 6 presets, alternou 4 displays e 3 reset modes, sem erros JS; canvas ativo e texto preservado
+- Refeito com modo Particles: centenas de círculos com colisão, containment circular, gravidade vetorial
+- Ponteiros empurram partículas, hub em camadas
+- 6 presets: Particles, Silk, Dense, Hours, Text, Pride
 
 ---
 
-## 2026-05-20
+## 2026-05-20 / 2026-05-21
 
-### Fase 1 Completa — 4 Kinetic Type Modes
+### Infraestrutura
+- shared/ui.js criado — TipoUI com formatters declarativos, preset handling, recorder init, export helpers
+- Eliminou ~1400 linhas de boilerplate duplicado nas 4 páginas core
+- 32 squads instalados em .claude/skills/
 
-**Cylinder** (FUNCIONAL)
-- 21 controles: Cylinder (radius, count, rotate, offset), Wave (count, speed, latitude, longitude, ripple, x/y scale), Type (x/y scale, weight), Tweak (x/y/z rotation), Camera (x/y/z rotation, zoom)
-- 8 presets + Reset: Simple, Jellyfish, Crown, Complex, Weave, Zebra, Hoops, Pride
-- Bug fix: fonte .otf baixou como HTML → .ttf do Google Fonts GitHub
-- Bug fix: text() WEBGL precisa fill() não stroke()
+### Fase 1 Completa — 4 Kinetic Type Modes Core
+- **Cylinder:** 21 controles, 8 presets, p5.js WEBGL
+- **Field:** 21 controles, 7 presets, p5.js WEBGL, Z-surface auto-rotation
+- **Stripes:** 13 controles + 5 colors, 11 presets, p5.js 2D, ribbon shadows
+- **Coil:** 13 controles + 5 colors, 11 presets, p5.js 2D, Archimedean spiral
 
-**Field** (FUNCIONAL)
-- 21 controles: Grid (columns, rows, tracking, line space), Type (x/y scale, weight), Wave (speed, x/y freq), Amplitude (z/x/y axis, z smooth, x stretch, x/y stretch wave, offsets), Camera
-- 7 presets + Reset: Stacks, Bricks, Simple Z, Complex Z, Zebra, Harlequin, Pride
-- Auto-rotation to follow Z surface (rotateY/rotateX based on neighboring Z values)
-- Full text toggle (fill entire grid or single text run)
+### Fase 2 Completa — 4 Modos 3D Intermediários
+- **Flag:** 17 controles, 14 presets, font engine vetorial (precisa refinamento)
+- **Cascade:** 8 controles, 12 presets, pirâmide com sinEngine
+- **Ribbon:** 15 controles, 13 presets, path Möbius-like 3D
+- **Morisawa:** 6 controles, 8 presets, pirâmide expandindo com scroll
 
-**Stripes** (FUNCIONAL)
-- 13 controles + 5 color slots: Type (x/y scale, weight, tracking), Ribbon (count, x/y space, size, offset), Wave (size, speed, wavelength, slope)
-- 11 presets + Reset: Marquee, Subway, Wow, Stacks, Old Sea, Color Sea, Simple Wave, Simple Wave 2, Not So Weird, Racer, Pride
-- 2D mode (sem WEBGL) — colored ribbons with text auto-rotating to follow curve
-- Shadow layer behind each ribbon
-- sinEngine with adjustable slope for square/round wave shapes
+### Fase 3 Completa — 3 Modos 2D
+- **Layers:** 5 controles, 7 presets, Z-scroll com 4-fold symmetry
+- **Danger:** 7 controles, 8 presets, Perlin noise mesh distortion
+- **String:** 5 controles, 8 presets, Bezier curve ribbons com texture scrolling
 
-**Coil** (FUNCIONAL)
-- 13 controles + 5 color slots: Type (x/y scale, weight), Ribbon (count, size, hide, flat caps), Spiral (radius, spacing, start, spin), Wave (size, count, speed, slope)
-- 11 presets + Reset: Wide, Super, Amoeba, Spacer, Kitty, Hourglass, Star, ZZtar, Pretzel, Lemniscate, Pride
-- Archimedean spiral with radial wave distortion
-- Thicker ribbons (ribSize default 25, max 80) for solid spiral look
+### Fase 4 Completa — 3 Modos Composição
+- **Badge:** 15 controles, 9 presets, strip/ring/tunnel/spread layers
+- **Clutter:** 5 controles, 7 presets, 6 sub-modes (ring, cloud, cosmic, sphere, scatter, vortex)
+- **Construct:** 5 controles, 7 presets, 6 sub-modes (cloud, scribble, zigzag, gradient, box, matrix)
 
-## 2026-05-21
+### Fase 5 Completa — 8 Modos Animação
+- **Snap:** 4 controles, 5 presets, kinetic letter stagger
+- **Flash:** 3 controles, 5 presets, 8 cycling text effects
+- **Pow:** 4 controles, 5 presets, explosive particle scatter
+- **Crash:** 4 controles, 5 presets, physics falling text
+- **Crash Clock:** 4 controles, 5 presets, real-time clock com falling numbers
+- **Vessel:** 4 controles, 5 presets, morphing container com 7 easing types
+- **Shine:** 5 controles, 5 presets, radial light spokes (WEBGL)
+- **Boost:** 4 controles, 5 presets, letter-by-letter directional reveal
 
-### Visual Tools — 5 Novas Ferramentas
-- **Retícula** — Halftone grid: imagem → grid de dots/shapes com tamanho proporcional à luminosidade. 5 shapes (circle, square, diamond, cross, line), rotação angular, 6 presets
-- **Glitch** — Distorção digital: RGB channel shift, horizontal slicing, pixel noise, scanlines. 6 presets (Subtle, VHS, Corrupt, RGB Split, Scanlines, Chaos). Animado com export MP4
-- **Duotone** — Mapeamento de imagem para 2 cores (shadow + highlight). Contraste, brilho, threshold. 5 presets (Midnight, Sunset, Ocean, Forest, Neon)
-- **Grain** — Textura de film grain sobre imagens. Densidade, tamanho, opacidade, mono/color. 5 presets (Film, Heavy, Subtle, Vintage, Color Noise)
-- **ASCII** — Conversor de imagem para arte ASCII. Resolução variável, 3 charsets, cor original ou mono. 5 presets (Classic, Dense, Minimal, Color, Matrix)
-
-### Landing Page — Animações melhoradas
-- Quadrante 3D: perspective cylinder spin com wave scaling
-- Quadrante 2D: wave distortion com skew + stretch
-- Quadrante Composition: orbital circular com scale pulse
-- Quadrante Animation: snap/flash/explode sequence
-- Kinetic preview: staggered multi-effect morph com color
-
-### Fase 2 Completa — 4 Kinetic Type Modes (3D Intermediários)
-
-**Flag** (FUNCIONAL — precisa refinamento)
-- 17 controles: Type (x/y scale, weight, rows, padding, ribbon depth, text-only), Wave (x/y/z size, offset, speed, row offset, slope), Camera (x/y/z rotation, zoom)
-- 14 presets + Reset: A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case, Pride
-- 3D waving flag surface — text via font engine vetorial (drawChar com bilinear interpolation nos 4 corners)
-- Ribbon = filled quad unpadded atrás (Z=-typePush), texto = stroke padded na frente
-- sinEngine com slope easing, multi-color cycling por row
-- Nota: font engine vetorial simplificado — precisa refinamento para match exato com Space Type Generator
-
-**Cascade** (FUNCIONAL)
-- 8 controles: Type (x-scale, weight, tracking, line space), Grid (rows, mirror, gradient, text-only), Wave (length, speed, slope)
-- 12 presets + Reset: Checker, Cascade, Classic, Mosaic, Ticker, Run, Salmon, Grid, Web Art, Sparkle, Pixel Gradient, Pride
-- 2D mode (sem WEBGL) — pirâmide de texto com row heights controlados por sinEngine
-- Triangular number formula para distribuição vertical: step = rows*(rows+1)/2
-- Mirror mode duplica grid invertido, gradient mode interpola cores entre rows
-- Presets todos usam TIPÓ como texto default
-
-**Ribbon** (FUNCIONAL)
-- 15 controles: Type (height, tracking, weight), Ribbon (seg space, seg count, depth, stretch, count, z-space, x-space, alternate, back side, text-only, gradient), Animation (speed), Camera (scale, x/y/z rotation)
-- 13 presets + Reset: Basic, Streamers, Terrace, Link, Sea, River, Web Art, Primary, Snake, Hot/Cold, Track, Track II, Pride
-- 3D WEBGL com projeção ortográfica — path Möbius-like com 4 segmentos (2 retos + 2 curvos)
-- Texto flui ao longo do path como esteira, múltiplas ribbons com z-spacing
-- Gradient color interpolation ao longo da ribbon
-
-**Morisawa** (FUNCIONAL)
-- 6 controles: Rows, Weight, Tracking, Line Space, Matte, Scroll Speed + 3 checkboxes (Mirror, Flip Speed, Row Flux)
-- 8 presets + Reset: Moon, Post Space, X, Bridge, Whitney, Beach, Recede, Pride
-- 2D mode — pirâmide expandindo: row j tem j+1 cópias do texto
-- Cada row scrolla a velocidade diferente: speed * (rows - j) — top = rápido, bottom = lento
-- Flux mode: rows oscilam sinusoidalmente via sinEngine
-- Matte borders para clip de overflow
-- Wrap-around seamless para scroll contínuo
-
-### Fase 2 — Primeiro modo: Flag
-
-**Flag** (FUNCIONAL)
-- 17 controles: Type (x/y scale, weight, rows, padding, ribbon depth, text-only toggle), Wave (x/y/z size, offset, speed, row offset, slope), Camera (x/y/z rotation, zoom)
-- 14 presets + Reset: A Banner, A Twist, Folds, Flat Sea, Barber, Silos, Mystery, Cola Waves, Origami, Origami 2, B&W, Newsprint, Edge Case, Pride
-- 3D waving flag surface — text on deformable quad grid, per-corner wave deformation
-- sinEngine with slope easing, multi-color cycling by row, ribbon depth with back face
-- Padding = lerp corners toward center (shrink cells)
-- Auto-rotation of text to follow deformed surface normal
-- First mode to use TipoUI.init() from shared/ui.js
-
-### UI Polish (aplicado em todas as páginas)
-- Section titles: #99E0D2 accent color
-- Presets movidos pra logo abaixo do Text input
-- Botão Reset vermelho no final dos presets
-- Color pickers + Swap button após presets (Cylinder, Field) / na seção Colors (Stripes, Coil)
-- Header nav: KINETIC TYPE (esquerda) | HOME (direita)
-- Dithering: VISUAL TOOLS (esquerda) | HOME (direita)
-- Todos presets mantêm TIPÓ como texto (corrigido: *SUPER*, SPACE *, Hello?, etc → TIPÓ)
-
-### Infraestrutura & Deploy
-- Git repo: github.com/damelchert/tipo
-- Deploy: Vercel (auto-deploy on push)
-- shared/style.css — design system com CSS variables, swap-btn, color-section-row
-- shared/recorder.js — classe TipoRecorder reutilizável
-- Landing page: navegação progressiva com hash routing (#kinetic, #visual, #3d, etc)
-- Keyboard nav: ESC/Backspace volta nível
-
-### Naming & Branding
-- Nome definido: **Tipó** (brand-squad consultado, 40+ sugestões)
+### Visual Tools — 5 Ferramentas Originais
+- Retícula, Glitch, Duotone, Grain, ASCII (Duotone e Grain removidos depois)
 
 ### Engenharia Reversa — Space Type Generator (COMPLETA)
 - 22 modos, ~150 presets, 98 arquivos (75 JS + 22 HTML + 1 CSS)
-- Docs: `tipo_vault/knowledge/spacetype_reverse_engineering.md`
-- Source: `tipo_vault/knowledge/spacetype_src/`
-
-### Organização
-- Pasta: `dithering tool` → `tipo`
-- Vault: `dithering_vault` → `tipo_vault`
-- Unificado memoria.md (deletado PROJECT_MEMORY.md duplicado)
-- Deletados templates vazios do vault (MEMORIA.md, PROJECT.md)
 
 ---
 
 ## 2026-05-19
 
 ### Dithering Tool — Construção Completa (FUNCIONAL)
-- Criado do zero como single HTML file
-- Análise de 32 screenshots (2 vídeos do @antoncreations)
-
-**Features:**
 - Upload imagem/vídeo + webcam + drag & drop
-- 7-State Midtone Mapping (highlights → shadows) com SVG customizado por state
-- Grid resolution, overall scale, aspect ratio (original/1:1), background color
-- Fill solid, invert mapping, scale with midtones, 90° snap rotation
-- Shape Library: 60+ shapes em 7 categorias
-- Text-to-Shape: bitmap trace
-- 10 shape presets + 24 color palettes + hex copiável
+- 7-State Midtone Mapping com SVG customizado por state
+- 60+ shapes, 10 shape presets, 24 color palettes
 - Export: PNG, SVG, MP4 (8/16 Mbps)
-
-**Gravação de Vídeo (4 iterações até chegar na v4 final):**
-- v4: MP4 em tempo real, back-pressure control, real-time timestamps, recordCanvas fixo, progress bar, timer visual
-
-**Problemas resolvidos:**
-1. CDN bloqueado em file:// → UMD script tag
-2. Vídeo travava → back-pressure via encodeQueueSize
-3. Vídeo acelerava → real-time timestamps + recordCanvas fixo
-4. Text SVG não renderizava → bitmap trace
-5. WebM sem duração → gravar direto em MP4
+- 4 iterações do sistema de gravação até chegar no v4 final
