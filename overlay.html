@@ -291,20 +291,13 @@ function renderComposite() {
   if (overlayBuffer) {
     const blendOpac = val('opacity') / 100;
     mainCtx.globalAlpha = blendOpac;
-    // Use overlay blend when there's a source image (preserves source visibility)
-    // Use multiply/screen when no source (texture-only mode)
-    if (frame) {
-      mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'overlay';
-    } else {
-      mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'multiply';
-    }
+    mainCtx.globalCompositeOperation = 'source-over';
     for (let ty = 0; ty < h; ty += overlayBuffer.height) {
       for (let tx = 0; tx < w; tx += overlayBuffer.width) {
         mainCtx.drawImage(overlayBuffer, tx, ty);
       }
     }
     mainCtx.globalAlpha = 1;
-    mainCtx.globalCompositeOperation = 'source-over';
   }
 
   // Recording
