@@ -327,10 +327,14 @@ function generateOverlay() {
   const transp = chk('transparent');
   const baseCol = document.getElementById('baseColor').value;
 
-  mainCanvas.width = size;
-  mainCanvas.height = size;
-
-  const imageData = mainCtx.createImageData(size, size);
+  // Use a temporary context for generating the overlay (NOT mainCanvas)
+  if (!overlayBuffer || overlayBuffer.width !== size || overlayBuffer.height !== size) {
+    overlayBuffer = document.createElement('canvas');
+    overlayBuffer.width = size;
+    overlayBuffer.height = size;
+  }
+  const genCtx = overlayBuffer.getContext('2d');
+  const imageData = genCtx.createImageData(size, size);
   const px = imageData.data;
 
   // Parse base color
@@ -496,13 +500,7 @@ function generateOverlay() {
     }
   }
 
-  // Store in overlay buffer (not main canvas)
-  if (!overlayBuffer || overlayBuffer.width !== size || overlayBuffer.height !== size) {
-    overlayBuffer = document.createElement('canvas');
-    overlayBuffer.width = size;
-    overlayBuffer.height = size;
-  }
-  overlayBuffer.getContext('2d').putImageData(imageData, 0, 0);
+  genCtx.putImageData(imageData, 0, 0);
 }
 
 function updateTilePreview() {
@@ -617,7 +615,6 @@ function resetAll() {
   updateLabels();
   seed = Math.random() * 10000;
   overlayDirty = true;
-  renderComposite();
 }
 
 function applyPreset(name) {
