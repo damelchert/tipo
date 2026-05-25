@@ -12,6 +12,22 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a0a; color: #e0e0e0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
+  /* Light mode support */
+  html[data-theme="light"] body { background: #ffffff; color: #1a1a1a; }
+  html[data-theme="light"] .panel { background: #f5f5f5 !important; border-color: #e0e0e0 !important; }
+  html[data-theme="light"] .panel * { color: #1a1a1a; }
+  html[data-theme="light"] .panel input[type="range"] { accent-color: #2266dd; }
+  html[data-theme="light"] .panel select, html[data-theme="light"] .panel button { background: #e0e0e0 !important; color: #1a1a1a !important; border-color: #ccc !important; }
+  html[data-theme="light"] .panel .section-title { color: #99E0D2 !important; }
+  html[data-theme="light"] ::-webkit-scrollbar-track { background: #eee; }
+  html[data-theme="light"] ::-webkit-scrollbar-thumb { background: #bbb; }
+
+  /* Theme toggle */
+  .tipo-theme-toggle { position: fixed; top: 12px; right: 12px; z-index: 200; width: 32px; height: 32px; background: #222; border: 1px solid #444; border-radius: 50%; color: #aaa; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; line-height: 1; padding: 0; }
+  .tipo-theme-toggle:hover { border-color: #4488ff; color: #fff; }
+  html[data-theme="light"] .tipo-theme-toggle { background: #e0e0e0; border-color: #ccc; color: #555; }
+  html[data-theme="light"] .tipo-theme-toggle:hover { border-color: #2266dd; color: #000; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: #1a1a1a; }
@@ -1724,6 +1740,26 @@ function applyPalette(index) {
   requestRender();
   showStatus(`Palette: ${p.name}`);
 }
+
+// ============================================================
+// THEME TOGGLE
+// ============================================================
+(function initTheme() {
+  const saved = localStorage.getItem('tipo-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.title = 'Toggle light/dark theme';
+  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+  });
+  document.body.appendChild(btn);
+})();
 
 // ============================================================
 // INIT

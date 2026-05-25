@@ -532,9 +532,40 @@ function updateTilePreview() {
 }
 
 function exportPNG() {
+  // Export at source image resolution (not screen size)
+  const frame = getCurrentFrame();
+  let expW = mainCanvas.width, expH = mainCanvas.height;
+  if (frame) {
+    expW = frame.videoWidth || frame.naturalWidth || frame.width || expW;
+    expH = frame.videoHeight || frame.naturalHeight || frame.height || expH;
+  }
+  const expCanvas = document.createElement('canvas');
+  expCanvas.width = expW;
+  expCanvas.height = expH;
+  const ctx = expCanvas.getContext('2d');
+
+  // Draw source at full res
+  if (frame) {
+    ctx.drawImage(frame, 0, 0, expW, expH);
+  } else {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, expW, expH);
+  }
+
+  // Tile overlay at full res
+  if (overlayBuffer) {
+    ctx.globalAlpha = val('opacity') / 100;
+    for (let ty = 0; ty < expH; ty += overlayBuffer.height) {
+      for (let tx = 0; tx < expW; tx += overlayBuffer.width) {
+        ctx.drawImage(overlayBuffer, tx, ty);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
   const link = document.createElement('a');
   link.download = 'tipo-overlay-composite.png';
-  link.href = mainCanvas.toDataURL('image/png');
+  link.href = expCanvas.toDataURL('image/png');
   link.click();
 }
 
