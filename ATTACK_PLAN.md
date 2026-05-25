@@ -34,9 +34,43 @@ Todos implementados e funcionais. Ver detalhes na memoria.md.
 
 ## PRÓXIMAS FASES
 
-### FASE 7 — Novas Visual Tools (profissionais)
+### FASE 7 — Cavalry-Level Polish (elevar qualidade dos 22 modos existentes)
 
-#### 7.1 — DEPTH (Image → 3D)
+O objetivo é fazer cada modo do Tipó ter a fluidez e profissionalismo do Cavalry.
+Atacar ANTES de criar ferramentas novas — polir o que existe primeiro.
+
+#### 7.1 — Easing Curves profissionais em todos os modos
+- Substituir interpolação linear/sin por curvas profissionais
+- Biblioteca de easing: easeInOut, elastic, bounce, back, expo, circ
+- Implementar em shared/ui.js como `TipoUI.ease(t, type)` reutilizável
+- Aplicar em: Snap, Flash, Pow, Boost, Vessel (já tem parcial), Cascade, Morisawa
+- Resultado: movimentos orgânicos em vez de mecânicos
+- **Status:** [ ] A implementar
+
+#### 7.2 — Mouse Interaction (elementos reagem ao cursor)
+- mouseX/mouseY como variáveis de distorção no draw loop
+- Modos prioritários: Field (letters repel/attract), Clutter (scatter follow mouse), Danger (distortion center = mouse), Pow (explosion origin = click)
+- Implementar como opt-in toggle "Mouse React" em cada modo
+- Mobile: touch position como substituto
+- **Status:** [ ] A implementar
+
+#### 7.3 — Noise orgânico em todas as animações
+- Perlin noise sutil aplicado a posição, escala, rotação
+- p5.js `noise()` nativo — adicionar como camada de "jitter" em todos os modos
+- Slider "Organic" (0-100) que controla intensidade do noise
+- Resultado: movimento humano, não robótico
+- **Status:** [ ] A implementar
+
+#### 7.4 — Transições suaves entre presets
+- Ao trocar preset, animar os sliders de valor atual → valor novo (300ms ease)
+- Em vez de snap instantâneo, morphing suave dos parâmetros
+- Implementar em shared/ui.js como `TipoUI.animatePreset(values, duration)`
+- Resultado: experiência premium, como trocar filtro no Instagram
+- **Status:** [ ] A implementar
+
+### FASE 8 — Novas Visual Tools (profissionais)
+
+#### 8.1 — DEPTH (Image → 3D)
 Upload imagem 2D → gera depth map → cria mesh 3D interativo.
 - **Técnica:** Fragment shader com depth map displacement (Codrops approach)
 - **Depth map:** AI via TensorFlow.js (DepthAnything/MiDaS) OU upload manual
@@ -50,7 +84,7 @@ Upload imagem 2D → gera depth map → cria mesh 3D interativo.
 - **Stack:** three.js ou raw WebGL, nada de p5.js (performance)
 - **Status:** [ ] A implementar
 
-#### 7.2 — GRADIENT MAP
+#### 8.2 — GRADIENT MAP
 Upload imagem → mapeia luminosidade pra paleta de cores custom.
 - **Diferente do Duotone (removido):** N cores, não 2. Gradiente completo.
 - **Controles:** 5-10 color stops arrastáveis, curva de contraste, mix com original
@@ -58,7 +92,7 @@ Upload imagem → mapeia luminosidade pra paleta de cores custom.
 - **Video+webcam input**
 - **Status:** [ ] A implementar
 
-#### 7.3 — PIXEL SORT
+#### 8.3 — PIXEL SORT
 Upload imagem/video → pixel sorting artístico.
 - **Técnica:** Ordena pixels por brightness/hue/saturation em faixas
 - **Controles:** Direction (H/V/diagonal), threshold, sort by (brightness/hue/sat), range
@@ -66,7 +100,7 @@ Upload imagem/video → pixel sorting artístico.
 - **Video+webcam input**
 - **Status:** [ ] A implementar
 
-#### 7.4 — COLOR HALFTONE (CMYK)
+#### 8.4 — COLOR HALFTONE (CMYK)
 Imagem → separação CMYK com dots em ângulos diferentes por canal.
 - **Técnica:** 4 passes (C/M/Y/K) cada um com halftone angle offset (15°/75°/0°/45°)
 - **Controles:** Dot size, angles por canal, paper color, channel toggle
@@ -74,16 +108,16 @@ Imagem → separação CMYK com dots em ângulos diferentes por canal.
 - **Video+webcam input**
 - **Status:** [ ] A implementar
 
-### FASE 8 — Features Transversais (todas as ferramentas)
+### FASE 9 — Features Transversais (todas as ferramentas)
 
-#### 8.1 — Custom Font Upload
+#### 9.1 — Custom Font Upload
 - Upload de .ttf/.otf/.woff2 via drag & drop
 - loadFont() do p5.js aceita TTF/OTF
 - Fallback pra IBM Plex Mono se falhar
 - **Impacto:** Alto — criadores querem suas fontes
 - **Status:** [ ] A implementar
 
-#### 8.2 — GIF Loop Export
+#### 9.2 — GIF Loop Export
 - Gravar N frames → encodar como GIF animado
 - Lib: gif.js (WebWorker-based) ou CCapture.js
 - Botão "Export GIF" ao lado de PNG/MP4
@@ -91,25 +125,19 @@ Imagem → separação CMYK com dots em ângulos diferentes por canal.
 - **Impacto:** Alto — formato mais compartilhável em redes sociais
 - **Status:** [ ] A implementar
 
-#### 8.3 — Mouse Interaction
-- Texto reage à posição do mouse (distorção, atração, repulsão)
-- Implementar em modos selecionados: Field, Clutter, Pow, Danger
-- mouseX/mouseY como variáveis no draw loop
-- **Status:** [ ] A implementar
-
-#### 8.4 — Share via URL
+#### 9.3 — Share via URL
 - Serializar estado dos sliders + cores + preset no URL hash
 - Ex: `cylinder.html#r=250&s=8&c=ff0000`
 - Botão "Copy Link" que copia URL com state
 - **Impacto:** Alto — compartilhar criações sem export
 - **Status:** [ ] A implementar
 
-#### 8.5 — Fullscreen Mode
+#### 9.4 — Fullscreen Mode
 - Botão F para fullscreen (esconde panel, canvas 100vw×100vh)
 - ESC pra sair
 - **Status:** [ ] A implementar
 
-### FASE 9 — Refinamento Visual (match com Space Type Generator)
+### FASE 10 — Refinamento Visual (match com Space Type Generator)
 
 #### Prioridade Alta
 - [ ] **FLAG** — Font engine vetorial completo (keyboardEngine_corners com bilinear interpolation)
@@ -120,21 +148,21 @@ Imagem → separação CMYK com dots em ângulos diferentes por canal.
 - [ ] Refinamento Fases 3-5 (Layers, Danger, String, Badge, Clutter, Construct, Snap, Flash, Pow, Crash, Vessel, Shine, Boost)
 - [ ] Cada modo precisa: testar todos os presets, comparar side-by-side com STG, ajustar
 
-### FASE 10 — Expansão de Ferramentas Criativas
+### FASE 11 — Expansão de Ferramentas Criativas
 
-#### 10.1 — Pattern Generator
+#### 11.1 — Pattern Generator
 - Geração de padrões geométricos repetitivos (tessellation)
 - Controles: shape, repetition, rotation, scale, color palette
 - Export como PNG tileable + SVG
 - **Status:** [ ] Conceito
 
-#### 10.2 — Color Palette Generator
+#### 11.2 — Color Palette Generator
 - Upload imagem → extrai paleta dominante (5-10 cores)
 - Gera paletas complementares, análogas, triádicas
 - Export como ASE (Adobe), CSS variables, JSON
 - **Status:** [ ] Conceito
 
-#### 10.3 — Mockup Compositor
+#### 11.3 — Mockup Compositor
 - Upload arte 2D + seleciona mockup (poster, camiseta, tela, cartão)
 - Perspectiva + lighting automáticos
 - Inspirado no Brand Forge mas simplificado (sem IA)
