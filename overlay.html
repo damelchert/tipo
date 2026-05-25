@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Overlay Generator</title>
 <link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -17,6 +19,7 @@
   .tile-preview { position: absolute; bottom: 16px; right: 16px; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; background: #888; }
   .tile-preview canvas { display: block; }
   .tile-label { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 8px; color: #fff; background: rgba(0,0,0,0.6); padding: 2px; letter-spacing: 1px; text-transform: uppercase; }
+  .drop-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
   .size-row { display: flex; gap: 6px; align-items: center; }
   .size-row select { flex: 1; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
 </style>
@@ -25,6 +28,15 @@
 
 <div class="tipo-panel" id="panel">
   <h1>Overlays <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
 
   <div class="section">
     <div class="section-title">Pattern</div>
@@ -90,14 +102,18 @@
   <div class="section section-divider">
     <div class="section-title">Export</div>
     <div class="btn-row">
-      <button class="btn" onclick="exportPNG()">Download PNG</button>
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn" onclick="exportTile()">Tile PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
     </div>
-    <div style="font-size:9px;color:var(--text-5);margin-top:6px">Seamless tileable • Ready for Photoshop, Figma, CSS</div>
+    <div class="record-timer" id="recTimer"></div>
+    <div style="font-size:9px;color:var(--text-5);margin-top:6px">PNG = composite • Tile = seamless pattern • MP4 = video</div>
   </div>
   <div style="height:40px;"></div>
 </div>
 
 <div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video here</div>
   <canvas id="mainCanvas"></canvas>
   <div class="tile-preview">
     <canvas id="tilePreview" width="200" height="200"></canvas>
@@ -109,14 +125,89 @@
 // ============================================================
 // TIPÓ — OVERLAY GENERATOR
 // Professional seamless procedural texture generator.
-// 12 pattern types, tileable output, transparent PNG export.
+// Image/Video/Webcam + overlay compositing + MP4 recording.
 // ============================================================
 const mainCanvas = document.getElementById('mainCanvas');
 const mainCtx = mainCanvas.getContext('2d');
 const tileCanvas = document.getElementById('tilePreview');
 const tileCtx = tileCanvas.getContext('2d');
 
+// Overlay texture buffer (generated once, composited each frame)
+let overlayBuffer = null;
+let overlayDirty = true;
+
+// Source management
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // null | 'image' | 'video' | 'webcam'
+let recorder = null;
+let animFrame = null;
+
 let seed = Math.random() * 10000;
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    if (sourceVideo) { sourceVideo.pause(); sourceVideo = null; }
+    const img = new Image();
+    img.onload = () => { sourceImg = img; sourceType = 'image'; stopLoop(); renderComposite(); };
+    img.src = URL.createObjectURL(file);
+  } else if (file.type.startsWith('video/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    const vid = document.createElement('video');
+    vid.src = URL.createObjectURL(file);
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play();
+    sourceVideo = vid; sourceImg = null; sourceType = 'video';
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    startLoop();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null; sourceVideo = null;
+    sourceType = sourceImg ? 'image' : null;
+    stopLoop(); renderComposite();
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      const vid = document.createElement('video');
+      vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
+      vid.play();
+      sourceVideo = vid; sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      startLoop();
+    });
+}
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg;
+}
+
+function startLoop() {
+  if (animFrame) return;
+  function loop() {
+    renderComposite();
+    animFrame = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function stopLoop() {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+}
 
 // Seeded random for reproducibility
 function seededRandom(x, y) {
@@ -163,7 +254,61 @@ function fractalNoise(x, y, size, octaves, roughness) {
 function val(id) { return Number(document.getElementById(id).value); }
 function chk(id) { return document.getElementById(id).checked; }
 
-function generate() {
+// Composite: source image + overlay texture
+function renderComposite() {
+  const frame = getCurrentFrame();
+  const wrap = document.getElementById('canvasWrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+
+  if (mainCanvas.width !== w || mainCanvas.height !== h) {
+    mainCanvas.width = w;
+    mainCanvas.height = h;
+  }
+
+  mainCtx.fillStyle = '#000';
+  mainCtx.fillRect(0, 0, w, h);
+
+  // Draw source frame
+  if (frame) {
+    const sw = frame.videoWidth || frame.naturalWidth || frame.width;
+    const sh = frame.videoHeight || frame.naturalHeight || frame.height;
+    if (sw && sh) {
+      const sc = Math.min(w / sw, h / sh);
+      const dw = sw * sc, dh = sh * sc;
+      const ox = (w - dw) / 2, oy = (h - dh) / 2;
+      mainCtx.drawImage(frame, ox, oy, dw, dh);
+    }
+  }
+
+  // Generate overlay if dirty
+  if (overlayDirty || !overlayBuffer) {
+    generateOverlay();
+    overlayDirty = false;
+  }
+
+  // Tile overlay across canvas
+  if (overlayBuffer) {
+    const blendOpac = val('opacity') / 100;
+    mainCtx.globalAlpha = blendOpac;
+    mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'multiply';
+    for (let ty = 0; ty < h; ty += overlayBuffer.height) {
+      for (let tx = 0; tx < w; tx += overlayBuffer.width) {
+        mainCtx.drawImage(overlayBuffer, tx, ty);
+      }
+    }
+    mainCtx.globalAlpha = 1;
+    mainCtx.globalCompositeOperation = 'source-over';
+  }
+
+  // Recording
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+
+  updateTilePreview();
+}
+
+// Generate overlay texture buffer (tileable)
+function generateOverlay() {
   const size = Number(document.getElementById('tileSize').value);
   const pattern = document.getElementById('pattern').value;
   const density = val('density') / 100;
@@ -361,8 +506,13 @@ function generate() {
     }
   }
 
-  mainCtx.putImageData(imageData, 0, 0);
-  updateTilePreview();
+  // Store in overlay buffer (not main canvas)
+  if (!overlayBuffer || overlayBuffer.width !== size || overlayBuffer.height !== size) {
+    overlayBuffer = document.createElement('canvas');
+    overlayBuffer.width = size;
+    overlayBuffer.height = size;
+  }
+  overlayBuffer.getContext('2d').putImageData(imageData, 0, 0);
 }
 
 function updateTilePreview() {
@@ -402,11 +552,39 @@ function updateTilePreview() {
 
 function exportPNG() {
   const link = document.createElement('a');
-  const pattern = document.getElementById('pattern').value;
-  const size = document.getElementById('tileSize').value;
-  link.download = `tipo-overlay-${pattern}-${size}px.png`;
+  link.download = 'tipo-overlay-composite.png';
   link.href = mainCanvas.toDataURL('image/png');
   link.click();
+}
+
+function exportTile() {
+  if (!overlayBuffer) { generateOverlay(); }
+  const link = document.createElement('a');
+  const pattern = document.getElementById('pattern').value;
+  const size = document.getElementById('tileSize').value;
+  link.download = `tipo-overlay-${pattern}-${size}px-tile.png`;
+  link.href = overlayBuffer.toDataURL('image/png');
+  link.click();
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+    if (!animFrame) startLoop();
+  } else {
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+    if (sourceType === 'image' || !sourceType) stopLoop();
+  }
 }
 
 // Presets
@@ -424,7 +602,8 @@ function resetAll() {
   document.getElementById('tileSize').value = '512';
   updateLabels();
   seed = Math.random() * 10000;
-  generate();
+  overlayDirty = true;
+  renderComposite();
 }
 
 function applyPreset(name) {
@@ -441,7 +620,8 @@ function applyPreset(name) {
   };
   if (P[name]) P[name]();
   updateLabels();
-  generate();
+  overlayDirty = true;
+  renderComposite();
   document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
   if (event && event.target) event.target.classList.add('active');
 }
@@ -465,14 +645,27 @@ function updateLabels() {
 document.querySelectorAll('input[type="range"], input[type="checkbox"], input[type="color"], select').forEach(el => {
   el.addEventListener('input', () => {
     updateLabels();
-    generate();
+    overlayDirty = true;
+    renderComposite();
   });
 });
 
+// File input + drag & drop
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
 // Randomize seed on double-click
-document.getElementById('canvasWrap').addEventListener('dblclick', () => {
+wrap.addEventListener('dblclick', () => {
   seed = Math.random() * 10000;
-  generate();
+  overlayDirty = true;
+  renderComposite();
 });
 
 // Theme toggle (standalone — no TipoUI since no p5.js)
@@ -494,7 +687,8 @@ document.getElementById('canvasWrap').addEventListener('dblclick', () => {
 })();
 
 // Init
-generate();
+overlayDirty = true;
+renderComposite();
 </script>
 </body>
 </html>
