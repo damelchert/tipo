@@ -291,7 +291,13 @@ function renderComposite() {
   if (overlayBuffer) {
     const blendOpac = val('opacity') / 100;
     mainCtx.globalAlpha = blendOpac;
-    mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'multiply';
+    // Use overlay blend when there's a source image (preserves source visibility)
+    // Use multiply/screen when no source (texture-only mode)
+    if (frame) {
+      mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'overlay';
+    } else {
+      mainCtx.globalCompositeOperation = chk('invert') ? 'screen' : 'multiply';
+    }
     for (let ty = 0; ty < h; ty += overlayBuffer.height) {
       for (let tx = 0; tx < w; tx += overlayBuffer.width) {
         mainCtx.drawImage(overlayBuffer, tx, ty);
@@ -473,36 +479,20 @@ function generateOverlay() {
       // Invert
       if (inv && pattern !== 'halftone' && pattern !== 'grid') v = 1 - v;
 
-      // Apply opacity and color
-      const alpha = Math.round(Math.abs(v - 0.5) * 2 * opac * 255);
-
-      if (transp) {
-        // Transparent mode: grayscale dots on transparent
-        const lum = v < 0.5 ? 0 : 255;
-        if (mono) {
-          px[idx] = lum;
-          px[idx + 1] = lum;
-          px[idx + 2] = lum;
-        } else {
-          px[idx] = Math.round(lum * (br / 255));
-          px[idx + 1] = Math.round(lum * (bg / 255));
-          px[idx + 2] = Math.round(lum * (bb / 255));
-        }
-        px[idx + 3] = alpha;
+      // Always render solid grayscale into buffer
+      // Compositing blend mode handles the overlay effect
+      // "Transparent" checkbox only affects Tile PNG export
+      const lum = Math.round(v * 255);
+      if (mono) {
+        px[idx] = lum;
+        px[idx + 1] = lum;
+        px[idx + 2] = lum;
       } else {
-        // Solid mode: blend with base color
-        const lum = Math.round(v * 255);
-        if (mono) {
-          px[idx] = lum;
-          px[idx + 1] = lum;
-          px[idx + 2] = lum;
-        } else {
-          px[idx] = Math.round(br * (1 - opac) + lum * opac);
-          px[idx + 1] = Math.round(bg * (1 - opac) + lum * opac);
-          px[idx + 2] = Math.round(bb * (1 - opac) + lum * opac);
-        }
-        px[idx + 3] = 255;
+        px[idx] = Math.round(br * v);
+        px[idx + 1] = Math.round(bg * v);
+        px[idx + 2] = Math.round(bb * v);
       }
+      px[idx + 3] = 255;
     }
   }
 
@@ -559,11 +549,35 @@ function exportPNG() {
 
 function exportTile() {
   if (!overlayBuffer) { generateOverlay(); }
-  const link = document.createElement('a');
   const pattern = document.getElementById('pattern').value;
-  const size = document.getElementById('tileSize').value;
+  const size = Number(document.getElementById('tileSize').value);
+  const transp = chk('transparent');
+
+  let exportCanvas = overlayBuffer;
+
+  // If transparent mode, convert solid gray to transparent overlay
+  if (transp) {
+    exportCanvas = document.createElement('canvas');
+    exportCanvas.width = size;
+    exportCanvas.height = size;
+    const ctx = exportCanvas.getContext('2d');
+    const srcData = overlayBuffer.getContext('2d').getImageData(0, 0, size, size);
+    const dst = ctx.createImageData(size, size);
+    for (let i = 0; i < srcData.data.length; i += 4) {
+      const lum = srcData.data[i]; // grayscale value
+      // Map: 128 (mid gray) = transparent, darker/lighter = more visible
+      const deviation = Math.abs(lum - 128) / 128;
+      dst.data[i] = lum < 128 ? 0 : 255;
+      dst.data[i + 1] = lum < 128 ? 0 : 255;
+      dst.data[i + 2] = lum < 128 ? 0 : 255;
+      dst.data[i + 3] = Math.round(deviation * 255);
+    }
+    ctx.putImageData(dst, 0, 0);
+  }
+
+  const link = document.createElement('a');
   link.download = `tipo-overlay-${pattern}-${size}px-tile.png`;
-  link.href = overlayBuffer.toDataURL('image/png');
+  link.href = exportCanvas.toDataURL('image/png');
   link.click();
 }
 
