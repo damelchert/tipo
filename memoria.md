@@ -131,6 +131,23 @@
 
 ---
 
+## 2026-05-25
+
+### Pesquisa Competitiva + Roadmap Atualizado
+- Pesquisa de concorrentes: Space Type Generator, Munken Creator, Typeflow, Found Tools, Bracken Overlayers
+- Análise do Cavalry: easing curves, duplicator+falloffs, noise behaviors, physics, real-time performance
+- **Cavalry NÃO é engenharia reversa** — é software nativo C++ compilado. As técnicas são algoritmos públicos de computer graphics
+- Features gap identificadas: custom font upload, GIF export, mouse interaction, share via URL, image→3D depth
+- ATTACK_PLAN atualizado com Fases 7-11:
+  - **Fase 7 (próxima):** Cavalry-level polish (easing curves, mouse interaction, organic noise, transições suaves)
+  - **Fase 8:** Novas Visual Tools (Depth/3D, Gradient Map, Pixel Sort, CMYK Halftone)
+  - **Fase 9:** Features transversais (custom fonts, GIF, share URL, fullscreen)
+  - **Fase 10:** Refinamento visual (match Space Type Generator)
+  - **Fase 11:** Expansão (Pattern Gen, Color Palette, Mockup Compositor)
+- Estratégia: **polir os 22 modos existentes ANTES de criar ferramentas novas**
+
+---
+
 ## 2026-05-24 / 2026-05-25
 
 ### Visual Tools — Reestruturação completa
