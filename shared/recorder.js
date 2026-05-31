@@ -1,8 +1,8 @@
 /* ============================================================
    TIPÓ — Shared MP4 Recorder
-   Reusable across all tools. Defaults to MediaRecorder/captureStream
-   because it keeps animation responsive during recording and finalizes
-   reliably. WebCodecs direct MP4 is still available as an opt-in mode.
+   Reusable across all tools. Uses WebCodecs + mp4-muxer for 2D MP4,
+   with MediaRecorder/captureStream fallback for WEBGL or unsupported
+   browsers.
    ============================================================ */
 
 class TipoRecorder {
@@ -11,7 +11,7 @@ class TipoRecorder {
     this.fps = options.fps || 30;
     this.onStatusChange = options.onStatusChange || (() => {});
     this.onProgress = options.onProgress || (() => {});
-    this.preferStream = options.preferStream !== false;
+    this.preferStream = options.preferStream === true;
 
     this.isRecording = false;
     this.muxer = null;
@@ -21,6 +21,7 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
     this.encW = 0;
     this.encH = 0;
+    this._firstTimestampUs = null;
 
     // MediaRecorder state
     this._mediaRecorder = null;
@@ -53,10 +54,14 @@ class TipoRecorder {
     // Check if canvas is WEBGL (getContext('2d') returns null on WEBGL canvas)
     const is2D = !!this.canvas.getContext('2d');
     if (is2D && this.hasMp4Support && !this.preferStream) {
-      // 2D canvas: direct MP4 encoding via VideoEncoder (best quality)
-      this._startMP4(bitrate);
+      try {
+        this._startMP4(bitrate);
+      } catch (err) {
+        console.warn('MP4 encoder unavailable, falling back to stream recorder:', err);
+        this._resetSession();
+        this._startStream(bitrate, is2D);
+      }
     } else {
-      // Default path: keeps the render loop smooth and finalizes quickly.
       this._startStream(bitrate, is2D);
     }
 
@@ -104,7 +109,7 @@ class TipoRecorder {
     const sourceCanvas = copyCanvas ? this._createStreamCanvas() : this.canvas;
     if (copyCanvas) this._paintStreamCanvas();
 
-    let stream = sourceCanvas.captureStream(0);
+    let stream = sourceCanvas.captureStream(this.fps);
     this._streamTrack = stream.getVideoTracks()[0] || null;
     if (!this._streamTrack || typeof this._streamTrack.requestFrame !== 'function') {
       stream.getTracks().forEach(track => track.stop());
@@ -151,6 +156,7 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
     this.encW = 0;
     this.encH = 0;
+    this._firstTimestampUs = null;
     this._chunks = null;
     this._streamFormat = null;
     this._streamTrack = null;
@@ -213,7 +219,9 @@ class TipoRecorder {
     if (this.lastCaptureTime >= 0 && (elapsed - this.lastCaptureTime) < 16) return;
 
     this.lastCaptureTime = elapsed;
-    const timestampUs = Math.round(elapsed * 1000);
+    const rawTimestampUs = Math.round(elapsed * 1000);
+    if (this._firstTimestampUs === null) this._firstTimestampUs = rawTimestampUs;
+    const timestampUs = rawTimestampUs - this._firstTimestampUs;
 
     // Lazy-create record canvas
     if (!this._recCanvas) {
