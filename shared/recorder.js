@@ -30,6 +30,7 @@ class TipoRecorder {
     this._streamTrack = null;
     this._streamFrameTimer = null;
     this._lastStreamFrameTime = -1;
+    this._mp4FrameTimer = null;
 
     // Timer
     this.timerInterval = null;
@@ -66,6 +67,11 @@ class TipoRecorder {
     }
 
     this.isRecording = true;
+    if (this.encoder) {
+      this._mp4FrameTimer = setInterval(() => {
+        this.captureFrame();
+      }, 1000 / this.fps);
+    }
     this.startTime = performance.now();
     this._startTimer();
     this.onStatusChange('recording');
@@ -163,6 +169,8 @@ class TipoRecorder {
     this._lastStreamFrameTime = -1;
     if (this._streamFrameTimer) clearInterval(this._streamFrameTimer);
     this._streamFrameTimer = null;
+    if (this._mp4FrameTimer) clearInterval(this._mp4FrameTimer);
+    this._mp4FrameTimer = null;
     this._recCanvas = null;
     this._recCtx = null;
   }
@@ -244,8 +252,11 @@ class TipoRecorder {
 
   async stop() {
     if (!this.isRecording) return;
+    if (this.encoder && this.frameCount === 0) this.captureFrame();
     this.isRecording = false;
     this._stopTimer();
+    if (this._mp4FrameTimer) clearInterval(this._mp4FrameTimer);
+    this._mp4FrameTimer = null;
 
     if (this.encoder) {
       return this._stopMP4();
