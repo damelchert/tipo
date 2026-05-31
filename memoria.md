@@ -225,14 +225,23 @@ Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
 - "Visual Tools" e "Kinetic Type" com split chars + scramble + magnetic hover
 - Vídeo 3D: mix-blend-mode lighten pra fundir preto puro com warm black
 
-### Próximo: Quadrant animations (3D, 2D, Composition, Animation)
-- As animações CSS atuais dos quadrantes kinetic type são amadoras — substituir por GSAP
-- Cada quadrante precisa de animação crafted que reflita a essência da categoria:
-  - **3D:** perspectiva, rotação 3D, depth, parallax
-  - **2D:** distorção, wave, ribbon flow
-  - **Composition:** arranjo circular, badge rotation, scatter→organize
-  - **Animation:** snap/bounce, elastic, timing choreography
-- Paleta de cores dos quadrantes está OK — manter
+### Quadrant previews — Canvas GSAP
+- Substituídas as animações CSS amadoras por canvas renders:
+  - **3D:** cilindro rotativo de caracteres com depth/perspectiva
+  - **2D:** grid de texto com noise distortion (skew, scale, linhas)
+  - **Composition:** texto orbitando em anéis concêntricos (badge circular)
+  - **Animation:** 6 GSAP timelines ciclando (snap, flash, pow, crash, vessel, shine)
+
+### Próxima sessão: FASE 7.5 — UI/UX Polish + Brand Identity
+Plano detalhado no ATTACK_PLAN.md. Itens:
+1. Light mode como padrão ao acessar
+2. Header mais disruptivo (menos espaço vazio, mais impacto)
+3. Paleta brand Athos em TODOS os presets default (light mode)
+4. Fix: edição de hex nos color pickers (não aceita digitação)
+5. Fix: gravação MP4/WebM em todas as ferramentas
+6. Auditoria geral de bugs (travamentos, memória, performance)
+7. Cards dos menus: fundo teal `#2b8a7c`, letra inicial em âmbar `#D4A040`
+8. Botão Voltar em TODAS as 28 páginas
 
 ---
 

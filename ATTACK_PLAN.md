@@ -70,6 +70,54 @@ Atacar ANTES de criar ferramentas novas — polir o que existe primeiro.
 - Funciona automaticamente em TODAS as 27 ferramentas
 - **Status:** [x] Implementado
 
+### FASE 7.5 — UI/UX Polish + Brand Identity (PRÓXIMA SESSÃO)
+
+Prioridade máxima — arrumar experiência antes de features novas.
+
+#### 7.5.1 — Light mode como padrão
+- [ ] Mudar default do localStorage para `light` em todas as tools
+- [ ] Manter toggle dark/light funcionando
+- [ ] Testar TODAS as 28 ferramentas em light mode
+
+#### 7.5.2 — Header disruptivo
+- [ ] Melhorar GSAP animations do header (mais impacto, menos espaço vazio)
+- [ ] Ghost text mais expressivo
+- [ ] Animação da linha gradient mais impactante
+
+#### 7.5.3 — Paleta brand nos presets default
+- [ ] TODAS as ferramentas devem abrir com cores da paleta Athos (light mode):
+  - Background: `#F8F5F0`, texto: `#1A1818`, accent: `#2A8A7A`, stroke: `#D4A040`
+- [ ] Presets criativos mantêm suas paletas próprias — só o default muda
+- [ ] Auditar os 28 arquivos HTML um por um
+
+#### 7.5.4 — Fix: edição de hex nos color pickers
+- [ ] Input de cor hex não aceita digitação manual em vários browsers
+- [ ] Investigar se é limitação do `<input type="color">` nativo
+- [ ] Solução: adicionar campo de texto hex ao lado do color picker
+
+#### 7.5.5 — Fix: gravação MP4/WebM
+- [ ] Auditar recorder em TODAS as ferramentas
+- [ ] Verificar: WebCodecs MP4 vs MediaRecorder WebM vs Chrome nativo
+- [ ] Testar: início, parada, export, tamanho do arquivo
+- [ ] Corrigir bugs de frames vazios, codec não suportado, etc.
+
+#### 7.5.6 — Auditoria geral de bugs
+- [ ] Percorrer todas as 28 ferramentas
+- [ ] Identificar: travamentos, performance, inflação de memória, leaks de canvas
+- [ ] Listar bugs encontrados e priorizar
+
+#### 7.5.7 — Cards dos menus: identidade visual
+- [ ] Visual Tools cards: quadrado preview com fundo `#2b8a7c` (teal), letra inicial em âmbar `#D4A040`
+- [ ] Kinetic Type quadrantes: mesma lógica — fundo teal, letras iniciais em âmbar
+- [ ] Não alterar animações/ícones existentes dos quadrantes
+
+#### 7.5.8 — Botão Voltar em todas as páginas
+- [ ] Adicionar botão de voltar consistente em TODAS as 28 ferramentas
+- [ ] Comportamento: retorna ao menu anterior (Visual Tools ou categoria Kinetic)
+- [ ] Estilo: discreto, integrado ao header da tool
+
+---
+
 ### FASE 8 — Dithering Engine Pro (inspirado na análise do Dither Boy)
 
 Engenharia reversa do Dither Boy 6.0.3 (Electron app, Studio AAA) revelou:
