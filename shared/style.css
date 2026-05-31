@@ -9,48 +9,52 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap');
 
 :root, :root[data-theme="dark"] {
-  --bg-0: #0a0a0a;
-  --bg-1: #111111;
-  --bg-2: #1a1a1a;
-  --bg-3: #222222;
-  --border-1: #222222;
-  --border-2: #333333;
-  --border-3: #444444;
-  --text-0: #ffffff;
-  --text-1: #e0e0e0;
-  --text-2: #aaaaaa;
-  --text-3: #888888;
-  --text-4: #666666;
-  --text-5: #555555;
-  --text-6: #444444;
-  --accent: #4488ff;
-  --accent-dim: rgba(68,170,255,0.03);
-  --red: #f44444;
-  --green: #44ff44;
+  --bg-0: #0C0C0A;
+  --bg-1: #141412;
+  --bg-2: #1C1C1A;
+  --bg-3: #222220;
+  --border-1: #222220;
+  --border-2: #333330;
+  --border-3: #4A4A44;
+  --text-0: #E8E4E0;
+  --text-1: #D8D4D0;
+  --text-2: #AAA6A0;
+  --text-3: #888480;
+  --text-4: #666260;
+  --text-5: #555250;
+  --text-6: #444240;
+  --accent: #2A8A7A;
+  --accent-dim: rgba(42,138,122,0.06);
+  --accent-brand: #99E0D2;
+  --accent-warm: #D4A040;
+  --red: #CC4840;
+  --green: #3A7848;
   --font-ui: 'IBM Plex Mono', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   --panel-width: 320px;
 }
 
 :root[data-theme="light"] {
-  --bg-0: #ffffff;
-  --bg-1: #f5f5f5;
-  --bg-2: #ebebeb;
-  --bg-3: #e0e0e0;
-  --border-1: #e0e0e0;
-  --border-2: #cccccc;
-  --border-3: #bbbbbb;
-  --text-0: #000000;
-  --text-1: #1a1a1a;
-  --text-2: #555555;
-  --text-3: #777777;
-  --text-4: #999999;
-  --text-5: #aaaaaa;
-  --text-6: #bbbbbb;
-  --accent: #2266dd;
-  --accent-dim: rgba(34,102,221,0.05);
-  --red: #dd2222;
-  --green: #22aa22;
+  --bg-0: #F8F5F0;
+  --bg-1: #EEEAE4;
+  --bg-2: #E2DED6;
+  --bg-3: #D8D4CC;
+  --border-1: #D8D4CC;
+  --border-2: #C4C0B8;
+  --border-3: #AAA6A0;
+  --text-0: #1A1818;
+  --text-1: #2A2826;
+  --text-2: #5A5650;
+  --text-3: #7A7670;
+  --text-4: #9A9690;
+  --text-5: #AAA6A0;
+  --text-6: #BAB6B0;
+  --accent: #1B7A6A;
+  --accent-dim: rgba(27,122,106,0.06);
+  --accent-brand: #2A8A7A;
+  --accent-warm: #B08830;
+  --red: #BB3830;
+  --green: #2E6838;
 }
 
 /* Theme toggle button */
@@ -132,7 +136,7 @@ body {
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #99E0D2;
+  color: var(--accent-brand);
   font-weight: 600;
   margin-bottom: 4px;
 }

@@ -77,6 +77,14 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Background</div>
+    <input type="file" id="bgMediaInput" accept="image/*,video/*">
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="clearBackgroundMedia()">Clear Media</button>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Mouse</div>
     <label class="checkbox-label"><input type="checkbox" id="mouseReact"> Mouse React</label>
     <div class="range-row"><span class="range-label">Strength</span><input type="range" id="mouseStr" min="0" max="100" value="50"><span class="range-value" id="mouseStrVal">50</span></div>
@@ -119,6 +127,8 @@ let lastFontSize = 0;
 let lastLeading = 0;
 let lastTypeColor = '';
 let lastCanvasW = 0;
+let bgMedia = null;
+let bgMediaUrl = '';
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
@@ -149,6 +159,7 @@ function setup() {
   });
   recorder = TipoUI.recorder;
   TipoMouse.init(c);
+  document.getElementById('bgMediaInput').addEventListener('change', handleBackgroundMedia);
 }
 
 function getCanvasSize() {
@@ -204,7 +215,7 @@ function draw() {
   const isInvert = chk('invert');
   const foreC = isInvert ? '#ffffff' : document.getElementById('typeColor').value;
   const bgC = isInvert ? '#000000' : document.getElementById('bgColor').value;
-  background(prideMode ? '#000000' : bgC);
+  drawBackground(prideMode ? '#000000' : bgC);
 
   const txt = document.getElementById('textInput').value || 'TIPÓ';
   const nSpeed = val('noiseSpeed');
@@ -238,6 +249,62 @@ function draw() {
   TipoUI.captureFrame();
 }
 
+function drawBackground(bgC) {
+  background(bgC);
+  if (!bgMedia || !bgMedia.ready) return;
+
+  const el = bgMedia.el;
+  const sw = bgMedia.type === 'video' ? el.videoWidth : el.naturalWidth;
+  const sh = bgMedia.type === 'video' ? el.videoHeight : el.naturalHeight;
+  if (!sw || !sh) return;
+
+  const scale = max(width / sw, height / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  const dx = (width - dw) / 2;
+  const dy = (height - dh) / 2;
+  drawingContext.drawImage(el, dx, dy, dw, dh);
+}
+
+function handleBackgroundMedia(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  clearBackgroundMedia(false);
+
+  bgMediaUrl = URL.createObjectURL(file);
+  if (file.type.startsWith('video/')) {
+    const video = document.createElement('video');
+    video.src = bgMediaUrl;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    bgMedia = { type: 'video', el: video, ready: false };
+    video.addEventListener('loadeddata', () => {
+      bgMedia.ready = true;
+      video.play().catch(() => {});
+    }, { once: true });
+    video.load();
+  } else {
+    const img = new Image();
+    bgMedia = { type: 'image', el: img, ready: false };
+    img.onload = () => { bgMedia.ready = true; };
+    img.src = bgMediaUrl;
+  }
+}
+
+function clearBackgroundMedia(clearInput = true) {
+  if (bgMedia && bgMedia.type === 'video') {
+    bgMedia.el.pause();
+    bgMedia.el.removeAttribute('src');
+    bgMedia.el.load();
+  }
+  if (bgMediaUrl) URL.revokeObjectURL(bgMediaUrl);
+  bgMedia = null;
+  bgMediaUrl = '';
+  if (clearInput) document.getElementById('bgMediaInput').value = '';
+}
+
 function drawDistortedBuffer(buffer, cols, rws, nSpeed, radNoise, tumult) {
   const ctx = drawingContext;
   ctx.save();
@@ -259,10 +326,6 @@ function drawDistortedBuffer(buffer, cols, rws, nSpeed, radNoise, tumult) {
 
   const baseSpot = max(width, height) * 0.72;
   const strength = radNoise * min(width, height) * 0.22;
-
-  ctx.globalAlpha = 0.18;
-  ctx.drawImage(buffer.elt, 0, topY);
-  ctx.globalAlpha = 1;
 
   for (let y = 0; y < drawRows; y++) {
     for (let x = 0; x < drawCols; x++) {

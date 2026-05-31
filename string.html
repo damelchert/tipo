@@ -50,6 +50,15 @@
 
   <div class="section">
     <div class="section-title">String</div>
+    <select id="pathPattern">
+      <option value="wave">Wave</option>
+      <option value="river">River</option>
+      <option value="vertical">Rain</option>
+      <option value="orbit">Orbit</option>
+      <option value="spiral">Spiral</option>
+      <option value="harp">Harp</option>
+      <option value="constellation">Constellation</option>
+    </select>
     <div class="range-row"><span class="range-label">Strip Height</span><input type="range" id="stripHeight" min="10" max="300" value="70"><span class="range-value" id="stripHeightVal">70</span></div>
     <div class="range-row"><span class="range-label">Strip Count</span><input type="range" id="stripCount" min="1" max="6" value="1"><span class="range-value" id="stripCountVal">1</span></div>
     <div class="range-row"><span class="range-label">Points</span><input type="range" id="points" min="3" max="30" value="7"><span class="range-value" id="pointsVal">7</span></div>
@@ -110,6 +119,7 @@ let particles = [];
 let lastPoints = 0;
 let lastRandom = -1;
 let lastCurve = -1;
+let lastPattern = '';
 const STEPS = 70;
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
@@ -137,7 +147,7 @@ function setup() {
   });
   recorder = TipoUI.recorder;
 
-  generateParticles(7, 50, 30);
+  generateParticles(7, 50, 30, 'wave');
 }
 
 function getCanvasSize() {
@@ -164,23 +174,63 @@ function chk(id) { return TipoUI.chk(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 function col(id) { return TipoUI.col(id); }
 
+function setPattern(name) {
+  const el = document.getElementById('pathPattern');
+  if (el) el.value = name;
+  lastPattern = '';
+}
+
 // Generate control points along a path
-function generateParticles(count, curveAmt, randomAmt) {
+function generateParticles(count, curveAmt, randomAmt, pattern) {
   particles = [];
-  randomSeed(1000 + count * 31 + round(curveAmt) * 17 + round(randomAmt) * 13);
+  randomSeed(1000 + count * 31 + round(curveAmt) * 17 + round(randomAmt) * 13 + pattern.length * 19);
   const w = max(1, width - 120);
   const h = max(1, height - 160);
+  const cx = width / 2;
+  const cy = height / 2;
   const randF = randomAmt / 100;
   const curveF = curveAmt / 100;
 
   for (let i = 0; i < count; i++) {
     const t = count <= 1 ? 0 : i / (count - 1);
-    // Base path: smooth wave across canvas
-    const x = 60 + t * w;
-    const baseY = height / 2 + sin(t * TWO_PI) * h * 0.16 * curveF;
-    const y = baseY + random(-1, 1) * h * 0.34 * randF;
-    const baseAngle = cos(t * TWO_PI) * 0.35 * curveF;
-    const angle = baseAngle + random(-PI, PI) * curveF * 0.55;
+    let x, y, baseAngle;
+
+    if (pattern === 'river') {
+      x = 60 + t * w;
+      y = cy + sin(t * TWO_PI * 1.25 + 0.4) * h * 0.24 + sin(t * TWO_PI * 3.1) * h * 0.08 * curveF;
+      baseAngle = cos(t * TWO_PI * 1.25 + 0.4) * 0.55 * curveF;
+    } else if (pattern === 'vertical') {
+      x = cx + sin(t * TWO_PI * 1.35) * w * 0.22 * curveF;
+      y = 80 + t * h;
+      baseAngle = HALF_PI + cos(t * TWO_PI * 1.35) * 0.55 * curveF;
+    } else if (pattern === 'orbit') {
+      const a = -PI * 0.92 + t * TWO_PI * 1.84;
+      x = cx + cos(a) * w * 0.34;
+      y = cy + sin(a) * h * 0.28;
+      baseAngle = a + HALF_PI;
+    } else if (pattern === 'spiral') {
+      const a = -HALF_PI + t * TWO_PI * 1.65;
+      const r = lerp(min(w, h) * 0.06, min(w, h) * 0.40, t);
+      x = cx + cos(a) * r;
+      y = cy + sin(a) * r;
+      baseAngle = a + HALF_PI;
+    } else if (pattern === 'harp') {
+      x = lerp(70, width - 70, t);
+      y = lerp(height * 0.78, height * 0.22, t) + sin(t * PI * count) * h * 0.045 * curveF;
+      baseAngle = -0.55 + sin(t * TWO_PI) * 0.35 * curveF;
+    } else if (pattern === 'constellation') {
+      x = lerp(90, width - 90, t) + random(-1, 1) * w * 0.08 * randF;
+      y = cy + (i % 2 === 0 ? -1 : 1) * h * (0.15 + random(0, 0.22) * randF);
+      baseAngle = random(-PI, PI) * curveF;
+    } else {
+      x = 60 + t * w;
+      y = cy + sin(t * TWO_PI) * h * 0.16 * curveF;
+      baseAngle = cos(t * TWO_PI) * 0.35 * curveF;
+    }
+
+    x += random(-1, 1) * w * 0.06 * randF;
+    y += random(-1, 1) * h * 0.10 * randF;
+    const angle = baseAngle + random(-PI, PI) * curveF * 0.45;
     const handleLen = (w / max(count - 1, 1)) * (0.35 + curveF * 0.65);
 
     particles.push({ x, y, angle, handleLen });
@@ -210,15 +260,17 @@ function draw() {
   const pts = val('points');
   const curveAmt = val('curve');
   const randomAmt = val('randomize');
+  const pattern = document.getElementById('pathPattern').value;
   const isOutline = chk('outline');
   const txtC = document.getElementById('typeColor').value;
 
   // Regenerate particles if changed
-  if (pts !== lastPoints || randomAmt !== lastRandom || curveAmt !== lastCurve) {
-    generateParticles(pts, curveAmt, randomAmt);
+  if (pts !== lastPoints || randomAmt !== lastRandom || curveAmt !== lastCurve || pattern !== lastPattern) {
+    generateParticles(pts, curveAmt, randomAmt, pattern);
     lastPoints = pts;
     lastRandom = randomAmt;
     lastCurve = curveAmt;
+    lastPattern = pattern;
   }
 
   if (particles.length < 2) return;
@@ -334,6 +386,7 @@ function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
 
 function resetAll() {
   prideMode = false;
+  setPattern('wave');
   setVal('stripHeight', 70); setVal('stripCount', 1);
   setVal('points', 7); setVal('curve', 50); setVal('randomize', 30);
   setVal('outline', false); setVal('numColors', 5);
@@ -350,15 +403,17 @@ function resetAll() {
 
 const PRESETS = {
   vote: () => { resetAll();
-    setVal('stripHeight',180);setVal('stripCount',4);setVal('points',7);setVal('curve',60);setVal('randomize',40);
+    setPattern('river');
+    setVal('stripHeight',180);setVal('stripCount',4);setVal('points',7);setVal('curve',65);setVal('randomize',20);
     setVal('numColors',5);
-    document.getElementById('c1').value='#2955d9';document.getElementById('c2').value='#2793f2';
-    document.getElementById('c3').value='#ffffff';document.getElementById('c4').value='#f23e2e';
-    document.getElementById('c5').value='#000000';
-    document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
+    document.getElementById('c1').value='#009c3b';document.getElementById('c2').value='#ffdf00';
+    document.getElementById('c3').value='#ffffff';document.getElementById('c4').value='#002776';
+    document.getElementById('c5').value='#009c3b';
+    document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#002776';
     lastPoints=0;
   },
   dreamer: () => { resetAll();
+    setPattern('constellation');
     setVal('stripHeight',44);setVal('stripCount',2);setVal('points',20);setVal('curve',40);setVal('randomize',50);
     setVal('outline',true);
     setVal('numColors',5);
@@ -369,6 +424,7 @@ const PRESETS = {
     lastPoints=0;
   },
   tracks: () => { resetAll();
+    setPattern('harp');
     setVal('stripHeight',60);setVal('stripCount',1);setVal('points',28);setVal('curve',70);setVal('randomize',10);
     setVal('outline',true);
     setVal('numColors',5);
@@ -379,6 +435,7 @@ const PRESETS = {
     lastPoints=0;
   },
   juicy: () => { resetAll();
+    setPattern('river');
     setVal('stripHeight',100);setVal('stripCount',2);setVal('points',10);setVal('curve',50);setVal('randomize',60);
     setVal('numColors',5);
     document.getElementById('c1').value='#0f5cbf';document.getElementById('c2').value='#25d964';
@@ -388,6 +445,7 @@ const PRESETS = {
     lastPoints=0;
   },
   guts: () => { resetAll();
+    setPattern('vertical');
     setVal('stripHeight',100);setVal('stripCount',3);setVal('points',28);setVal('curve',60);setVal('randomize',20);
     setVal('outline',true);
     setVal('numColors',5);
@@ -398,6 +456,7 @@ const PRESETS = {
     lastPoints=0;
   },
   spiral: () => { resetAll();
+    setPattern('spiral');
     setVal('stripHeight',80);setVal('stripCount',2);setVal('points',15);setVal('curve',80);setVal('randomize',5);
     setVal('numColors',3);
     document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffffff';
@@ -406,6 +465,7 @@ const PRESETS = {
     lastPoints=0;
   },
   wave: () => { resetAll();
+    setPattern('orbit');
     setVal('stripHeight',120);setVal('stripCount',4);setVal('points',12);setVal('curve',40);setVal('randomize',15);
     setVal('numColors',4);
     document.getElementById('c1').value='#000000';document.getElementById('c2').value='#ff0000';
@@ -413,7 +473,7 @@ const PRESETS = {
     document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000';
     lastPoints=0;
   },
-  pride: () => { prideMode = true; lastPoints=0; },
+  pride: () => { prideMode = true; setPattern('orbit'); lastPoints=0; },
 };
 
 function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }

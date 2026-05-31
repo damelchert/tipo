@@ -1,8 +1,8 @@
 /* ============================================================
    TIPÓ — Shared MP4 Recorder
-   Reusable across all tools. Uses WebCodecs + mp4-muxer for 2D,
-   MediaRecorder/captureStream for WEBGL canvases.
-   Always outputs .mp4 when possible.
+   Reusable across all tools. Defaults to MediaRecorder/captureStream
+   because it keeps animation responsive during recording and finalizes
+   reliably. WebCodecs direct MP4 is still available as an opt-in mode.
    ============================================================ */
 
 class TipoRecorder {
@@ -11,6 +11,7 @@ class TipoRecorder {
     this.fps = options.fps || 30;
     this.onStatusChange = options.onStatusChange || (() => {});
     this.onProgress = options.onProgress || (() => {});
+    this.preferStream = options.preferStream !== false;
 
     this.isRecording = false;
     this.muxer = null;
@@ -25,6 +26,9 @@ class TipoRecorder {
     this._mediaRecorder = null;
     this._chunks = null;
     this._streamFormat = null;
+    this._streamTrack = null;
+    this._streamFrameTimer = null;
+    this._lastStreamFrameTime = -1;
 
     // Timer
     this.timerInterval = null;
@@ -44,15 +48,16 @@ class TipoRecorder {
   async start(bitrate = 8000000) {
     if (this.isRecording) return;
 
+    this._resetSession();
+
     // Check if canvas is WEBGL (getContext('2d') returns null on WEBGL canvas)
     const is2D = !!this.canvas.getContext('2d');
-
-    if (is2D && this.hasMp4Support) {
+    if (is2D && this.hasMp4Support && !this.preferStream) {
       // 2D canvas: direct MP4 encoding via VideoEncoder (best quality)
       this._startMP4(bitrate);
     } else {
-      // WEBGL or no VideoEncoder: use captureStream + MediaRecorder
-      this._startStream(bitrate);
+      // Default path: keeps the render loop smooth and finalizes quickly.
+      this._startStream(bitrate, is2D);
     }
 
     this.isRecording = true;
@@ -72,6 +77,7 @@ class TipoRecorder {
       target,
       video: { codec: 'avc', width: this.encW, height: this.encH },
       fastStart: 'in-memory',
+      firstTimestampBehavior: 'offset',
     });
 
     this.encoder = new VideoEncoder({
@@ -92,8 +98,19 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
   }
 
-  _startStream(bitrate) {
-    const stream = this.canvas.captureStream(this.fps);
+  _startStream(bitrate, copyCanvas = false) {
+    this.encW = this.canvas.width + (this.canvas.width % 2);
+    this.encH = this.canvas.height + (this.canvas.height % 2);
+    const sourceCanvas = copyCanvas ? this._createStreamCanvas() : this.canvas;
+    if (copyCanvas) this._paintStreamCanvas();
+
+    let stream = sourceCanvas.captureStream(0);
+    this._streamTrack = stream.getVideoTracks()[0] || null;
+    if (!this._streamTrack || typeof this._streamTrack.requestFrame !== 'function') {
+      stream.getTracks().forEach(track => track.stop());
+      stream = sourceCanvas.captureStream(this.fps);
+      this._streamTrack = stream.getVideoTracks()[0] || null;
+    }
 
     // Try MP4 first (Chrome 130+), then WebM
     let mimeType, ext;
@@ -122,6 +139,55 @@ class TipoRecorder {
     };
     this._mediaRecorder.start(100);
     this.frameCount = 0;
+    this._lastStreamFrameTime = -1;
+    this._requestStreamFrame(true);
+    this._streamFrameTimer = setInterval(() => {
+      this._requestStreamFrame();
+    }, 1000 / this.fps);
+  }
+
+  _resetSession() {
+    this.frameCount = 0;
+    this.lastCaptureTime = -1;
+    this.encW = 0;
+    this.encH = 0;
+    this._chunks = null;
+    this._streamFormat = null;
+    this._streamTrack = null;
+    this._lastStreamFrameTime = -1;
+    if (this._streamFrameTimer) clearInterval(this._streamFrameTimer);
+    this._streamFrameTimer = null;
+    this._recCanvas = null;
+    this._recCtx = null;
+  }
+
+  _requestStreamFrame(force = false) {
+    if (!this._streamTrack && !this._recCanvas) return false;
+    const now = performance.now();
+    const minDelta = 1000 / this.fps * 0.75;
+    if (!force && this._lastStreamFrameTime >= 0 && now - this._lastStreamFrameTime < minDelta) return false;
+    this._lastStreamFrameTime = now;
+    this._paintStreamCanvas();
+    if (this._streamTrack && typeof this._streamTrack.requestFrame === 'function') {
+      this._streamTrack.requestFrame();
+    }
+    this.frameCount++;
+    return true;
+  }
+
+  _createStreamCanvas() {
+    this._recCanvas = document.createElement('canvas');
+    this._recCanvas.width = this.encW;
+    this._recCanvas.height = this.encH;
+    this._recCtx = this._recCanvas.getContext('2d');
+    return this._recCanvas;
+  }
+
+  _paintStreamCanvas() {
+    if (!this._recCtx) return;
+    this._recCtx.fillStyle = '#000';
+    this._recCtx.fillRect(0, 0, this.encW, this.encH);
+    this._recCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
   }
 
   // Call this every frame from your render loop
@@ -130,7 +196,11 @@ class TipoRecorder {
 
     // Stream mode: MediaRecorder captures automatically
     if (this._mediaRecorder) {
-      this.frameCount++;
+      if (this._recCanvas || (this._streamTrack && typeof this._streamTrack.requestFrame === 'function')) {
+        this._requestStreamFrame();
+      } else {
+        this.frameCount++;
+      }
       return;
     }
 
@@ -177,6 +247,7 @@ class TipoRecorder {
   }
 
   async _stopMP4() {
+    if (this.frameCount === 0) this.captureFrame();
     this.onProgress({ phase: 'flushing', percent: 30, frames: this.frameCount });
 
     const flushStart = performance.now();
@@ -190,7 +261,10 @@ class TipoRecorder {
       });
     }, 200);
 
-    await this.encoder.flush();
+    await Promise.race([
+      this.encoder.flush(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('MP4 encoder flush timed out')), 15000))
+    ]);
     clearInterval(progTimer);
     this.onProgress({ phase: 'muxing', percent: 90 });
 
@@ -212,8 +286,13 @@ class TipoRecorder {
   }
 
   async _stopStream() {
+    if (this._streamFrameTimer) clearInterval(this._streamFrameTimer);
+    this._streamFrameTimer = null;
+    this._requestStreamFrame(true);
+    this.onProgress({ phase: 'muxing', percent: 80, frames: this.frameCount });
     await new Promise(resolve => {
       this._mediaRecorder.onstop = resolve;
+      if (this._mediaRecorder.state === 'recording') this._mediaRecorder.requestData();
       this._mediaRecorder.stop();
     });
 
@@ -225,6 +304,9 @@ class TipoRecorder {
 
     this._mediaRecorder = null;
     this._chunks = null;
+    if (this._streamTrack) this._streamTrack.stop();
+    this._streamTrack = null;
+    this.onProgress({ phase: 'done', percent: 100, duration, sizeMB });
     this.onStatusChange('idle');
 
     return { blob, filename: `tipo-export.${ext}`, duration, sizeMB };

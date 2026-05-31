@@ -429,21 +429,34 @@ const TipoUI = {
     if (!this.recorder) return;
     const btn = document.getElementById('recBtn');
     if (!this.recorder.isRecording) {
-      await this.recorder.start(8000000);
-      btn.textContent = 'Stop Recording';
-      btn.style.borderColor = 'var(--red)';
+      try {
+        await this.recorder.start(8000000);
+        btn.textContent = 'Stop Recording';
+        btn.style.borderColor = 'var(--red)';
+      } catch (err) {
+        console.error(err);
+        this.showToast('Recording failed to start');
+      }
     } else {
-      // Only show progress overlay for MP4 (encoder-based) — WebM stops instantly
-      const isMP4 = !!this.recorder.encoder;
       const prog = document.getElementById('exportProgress');
-      if (isMP4 && prog) prog.classList.add('open');
-      const result = await this.recorder.stop();
-      TipoRecorder.download(result.blob, result.filename);
-      const ext = result.filename.endsWith('.mp4') ? 'MP4' : 'WebM';
-      this.showToast(`${ext} exported (${result.sizeMB} MB)`);
-      if (prog) prog.classList.remove('open');
-      btn.textContent = 'Record MP4';
-      btn.style.borderColor = '';
+      if (prog) prog.classList.add('open');
+      btn.textContent = 'Finalizing...';
+      btn.disabled = true;
+      try {
+        const result = await this.recorder.stop();
+        if (!result || !result.blob || result.blob.size === 0) throw new Error('Empty recording');
+        TipoRecorder.download(result.blob, result.filename);
+        const ext = result.filename.endsWith('.mp4') ? 'MP4' : 'WebM';
+        this.showToast(`${ext} exported (${result.sizeMB} MB)`);
+      } catch (err) {
+        console.error(err);
+        this.showToast('Export failed');
+      } finally {
+        if (prog) prog.classList.remove('open');
+        btn.disabled = false;
+        btn.textContent = 'Record MP4';
+        btn.style.borderColor = '';
+      }
     }
   },
 

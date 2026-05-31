@@ -48,6 +48,7 @@
     <div class="section-title">Layers</div>
     <div class="range-row"><span class="range-label">Count</span><input type="range" id="stackCount" min="1" max="40" value="14"><span class="range-value" id="stackCountVal">14</span></div>
     <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="50" max="300" value="100"><span class="range-value" id="fontSizeVal">100</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="motionSpeed" min="0" max="200" value="100"><span class="range-value" id="motionSpeedVal">1.00</span></div>
     <div class="range-row"><span class="range-label">Inner H</span><input type="range" id="innerH" min="-500" max="1500" value="100"><span class="range-value" id="innerHVal">100</span></div>
     <div class="range-row"><span class="range-label">Inner V</span><input type="range" id="innerV" min="-500" max="1500" value="100"><span class="range-value" id="innerVVal">100</span></div>
     <div class="range-row"><span class="range-label">Rotate</span><input type="range" id="rotateFactor" min="-78" max="78" value="0"><span class="range-value" id="rotateFactorVal">0.00</span></div>
@@ -120,6 +121,7 @@ function setup() {
   TipoUI.init({
     mode: 'layers',
     formatters: {
+      motionSpeed: { div: 100, decimals: 2 },
       rotateFactor: { div: 100, decimals: 2 }
     }
   });
@@ -153,6 +155,7 @@ function draw() {
   const txt = (document.getElementById('textInput').value || 'TIPÓ ').trimEnd() + ' ';
   const stacks = val('stackCount');
   const fSize = val('fontSize');
+  const speed = val('motionSpeed') / 100;
   const innerH = val('innerH');
   const innerV = val('innerV');
   const rotFactor = val('rotateFactor') / 100;
@@ -167,7 +170,8 @@ function draw() {
   const stripH = fSize * 1.12;
   const cx = width / 2;
   const cy = height / 2;
-  const scrollPhase = (frameCount * 0.035) % 1;
+  const t = frameCount * speed;
+  const scrollPhase = (t * 0.035) % 1;
   const maxH = height * 0.62;
   const maxV = width * 0.62;
   const startH = map(innerH, -500, 1500, -height * 0.18, height * 0.32);
@@ -180,21 +184,21 @@ function draw() {
     const alpha = lerp(45, 255, depth);
     const hDist = lerp(startH, maxH, depth);
     const vDist = lerp(startV, maxV, depth);
-    const angle = rotFactor * (i - stacks / 2) * 0.16 + sin(frameCount * 0.01 + i) * rotFactor * 0.08;
+    const angle = rotFactor * (i - stacks / 2) * 0.16 + sin(t * 0.01 + i) * rotFactor * 0.08;
     const layerBlock = prideMode ? prideColors[i % prideColors.length] : blockC;
     const layerText = prideMode ? prideColors[(i + 3) % prideColors.length] : txtC;
     const stripW = max(width * 1.45, textRunW * 3);
 
-    drawLayerStrip(cx, cy - hDist, stripW, stripH * scale, angle, txt, layerText, layerBlock, strkC, alpha, i);
-    drawLayerStrip(cx, cy + hDist, stripW, stripH * scale, -angle, txt, layerText, layerBlock, strkC, alpha, i + 23);
-    drawLayerStrip(cx - vDist, cy, stripW, stripH * scale, HALF_PI + angle, txt, layerText, layerBlock, strkC, alpha, i + 47);
-    drawLayerStrip(cx + vDist, cy, stripW, stripH * scale, HALF_PI - angle, txt, layerText, layerBlock, strkC, alpha, i + 71);
+    drawLayerStrip(cx, cy - hDist, stripW, stripH * scale, angle, txt, layerText, layerBlock, strkC, alpha, i, speed);
+    drawLayerStrip(cx, cy + hDist, stripW, stripH * scale, -angle, txt, layerText, layerBlock, strkC, alpha, i + 23, speed);
+    drawLayerStrip(cx - vDist, cy, stripW, stripH * scale, HALF_PI + angle, txt, layerText, layerBlock, strkC, alpha, i + 47, speed);
+    drawLayerStrip(cx + vDist, cy, stripW, stripH * scale, HALF_PI - angle, txt, layerText, layerBlock, strkC, alpha, i + 71, speed);
   }
 
   TipoUI.captureFrame();
 }
 
-function drawLayerStrip(x, y, w, h, angle, txt, txtC, blockC, strokeC, alpha, seed) {
+function drawLayerStrip(x, y, w, h, angle, txt, txtC, blockC, strokeC, alpha, seed, speed) {
   push();
   translate(x, y);
   rotate(angle);
@@ -222,7 +226,7 @@ function drawLayerStrip(x, y, w, h, angle, txt, txtC, blockC, strokeC, alpha, se
   textAlign(LEFT, CENTER);
   const run = txt + ' ';
   const runW = max(textWidth(run), h);
-  const offset = -((frameCount * (2.4 + seed * 0.018)) % runW);
+  const offset = -((frameCount * speed * (2.4 + seed * 0.018)) % runW);
   for (let tx = -w / 2 + offset - runW; tx < w / 2 + runW; tx += runW) {
     text(run, tx, 0);
   }
@@ -238,6 +242,7 @@ function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
 function resetAll() {
   prideMode = false;
   setVal('stackCount', 14); setVal('fontSize', 100);
+  setVal('motionSpeed', 100);
   setVal('innerH', 100); setVal('innerV', 100); setVal('rotateFactor', 0);
   document.getElementById('typeColor').value = '#000000';
   document.getElementById('blockColor').value = '#ffffff';
