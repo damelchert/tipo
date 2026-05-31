@@ -349,7 +349,8 @@ const TipoUI = {
 
     // Highlight active chip
     document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
-    if (event && event.target) event.target.classList.add('active');
+    const ev = typeof window !== 'undefined' ? window.event : null;
+    if (ev && ev.target && ev.target.classList) ev.target.classList.add('active');
 
     if (!changed) return;
 

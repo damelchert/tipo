@@ -237,7 +237,7 @@ function draw() {
   for (let m = 0; m < stripCnt; m++) {
     const stripTop = -stripH / 2 + (m * stripH) / stripCnt;
     const stripBot = -stripH / 2 + ((m + 1) * stripH) / stripCnt;
-    const rSpeed = 0.5 + random() * 1.5; // Random speed per strip
+    const rSpeed = 0.5 + (m + 1) * 0.4; // Deterministic speed per strip
     let culmDist = 0;
 
     // For each segment between particles

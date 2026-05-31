@@ -150,11 +150,13 @@ function draw() {
 
   const layerDepth = 200;
 
-  // Text dimensions
+  // Text dimensions — use a temporary 2D graphics to measure reliably
+  push();
   textSize(fSize);
   textAlign(LEFT, TOP);
-  const sWidth = textWidth(txt);
+  const sWidth = textWidth(txt) || fSize * txt.length * 0.6;
   const sHeight = fSize * 1.2;
+  pop();
 
   // Shelf dimensions
   const shelfH = sHeight;
