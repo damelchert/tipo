@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Kinetic Type & Visual Tools</title>
 <link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <style>
 body { overflow: hidden; }
 
@@ -23,21 +24,75 @@ body { overflow: hidden; }
 /* Header bar */
 .tipo-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 32px; border-bottom: 1px solid var(--border-1);
+  padding: 0 32px; height: 56px;
   background: var(--bg-1); z-index: 10;
+  position: relative; overflow: hidden;
 }
+.tipo-header-line {
+  position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-brand, #99E0D2) 15%, var(--accent-warm, #D4A040) 50%, var(--accent-brand, #99E0D2) 85%, transparent 100%);
+  background-size: 200% 100%;
+  opacity: 0.5;
+  animation: header-line-flow 4s ease-in-out infinite;
+}
+@keyframes header-line-flow {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+
+/* Logo — each letter is a span */
 .tipo-header-logo {
-  font-size: 18px; font-weight: 700; letter-spacing: 4px;
-  color: var(--text-0); cursor: pointer;
+  display: flex; align-items: center; gap: 0;
+  cursor: pointer; position: relative;
+  height: 100%;
 }
+.tipo-header-logo .logo-char {
+  font-size: 20px; font-weight: 700; letter-spacing: 4px;
+  color: var(--text-0);
+  display: inline-block;
+  transition: color 0.3s;
+  will-change: transform;
+}
+.tipo-header-logo:hover .logo-char {
+  color: var(--accent-brand, #99E0D2);
+}
+.tipo-header-logo .logo-accent {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-warm, #D4A040);
+  display: inline-block; margin-left: 2px;
+  opacity: 0; transform: scale(0);
+  vertical-align: super; font-size: 0;
+}
+
+/* Ghost text — large TIPÓ filling header background */
+.header-ghost {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; overflow: hidden;
+}
+.header-ghost-char {
+  font-size: 120px; font-weight: 900; letter-spacing: 20px;
+  color: var(--text-0); opacity: 0.025;
+  display: inline-block; will-change: transform;
+  line-height: 1;
+}
+
+/* Breadcrumb */
 .tipo-breadcrumb {
   display: flex; align-items: center; gap: 8px;
   font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5);
+  height: 100%; z-index: 2;
 }
-.tipo-breadcrumb span { cursor: pointer; transition: color 0.15s; }
-.tipo-breadcrumb span:hover { color: var(--text-0); }
+.tipo-breadcrumb span { cursor: pointer; transition: color 0.2s; }
+.tipo-breadcrumb span:hover { color: var(--accent-brand, #99E0D2); }
 .tipo-breadcrumb .sep { color: var(--text-6); cursor: default; }
 .tipo-breadcrumb .current { color: var(--text-2); cursor: default; }
+
+/* Floating particles behind header */
+.header-particle {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  opacity: 0;
+}
 
 /* Main content area */
 .tipo-main {
@@ -70,6 +125,17 @@ body { overflow: hidden; }
 }
 :root[data-theme="light"] .tipo-split-label { color: #000; text-shadow: none; }
 .tipo-split-panel:hover .tipo-split-label { transform: scale(1.05); }
+
+/* Split text — individual animated chars */
+.split-char {
+  display: inline-block;
+  will-change: transform;
+  transition: color 0.2s;
+}
+.split-char.space { width: 0.3em; }
+.tipo-split-panel:hover .split-char {
+  color: var(--accent-brand, #99E0D2);
+}
 
 .tipo-split-sub {
   font-size: 10px; letter-spacing: 3px; color: var(--accent-brand, #99E0D2);
@@ -154,6 +220,8 @@ body { overflow: hidden; }
   width: 100%; height: 100%;
   object-fit: cover;
   opacity: 0.6;
+  mix-blend-mode: lighten;
+  filter: brightness(1.05) saturate(0.9);
 }
 
 /* 3D quadrant — cylinder + ribbon + flag layers */
@@ -276,11 +344,17 @@ body { overflow: hidden; }
 
 <div class="tipo-nav">
   <!-- HEADER -->
-  <div class="tipo-header">
-    <div class="tipo-header-logo" onclick="goHome()">TIPÓ</div>
+  <div class="tipo-header" id="tipoHeader">
+    <div class="header-ghost" id="headerGhost">
+      <span class="header-ghost-char">T</span><span class="header-ghost-char">I</span><span class="header-ghost-char">P</span><span class="header-ghost-char">Ó</span>
+    </div>
+    <div class="tipo-header-logo" id="tipoLogo" onclick="goHome()">
+      <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
+    </div>
     <div class="tipo-breadcrumb" id="breadcrumb">
       <span class="current">Home</span>
     </div>
+    <div class="tipo-header-line"></div>
   </div>
 
   <!-- MAIN -->
@@ -293,8 +367,8 @@ body { overflow: hidden; }
           <div class="tipo-preview-bg">
             <div class="dither-preview" id="ditherGrid"></div>
           </div>
-          <div class="tipo-split-label">Visual Tools</div>
-          <div class="tipo-split-sub">Dithering &bull; Retícula &bull; Glitch &bull; ASCII &bull; Overlays</div>
+          <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
+          <div class="tipo-split-sub split-sub">Dithering &bull; Retícula &bull; Glitch &bull; ASCII &bull; Overlays</div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -302,8 +376,8 @@ body { overflow: hidden; }
               <source src="assets/kinetic-preview.mp4" type="video/mp4">
             </video>
           </div>
-          <div class="tipo-split-label">Kinetic Type</div>
-          <div class="tipo-split-sub">22 modes &bull; 3D &bull; Animation</div>
+          <div class="tipo-split-label split-text" data-text="Kinetic Type">Kinetic Type</div>
+          <div class="tipo-split-sub split-sub">22 modes &bull; 3D &bull; Animation</div>
         </div>
       </div>
     </div>
@@ -644,6 +718,255 @@ function handleHash() {
 }
 handleHash();
 window.addEventListener('hashchange', handleHash);
+
+// ============================================================
+// GSAP — Animation System (10 random animations)
+// ============================================================
+
+const logoChars = document.querySelectorAll('.logo-char');
+const ghostChars = document.querySelectorAll('.header-ghost-char');
+const logo = document.getElementById('tipoLogo');
+const header = document.getElementById('tipoHeader');
+const originalChars = 'TIPÓ';
+const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?░▒▓█▄▀';
+let scrambleInterval = null;
+let lastAnimIndex = -1;
+
+// ---- 10 LOGO ENTRANCE ANIMATIONS ----
+const logoAnimations = [
+  // 0: Drop from above with bounce
+  (chars, ghosts) => {
+    gsap.from(chars, { y: -60, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'bounce.out' });
+    gsap.from(ghosts, { y: -200, opacity: 0, duration: 0.8, stagger: 0.04, ease: 'power4.out' });
+  },
+  // 1: Rise from below with elastic
+  (chars, ghosts) => {
+    gsap.from(chars, { y: 40, opacity: 0, rotateX: -90, duration: 0.6, stagger: 0.08, ease: 'elastic.out(1,0.5)' });
+    gsap.from(ghosts, { y: 150, opacity: 0, duration: 1, stagger: 0.05, ease: 'power3.out' });
+  },
+  // 2: Scale from zero with rotation
+  (chars, ghosts) => {
+    gsap.from(chars, { scale: 0, rotation: 360, opacity: 0, duration: 0.6, stagger: 0.1, ease: 'back.out(2)' });
+    gsap.from(ghosts, { scale: 3, opacity: 0, duration: 0.8, ease: 'power2.out' });
+  },
+  // 3: Slide from left one by one
+  (chars, ghosts) => {
+    gsap.from(chars, { x: -100, opacity: 0, skewX: 30, duration: 0.5, stagger: 0.1, ease: 'power3.out' });
+    gsap.from(ghosts, { x: -400, opacity: 0, duration: 1.2, stagger: -0.08, ease: 'power2.out' });
+  },
+  // 4: Slide from right reversed
+  (chars, ghosts) => {
+    gsap.from(chars, { x: 100, opacity: 0, skewX: -30, duration: 0.5, stagger: { each: 0.1, from: 'end' }, ease: 'power3.out' });
+    gsap.from(ghosts, { x: 400, opacity: 0, duration: 1.2, stagger: { each: 0.08, from: 'end' }, ease: 'power2.out' });
+  },
+  // 5: Typewriter — each char pops in with scale punch
+  (chars, ghosts) => {
+    gsap.from(chars, { opacity: 0, scale: 1.8, duration: 0.15, stagger: 0.12, ease: 'power4.out' });
+    gsap.to(ghosts, { opacity: 0.04, duration: 0.3, stagger: 0.1, ease: 'power2.out' });
+  },
+  // 6: Flip in 3D on Y axis
+  (chars, ghosts) => {
+    gsap.from(chars, { rotateY: 90, opacity: 0, duration: 0.6, stagger: 0.08, ease: 'power3.out', transformPerspective: 600 });
+    gsap.from(ghosts, { rotateY: -90, opacity: 0, duration: 0.8, stagger: 0.06, ease: 'power2.out' });
+  },
+  // 7: Random positions converge
+  (chars, ghosts) => {
+    chars.forEach(c => {
+      gsap.from(c, { x: (Math.random()-0.5)*200, y: (Math.random()-0.5)*80, rotation: (Math.random()-0.5)*60, opacity: 0, scale: 0.5 + Math.random(), duration: 0.7, ease: 'elastic.out(1,0.6)' });
+    });
+    gsap.from(ghosts, { scale: 0, rotation: 180, opacity: 0, duration: 1, stagger: 0.05, ease: 'back.out(1.5)' });
+  },
+  // 8: Glitch-in — fast scramble then reveal
+  (chars, ghosts) => {
+    gsap.from(chars, { opacity: 0, duration: 0.01 });
+    let it = 0;
+    const iv = setInterval(() => {
+      chars.forEach((c, i) => {
+        c.textContent = i < it ? originalChars[i] : scrambleChars[Math.floor(Math.random()*scrambleChars.length)];
+      });
+      it += 0.4;
+      if (it >= chars.length + 1) { clearInterval(iv); chars.forEach((c,i) => c.textContent = originalChars[i]); }
+    }, 30);
+    gsap.from(ghosts, { x: () => (Math.random()-0.5)*100, opacity: 0, duration: 0.5, stagger: 0.03, ease: 'power4.out' });
+  },
+  // 9: Wave — sine wave displacement
+  (chars, ghosts) => {
+    chars.forEach((c, i) => {
+      gsap.from(c, { y: Math.sin(i * 1.5) * 40, opacity: 0, duration: 0.6, delay: i * 0.08, ease: 'power2.out' });
+    });
+    ghosts.forEach((g, i) => {
+      gsap.from(g, { y: Math.cos(i * 2) * 100, opacity: 0, duration: 0.9, delay: i * 0.06, ease: 'power2.out' });
+    });
+  },
+];
+
+function playLogoAnimation() {
+  // Reset all chars
+  gsap.set(logoChars, { clearProps: 'all' });
+  gsap.set(ghostChars, { clearProps: 'all' });
+  logoChars.forEach((c, i) => c.textContent = originalChars[i]);
+
+  // Pick random animation (never repeat last)
+  let idx;
+  do { idx = Math.floor(Math.random() * logoAnimations.length); } while (idx === lastAnimIndex);
+  lastAnimIndex = idx;
+  logoAnimations[idx](logoChars, ghostChars);
+
+  // Always pop in accent dot after
+  gsap.fromTo('#logoAccent', { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'elastic.out(1,0.5)', delay: 0.6 });
+}
+
+// Play on initial load
+playLogoAnimation();
+
+// ---- BREADCRUMB ENTRANCE ----
+gsap.from('#breadcrumb', { opacity: 0, x: 20, duration: 0.5, ease: 'power2.out', delay: 0.4 });
+
+// ---- MAGNETIC HOVER ON LOGO ----
+logo.addEventListener('mousemove', (e) => {
+  logoChars.forEach((char) => {
+    const cr = char.getBoundingClientRect();
+    const dx = e.clientX - (cr.left + cr.width/2);
+    const dy = e.clientY - (cr.top + cr.height/2);
+    const d = Math.sqrt(dx*dx + dy*dy);
+    const s = Math.max(0, 1 - d/80);
+    gsap.to(char, { x: dx*s*0.3, y: dy*s*0.2, scale: 1+s*0.15, duration: 0.3, ease: 'power2.out' });
+  });
+  // Ghost follows with delay
+  ghostChars.forEach((g) => {
+    const gr = g.getBoundingClientRect();
+    const dx = e.clientX - (gr.left + gr.width/2);
+    const dy = e.clientY - (gr.top + gr.height/2);
+    const d = Math.sqrt(dx*dx + dy*dy);
+    const s = Math.max(0, 1 - d/300);
+    gsap.to(g, { x: dx*s*0.08, y: dy*s*0.05, duration: 0.8, ease: 'power1.out' });
+  });
+});
+
+logo.addEventListener('mouseleave', () => {
+  logoChars.forEach(c => gsap.to(c, { x:0, y:0, scale:1, duration: 0.6, ease: 'elastic.out(1,0.4)' }));
+  ghostChars.forEach(g => gsap.to(g, { x:0, y:0, duration: 1, ease: 'power2.out' }));
+});
+
+// ---- TEXT SCRAMBLE ON HOVER ----
+logo.addEventListener('mouseenter', () => {
+  let iteration = 0;
+  clearInterval(scrambleInterval);
+  scrambleInterval = setInterval(() => {
+    logoChars.forEach((char, i) => {
+      char.textContent = i < iteration ? originalChars[i] : scrambleChars[Math.floor(Math.random()*scrambleChars.length)];
+    });
+    iteration += 0.5;
+    if (iteration >= logoChars.length) { clearInterval(scrambleInterval); logoChars.forEach((c,i) => c.textContent = originalChars[i]); }
+  }, 40);
+  gsap.to('#logoAccent', { scale: 1.4, duration: 0.3, ease: 'power2.out', yoyo: true, repeat: 1 });
+});
+logo.addEventListener('mouseleave', () => {
+  clearInterval(scrambleInterval);
+  logoChars.forEach((c,i) => c.textContent = originalChars[i]);
+});
+
+// ---- RE-TRIGGER ANIMATION ON NAVIGATION ----
+const origGoHome = goHome;
+const origGoVisualTools = goVisualTools;
+const origGoKineticType = goKineticType;
+const origGoCategory = goCategory;
+
+goHome = function() { origGoHome(); playLogoAnimation(); };
+goVisualTools = function() { origGoVisualTools(); playLogoAnimation(); };
+goKineticType = function() { origGoKineticType(); playLogoAnimation(); };
+goCategory = function(cat) { origGoCategory(cat); playLogoAnimation(); };
+
+// ---- SPLIT TEXT (Visual Tools / Kinetic Type) ----
+document.querySelectorAll('.split-text').forEach(el => {
+  const text = el.getAttribute('data-text') || el.textContent;
+  el.innerHTML = text.split('').map(ch =>
+    ch === ' ' ? '<span class="split-char space"> </span>' :
+    `<span class="split-char">${ch}</span>`
+  ).join('');
+  gsap.from(el.querySelectorAll('.split-char'), {
+    y: 60, opacity: 0, rotateZ: () => (Math.random()-0.5)*20,
+    duration: 0.5, stagger: 0.03, ease: 'back.out(1.4)', delay: 0.4
+  });
+});
+
+gsap.from('.split-sub', { opacity: 0, y: 15, duration: 0.6, stagger: 0.15, ease: 'power2.out', delay: 0.9 });
+
+// ---- MAGNETIC + SCRAMBLE ON SPLIT PANELS ----
+document.querySelectorAll('.tipo-split-panel').forEach(panel => {
+  const label = panel.querySelector('.split-text');
+  if (!label) return;
+  const chars = label.querySelectorAll('.split-char:not(.space)');
+  const originalText = label.getAttribute('data-text');
+  const scrambleSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#&!?░▒▓';
+  let scrambleInt = null;
+
+  panel.addEventListener('mousemove', (e) => {
+    chars.forEach((ch) => {
+      const cr = ch.getBoundingClientRect();
+      const dx = e.clientX - (cr.left+cr.width/2);
+      const dy = e.clientY - (cr.top+cr.height/2);
+      const d = Math.sqrt(dx*dx+dy*dy);
+      const s = Math.max(0, 1-d/150);
+      gsap.to(ch, { x: dx*s*0.2, y: dy*s*0.15, scale: 1+s*0.2, duration: 0.3, ease: 'power2.out' });
+    });
+  });
+
+  panel.addEventListener('mouseenter', () => {
+    let iter = 0;
+    const letters = originalText.split('');
+    clearInterval(scrambleInt);
+    scrambleInt = setInterval(() => {
+      let ci = 0;
+      for (let j = 0; j < letters.length; j++) {
+        if (letters[j] !== ' ' && chars[ci]) {
+          chars[ci].textContent = ci < iter ? letters[j] : scrambleSet[Math.floor(Math.random()*scrambleSet.length)];
+          ci++;
+        }
+      }
+      iter += 0.6;
+      if (iter >= chars.length) {
+        clearInterval(scrambleInt);
+        ci = 0;
+        for (let j = 0; j < letters.length; j++) { if (letters[j] !== ' ' && chars[ci]) { chars[ci].textContent = letters[j]; ci++; } }
+      }
+    }, 35);
+  });
+
+  panel.addEventListener('mouseleave', () => {
+    clearInterval(scrambleInt);
+    const letters = originalText.split('');
+    let ci = 0;
+    for (let j = 0; j < letters.length; j++) { if (letters[j] !== ' ' && chars[ci]) { chars[ci].textContent = letters[j]; ci++; } }
+    chars.forEach(ch => gsap.to(ch, { x:0, y:0, scale:1, duration: 0.6, ease: 'elastic.out(1,0.4)' }));
+  });
+});
+
+// ---- FLOATING PARTICLES ----
+(function initHeaderParticles() {
+  const h = document.getElementById('tipoHeader');
+  const colors = ['#99E0D2', '#D4A040', '#99E0D2', '#E87830', '#D65C8C', '#2A8A7A'];
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'header-particle';
+    const size = 1.5 + Math.random() * 2.5;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.background = colors[i % colors.length];
+    p.style.left = (5 + Math.random() * 90) + '%';
+    p.style.top = (15 + Math.random() * 70) + '%';
+    h.appendChild(p);
+    gsap.to(p, {
+      opacity: 0.12 + Math.random() * 0.18,
+      x: () => (Math.random()-0.5) * 80,
+      y: () => (Math.random()-0.5) * 20,
+      duration: 3 + Math.random() * 5,
+      repeat: -1, yoyo: true,
+      ease: 'sine.inOut',
+      delay: Math.random() * 3
+    });
+  }
+})();
 </script>
 
 </body>

@@ -215,10 +215,24 @@ Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
 - `audiotype.html` commitado e deployed no Vercel (estava untracked)
 - Card na landing page já existia, agora funcional
 
-### Próximo: Header redesign
-- Header atual é flat demais — precisa ser mais disruptivo
-- Pesquisar GSAP (GreenSock Animation Platform) para animações premium
-- Objetivo: header que transmita a identidade visual + convide à exploração
+### Header — GSAP implementado
+- GSAP 3.12.5 adicionado à landing page
+- Logo "TIPÓ" com letras individuais: magnetic hover, text scramble, elastic spring
+- Ghost text (120px) preenchendo o fundo do header — reage ao mouse
+- 10 animações de entrada alternando randomicamente a cada navegação (drop, elastic, 3D flip, scatter, glitch, wave, typewriter, etc.)
+- Linha animada mint→ouro fluindo no bottom do header
+- Partículas flutuantes mint + ouro
+- "Visual Tools" e "Kinetic Type" com split chars + scramble + magnetic hover
+- Vídeo 3D: mix-blend-mode lighten pra fundir preto puro com warm black
+
+### Próximo: Quadrant animations (3D, 2D, Composition, Animation)
+- As animações CSS atuais dos quadrantes kinetic type são amadoras — substituir por GSAP
+- Cada quadrante precisa de animação crafted que reflita a essência da categoria:
+  - **3D:** perspectiva, rotação 3D, depth, parallax
+  - **2D:** distorção, wave, ribbon flow
+  - **Composition:** arranjo circular, badge rotation, scatter→organize
+  - **Animation:** snap/bounce, elastic, timing choreography
+- Paleta de cores dos quadrantes está OK — manter
 
 ---
 
