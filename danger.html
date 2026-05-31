@@ -106,30 +106,38 @@
 <script>
 // ============================================================
 // TIPÓ — DANGER MODE
-// Perlin noise mesh distortion on text textures.
-// Text rendered to off-screen buffer, then mapped onto
-// animated vertex grid with noise-based displacement.
+// Perlin noise distortion on text buffers.
+// Text is rendered to an off-screen 2D buffer, then displaced
+// in a cell grid so this mode stays in the 2D export path.
 // ============================================================
-let font, recorder;
+let font, recorder, resizeObserver;
 let prideMode = false;
 const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
 let textBuffers = [];
 let lastText = '';
 let lastFontSize = 0;
 let lastLeading = 0;
+let lastTypeColor = '';
+let lastCanvasW = 0;
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
-  setAttributes('preserveDrawingBuffer', true);
-  const c = createCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight,
-    WEBGL
-  );
-  c.parent('canvasContainer');
+  const container = document.getElementById('canvasContainer');
+  const c = createCanvas(10, 10);
+  c.parent(container);
+  pixelDensity(1);
   textFont(font);
   frameRate(30);
+  fitCanvas();
+  requestAnimationFrame(fitCanvas);
+  if ('ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(() => {
+      fitCanvas();
+      lastText = '';
+    });
+    resizeObserver.observe(container);
+  }
 
   TipoUI.init({
     mode: 'danger',
@@ -143,13 +151,21 @@ function setup() {
   TipoMouse.init(c);
 }
 
-function windowResized() {
-  resizeCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight
-  );
-  lastText = ''; // Force rebuild
+function getCanvasSize() {
+  const container = document.getElementById('canvasContainer');
+  const rect = container.getBoundingClientRect();
+  return {
+    w: max(1, round(rect.width || container.clientWidth || window.innerWidth)),
+    h: max(1, round(rect.height || container.clientHeight || window.innerHeight))
+  };
 }
+
+function fitCanvas() {
+  const s = getCanvasSize();
+  if (width !== s.w || height !== s.h) resizeCanvas(s.w, s.h);
+}
+
+function windowResized() { fitCanvas(); lastText = ''; }
 
 function val(id) { return TipoUI.val(id); }
 function chk(id) { return TipoUI.chk(id); }
@@ -160,30 +176,30 @@ function easer(step) {
   return pow(step, 4) / (pow(step, 4) + pow(1 - step, 4));
 }
 
-// Build text textures
-function buildTextures(txt, fSize, ldng) {
+// Build one transparent text texture, then distort it in 2D cells.
+function buildTextures(txt, fSize, ldng, foreC) {
   const lines = txt.split('|');
   textBuffers = [];
+  const lineH = fSize * 1.18;
+  const leadingPx = fSize * ldng;
+  const totalH = max(1, lines.length * lineH + max(0, lines.length - 1) * leadingPx);
+  const g = createGraphics(width, ceil(totalH));
+  g.pixelDensity(1);
+  g.clear();
+  g.noStroke();
+  g.textFont(font);
+  g.textSize(fSize);
+  g.textAlign(CENTER, CENTER);
   for (let z = 0; z < lines.length; z++) {
-    const line = lines[z];
-    const g = createGraphics(width, fSize * 1.3);
-    if (prideMode) {
-      g.background(prideColors[(z + 3) % 6]);
-      g.fill(prideColors[z % 6]);
-    } else {
-      g.background(255);
-      g.fill(0);
-    }
-    g.noStroke();
-    g.textFont(font);
-    g.textSize(fSize);
-    g.textAlign(CENTER, CENTER);
-    g.text(line, g.width / 2, g.height / 2);
-    textBuffers.push(g);
+    g.fill(prideMode ? prideColors[z % prideColors.length] : foreC);
+    const y = z * (lineH + leadingPx) + lineH / 2;
+    g.text(lines[z], g.width / 2, y);
   }
+  textBuffers.push(g);
 }
 
 function draw() {
+  fitCanvas();
   TipoMouse.update();
   const isInvert = chk('invert');
   const foreC = isInvert ? '#ffffff' : document.getElementById('typeColor').value;
@@ -200,84 +216,79 @@ function draw() {
   const ldng = val('leading') / 100;
 
   // Rebuild textures if needed
-  if (txt !== lastText || fSize !== lastFontSize || ldng !== lastLeading) {
-    buildTextures(txt, fSize, ldng);
+  if (
+    txt !== lastText ||
+    fSize !== lastFontSize ||
+    ldng !== lastLeading ||
+    foreC !== lastTypeColor ||
+    width !== lastCanvasW
+  ) {
+    buildTextures(txt, fSize, ldng, foreC);
     lastText = txt;
     lastFontSize = fSize;
     lastLeading = ldng;
+    lastTypeColor = foreC;
+    lastCanvasW = width;
   }
 
-  const lines = txt.split('|');
-  const totalH = lines.length * fSize * 1.3 + (lines.length - 1) * fSize * ldng;
-
-  push();
-  translate(-width / 2, -totalH / 2);
-
-  for (let z = 0; z < textBuffers.length; z++) {
-    const stripS = textBuffers[z];
-    if (!stripS) continue;
-
-    push();
-    textureMode(NORMAL);
-    texture(stripS);
-    noStroke();
-
-    const yOff = z * (fSize * 1.3 + fSize * ldng);
-    translate(0, yOff);
-
-    const xSpace = 1.0 / cols;
-    const ySpace = 1.0 / rws;
-
-    // Mouse-reactive anchor point: distortion center follows mouse
-    let anchorX = stripS.width;
-    let anchorY = -stripS.height / 2;
-    if (chk('mouseReact') && TipoMouse.active) {
-      const mStr = val('mouseStr') / 100;
-      anchorX = lerp(anchorX, (TipoMouse.sx * 0.5 + 0.5) * stripS.width, mStr);
-      anchorY = lerp(anchorY, (TipoMouse.sy * 0.5 + 0.5) * stripS.height, mStr);
-    }
-    const baseSpot = dist(anchorX, anchorY, 0, 0);
-
-    for (let y = 0; y < rws; y++) {
-      beginShape(TRIANGLE_STRIP);
-
-      for (let x = 0; x <= cols; x++) {
-        // Two vertices per column: top and bottom of this row
-        for (let dy = 0; dy <= 1; dy++) {
-          const px = x * xSpace;
-          const py = (y + dy) * ySpace;
-          const screenX = px * stripS.width;
-          const screenY = py * stripS.height;
-
-          // Distance from anchor point
-          const d = dist(screenX, screenY, anchorX, anchorY);
-          const distMap = constrain(map(d, 0, baseSpot, 1, 0), 0, 1);
-          const radiusMap = easer(distMap) * radNoise;
-
-          // Perlin noise angle
-          const noiseVal = noise(
-            (screenX - nSpeed * 15 * frameCount) * 0.001,
-            (screenY + z * rws + nSpeed * 5 * frameCount) * 0.001,
-            frameCount * nSpeed * 0.001
-          );
-          const noiseAngle = map(noiseVal, 0, 1, -tumult, tumult);
-
-          // Displaced position
-          const fx = screenX + sin(noiseAngle) * radiusMap * stripS.width;
-          const fy = screenY + cos(noiseAngle) * radiusMap * stripS.height;
-
-          vertex(fx, fy, 0, px, py);
-        }
-      }
-
-      endShape();
-    }
-
-    pop();
-  }
-  pop();
+  const buffer = textBuffers[0];
+  if (!buffer) return;
+  drawDistortedBuffer(buffer, cols, rws, nSpeed, radNoise, tumult);
 
   TipoUI.captureFrame();
+}
+
+function drawDistortedBuffer(buffer, cols, rws, nSpeed, radNoise, tumult) {
+  const ctx = drawingContext;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+
+  const drawCols = min(max(1, cols), 110);
+  const drawRows = min(max(1, rws), 110);
+  const cellW = buffer.width / drawCols;
+  const cellH = buffer.height / drawRows;
+  const topY = height / 2 - buffer.height / 2;
+  let anchorX = width / 2;
+  let anchorY = height / 2;
+
+  if (chk('mouseReact') && TipoMouse.active) {
+    const mStr = val('mouseStr') / 100;
+    anchorX = lerp(anchorX, (TipoMouse.sx * 0.5 + 0.5) * width, mStr);
+    anchorY = lerp(anchorY, (TipoMouse.sy * 0.5 + 0.5) * height, mStr);
+  }
+
+  const baseSpot = max(width, height) * 0.72;
+  const strength = radNoise * min(width, height) * 0.22;
+
+  ctx.globalAlpha = 0.18;
+  ctx.drawImage(buffer.elt, 0, topY);
+  ctx.globalAlpha = 1;
+
+  for (let y = 0; y < drawRows; y++) {
+    for (let x = 0; x < drawCols; x++) {
+      const sx = x * cellW;
+      const sy = y * cellH;
+      const cx = sx + cellW / 2;
+      const cy = topY + sy + cellH / 2;
+      const d = dist(cx, cy, anchorX, anchorY);
+      const falloff = easer(constrain(1 - d / baseSpot, 0, 1));
+      const n = noise(
+        (cx - nSpeed * 18 * frameCount) * 0.004,
+        (cy + nSpeed * 8 * frameCount) * 0.004,
+        frameCount * nSpeed * 0.0009
+      );
+      const angle = map(n, 0, 1, -tumult, tumult);
+      const lineWave = sin((cy + frameCount * nSpeed) * 0.025) * strength * 0.08;
+      const dx = sx + cos(angle) * strength * falloff + lineWave;
+      const dy = topY + sy + sin(angle) * strength * falloff;
+      ctx.drawImage(
+        buffer.elt,
+        sx, sy, cellW + 1, cellH + 1,
+        dx, dy, cellW + 1, cellH + 1
+      );
+    }
+  }
+  ctx.restore();
 }
 
 // ============================================================

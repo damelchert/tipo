@@ -94,25 +94,28 @@
 <script>
 // ============================================================
 // TIPÓ — LAYERS MODE
-// 3D stacking text layers with Z-scroll animation.
-// 4-fold rotational symmetry, pinch geometry, depth cycling.
+// 2D stacked text strips with depth cycling.
+// 4-fold symmetry, clipped strips, stable MP4 export path.
 // ============================================================
-let font, recorder;
+let font, recorder, resizeObserver;
 let prideMode = false;
 const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
-  setAttributes('preserveDrawingBuffer', true);
-  const c = createCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight,
-    WEBGL
-  );
-  c.parent('canvasContainer');
+  const container = document.getElementById('canvasContainer');
+  const c = createCanvas(10, 10);
+  c.parent(container);
+  pixelDensity(1);
   textFont(font);
   frameRate(30);
+  fitCanvas();
+  requestAnimationFrame(fitCanvas);
+  if ('ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(fitCanvas);
+    resizeObserver.observe(container);
+  }
 
   TipoUI.init({
     mode: 'layers',
@@ -123,21 +126,31 @@ function setup() {
   recorder = TipoUI.recorder;
 }
 
-function windowResized() {
-  resizeCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight
-  );
+function getCanvasSize() {
+  const container = document.getElementById('canvasContainer');
+  const rect = container.getBoundingClientRect();
+  return {
+    w: max(1, round(rect.width || container.clientWidth || window.innerWidth)),
+    h: max(1, round(rect.height || container.clientHeight || window.innerHeight))
+  };
 }
+
+function fitCanvas() {
+  const s = getCanvasSize();
+  if (width !== s.w || height !== s.h) resizeCanvas(s.w, s.h);
+}
+
+function windowResized() { fitCanvas(); }
 
 function val(id) { return TipoUI.val(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 
 function draw() {
+  fitCanvas();
   const bgC = document.getElementById('bgColor').value;
   background(bgC);
 
-  const txt = document.getElementById('textInput').value || 'TIPÓ ';
+  const txt = (document.getElementById('textInput').value || 'TIPÓ ').trimEnd() + ' ';
   const stacks = val('stackCount');
   const fSize = val('fontSize');
   const innerH = val('innerH');
@@ -148,99 +161,73 @@ function draw() {
   const blockC = document.getElementById('blockColor').value;
   const strkC = document.getElementById('strokeColor').value;
 
-  const layerDepth = 200;
-
-  // Text dimensions — use a temporary 2D graphics to measure reliably
-  push();
   textSize(fSize);
-  textAlign(LEFT, TOP);
-  const sWidth = textWidth(txt) || fSize * txt.length * 0.6;
-  const sHeight = fSize * 1.2;
-  pop();
+  textAlign(LEFT, CENTER);
+  const textRunW = max(textWidth(txt), fSize);
+  const stripH = fSize * 1.12;
+  const cx = width / 2;
+  const cy = height / 2;
+  const scrollPhase = (frameCount * 0.035) % 1;
+  const maxH = height * 0.62;
+  const maxV = width * 0.62;
+  const startH = map(innerH, -500, 1500, -height * 0.18, height * 0.32);
+  const startV = map(innerV, -500, 1500, -width * 0.18, width * 0.32);
 
-  // Shelf dimensions
-  const shelfH = sHeight;
-  const shelfW = sWidth;
+  for (let i = stacks - 1; i >= 0; i--) {
+    const rawDepth = ((i / max(stacks - 1, 1)) + scrollPhase) % 1;
+    const depth = TipoEase.out.cubic(rawDepth);
+    const scale = lerp(0.22, 1.12, depth);
+    const alpha = lerp(45, 255, depth);
+    const hDist = lerp(startH, maxH, depth);
+    const vDist = lerp(startV, maxV, depth);
+    const angle = rotFactor * (i - stacks / 2) * 0.16 + sin(frameCount * 0.01 + i) * rotFactor * 0.08;
+    const layerBlock = prideMode ? prideColors[i % prideColors.length] : blockC;
+    const layerText = prideMode ? prideColors[(i + 3) % prideColors.length] : txtC;
+    const stripW = max(width * 1.45, textRunW * 3);
 
-  // Spacing
-  const hSpace = -height / 2 - shelfH / 2;
-  const vSpace = -width / 2 - shelfW / 2;
-
-  // Pinch factors
-  const pinchH = -((hSpace + shelfH / 2) + innerH) / stacks;
-  const pinchV = -((vSpace + shelfW / 2) + innerV) / stacks;
-
-  push();
-  // Camera: upward angle
-  translate(0, -height / 4, layerDepth * 2);
-  rotateX(PI / 8);
-
-  for (let i = stacks; i >= 1; i--) {
-    // Alpha animation for top layer
-    let alpha = 255;
-    if (i === stacks) {
-      alpha = map(frameCount * 2 % layerDepth, 0, layerDepth, 0, 255);
-    }
-
-    push();
-    // Z-depth position + scroll
-    translate(0, 0, i * -layerDepth);
-    translate(0, 0, frameCount * 2 % layerDepth);
-
-    // 4-fold symmetry
-    for (let j = 0; j < 4; j++) {
-      push();
-
-      // Rotation animation
-      rotateZ(rotFactor * i - rotFactor * (frameCount * 2 % layerDepth) / layerDepth);
-
-      // Position based on quadrant
-      const hDist = hSpace + pinchH * i - pinchH * (frameCount * 2 % layerDepth) / layerDepth;
-      const vDist = vSpace + pinchV * i - pinchV * (frameCount * 2 % layerDepth) / layerDepth;
-
-      if (j % 2 === 0) {
-        // Horizontal shelf
-        translate(0, j === 0 ? hDist : -hDist, 0);
-      } else {
-        // Vertical shelf (rotated 90)
-        rotateZ(HALF_PI);
-        translate(0, j === 1 ? vDist : -vDist, 0);
-      }
-
-      // Draw block background
-      const layerColor = prideMode ? color(prideColors[i % 6]) : color(blockC);
-      if (i === stacks) {
-        layerColor.setAlpha(alpha);
-      }
-      fill(layerColor);
-      stroke(strkC);
-      strokeWeight(1);
-      rect(-sWidth / 2, -shelfH / 2, sWidth * 3, shelfH);
-
-      // Draw scrolling text
-      const textC = prideMode ? color(prideColors[(i + 3) % 6]) : color(txtC);
-      if (i === stacks) {
-        textC.setAlpha(alpha);
-      }
-      fill(textC);
-      noStroke();
-      textSize(fSize);
-      textAlign(LEFT, CENTER);
-
-      // Horizontal scroll
-      const scrollX = -(frameCount * 4) % sWidth;
-      for (let t = -1; t <= 2; t++) {
-        text(txt, scrollX + t * sWidth - sWidth / 2, 0);
-      }
-
-      pop();
-    }
-
-    pop();
+    drawLayerStrip(cx, cy - hDist, stripW, stripH * scale, angle, txt, layerText, layerBlock, strkC, alpha, i);
+    drawLayerStrip(cx, cy + hDist, stripW, stripH * scale, -angle, txt, layerText, layerBlock, strkC, alpha, i + 23);
+    drawLayerStrip(cx - vDist, cy, stripW, stripH * scale, HALF_PI + angle, txt, layerText, layerBlock, strkC, alpha, i + 47);
+    drawLayerStrip(cx + vDist, cy, stripW, stripH * scale, HALF_PI - angle, txt, layerText, layerBlock, strkC, alpha, i + 71);
   }
-  pop();
 
   TipoUI.captureFrame();
+}
+
+function drawLayerStrip(x, y, w, h, angle, txt, txtC, blockC, strokeC, alpha, seed) {
+  push();
+  translate(x, y);
+  rotate(angle);
+
+  const block = color(blockC);
+  block.setAlpha(alpha);
+  const strokeCol = color(strokeC);
+  strokeCol.setAlpha(min(180, alpha));
+  fill(block);
+  stroke(strokeCol);
+  strokeWeight(1);
+  rectMode(CENTER);
+  rect(0, 0, w, h);
+
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(-w / 2, -h / 2, w, h);
+  drawingContext.clip();
+
+  const textCol = color(txtC);
+  textCol.setAlpha(alpha);
+  fill(textCol);
+  noStroke();
+  textSize(h * 0.72);
+  textAlign(LEFT, CENTER);
+  const run = txt + ' ';
+  const runW = max(textWidth(run), h);
+  const offset = -((frameCount * (2.4 + seed * 0.018)) % runW);
+  for (let tx = -w / 2 + offset - runW; tx < w / 2 + runW; tx += runW) {
+    text(run, tx, 0);
+  }
+  drawingContext.restore();
+  pop();
 }
 
 // ============================================================

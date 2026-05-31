@@ -99,32 +99,37 @@
 <script>
 // ============================================================
 // TIPÓ — STRING MODE
-// Bezier curve ribbons with text texture scrolling.
+// Bezier curve ribbons with text moving along the path.
 // Auto-generated control points with adjustable curve/randomness.
 // ============================================================
-let font, recorder;
+let font, recorder, resizeObserver;
 let prideMode = false;
 const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
 
-let textBuffer = null;
-let lastText = '';
 let particles = [];
 let lastPoints = 0;
 let lastRandom = -1;
+let lastCurve = -1;
 const STEPS = 70;
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
-  setAttributes('preserveDrawingBuffer', true);
-  const c = createCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight,
-    WEBGL
-  );
-  c.parent('canvasContainer');
+  const container = document.getElementById('canvasContainer');
+  const c = createCanvas(10, 10);
+  c.parent(container);
+  pixelDensity(1);
   textFont(font);
   frameRate(30);
+  fitCanvas();
+  requestAnimationFrame(fitCanvas);
+  if ('ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(() => {
+      fitCanvas();
+      lastPoints = 0;
+    });
+    resizeObserver.observe(container);
+  }
 
   TipoUI.init({
     mode: 'string',
@@ -135,11 +140,22 @@ function setup() {
   generateParticles(7, 50, 30);
 }
 
+function getCanvasSize() {
+  const container = document.getElementById('canvasContainer');
+  const rect = container.getBoundingClientRect();
+  return {
+    w: max(1, round(rect.width || container.clientWidth || window.innerWidth)),
+    h: max(1, round(rect.height || container.clientHeight || window.innerHeight))
+  };
+}
+
+function fitCanvas() {
+  const s = getCanvasSize();
+  if (width !== s.w || height !== s.h) resizeCanvas(s.w, s.h);
+}
+
 function windowResized() {
-  resizeCanvas(
-    document.getElementById('canvasContainer').offsetWidth,
-    document.getElementById('canvasContainer').offsetHeight
-  );
+  fitCanvas();
   lastPoints = 0; // Force regeneration
 }
 
@@ -151,40 +167,24 @@ function col(id) { return TipoUI.col(id); }
 // Generate control points along a path
 function generateParticles(count, curveAmt, randomAmt) {
   particles = [];
-  const w = width - 100;
-  const h = height - 100;
+  randomSeed(1000 + count * 31 + round(curveAmt) * 17 + round(randomAmt) * 13);
+  const w = max(1, width - 120);
+  const h = max(1, height - 160);
   const randF = randomAmt / 100;
   const curveF = curveAmt / 100;
 
   for (let i = 0; i < count; i++) {
-    const t = i / (count - 1);
+    const t = count <= 1 ? 0 : i / (count - 1);
     // Base path: smooth wave across canvas
-    const x = 50 + t * w;
-    const baseY = height / 2 + sin(t * TWO_PI) * h * 0.2;
-    const y = baseY + (random(-1, 1) * h * 0.3 * randF);
-    const angle = random(-PI, PI) * curveF;
-    const handleLen = (w / count) * 0.5 * (0.5 + curveF);
+    const x = 60 + t * w;
+    const baseY = height / 2 + sin(t * TWO_PI) * h * 0.16 * curveF;
+    const y = baseY + random(-1, 1) * h * 0.34 * randF;
+    const baseAngle = cos(t * TWO_PI) * 0.35 * curveF;
+    const angle = baseAngle + random(-PI, PI) * curveF * 0.55;
+    const handleLen = (w / max(count - 1, 1)) * (0.35 + curveF * 0.65);
 
     particles.push({ x, y, angle, handleLen });
   }
-}
-
-// Build text texture
-function buildTexture(txt, stripH) {
-  const g = createGraphics(width * 2, stripH);
-  g.background(0, 0, 0, 0);
-  g.fill(255);
-  g.noStroke();
-  g.textFont(font);
-  g.textSize(stripH * 0.7);
-  g.textAlign(LEFT, CENTER);
-  // Repeat text to fill width
-  const measured = g.textWidth(txt + ' ') || 1;
-  const repeats = ceil(g.width / measured) + 1;
-  for (let r = 0; r < repeats; r++) {
-    g.text(txt + ' ', r * measured, stripH / 2);
-  }
-  return g;
 }
 
 // Get gradient color for position along path
@@ -200,6 +200,7 @@ function getGradColor(t) {
 }
 
 function draw() {
+  fitCanvas();
   const bgC = document.getElementById('bgColor').value;
   background(bgC);
 
@@ -213,136 +214,117 @@ function draw() {
   const txtC = document.getElementById('typeColor').value;
 
   // Regenerate particles if changed
-  if (pts !== lastPoints || randomAmt !== lastRandom) {
+  if (pts !== lastPoints || randomAmt !== lastRandom || curveAmt !== lastCurve) {
     generateParticles(pts, curveAmt, randomAmt);
     lastPoints = pts;
     lastRandom = randomAmt;
+    lastCurve = curveAmt;
   }
 
-  // Rebuild texture if text changed
-  if (txt !== lastText) {
-    if (textBuffer) textBuffer.remove();
-    textBuffer = buildTexture(txt, stripH);
-    lastText = txt;
-  }
-
-  if (!textBuffer || particles.length < 2) return;
-
-  const heightRatio = textBuffer.width / 2;
-
-  push();
-  translate(-width / 2, -height / 2);
+  if (particles.length < 2) return;
 
   // Render each strip
   for (let m = 0; m < stripCnt; m++) {
-    const stripTop = -stripH / 2 + (m * stripH) / stripCnt;
-    const stripBot = -stripH / 2 + ((m + 1) * stripH) / stripCnt;
-    const rSpeed = 0.5 + (m + 1) * 0.4; // Deterministic speed per strip
-    let culmDist = 0;
-
-    // For each segment between particles
-    for (let seg = 0; seg < particles.length - 1; seg++) {
-      const p0 = particles[seg];
-      const p1 = particles[seg + 1];
-
-      // Bezier control points from particle handles
-      const hx0 = p0.x + cos(p0.angle) * p0.handleLen;
-      const hy0 = p0.y + sin(p0.angle) * p0.handleLen;
-      const hx1 = p1.x - cos(p1.angle) * p1.handleLen;
-      const hy1 = p1.y - sin(p1.angle) * p1.handleLen;
-
-      // Get color for this segment
-      const segT = seg / (particles.length - 1);
-      const segColor = getGradColor(segT);
-
-      if (isOutline) {
-        // Outline mode: draw stroked bezier
-        noFill();
-        stroke(segColor);
-        strokeWeight(2);
-        bezier(p0.x, p0.y, hx0, hy0, hx1, hy1, p1.x, p1.y);
-      } else {
-        // Textured ribbon along bezier
-        textureMode(NORMAL);
-        texture(textBuffer);
-        noStroke();
-
-        beginShape(TRIANGLE_STRIP);
-        for (let s = 0; s <= STEPS; s++) {
-          const t = s / STEPS;
-
-          // Bezier point
-          const bx = bezierPoint(p0.x, hx0, hx1, p1.x, t);
-          const by = bezierPoint(p0.y, hy0, hy1, p1.y, t);
-
-          // Bezier tangent for perpendicular
-          const tx = bezierTangent(p0.x, hx0, hx1, p1.x, t);
-          const ty = bezierTangent(p0.y, hy0, hy1, p1.y, t);
-          const angle = atan2(ty, tx) - HALF_PI;
-
-          // UV scrolling
-          const u = ((culmDist + frameCount * rSpeed) % heightRatio) / heightRatio;
-
-          // Top and bottom vertices
-          const topX = bx + cos(angle) * stripTop;
-          const topY = by + sin(angle) * stripTop;
-          const botX = bx + cos(angle) * stripBot;
-          const botY = by + sin(angle) * stripBot;
-
-          vertex(botX, botY, 0, u, (m + 1) / stripCnt);
-          vertex(topX, topY, 0, u, m / stripCnt);
-
-          // Track cumulative distance
-          if (s > 0) {
-            const prevBx = bezierPoint(p0.x, hx0, hx1, p1.x, (s - 1) / STEPS);
-            const prevBy = bezierPoint(p0.y, hy0, hy1, p1.y, (s - 1) / STEPS);
-            culmDist += dist(prevBx, prevBy, bx, by);
-          }
-        }
-        endShape();
-      }
-    }
-
-    // Draw text along path in outline mode
-    if (isOutline) {
-      fill(txtC);
-      noStroke();
-      textSize(stripH * 0.5);
-      textAlign(CENTER, CENTER);
-      for (let seg = 0; seg < particles.length - 1; seg++) {
-        const p0 = particles[seg];
-        const p1 = particles[seg + 1];
-        const hx0 = p0.x + cos(p0.angle) * p0.handleLen;
-        const hy0 = p0.y + sin(p0.angle) * p0.handleLen;
-        const hx1 = p1.x - cos(p1.angle) * p1.handleLen;
-        const hy1 = p1.y - sin(p1.angle) * p1.handleLen;
-
-        for (let k = 0; k < txt.length; k++) {
-          const t = (k + frameCount * 0.02) % txt.length / txt.length;
-          const bx = bezierPoint(p0.x, hx0, hx1, p1.x, t);
-          const by = bezierPoint(p0.y, hy0, hy1, p1.y, t);
-          push();
-          translate(bx, by);
-          const tx = bezierTangent(p0.x, hx0, hx1, p1.x, t);
-          const ty = bezierTangent(p0.y, hy0, hy1, p1.y, t);
-          rotate(atan2(ty, tx));
-          text(txt.charAt(k), 0, 0);
-          pop();
-        }
-      }
-    }
+    const offset = (m - (stripCnt - 1) / 2) * stripH * 0.55;
+    const samples = samplePath(offset);
+    drawStringPath(samples, m, stripH, isOutline);
+    drawMovingText(samples, txt, txtC, stripH, m, isOutline);
   }
-
-  // Draw particle nodes
-  noStroke();
-  fill(255, 255, 255, 80);
-  for (const p of particles) {
-    ellipse(p.x, p.y, 8, 8);
-  }
-
-  pop();
 
   TipoUI.captureFrame();
+}
+
+function samplePath(offset) {
+  const samples = [];
+  let total = 0;
+  let prev = null;
+  for (let seg = 0; seg < particles.length - 1; seg++) {
+    const p0 = particles[seg];
+    const p1 = particles[seg + 1];
+    const hx0 = p0.x + cos(p0.angle) * p0.handleLen;
+    const hy0 = p0.y + sin(p0.angle) * p0.handleLen;
+    const hx1 = p1.x - cos(p1.angle) * p1.handleLen;
+    const hy1 = p1.y - sin(p1.angle) * p1.handleLen;
+
+    for (let s = 0; s <= STEPS; s++) {
+      if (seg > 0 && s === 0) continue;
+      const t = s / STEPS;
+      const bx = bezierPoint(p0.x, hx0, hx1, p1.x, t);
+      const by = bezierPoint(p0.y, hy0, hy1, p1.y, t);
+      const tx = bezierTangent(p0.x, hx0, hx1, p1.x, t);
+      const ty = bezierTangent(p0.y, hy0, hy1, p1.y, t);
+      const len = max(0.001, sqrt(tx * tx + ty * ty));
+      const nx = -ty / len;
+      const ny = tx / len;
+      const x = bx + nx * offset;
+      const y = by + ny * offset;
+      if (prev) total += dist(prev.x, prev.y, x, y);
+      const globalT = (seg + t) / max(1, particles.length - 1);
+      const sample = { x, y, angle: atan2(ty, tx), d: total, t: globalT };
+      samples.push(sample);
+      prev = sample;
+    }
+  }
+  return samples;
+}
+
+function drawStringPath(samples, stripIndex, stripH, isOutline) {
+  if (samples.length < 2) return;
+  noFill();
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  const sw = isOutline ? max(1.5, stripH * 0.035) : max(6, stripH * 0.36);
+  strokeWeight(sw);
+
+  for (let i = 1; i < samples.length; i++) {
+    const t = i / (samples.length - 1);
+    const c = getGradColor((t + stripIndex * 0.08) % 1);
+    stroke(c);
+    line(samples[i - 1].x, samples[i - 1].y, samples[i].x, samples[i].y);
+  }
+}
+
+function pointAtDistance(samples, d) {
+  if (!samples.length) return null;
+  const total = samples[samples.length - 1].d;
+  const target = constrain(d, 0, total);
+  for (let i = 1; i < samples.length; i++) {
+    if (samples[i].d >= target) {
+      const a = samples[i - 1];
+      const b = samples[i];
+      const span = max(0.001, b.d - a.d);
+      const t = (target - a.d) / span;
+      return {
+        x: lerp(a.x, b.x, t),
+        y: lerp(a.y, b.y, t),
+        angle: lerp(a.angle, b.angle, t)
+      };
+    }
+  }
+  return samples[samples.length - 1];
+}
+
+function drawMovingText(samples, txt, txtC, stripH, stripIndex, isOutline) {
+  if (samples.length < 2) return;
+  const total = samples[samples.length - 1].d;
+  fill(prideMode ? prideColors[(stripIndex + 3) % prideColors.length] : txtC);
+  noStroke();
+  textFont(font);
+  textSize(max(10, stripH * (isOutline ? 0.48 : 0.38)));
+  textAlign(CENTER, CENTER);
+  const token = txt + ' ';
+  const spacing = max(textWidth(token) + stripH * 0.45, stripH * 1.15);
+  const offset = (frameCount * (1.4 + stripIndex * 0.35)) % spacing;
+
+  for (let d = offset; d < total; d += spacing) {
+    const p = pointAtDistance(samples, d);
+    if (!p) continue;
+    push();
+    translate(p.x, p.y);
+    rotate(p.angle);
+    text(token, 0, 0);
+    pop();
+  }
 }
 
 // ============================================================
@@ -363,6 +345,7 @@ function resetAll() {
   document.getElementById('typeColor').value = '#ffffff';
   document.getElementById('bgColor').value = '#000000';
   lastPoints = 0;
+  lastCurve = -1;
 }
 
 const PRESETS = {
