@@ -189,6 +189,39 @@ Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
 
 ---
 
+## 2026-05-30
+
+### Brand Identity — Paleta "Athos" (Mint Brasileiro)
+- **Pesquisa completa** em `tipo_vault/brand/`:
+  - `01-competitive-color-research.md` — 10 concorrentes analisados (SpaceType, Cavalry, Rive, Figma, Canva, etc.)
+  - `02-brazilian-color-identity.md` — estudo cultural: Tarsila, Oiticica, Athos Bulcão, Lina Bo Bardi, Cerrado, Bossa Nova
+  - `03-palette-proposals.md` — 8 paletas completas (Terracota Digital, Mata Noturna, Tropicália, Concreto & Ipê, Azulejo, Cerrado, Bossa Nova, Neon Favela)
+  - `00-RECOMENDACAO-FINAL.md` — consolidação + híbrido recomendado
+- **Descoberta-chave:** mint #99E0D2 é território vazio — NENHUM concorrente usa. Diferencial real.
+- **Paleta aplicada (CSS variables em shared/style.css):**
+  - Dark: warm blacks `#0C0C0A`, ivory text `#E8E4E0`, teal accent `#2A8A7A`
+  - Light: warm off-white `#F8F5F0`, deep teal `#1B7A6A`
+  - Novas vars: `--accent-brand` (mint), `--accent-warm` (gold #D4A040)
+  - Section titles via `var(--accent-brand)` em vez de hardcoded
+- **Princípio:** "brasileiro na temperatura, não nos símbolos" — warmth sutil que se sente mas não se aponta
+- **Presets criativos das tools NÃO mudaram** — user continua livre pra brincar com cores
+
+### Bug fixes — Tools 2D
+- Danger: fix anchorY (`/ 0.5` → `/ 2`), pride mode funcional, background media support
+- Layers: rewrite para 2D (era WEBGL), speed control, ResizeObserver, fitCanvas robusto
+- String: path patterns (wave, river, rain, orbit, spiral, harp, constellation), speed determinístico
+
+### AudioType — Deploy
+- `audiotype.html` commitado e deployed no Vercel (estava untracked)
+- Card na landing page já existia, agora funcional
+
+### Próximo: Header redesign
+- Header atual é flat demais — precisa ser mais disruptivo
+- Pesquisar GSAP (GreenSock Animation Platform) para animações premium
+- Objetivo: header que transmita a identidade visual + convide à exploração
+
+---
+
 ## 2026-05-25
 
 ### Pesquisa Competitiva + Roadmap Atualizado
