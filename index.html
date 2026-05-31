@@ -1046,93 +1046,144 @@ function initQuadCanvases() {
     draw();
   })();
 
-  // ===== ANIMATION: Letters exploding, snapping, bouncing =====
+  // ===== ANIMATION: GSAP timeline showcase =====
   (function initAnim() {
     const cvs = document.getElementById('qAnim');
     if (!cvs) return;
     const { ctx, w, h } = fitCanvas(cvs);
-    const letters = 'TIPÓ'.split('');
-    const particles = letters.map((ch, i) => ({
-      ch, x: 0, y: 0, baseX: w * (0.3 + i * 0.13), baseY: h / 2,
-      vx: 0, vy: 0, scale: 1, rotation: 0, alpha: 0.15, phase: 0
+    const word = 'TIPÓ';
+    const n = word.length;
+    // State for each letter
+    const chars = word.split('').map((ch, i) => ({
+      ch, x: w/2, y: h/2, scale: 1, rotation: 0, alpha: 0, skewX: 0
     }));
-    let frame = 0;
-    const cycle = 180; // frames per animation cycle
+    const spacing = 38;
+    const baseX = i => w/2 + (i - (n-1)/2) * spacing;
+    const baseY = h * 0.48;
 
+    // 6 GSAP timelines cycling — each shows a different animation tool
+    let currentTL = null;
+    let modeIdx = 0;
+
+    function buildTimeline(mode) {
+      const tl = gsap.timeline({ repeat: 0, onComplete: nextMode });
+
+      // Reset all chars
+      chars.forEach((c, i) => { c.x = baseX(i); c.y = baseY; c.scale = 1; c.rotation = 0; c.alpha = 0; c.skewX = 0; });
+
+      if (mode === 0) {
+        // SNAP — elastic drop staggered, hold, slide out
+        chars.forEach((c, i) => {
+          c.y = -30; c.alpha = 0; c.scale = 0.3;
+          tl.to(c, { y: baseY, alpha: 0.22, scale: 1, duration: 0.5, ease: 'elastic.out(1.2,0.4)' }, i * 0.1);
+        });
+        tl.to({}, { duration: 1.2 }); // hold
+        chars.forEach((c, i) => {
+          tl.to(c, { y: h + 40, alpha: 0, scale: 0.5, duration: 0.3, ease: 'power3.in' }, '>' + (i === 0 ? '' : '-0.2'));
+        });
+      } else if (mode === 1) {
+        // FLASH — scale punch one by one, rotate, fade
+        chars.forEach((c, i) => {
+          c.alpha = 0; c.scale = 0;
+          tl.to(c, { alpha: 0.25, scale: 1.6, duration: 0.1, ease: 'power4.out' }, 0.6 + i * 0.18);
+          tl.to(c, { scale: 1, rotation: Math.PI * 2, duration: 0.5, ease: 'power2.out' }, '>');
+        });
+        tl.to({}, { duration: 0.8 }); // hold
+        chars.forEach((c, i) => {
+          tl.to(c, { alpha: 0, scale: 3, duration: 0.4, ease: 'power2.in' }, '>' + (i === 0 ? '' : '-0.3'));
+        });
+      } else if (mode === 2) {
+        // POW — converge to center, explode outward as particles
+        const cx = w/2, cy = h * 0.45;
+        chars.forEach((c, i) => {
+          const angle = (i/n) * Math.PI * 2;
+          c.x = cx + Math.cos(angle) * w * 0.45;
+          c.y = cy + Math.sin(angle) * h * 0.45;
+          c.alpha = 0.08; c.scale = 0.6;
+          tl.to(c, { x: cx, y: cy, alpha: 0.2, scale: 1, duration: 0.6, ease: 'power3.in' }, i * 0.08);
+        });
+        tl.to({}, { duration: 0.15 }); // impact frame
+        chars.forEach((c, i) => {
+          const angle = (i/n) * Math.PI * 2 + Math.PI/4;
+          tl.to(c, { x: cx + Math.cos(angle) * w * 0.5, y: cy + Math.sin(angle) * h * 0.5,
+            scale: 2.5, alpha: 0, rotation: (Math.random()-0.5) * 3, duration: 0.7, ease: 'power2.out' }, '<');
+        });
+      } else if (mode === 3) {
+        // CRASH — fall with gravity, bounce off floor, settle
+        const floor = h * 0.72;
+        chars.forEach((c, i) => {
+          c.y = -40 - i * 30; c.alpha = 0.18; c.x = baseX(i);
+          // Fall
+          tl.to(c, { y: floor, duration: 0.5 + i * 0.08, ease: 'bounce.out' }, i * 0.12);
+        });
+        tl.to({}, { duration: 1 }); // hold on floor
+        // Slide off screen
+        chars.forEach((c, i) => {
+          tl.to(c, { x: -60, alpha: 0, rotation: -0.4, duration: 0.4, ease: 'power3.in' }, '>' + (i === 0 ? '' : '-0.25'));
+        });
+      } else if (mode === 4) {
+        // VESSEL — letters morph scale/skew like shape-shifting container
+        chars.forEach((c, i) => {
+          c.alpha = 0.18; c.x = baseX(i); c.y = baseY;
+        });
+        tl.from(chars, { alpha: 0, duration: 0.3, stagger: 0.05 });
+        // Morph 1: stretch wide
+        tl.to(chars, { skewX: 0.4, scale: 1.3, duration: 0.6, ease: 'power2.inOut', stagger: 0.04 });
+        // Morph 2: compress tall
+        tl.to(chars, { skewX: -0.3, scale: 0.7, duration: 0.6, ease: 'power2.inOut', stagger: 0.04 });
+        // Morph 3: back to normal
+        tl.to(chars, { skewX: 0, scale: 1, duration: 0.5, ease: 'elastic.out(1,0.5)', stagger: 0.04 });
+        tl.to({}, { duration: 0.6 });
+        tl.to(chars, { alpha: 0, y: baseY - 30, duration: 0.3, stagger: 0.04 });
+      } else {
+        // SHINE — radial light rays behind letters
+        chars.forEach((c, i) => {
+          c.alpha = 0; c.x = baseX(i); c.y = baseY; c.scale = 0.8;
+        });
+        tl.to(chars, { alpha: 0.2, scale: 1, duration: 0.4, stagger: 0.06, ease: 'power2.out' });
+        // Pulse glow
+        tl.to(chars, { scale: 1.15, alpha: 0.28, duration: 0.5, ease: 'sine.inOut', stagger: 0.03, yoyo: true, repeat: 2 });
+        tl.to(chars, { alpha: 0, scale: 0.5, duration: 0.4, stagger: 0.05, ease: 'power3.in' });
+      }
+
+      return tl;
+    }
+
+    function nextMode() {
+      modeIdx = (modeIdx + 1) % 6;
+      currentTL = buildTimeline(modeIdx);
+    }
+
+    // Render loop
     function draw() {
       ctx.clearRect(0, 0, w, h);
-      const t = (frame % cycle) / cycle;
-      const mode = Math.floor(frame / cycle) % 4;
-
-      particles.forEach((p, i) => {
-        const delay = i * 0.15;
-        const pt = Math.max(0, Math.min(1, (t - delay) / (1 - delay * letters.length / (letters.length - 1))));
-
-        if (mode === 0) {
-          // SNAP: drop from top, overshoot, settle
-          const et = pt < 0.5 ? 4*pt*pt*pt : 1-Math.pow(-2*pt+2,3)/2;
-          p.x = p.baseX;
-          p.y = p.baseY - 100 + et * 100 + (pt > 0.4 && pt < 0.7 ? Math.sin(pt * 20) * 5 : 0);
-          p.scale = 0.3 + et * 0.7;
-          p.alpha = et * 0.18;
-          p.rotation = (1 - et) * 0.5;
-        } else if (mode === 1) {
-          // EXPLODE: center → scatter outward
-          const et = pt < 0.3 ? pt / 0.3 : 1;
-          const angle = (i / letters.length) * Math.PI * 2 - Math.PI / 2;
-          const dist = et * Math.min(w, h) * 0.4;
-          p.x = w / 2 + Math.cos(angle) * dist;
-          p.y = h / 2 + Math.sin(angle) * dist;
-          p.scale = 0.8 + et * 1.5;
-          p.alpha = 0.2 * (1 - et * 0.7);
-          p.rotation = et * (i % 2 === 0 ? 0.3 : -0.3);
-        } else if (mode === 2) {
-          // BOUNCE: physics drop with bounce
-          const gravity = 9.8;
-          const bounceT = pt * 3;
-          let yPos;
-          if (bounceT < 1) { yPos = bounceT * bounceT; }
-          else if (bounceT < 2) { const bt = bounceT - 1.5; yPos = 1 - bt * bt * 0.5; }
-          else { const bt = bounceT - 2.5; yPos = 1 - bt * bt * 0.2; }
-          p.x = p.baseX;
-          p.y = h * 0.15 + yPos * (h * 0.35);
-          p.scale = 1 + (yPos > 0.9 ? (1 - yPos) * 3 : 0);
-          p.alpha = 0.15;
-          p.rotation = 0;
-        } else {
-          // WAVE: horizontal wave scroll
-          const wt = pt * Math.PI * 2;
-          p.x = p.baseX + Math.sin(wt + i * 1.2) * 25;
-          p.y = p.baseY + Math.cos(wt + i * 0.8) * 30;
-          p.scale = 0.8 + Math.sin(wt + i) * 0.3;
-          p.alpha = 0.1 + Math.abs(Math.sin(wt + i)) * 0.1;
-          p.rotation = Math.sin(wt + i * 0.5) * 0.15;
-        }
-
+      chars.forEach((c, i) => {
+        if (c.alpha < 0.005) return;
         ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.scale(p.scale, p.scale);
-        ctx.font = '900 40px "IBM Plex Mono", monospace';
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rotation);
+        ctx.transform(c.scale, c.skewX, 0, c.scale, 0, 0);
+        ctx.font = '900 36px "IBM Plex Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const color = i === 3 ? `rgba(212,160,64,${p.alpha})` : fg + p.alpha + ')';
-        ctx.fillStyle = color;
-        ctx.fillText(p.ch, 0, 0);
+        // Accent color on Ó
+        ctx.fillStyle = i === 3 ? `rgba(212,160,64,${c.alpha})` : fg + c.alpha + ')';
+        ctx.fillText(c.ch, 0, 0);
+
+        // Glow effect when alpha is high (shine mode)
+        if (c.alpha > 0.22) {
+          ctx.shadowColor = i === 3 ? 'rgba(212,160,64,0.3)' : 'rgba(153,224,210,0.3)';
+          ctx.shadowBlur = 20;
+          ctx.fillText(c.ch, 0, 0);
+          ctx.shadowBlur = 0;
+        }
         ctx.restore();
       });
-
-      // Mode label (tiny, bottom)
-      const modeNames = ['SNAP', 'POW', 'CRASH', 'WAVE'];
-      ctx.font = '600 8px "IBM Plex Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = fg + '0.06)';
-      ctx.fillText(modeNames[mode], w / 2, h - 15);
-
-      frame++;
       requestAnimationFrame(draw);
     }
+
     draw();
+    currentTL = buildTimeline(0);
   })();
 }
 
