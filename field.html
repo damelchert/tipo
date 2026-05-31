@@ -101,6 +101,12 @@
     <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="camZoom" min="-500" max="500" value="0"><span class="range-value" id="camZoomVal">0</span></div>
   </div>
 
+  <div class="section">
+    <div class="section-title">Mouse</div>
+    <label class="checkbox-label"><input type="checkbox" id="mouseReact"> Mouse React</label>
+    <div class="range-row"><span class="range-label">Strength</span><input type="range" id="mouseStr" min="0" max="100" value="50"><span class="range-value" id="mouseStrVal">50</span></div>
+  </div>
+
   <div class="section section-divider">
     <div class="section-title">Export</div>
     <div class="btn-row">
@@ -146,6 +152,7 @@ function setup() {
     }
   });
   recorder = TipoUI.recorder;
+  TipoMouse.init(c);
 }
 
 function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
@@ -186,6 +193,7 @@ function draw() {
 
   const typeC = document.getElementById('typeColor').value;
 
+  TipoMouse.update();
   noStroke();
   textAlign(CENTER, CENTER);
 
@@ -235,8 +243,23 @@ function draw() {
       strY = map(sinEng(PI, xF, col, yF, row, spd), -1, 1, 0, aYStr);
     }
 
+    // Mouse repel effect
+    let mxOff = 0, myOff = 0, mzOff = 0;
+    if (chk('mouseReact') && TipoMouse.active) {
+      const mStr = val('mouseStr') * 2;
+      const gridNx = (cols > 1) ? (col / (cols - 1)) * 2 - 1 : 0;
+      const gridNy = (rws > 1) ? (row / (rws - 1)) * 2 - 1 : 0;
+      const dx = gridNx - TipoMouse.sx;
+      const dy = gridNy - TipoMouse.sy;
+      const d = Math.max(Math.sqrt(dx * dx + dy * dy), 0.1);
+      const force = mStr / (d * d + 0.5);
+      mxOff = (dx / d) * force;
+      myOff = (dy / d) * force;
+      mzOff = force * 0.5;
+    }
+
     push();
-    translate(col * xSpace + xW, row * ySpace + yW, zW);
+    translate(col * xSpace + xW + mxOff, row * ySpace + yW + myOff, zW + mzOff);
 
     // Z-axis rotation smoothing (auto-rotate to follow surface)
     if (aZ > 0) {

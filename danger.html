@@ -76,6 +76,12 @@
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-title">Mouse</div>
+    <label class="checkbox-label"><input type="checkbox" id="mouseReact"> Mouse React</label>
+    <div class="range-row"><span class="range-label">Strength</span><input type="range" id="mouseStr" min="0" max="100" value="50"><span class="range-value" id="mouseStrVal">50</span></div>
+  </div>
+
   <div class="section section-divider">
     <div class="section-title">Export</div>
     <div class="btn-row">
@@ -134,6 +140,7 @@ function setup() {
     }
   });
   recorder = TipoUI.recorder;
+  TipoMouse.init(c);
 }
 
 function windowResized() {
@@ -172,6 +179,7 @@ function buildTextures(txt, fSize, ldng) {
 }
 
 function draw() {
+  TipoMouse.update();
   const isInvert = chk('invert');
   const foreC = isInvert ? '#ffffff' : document.getElementById('typeColor').value;
   const bgC = isInvert ? '#000000' : document.getElementById('bgColor').value;
@@ -214,7 +222,16 @@ function draw() {
 
     const xSpace = 1.0 / cols;
     const ySpace = 1.0 / rws;
-    const baseSpot = dist(stripS.width, -stripS.height / 0.5, 0, 0);
+
+    // Mouse-reactive anchor point: distortion center follows mouse
+    let anchorX = stripS.width;
+    let anchorY = -stripS.height / 0.5;
+    if (chk('mouseReact') && TipoMouse.active) {
+      const mStr = val('mouseStr') / 100;
+      anchorX = lerp(anchorX, (TipoMouse.sx * 0.5 + 0.5) * stripS.width, mStr);
+      anchorY = lerp(anchorY, (TipoMouse.sy * 0.5 + 0.5) * stripS.height, mStr);
+    }
+    const baseSpot = dist(anchorX, anchorY, 0, 0);
 
     for (let y = 0; y < rws; y++) {
       beginShape(TRIANGLE_STRIP);
@@ -228,7 +245,7 @@ function draw() {
           const screenY = py * stripS.height;
 
           // Distance from anchor point
-          const d = dist(screenX, screenY, stripS.width, -stripS.height / 0.5);
+          const d = dist(screenX, screenY, anchorX, anchorY);
           const distMap = constrain(map(d, 0, baseSpot, 1, 0), 0, 1);
           const radiusMap = easer(distMap) * radNoise;
 

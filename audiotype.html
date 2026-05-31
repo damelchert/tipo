@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — AudioType: audio-reactive typography visualizer. Upload text or images + music, watch letters pulse with sound.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — AudioType</title>
+<link rel="stylesheet" href="shared/style.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js"></script>
+<script src="shared/ui.js"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; background: #000; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase;
+    flex-direction: column; gap: 8px; }
+  .drop-hint span { font-size: 9px; opacity: 0.5; }
+  .color-level-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; }
+  .color-level-row label { font-size: 9px; color: var(--text-4); width: 14px; text-align: right; }
+  .color-level-row input[type="color"] { width: 24px; height: 18px; border: none; cursor: pointer; }
+  #audioFileName { font-size: 9px; color: var(--accent); margin-top: 4px; word-break: break-all; }
+  .play-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+  .play-row button { font-size: 10px; }
+  #audioTime { font-size: 9px; color: var(--text-4); }
+  .waveform-bar { height: 24px; background: var(--bg-2); border-radius: 3px; margin-top: 6px; position: relative; overflow: hidden; cursor: pointer; }
+  .waveform-fill { height: 100%; background: var(--accent); opacity: 0.3; position: absolute; left: 0; top: 0; transition: none; }
+  .waveform-pos { height: 100%; width: 2px; background: var(--accent); position: absolute; top: 0; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>AudioType <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" onclick="document.getElementById('imgInput').click()" style="font-size:10px;">Upload Image</button>
+    </div>
+    <input type="file" id="imgInput" accept="image/*" style="display:none">
+    <div id="imgName" style="font-size:9px;color:var(--text-4);margin-top:3px;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Audio</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('audioInput').click()">Upload Audio</button>
+      <button class="btn btn-secondary" id="micBtn" onclick="toggleMic()">Mic</button>
+    </div>
+    <input type="file" id="audioInput" accept="audio/*" style="display:none">
+    <div id="audioFileName"></div>
+    <div class="play-row" id="playControls" style="display:none;">
+      <button class="btn btn-secondary" id="playBtn" onclick="togglePlay()" style="padding:4px 12px;">&#9654;</button>
+      <span id="audioTime">0:00</span>
+    </div>
+    <div class="waveform-bar" id="waveformBar" style="display:none;" onclick="seekAudio(event)">
+      <div class="waveform-fill" id="waveformFill"></div>
+      <div class="waveform-pos" id="waveformPos" style="left:0;"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('equalizer')">Equalizer</span>
+      <span class="preset-chip" onclick="applyPreset('waveform')">Waveform</span>
+      <span class="preset-chip" onclick="applyPreset('spectrum')">Spectrum</span>
+      <span class="preset-chip" onclick="applyPreset('pulse')">Pulse</span>
+      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
+      <span class="preset-chip" onclick="applyPreset('neon')">Neon</span>
+      <span class="preset-chip" onclick="applyPreset('mono')">Mono</span>
+      <span class="preset-chip" onclick="applyPreset('fire')">Fire</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Grid</div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="cols" min="10" max="200" value="60"><span class="range-value" id="colsVal">60</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="5" max="150" value="40"><span class="range-value" id="rowsVal">40</span></div>
+    <div class="range-row"><span class="range-label">Gap</span><input type="range" id="gap" min="0" max="10" value="1"><span class="range-value" id="gapVal">1</span></div>
+    <div class="range-row"><span class="range-label">Min Size</span><input type="range" id="minSize" min="0" max="100" value="5"><span class="range-value" id="minSizeVal">5</span></div>
+    <div class="range-row"><span class="range-label">Max Size</span><input type="range" id="maxSize" min="0" max="100" value="100"><span class="range-value" id="maxSizeVal">100</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mode</div>
+    <select id="barMode" style="width:100%;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+      <option value="h-bars">Horizontal Bars</option>
+      <option value="v-bars">Vertical Bars</option>
+      <option value="pixels">Pixel Grid</option>
+    </select>
+    <div style="margin-top:6px;">
+      <select id="shrinkAxis" style="width:100%;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+        <option value="height">Shrink Height</option>
+        <option value="width">Shrink Width</option>
+        <option value="both">Shrink Both</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Audio Reactivity</div>
+    <div class="range-row"><span class="range-label">Intensity</span><input type="range" id="audioIntensity" min="0" max="100" value="60"><span class="range-value" id="audioIntensityVal">60</span></div>
+    <div class="range-row"><span class="range-label">Smoothing</span><input type="range" id="smoothing" min="1" max="99" value="75"><span class="range-value" id="smoothingVal">75</span></div>
+    <div class="range-row"><span class="range-label">Freq Range</span><input type="range" id="freqRange" min="0" max="100" value="50"><span class="range-value" id="freqRangeVal">50</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Color Levels</div>
+    <div class="range-row"><span class="range-label">Levels</span><input type="range" id="colorLevels" min="2" max="8" value="4"><span class="range-value" id="colorLevelsVal">4</span></div>
+    <div id="colorLevelInputs">
+      <div class="color-level-row"><label>1</label><input type="color" id="lv0" value="#000000"></div>
+      <div class="color-level-row"><label>2</label><input type="color" id="lv1" value="#6622cc"></div>
+      <div class="color-level-row"><label>3</label><input type="color" id="lv2" value="#ff6600"></div>
+      <div class="color-level-row"><label>4</label><input type="color" id="lv3" value="#ffffff"></div>
+      <div class="color-level-row" style="display:none;"><label>5</label><input type="color" id="lv4" value="#ff0066"></div>
+      <div class="color-level-row" style="display:none;"><label>6</label><input type="color" id="lv5" value="#00ccff"></div>
+      <div class="color-level-row" style="display:none;"><label>7</label><input type="color" id="lv6" value="#ffff00"></div>
+      <div class="color-level-row" style="display:none;"><label>8</label><input type="color" id="lv7" value="#00ff88"></div>
+    </div>
+    <div class="color-section-row" style="margin-top:6px;">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#000000">
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer">
+  <div class="drop-hint" id="dropHint">
+    DROP AUDIO OR IMAGE HERE
+    <span>or use controls on the left</span>
+  </div>
+</div>
+
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — AUDIOTYPE
+// Audio-reactive typography visualizer.
+// Text/image → grid of colored bars → bars pulse with audio.
+// ============================================================
+
+let font, recorder;
+let textBuffer = null;   // Offscreen buffer with rendered text/image
+let uploadedImg = null;   // User-uploaded image
+let useImage = false;     // true = use uploaded image, false = render text
+
+// Audio state
+let audioCtx = null;
+let analyser = null;
+let audioSource = null;
+let audioElement = null;
+let micStream = null;
+let freqData = null;
+let smoothedFreq = null;
+let isPlaying = false;
+let isMic = false;
+
+// Smoothed levels per column (for organic animation)
+let colLevels = [];
+
+function preload() {
+  font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf');
+}
+
+function setup() {
+  const container = document.getElementById('canvasContainer');
+  const c = createCanvas(container.offsetWidth, container.offsetHeight);
+  c.parent('canvasContainer');
+  pixelDensity(1);
+  textFont(font);
+
+  TipoUI.init({ mode: 'audiotype', formatters: {} });
+  recorder = TipoUI.recorder;
+
+  // File inputs
+  document.getElementById('audioInput').addEventListener('change', handleAudioUpload);
+  document.getElementById('imgInput').addEventListener('change', handleImageUpload);
+  document.getElementById('colorLevels').addEventListener('input', updateColorLevelVisibility);
+
+  // Drag & drop
+  const cc = document.getElementById('canvasContainer');
+  cc.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+  cc.addEventListener('drop', handleDrop);
+
+  buildTextBuffer();
+}
+
+function windowResized() {
+  const container = document.getElementById('canvasContainer');
+  resizeCanvas(container.offsetWidth, container.offsetHeight);
+  buildTextBuffer();
+}
+
+// ============================================================
+// TEXT / IMAGE BUFFER
+// ============================================================
+
+function buildTextBuffer() {
+  if (useImage && uploadedImg) {
+    // Use uploaded image as source
+    if (textBuffer) textBuffer.remove();
+    const aspect = uploadedImg.width / uploadedImg.height;
+    const bw = 800;
+    const bh = Math.round(bw / aspect);
+    textBuffer = createGraphics(bw, bh);
+    textBuffer.image(uploadedImg, 0, 0, bw, bh);
+    textBuffer.loadPixels();
+    return;
+  }
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  if (textBuffer) textBuffer.remove();
+
+  // Render text large so we get good sampling resolution
+  const bw = 800;
+  const bh = 400;
+  textBuffer = createGraphics(bw, bh);
+  textBuffer.background(0);
+  textBuffer.fill(255);
+  textBuffer.noStroke();
+  textBuffer.textFont(font);
+  textBuffer.textAlign(CENTER, CENTER);
+
+  // Auto-size text to fill buffer
+  let fs = 300;
+  textBuffer.textSize(fs);
+  while (textBuffer.textWidth(txt) > bw * 0.9 && fs > 20) {
+    fs -= 5;
+    textBuffer.textSize(fs);
+  }
+  textBuffer.text(txt, bw / 2, bh / 2);
+  textBuffer.loadPixels();
+}
+
+// ============================================================
+// AUDIO SETUP
+// ============================================================
+
+function initAudioContext() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.75;
+  freqData = new Uint8Array(analyser.frequencyBinCount);
+  smoothedFreq = new Float32Array(analyser.frequencyBinCount);
+}
+
+function handleAudioUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadAudioFile(file);
+}
+
+function loadAudioFile(file) {
+  initAudioContext();
+  if (isMic) stopMic();
+
+  // Clean up previous
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.remove();
+  }
+  if (audioSource) {
+    try { audioSource.disconnect(); } catch(e) {}
+  }
+
+  audioElement = new Audio();
+  audioElement.crossOrigin = 'anonymous';
+  audioElement.src = URL.createObjectURL(file);
+  audioElement.loop = true;
+
+  audioSource = audioCtx.createMediaElementSource(audioElement);
+  audioSource.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  document.getElementById('audioFileName').textContent = file.name;
+  document.getElementById('playControls').style.display = 'flex';
+  document.getElementById('waveformBar').style.display = 'block';
+  document.getElementById('dropHint').style.display = 'none';
+
+  // Resume AudioContext (browsers require user gesture)
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  audioElement.play().then(() => {
+    isPlaying = true;
+    document.getElementById('playBtn').innerHTML = '&#9646;&#9646;';
+  }).catch(err => {
+    console.warn('Autoplay blocked, click play:', err);
+    isPlaying = false;
+  });
+}
+
+function togglePlay() {
+  if (!audioElement) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (isPlaying) {
+    audioElement.pause();
+    isPlaying = false;
+    document.getElementById('playBtn').innerHTML = '&#9654;';
+  } else {
+    audioElement.play();
+    isPlaying = true;
+    document.getElementById('playBtn').innerHTML = '&#9646;&#9646;';
+  }
+}
+
+function seekAudio(e) {
+  if (!audioElement || !audioElement.duration) return;
+  const bar = document.getElementById('waveformBar');
+  const ratio = e.offsetX / bar.offsetWidth;
+  audioElement.currentTime = ratio * audioElement.duration;
+}
+
+function toggleMic() {
+  if (isMic) { stopMic(); return; }
+  initAudioContext();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    micStream = stream;
+    if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
+    audioSource = audioCtx.createMediaStreamSource(stream);
+    audioSource.connect(analyser);
+    isMic = true;
+    document.getElementById('micBtn').textContent = 'Stop Mic';
+    document.getElementById('micBtn').style.borderColor = 'var(--red)';
+    document.getElementById('dropHint').style.display = 'none';
+  }).catch(err => {
+    TipoUI.showToast('Mic access denied');
+  });
+}
+
+function stopMic() {
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
+  isMic = false;
+  document.getElementById('micBtn').textContent = 'Mic';
+  document.getElementById('micBtn').style.borderColor = '';
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadImage(URL.createObjectURL(file), img => {
+    uploadedImg = img;
+    useImage = true;
+    document.getElementById('imgName').textContent = file.name;
+    buildTextBuffer();
+  });
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const files = e.dataTransfer.files;
+  for (const file of files) {
+    if (file.type.startsWith('audio/')) {
+      loadAudioFile(file);
+    } else if (file.type.startsWith('image/')) {
+      loadImage(URL.createObjectURL(file), img => {
+        uploadedImg = img;
+        useImage = true;
+        document.getElementById('imgName').textContent = file.name;
+        buildTextBuffer();
+      });
+    }
+  }
+}
+
+// ============================================================
+// COLOR LEVELS
+// ============================================================
+
+function updateColorLevelVisibility() {
+  const n = TipoUI.val('colorLevels');
+  const rows = document.querySelectorAll('.color-level-row');
+  rows.forEach((row, i) => { row.style.display = i < n ? 'flex' : 'none'; });
+}
+
+function getLevelColor(brightness, numLevels) {
+  // Map brightness (0-1) to a color level
+  const idx = Math.min(Math.floor(brightness * numLevels), numLevels - 1);
+  const el = document.getElementById('lv' + idx);
+  return el ? el.value : '#ffffff';
+}
+
+// ============================================================
+// MAIN DRAW LOOP
+// ============================================================
+
+let lastText = '';
+
+// Per-cell smoothed energy for organic animation
+let cellEnergy = null;
+
+function draw() {
+  const bgC = document.getElementById('bgColor').value;
+  background(bgC);
+
+  // Rebuild text buffer if text changed
+  const currentText = document.getElementById('textInput').value || 'TIPÓ';
+  if (!useImage && currentText !== lastText) {
+    buildTextBuffer();
+    lastText = currentText;
+  }
+
+  if (!textBuffer) return;
+
+  // Read audio frequency data
+  const hasAudio = analyser && (isPlaying || isMic);
+  if (hasAudio) {
+    const sm = TipoUI.val('smoothing') / 100;
+    analyser.smoothingTimeConstant = sm;
+    analyser.getByteFrequencyData(freqData);
+    for (let i = 0; i < freqData.length; i++) {
+      smoothedFreq[i] = smoothedFreq[i] * 0.5 + freqData[i] * 0.5;
+    }
+  }
+
+  // Update audio time display
+  if (audioElement && audioElement.duration) {
+    const cur = audioElement.currentTime;
+    const dur = audioElement.duration;
+    const fmt = t => { const m = Math.floor(t/60); const s = Math.floor(t%60); return m + ':' + (s<10?'0':'') + s; };
+    document.getElementById('audioTime').textContent = fmt(cur) + ' / ' + fmt(dur);
+    const pct = (cur / dur) * 100;
+    document.getElementById('waveformPos').style.left = pct + '%';
+    document.getElementById('waveformFill').style.width = pct + '%';
+  }
+
+  // Grid params
+  const numCols = TipoUI.val('cols');
+  const numRows = TipoUI.val('rows');
+  const gapPx = TipoUI.val('gap');
+  const minSz = TipoUI.val('minSize') / 100;
+  const maxSz = TipoUI.val('maxSize') / 100;
+  const audioInt = TipoUI.val('audioIntensity') / 100;
+  const freqR = TipoUI.val('freqRange') / 100;
+  const numLevels = TipoUI.val('colorLevels');
+  const mode = document.getElementById('barMode').value;
+  const shrink = document.getElementById('shrinkAxis').value;
+
+  const cellW = width / numCols;
+  const cellH = height / numRows;
+
+  noStroke();
+
+  // Initialize per-cell energy array
+  const totalCells = numCols * numRows;
+  if (!cellEnergy || cellEnergy.length !== totalCells) {
+    cellEnergy = new Float32Array(totalCells);
+  }
+
+  // ---- Compute audio energy per row (frequency bands mapped to rows) ----
+  // Low frequencies = bottom rows, high frequencies = top rows
+  // This makes the visualizer react like an equalizer
+  const rowEnergy = new Float32Array(numRows);
+  if (hasAudio && smoothedFreq) {
+    const binCount = smoothedFreq.length;
+    const maxBin = Math.max(4, Math.floor(binCount * (0.1 + freqR * 0.9)));
+    for (let r = 0; r < numRows; r++) {
+      // Map rows: bottom row (r=numRows-1) = low freq, top row (r=0) = high freq
+      const rowFromBottom = numRows - 1 - r;
+      const binStart = Math.floor((rowFromBottom / numRows) * maxBin);
+      const binEnd = Math.floor(((rowFromBottom + 1) / numRows) * maxBin);
+      let sum = 0, count = 0;
+      for (let b = binStart; b < binEnd && b < binCount; b++) {
+        sum += smoothedFreq[b];
+        count++;
+      }
+      rowEnergy[r] = count > 0 ? (sum / count) / 255 : 0;
+    }
+  } else {
+    // Idle animation: wave through rows
+    const t = frameCount * 0.04;
+    for (let r = 0; r < numRows; r++) {
+      rowEnergy[r] = (Math.sin(t + r * 0.2) * 0.5 + 0.5) * 0.3;
+    }
+  }
+
+  // ---- Sample text buffer and draw bars ----
+  for (let r = 0; r < numRows; r++) {
+    const energy = rowEnergy[r];
+
+    for (let c = 0; c < numCols; c++) {
+      // Sample brightness from text buffer (this is the MASK)
+      const sx = Math.floor((c / numCols) * textBuffer.width);
+      const sy = Math.floor((r / numRows) * textBuffer.height);
+      const pidx = (sy * textBuffer.width + sx) * 4;
+      const pr = textBuffer.pixels[pidx];
+      const pg = textBuffer.pixels[pidx + 1];
+      const pb = textBuffer.pixels[pidx + 2];
+      const mask = (pr * 0.299 + pg * 0.587 + pb * 0.114) / 255;
+
+      // Skip cells outside the text shape
+      if (mask < 0.05) continue;
+
+      // Smooth cell energy (fast attack, slow release)
+      const cellIdx = r * numCols + c;
+      const targetEnergy = energy * audioInt;
+      if (targetEnergy > cellEnergy[cellIdx]) {
+        cellEnergy[cellIdx] += (targetEnergy - cellEnergy[cellIdx]) * 0.6;
+      } else {
+        cellEnergy[cellIdx] += (targetEnergy - cellEnergy[cellIdx]) * 0.1;
+      }
+      const e = cellEnergy[cellIdx];
+
+      // BAR SIZE: audio energy drives the size, mask gates visibility
+      // Without audio: bars show at minSz (skeleton of the letter)
+      // With audio: bars grow from minSz toward maxSz based on energy
+      const barSize = minSz + e * (maxSz - minSz);
+
+      // Calculate bar dimensions
+      let barW = cellW - gapPx;
+      let barH = cellH - gapPx;
+
+      if (shrink === 'height' || shrink === 'both') {
+        barH = Math.max(1, (cellH - gapPx) * barSize);
+      }
+      if (shrink === 'width' || shrink === 'both') {
+        barW = Math.max(1, (cellW - gapPx) * barSize);
+      }
+
+      // COLOR: energy level determines which color band
+      const colorIdx = constrain(e * 1.2, 0, 0.999);
+      const levelColor = getLevelColor(colorIdx, numLevels);
+      fill(levelColor);
+
+      // Position (centered in cell)
+      const cx = c * cellW + cellW / 2;
+      const cy = r * cellH + cellH / 2;
+      rect(cx - barW / 2, cy - barH / 2, barW, barH);
+    }
+  }
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function setCol(id, v) { document.getElementById(id).value = v; }
+
+function resetAll() {
+  useImage = false;
+  uploadedImg = null;
+  document.getElementById('imgName').textContent = '';
+  setVal('cols', 60); setVal('rows', 40); setVal('gap', 1);
+  setVal('minSize', 5); setVal('maxSize', 100);
+  setVal('audioIntensity', 60); setVal('smoothing', 75); setVal('freqRange', 50);
+  setVal('colorLevels', 4);
+  document.getElementById('barMode').value = 'h-bars';
+  document.getElementById('shrinkAxis').value = 'height';
+  setCol('lv0', '#000000'); setCol('lv1', '#6622cc');
+  setCol('lv2', '#ff6600'); setCol('lv3', '#ffffff');
+  setCol('lv4', '#ff0066'); setCol('lv5', '#00ccff');
+  setCol('lv6', '#ffff00'); setCol('lv7', '#00ff88');
+  setCol('bgColor', '#000000');
+  updateColorLevelVisibility();
+  buildTextBuffer();
+}
+
+const PRESETS = {
+  equalizer: () => { resetAll();
+    setVal('cols', 80); setVal('rows', 50); setVal('gap', 1);
+    setVal('minSize', 5); setVal('maxSize', 100);
+    setVal('audioIntensity', 80); setVal('smoothing', 60);
+    document.getElementById('barMode').value = 'h-bars';
+    document.getElementById('shrinkAxis').value = 'height';
+    setCol('lv0', '#0a0a2e'); setCol('lv1', '#4400aa');
+    setCol('lv2', '#ff6600'); setCol('lv3', '#ffffff');
+  },
+  waveform: () => { resetAll();
+    setVal('cols', 120); setVal('rows', 60); setVal('gap', 0);
+    setVal('minSize', 0); setVal('maxSize', 100);
+    setVal('audioIntensity', 90); setVal('smoothing', 60);
+    document.getElementById('barMode').value = 'v-bars';
+    document.getElementById('shrinkAxis').value = 'height';
+    setCol('lv0', '#000000'); setCol('lv1', '#003366');
+    setCol('lv2', '#0088ff'); setCol('lv3', '#88ddff');
+  },
+  spectrum: () => { resetAll();
+    setVal('cols', 100); setVal('rows', 80); setVal('gap', 0);
+    setVal('minSize', 0); setVal('maxSize', 100);
+    setVal('audioIntensity', 70); setVal('smoothing', 80);
+    setVal('colorLevels', 6); updateColorLevelVisibility();
+    document.getElementById('barMode').value = 'h-bars';
+    document.getElementById('shrinkAxis').value = 'both';
+    setCol('lv0', '#000000'); setCol('lv1', '#ff0044');
+    setCol('lv2', '#ff6600'); setCol('lv3', '#ffcc00');
+    setCol('lv4', '#00ff88'); setCol('lv5', '#00ccff');
+  },
+  pulse: () => { resetAll();
+    setVal('cols', 50); setVal('rows', 30); setVal('gap', 2);
+    setVal('minSize', 10); setVal('maxSize', 100);
+    setVal('audioIntensity', 100); setVal('smoothing', 50);
+    document.getElementById('barMode').value = 'pixels';
+    document.getElementById('shrinkAxis').value = 'both';
+    setCol('lv0', '#000000'); setCol('lv1', '#ff0066');
+    setCol('lv2', '#ff00cc'); setCol('lv3', '#ffffff');
+  },
+  minimal: () => { resetAll();
+    setVal('cols', 40); setVal('rows', 25); setVal('gap', 3);
+    setVal('minSize', 0); setVal('maxSize', 80);
+    setVal('audioIntensity', 40); setVal('smoothing', 90);
+    setVal('colorLevels', 2); updateColorLevelVisibility();
+    document.getElementById('barMode').value = 'h-bars';
+    document.getElementById('shrinkAxis').value = 'height';
+    setCol('lv0', '#111111'); setCol('lv1', '#ffffff');
+    setCol('bgColor', '#000000');
+  },
+  neon: () => { resetAll();
+    setVal('cols', 90); setVal('rows', 60); setVal('gap', 1);
+    setVal('minSize', 5); setVal('maxSize', 100);
+    setVal('audioIntensity', 75); setVal('smoothing', 65);
+    setVal('colorLevels', 5); updateColorLevelVisibility();
+    document.getElementById('barMode').value = 'v-bars';
+    document.getElementById('shrinkAxis').value = 'width';
+    setCol('lv0', '#0a000a'); setCol('lv1', '#6600cc');
+    setCol('lv2', '#ff00ff'); setCol('lv3', '#00ffcc');
+    setCol('lv4', '#ffffff');
+    setCol('bgColor', '#050005');
+  },
+  mono: () => { resetAll();
+    setVal('cols', 70); setVal('rows', 45); setVal('gap', 1);
+    setVal('minSize', 2); setVal('maxSize', 95);
+    setVal('audioIntensity', 55); setVal('smoothing', 80);
+    setVal('colorLevels', 4); updateColorLevelVisibility();
+    document.getElementById('barMode').value = 'h-bars';
+    document.getElementById('shrinkAxis').value = 'height';
+    setCol('lv0', '#000000'); setCol('lv1', '#333333');
+    setCol('lv2', '#999999'); setCol('lv3', '#ffffff');
+    setCol('bgColor', '#0a0a0a');
+  },
+  fire: () => { resetAll();
+    setVal('cols', 80); setVal('rows', 55); setVal('gap', 0);
+    setVal('minSize', 0); setVal('maxSize', 100);
+    setVal('audioIntensity', 85); setVal('smoothing', 55);
+    setVal('colorLevels', 5); updateColorLevelVisibility();
+    document.getElementById('barMode').value = 'v-bars';
+    document.getElementById('shrinkAxis').value = 'height';
+    setCol('lv0', '#0a0000'); setCol('lv1', '#660000');
+    setCol('lv2', '#cc3300'); setCol('lv3', '#ff8800');
+    setCol('lv4', '#ffdd44');
+    setCol('bgColor', '#050000');
+  },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+</script>
+</body>
+</html>

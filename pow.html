@@ -39,6 +39,7 @@
     <div class="range-row"><span class="range-label">Blast Strength</span><input type="range" id="blast" min="1" max="100" value="50"><span class="range-value" id="blastVal">50</span></div>
     <div class="range-row"><span class="range-label">Detail</span><input type="range" id="detail" min="10" max="200" value="80"><span class="range-value" id="detailVal">80</span></div>
     <div class="range-row"><span class="range-label">Particle Size</span><input type="range" id="pSize" min="2" max="40" value="10"><span class="range-value" id="pSizeVal">10</span></div>
+    <div class="range-row"><span class="range-label">Easing</span><input type="range" id="easing" min="0" max="9" value="5"><span class="range-value" id="easingVal">expo</span></div>
   </div>
   <div class="section"><div class="section-title">Color</div>
     <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#ffffff"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#000000"><span class="range-label">Bg</span></div>
@@ -60,7 +61,8 @@ function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 function setup() {
   const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
   c.parent('canvasContainer'); textFont(font); pixelDensity(1);
-  TipoUI.init({ mode: 'pow', formatters: {} }); recorder = TipoUI.recorder;
+  TipoUI.init({ mode: 'pow', formatters: { easing: v => TipoEase._names[v] } }); recorder = TipoUI.recorder;
+  TipoMouse.init(c);
 }
 function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
 function val(id) { return TipoUI.val(id); }
@@ -87,6 +89,7 @@ function draw() {
   const ps = val('pSize');
   const txtC = document.getElementById('typeColor').value;
 
+  TipoMouse.update();
   if (txt !== lastTxt || count !== lastDetail) initParticles(txt, count);
   if (particles.length === 0) initParticles(txt, count);
 
@@ -94,18 +97,25 @@ function draw() {
   const t = (frameCount % cycle) / cycle;
   const explode = t < 0.5;
   const phase = explode ? t * 2 : (t - 0.5) * 2;
-  const ease = explode ? pow(phase, 0.3) : 1 - pow(1 - phase, 3);
+  const easeFn = TipoEase.byIndex(val('easing'), explode ? 'out' : 'in');
+  const ease = easeFn(phase);
 
   textSize(ps); textAlign(CENTER, CENTER); noStroke();
 
+  // Mouse-reactive center offset
+  const mxOff = TipoMouse.active ? TipoMouse.sx * width * 0.3 : 0;
+  const myOff = TipoMouse.active ? TipoMouse.sy * height * 0.3 : 0;
+
   for (let p of particles) {
+    const hx = p.hx + mxOff;
+    const hy = p.hy + myOff;
     const dx = cos(p.angle) * blastStr * ease;
     const dy = sin(p.angle) * blastStr * ease;
     if (explode) {
-      p.x = p.hx + dx; p.y = p.hy + dy;
+      p.x = hx + dx; p.y = hy + dy;
     } else {
-      p.x = p.hx + cos(p.angle) * blastStr * (1 - ease);
-      p.y = p.hy + sin(p.angle) * blastStr * (1 - ease);
+      p.x = hx + cos(p.angle) * blastStr * (1 - ease);
+      p.y = hy + sin(p.angle) * blastStr * (1 - ease);
     }
     const alpha = explode ? map(ease, 0, 1, 255, 120) : map(ease, 0, 1, 120, 255);
     const col = prideMode ? color(prideColors[p.ci % 6]) : color(txtC);
@@ -120,23 +130,24 @@ function draw() {
     const a = map(phase, 0.7, 1, 0, 255);
     const mc = prideMode ? color(prideColors[0]) : color(txtC);
     mc.setAlpha(a); fill(mc);
+    const cx = width/2 + mxOff, cy = height/2 + myOff;
     if (prideMode) {
       for (let i = 0; i < txt.length; i++) {
         fill(color(prideColors[i % 6]));
-        text(txt.charAt(i), width/2 + (i-(txt.length-1)/2)*fSize*0.6, height/2);
+        text(txt.charAt(i), cx + (i-(txt.length-1)/2)*fSize*0.6, cy);
       }
-    } else { text(txt, width/2, height/2); }
+    } else { text(txt, cx, cy); }
   }
   TipoUI.captureFrame();
 }
 
 function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
-function resetAll() { prideMode = false; setVal('fontSize',80);setVal('blast',50);setVal('detail',80);setVal('pSize',10); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; particles=[]; }
+function resetAll() { prideMode = false; setVal('fontSize',80);setVal('blast',50);setVal('detail',80);setVal('pSize',10);setVal('easing',5); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; particles=[]; }
 const PRESETS = {
-  bomb: () => { resetAll(); setVal('blast',100);setVal('detail',150);setVal('fontSize',120); },
-  gentle: () => { resetAll(); setVal('blast',15);setVal('detail',40);setVal('pSize',20); },
-  dense: () => { resetAll(); setVal('detail',200);setVal('pSize',6);setVal('blast',40); },
-  micro: () => { resetAll(); setVal('pSize',4);setVal('detail',180);setVal('blast',30);setVal('fontSize',60); document.getElementById('bgColor').value='#111133'; },
+  bomb: () => { resetAll(); setVal('blast',100);setVal('detail',150);setVal('fontSize',120);setVal('easing',7); },
+  gentle: () => { resetAll(); setVal('blast',15);setVal('detail',40);setVal('pSize',20);setVal('easing',0); },
+  dense: () => { resetAll(); setVal('detail',200);setVal('pSize',6);setVal('blast',40);setVal('easing',2); },
+  micro: () => { resetAll(); setVal('pSize',4);setVal('detail',180);setVal('blast',30);setVal('fontSize',60);setVal('easing',9); document.getElementById('bgColor').value='#111133'; },
   pride: () => { prideMode = true; },
 };
 function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }

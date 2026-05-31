@@ -6,19 +6,20 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 27 ferramentas (5 visual tools + 22 kinetic type modes)
+- **Total:** 28 ferramentas (6 visual tools + 22 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
 /tipo/
   index.html                   — landing page (navegação progressiva com hash routing)
   
-  # VISUAL TOOLS (5)
+  # VISUAL TOOLS (6)
   dithering.html               — SVG dithering tool (FUNCIONAL — gold standard)
   reticula.html                — halftone grid, 11 shapes, video+webcam+MP4 (FUNCIONAL)
   glitch.html                  — RGB shift, pixel sort, slicing, video+webcam+MP4 (FUNCIONAL)
   ascii.html                   — 4 charsets, 3 color modes, video+webcam+MP4 (FUNCIONAL)
   overlay.html                 — gerador de texturas seamless, 12 patterns, image+video+webcam (FUNCIONAL)
+  audiotype.html               — audio-reactive typography, text/image + audio/mic, 2-8 color levels (FUNCIONAL)
   
   # KINETIC TYPE — Fase 1: Core (22)
   cylinder.html                — kinetic type: cylinder (FUNCIONAL)
@@ -128,6 +129,63 @@
 | Red (reset/rec) | #f44444 | #dd2222 |
 | Text primary | #ffffff | #000000 |
 | Text secondary | #aaaaaa | #555555 |
+
+---
+
+## 2026-05-26
+
+### Fase 7 — Cavalry-Level Polish (COMPLETA)
+Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
+
+**7.1 — TipoEase Library**
+- 10 curvas profissionais: sine, quad, cubic, quart, quint, expo, circ, back, bounce, elastic
+- 3 direções: in, out, inOut
+- Slider "Easing" adicionado em: Snap, Flash, Pow, Boost, Vessel
+- Vessel migrado de 7 funções locais → TipoEase compartilhado
+
+**7.2 — TipoMouse System**
+- Mouse/touch interaction opt-in com smoothing
+- Field: letters repel from cursor
+- Danger: distortion center follows mouse
+- Pow: explosion center follows mouse
+
+**7.3 — TipoNoise System**
+- 3-harmonic sine jitter para movimento orgânico
+- Slider "Organic" em: Snap, Boost, Flash
+
+**7.4 — Smooth Preset Transitions**
+- Morph de 300ms com TipoEase.inOut.cubic
+- Interpolação de sliders + cores (hex lerp)
+- Funciona automaticamente em TODAS as 28 ferramentas
+
+### Engenharia Reversa — Dither Boy 6.0.3 (Studio AAA)
+- **Tech:** Electron app, React 18, Zustand, Bytenode (V8 bytecode), FFmpeg WASM
+- **Extraído (código legível no imageProcessor.worker.js):**
+  - Pipeline de 9 efeitos: adjustments → dither → halftone → post → tint → epsilon glow → jpeg glitch → chromatic → temporal
+  - Halftone CMYK completo com supersampling, dot gain, GCR
+  - Epsilon Glow (luminance mask → distance map → gaussian blur → weighted composite)
+  - 16 blend modes para tint/overlay
+  - JPEG Glitch (5 sub-efeitos)
+  - Chromatic Aberration (per-channel displacement)
+  - Temporal Variation (9 animated noise patterns)
+  - 82 paletas de cores (RGB values)
+  - Metadados completos dos 73 algoritmos (controls, ranges, defaults)
+- **Protegido (V8 bytecode .jsc):** 73 algoritmos de dithering — mas todos são algoritmos públicos com papers
+- **Conclusão:** Implementar via papers originais, usando metadados como spec sheet
+- ATTACK_PLAN expandido: Fase 8 agora tem 12 sub-itens incluindo Risograph e AudioType
+
+### AudioType — Nova Visual Tool (EXCLUSIVA)
+- **audiotype.html** — tipografia reativa a áudio
+- Texto/imagem → grid de barras coloridas → barras pulsam com música
+- Web Audio API: AnalyserNode + FFT para frequencyData em tempo real
+- Inputs: texto digitado, upload de imagem, upload de áudio (MP3/WAV), microfone
+- 3 modos: horizontal bars, vertical bars, pixel grid
+- 2-8 níveis de cor customizáveis por faixa de luminosidade
+- 8 presets: Equalizer, Waveform, Spectrum, Pulse, Minimal, Neon, Mono, Fire
+- Idle animation quando sem áudio (subtle sine wave pulse)
+- Drag & drop para áudio e imagem
+- Export: PNG + MP4 via TipoRecorder
+- Adicionado à landing page (index.html) como 6ª Visual Tool
 
 ---
 
