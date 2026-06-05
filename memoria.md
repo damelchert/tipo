@@ -189,6 +189,59 @@ Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
 
 ---
 
+## 2026-05-31
+
+### Correções 2D + Recorder — Histórico Consolidado
+
+**Contexto do problema**
+- O usuário reportou que a seção 2D (`Layers`, `Danger`, `String`) estava bugada e depois mostrou screenshot do `Layers` em que clicar em **Record MP4** parava a animação e terminava com **Export failed**.
+- Testes headless iniciais passaram, mas o browser real revelou a falha: o caminho `MediaRecorder/captureStream` era frágil para as ferramentas 2D e podia gerar chunks vazios, travar perceptualmente a animação ou continuar usando script antigo via cache.
+
+**Commits relevantes**
+- `3081da9 Fix 2D kinetic modes`
+  - `layers.html`, `danger.html`, `string.html` foram estabilizados na aba 2D.
+  - Removido uso indevido de WEBGL/textures nos modos 2D.
+  - `Layers`: refeito como strips 2D responsivos.
+  - `Danger`: refeito com buffer 2D + distorção por grid/células.
+  - `String`: refeito com ribbons/curvas 2D sem debug dots.
+- `294810f Fix recording and 2D controls`
+  - `Layers`: adicionado controle **Speed** (`motionSpeed`, 0.00-2.00); speed 0 congela o movimento sem quebrar o draw loop.
+  - `Danger`: removido o TIPÓ estático/ghost no fundo; adicionado upload de imagem/vídeo de background + `Clear Media`; tipografia distorcida grava por cima da mídia.
+  - `String`: preset `VOTE` passa a usar cores da bandeira do Brasil (`#009c3b`, `#ffdf00`, `#ffffff`, `#002776`); adicionados patterns `Wave`, `River`, `Rain`, `Orbit`, `Spiral`, `Harp`, `Constellation`; presets agora usam caminhos diferentes.
+  - `shared/ui.js`: start/stop do recorder protegido com try/catch/finally para botão e overlay voltarem ao estado correto mesmo em falha.
+  - `shared/style.css` / `index.html`: aplicação da paleta Athos/mint/warm accent no sistema visual.
+- `3cb090a Fix 2D recording cache path`
+  - Correção final do recorder: 2D voltou a usar MP4 direto via WebCodecs + mp4-muxer por padrão.
+  - `MediaRecorder/captureStream` ficou como fallback para WEBGL ou browser sem WebCodecs.
+  - Corrigido timestamp inicial do MP4: `firstTimestampBehavior: 'offset'` no muxer + normalização manual do primeiro timestamp para 0.
+  - Adicionado timer interno de captura MP4 (`_mp4FrameTimer`) para gravar também canvases pouco animados/estáticos, como `ASCII` e `Retícula`.
+  - Adicionado cache-bust `?v=20260531-rec2` nos imports `shared/recorder.js`, `shared/ui.js` e `shared/style.css` das 28 páginas de ferramentas para impedir browser de manter recorder antigo.
+
+**Validação executada**
+- `git diff --check`: OK antes dos commits.
+- Testes CDP/Chrome headless com clique real em `toggleRec()`:
+  - `Layers`: animação avançou durante REC, usou WebCodecs (`hasEncoder: true`) e exportou MP4 (~1.3 MB).
+  - `Danger`: animação avançou durante REC e exportou MP4 (~0.3 MB).
+  - `String`: animação avançou durante REC e exportou MP4 (~0.2 MB).
+  - `ASCII` e `Retícula`: depois do timer interno MP4, passaram a gravar frames mesmo com `pageFrame` quase estático.
+- Smoke test amplo anterior: 27/27 tools completaram fluxo REC/STOP/download quando ambiente headless tinha contexto compatível.
+
+**Lições / decisões para próximos agentes**
+- Não confiar só em smoke test headless para gravação/exportação; validar em browser real quando o usuário reportar falha visual.
+- Para 2D, preferir WebCodecs/mp4-muxer. `captureStream` é útil como fallback, mas foi fonte da falha vista pelo usuário.
+- Sempre versionar/cache-bust arquivos compartilhados quando corrigir bug crítico em `shared/recorder.js` ou `shared/ui.js`; o Vercel/browser pode manter script antigo.
+- Ao testar export, evitar salvar downloads dentro de `assets/`; um teste sobrescreveu temporariamente `assets/tipo-export.mp4` e precisou ser restaurado.
+
+### Estado Pós-Correção
+- Repo estava limpo após os commits e push.
+- Histórico recente inclui também commits posteriores de landing/header/quadrants:
+  - `496252b Header: GSAP animations, ghost text, 10 random entrances, video blend fix`
+  - `6882330 Quadrant previews: replace CSS animations with canvas GSAP renders`
+  - `eecc124 Animation quadrant: rewrite with GSAP timelines — 6 crafted modes`
+- Servidor local usado nos testes: `http://127.0.0.1:4173/index.html#2d`.
+
+---
+
 ## 2026-05-30
 
 ### Brand Identity — Paleta "Athos" (Mint Brasileiro)
