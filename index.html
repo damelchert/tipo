@@ -866,9 +866,21 @@ document.querySelectorAll('.tipo-split-panel').forEach(panel => {
 // ---- QUAD CANVAS PREVIEWS ----
 // Each canvas renders a mini-demo of what the category does.
 
-function initQuadCanvases() {
+let _quadCanvasesInited = false;
+let fg = 'rgba(232,228,224,'; // shared by quad draw loops; refreshed on theme change
+
+function _refreshQuadTheme() {
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const fg = isDark ? 'rgba(232,228,224,' : 'rgba(26,24,24,';
+  fg = isDark ? 'rgba(232,228,224,' : 'rgba(26,24,24,';
+}
+new MutationObserver(_refreshQuadTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+function initQuadCanvases() {
+  // Guard: goKineticType calls this on every navigation — without it,
+  // RAF loops and GSAP timelines stack up.
+  _refreshQuadTheme();
+  if (_quadCanvasesInited) return;
+  _quadCanvasesInited = true;
   const accent = '#99E0D2';
   const gold = '#D4A040';
 
@@ -896,6 +908,7 @@ function initQuadCanvases() {
     let frame = 0;
 
     function draw() {
+      if (!cvs.offsetParent) { requestAnimationFrame(draw); return; } // skip work while hidden
       ctx.clearRect(0, 0, w, h);
       ctx.font = '700 14px "IBM Plex Mono", monospace';
       ctx.textAlign = 'center';
@@ -932,6 +945,7 @@ function initQuadCanvases() {
     let frame = 0;
 
     function draw() {
+      if (!cvs.offsetParent) { requestAnimationFrame(draw); return; } // skip work while hidden
       ctx.clearRect(0, 0, w, h);
       const t = frame * 0.02;
       const rows = 12;
@@ -982,6 +996,7 @@ function initQuadCanvases() {
     let frame = 0;
 
     function draw() {
+      if (!cvs.offsetParent) { requestAnimationFrame(draw); return; } // skip work while hidden
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2, cy = h / 2;
       const t = frame * 0.005;
@@ -1156,6 +1171,7 @@ function initQuadCanvases() {
 
     // Render loop
     function draw() {
+      if (!cvs.offsetParent) { requestAnimationFrame(draw); return; } // skip work while hidden
       ctx.clearRect(0, 0, w, h);
       chars.forEach((c, i) => {
         if (c.alpha < 0.005) return;

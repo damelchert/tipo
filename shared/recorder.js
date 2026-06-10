@@ -14,6 +14,7 @@ class TipoRecorder {
     this.preferStream = options.preferStream === true;
 
     this.isRecording = false;
+    this._stopping = false;
     this.muxer = null;
     this.encoder = null;
     this.frameCount = 0;
@@ -48,7 +49,9 @@ class TipoRecorder {
   }
 
   async start(bitrate = 8000000) {
-    if (this.isRecording) return;
+    // Block start while recording or while a previous stop() is still flushing —
+    // otherwise the new session would overwrite encoder/muxer mid-flush.
+    if (this.isRecording || this._stopping) return;
 
     this._resetSession();
 
@@ -177,6 +180,7 @@ class TipoRecorder {
 
   _requestStreamFrame(force = false) {
     if (!this._streamTrack && !this._recCanvas) return false;
+    if (!force && document.hidden && this.frameCount > 0) return false;
     const now = performance.now();
     const minDelta = 1000 / this.fps * 0.75;
     if (!force && this._lastStreamFrameTime >= 0 && now - this._lastStreamFrameTime < minDelta) return false;
@@ -220,6 +224,9 @@ class TipoRecorder {
 
     // MP4 direct mode: encode frame manually
     if (!this.encoder) return;
+    // Skip frozen frames while the tab is hidden (timestamps are real-time,
+    // so the last visible frame simply holds — smaller file, less CPU).
+    if (document.hidden && this.frameCount > 0) return;
     if (this.encoder.encodeQueueSize > 10) return;
 
     const now = performance.now();
@@ -251,17 +258,22 @@ class TipoRecorder {
   }
 
   async stop() {
-    if (!this.isRecording) return;
-    if (this.encoder && this.frameCount === 0) this.captureFrame();
-    this.isRecording = false;
-    this._stopTimer();
-    if (this._mp4FrameTimer) clearInterval(this._mp4FrameTimer);
-    this._mp4FrameTimer = null;
+    if (!this.isRecording || this._stopping) return;
+    this._stopping = true;
+    try {
+      if (this.encoder && this.frameCount === 0) this.captureFrame();
+      this.isRecording = false;
+      this._stopTimer();
+      if (this._mp4FrameTimer) clearInterval(this._mp4FrameTimer);
+      this._mp4FrameTimer = null;
 
-    if (this.encoder) {
-      return this._stopMP4();
-    } else if (this._mediaRecorder) {
-      return this._stopStream();
+      if (this.encoder) {
+        return await this._stopMP4();
+      } else if (this._mediaRecorder) {
+        return await this._stopStream();
+      }
+    } finally {
+      this._stopping = false;
     }
   }
 
@@ -353,7 +365,8 @@ class TipoRecorder {
     link.download = filename;
     link.href = URL.createObjectURL(blob);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    // Generous delay: revoking too early can truncate large downloads on slow disks
+    setTimeout(() => URL.revokeObjectURL(link.href), 60000);
   }
 }
 

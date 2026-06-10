@@ -92,22 +92,24 @@ const TipoMouse = {
   smoothing: 0.08,
   _canvas: null,
   _enabled: false,
+  _listeners: null,
 
   init(canvas) {
+    if (this._canvas) this.destroy(); // avoid duplicate listeners on re-init
     this._canvas = canvas;
     this._enabled = true;
 
     const el = canvas.elt || canvas;
-    el.addEventListener('mousemove', (e) => {
+    const onMouseMove = (e) => {
       const r = el.getBoundingClientRect();
       this.px = e.clientX - r.left;
       this.py = e.clientY - r.top;
       this.nx = (this.px / r.width) * 2 - 1;
       this.ny = (this.py / r.height) * 2 - 1;
       this.active = true;
-    });
-    el.addEventListener('mouseleave', () => { this.active = false; });
-    el.addEventListener('touchmove', (e) => {
+    };
+    const onMouseLeave = () => { this.active = false; };
+    const onTouchMove = (e) => {
       const r = el.getBoundingClientRect();
       const t = e.touches[0];
       this.px = t.clientX - r.left;
@@ -115,8 +117,27 @@ const TipoMouse = {
       this.nx = (this.px / r.width) * 2 - 1;
       this.ny = (this.py / r.height) * 2 - 1;
       this.active = true;
-    }, { passive: true });
-    el.addEventListener('touchend', () => { this.active = false; });
+    };
+    const onTouchEnd = () => { this.active = false; };
+
+    el.addEventListener('mousemove', onMouseMove);
+    el.addEventListener('mouseleave', onMouseLeave);
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd);
+    this._listeners = { el, onMouseMove, onMouseLeave, onTouchMove, onTouchEnd };
+  },
+
+  /** Remove listeners added by init() */
+  destroy() {
+    if (!this._listeners) { this._canvas = null; this._enabled = false; return; }
+    const { el, onMouseMove, onMouseLeave, onTouchMove, onTouchEnd } = this._listeners;
+    el.removeEventListener('mousemove', onMouseMove);
+    el.removeEventListener('mouseleave', onMouseLeave);
+    el.removeEventListener('touchmove', onTouchMove);
+    el.removeEventListener('touchend', onTouchEnd);
+    this._listeners = null;
+    this._canvas = null;
+    this._enabled = false;
   },
 
   /** Call in draw() to update smoothed values */

@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Coil</title>
-<link rel="stylesheet" href="shared/style.css?v=20260531-rec2">
+<link rel="stylesheet" href="shared/style.css?v=20260610-fix1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
-<script src="shared/recorder.js?v=20260531-rec2"></script>
-<script src="shared/ui.js?v=20260531-rec2"></script>
+<script src="shared/recorder.js?v=20260610-fix1"></script>
+<script src="shared/ui.js?v=20260610-fix1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -276,7 +276,6 @@ function resetAll() {
   document.getElementById('c1').value='#ff0000'; document.getElementById('c2').value='#ffff00';
   document.getElementById('c3').value='#0000ff'; document.getElementById('c4').value='#ffffff';
   document.getElementById('c5').value='#000000'; document.getElementById('bgColor').value='#000000';
-  document.getElementById('textInput').value='TIPÓ ';
 }
 
 const PRESETS = {
@@ -292,9 +291,7 @@ const PRESETS = {
     setVal('typeX',11);setVal('typeY',68);setVal('typeWeight',15);
     setVal('ribCount',40);setVal('ribSize',25);setVal('flatCaps',true);
     setVal('radius',10);setVal('spacing',4);setVal('spiralStart',6);
-    document.getElementById('bgColor').value='#0000ff';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#0000ff';  },
   amoeba: () => { resetAll();
     setVal('typeX',9);setVal('typeY',14);setVal('typeWeight',15);
     setVal('ribCount',25);setVal('ribSize',22);setVal('flatCaps',true);
@@ -309,34 +306,26 @@ const PRESETS = {
     setVal('ribCount',110);setVal('ribSize',-10);setVal('hideRibbons',true);
     setVal('radius',35);setVal('spacing',1);setVal('spiralStart',22);
     setVal('numColors',2);
-    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffffff';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#ffffff';  },
   kitty: () => { resetAll();
     setVal('typeX',6);setVal('typeY',23);setVal('typeWeight',15);
     setVal('ribCount',217);setVal('ribSize',9);
     setVal('radius',15);setVal('spacing',5);setVal('spiralStart',5);setVal('spin',0);
     document.getElementById('c1').value='#0433FF';document.getElementById('c2').value='#FFFB00';
     document.getElementById('c3').value='#FF2F92';document.getElementById('c4').value='#ffffff';
-    document.getElementById('bgColor').value='#FF7E79';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#FF7E79';  },
   hourglass: () => { resetAll();
     setVal('typeX',2);setVal('typeY',36);setVal('typeWeight',20);
     setVal('ribCount',337);setVal('ribSize',30);
     setVal('radius',30);setVal('spacing',3);setVal('spiralStart',96);
     setVal('waveSize',83);setVal('waveSpeed',4);setVal('slope',31);
-    document.getElementById('bgColor').value='#D9D9D9';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#D9D9D9';  },
   star: () => { resetAll();
     setVal('typeX',7);setVal('typeY',20);setVal('typeWeight',20);
     setVal('ribCount',230);setVal('ribSize',0);
     setVal('radius',45);setVal('spacing',0);setVal('spiralStart',122);setVal('spin',2);
     setVal('waveSize',25);setVal('waveCount',5);setVal('waveSpeed',0);
-    document.getElementById('bgColor').value='#ffff00';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#ffff00';  },
   zztar: () => { resetAll();
     setVal('typeX',5);setVal('typeY',12);setVal('typeWeight',20);
     setVal('ribCount',400);setVal('ribSize',43);
@@ -345,24 +334,18 @@ const PRESETS = {
     document.getElementById('c1').value='#ff0000';document.getElementById('c2').value='#FF9300';
     document.getElementById('c3').value='#ffff00';document.getElementById('c4').value='#00ff00';
     document.getElementById('c5').value='#0000ff';
-    document.getElementById('bgColor').value='#ff0000';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#ff0000';  },
   pretzel: () => { resetAll();
     setVal('typeX',4);setVal('typeY',20);setVal('typeWeight',20);
     setVal('ribCount',400);setVal('ribSize',31);
     setVal('radius',30);setVal('spacing',1);setVal('spiralStart',0);
     setVal('waveSize',200);setVal('waveCount',1);setVal('waveSpeed',3);
-    document.getElementById('bgColor').value='#0000ff';
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    document.getElementById('bgColor').value='#0000ff';  },
   lemniscate: () => { resetAll();
     setVal('typeX',4);setVal('typeY',9);setVal('typeWeight',20);
     setVal('ribCount',400);setVal('ribSize',50);setVal('flatCaps',true);
     setVal('radius',0);setVal('spacing',21);setVal('spiralStart',84);
-    setVal('waveSize',200);setVal('waveCount',2);setVal('waveSpeed',3);
-    document.getElementById('textInput').value='TIPÓ ';
-  },
+    setVal('waveSize',200);setVal('waveCount',2);setVal('waveSpeed',3);  },
   pride: () => { prideMode = true; },
 };
 

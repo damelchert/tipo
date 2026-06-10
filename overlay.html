@@ -7,9 +7,9 @@
 <meta name="description" content="Tipó — Overlay Generator. Seamless procedural textures for design.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Overlay Generator</title>
-<link rel="stylesheet" href="shared/style.css?v=20260531-rec2">
+<link rel="stylesheet" href="shared/style.css?v=20260610-fix1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
-<script src="shared/recorder.js?v=20260531-rec2"></script>
+<script src="shared/recorder.js?v=20260610-fix1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -146,18 +146,40 @@ let animFrame = null;
 
 let seed = Math.random() * 10000;
 
+let mediaUrl = null; // object URL of current video file (revoked on replace)
+
+function setMediaUrl(url) {
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = url;
+}
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load(); // release decoder
+  sourceVideo = null;
+}
+
 function handleFile(file) {
   document.getElementById('dropHint').style.display = 'none';
   if (file.type.startsWith('image/')) {
     if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
-    if (sourceVideo) { sourceVideo.pause(); sourceVideo = null; }
+    releaseVideo();
+    setMediaUrl(null);
+    const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => { sourceImg = img; sourceType = 'image'; stopLoop(); renderComposite(); };
-    img.src = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); sourceImg = img; sourceType = 'image'; stopLoop(); renderComposite(); };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
   } else if (file.type.startsWith('video/')) {
     if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
     const vid = document.createElement('video');
-    vid.src = URL.createObjectURL(file);
+    vid.src = url;
     vid.loop = true; vid.muted = true; vid.playsInline = true;
     vid.play();
     sourceVideo = vid; sourceImg = null; sourceType = 'video';
@@ -170,7 +192,8 @@ function handleFile(file) {
 function toggleWebcam() {
   if (webcamStream) {
     webcamStream.getTracks().forEach(t => t.stop());
-    webcamStream = null; sourceVideo = null;
+    webcamStream = null;
+    releaseVideo();
     sourceType = sourceImg ? 'image' : null;
     stopLoop(); renderComposite();
     document.getElementById('webcamBtn').textContent = 'Webcam';
@@ -180,6 +203,8 @@ function toggleWebcam() {
   navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
     .then(stream => {
       webcamStream = stream;
+      releaseVideo();
+      setMediaUrl(null);
       const vid = document.createElement('video');
       vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
       vid.play();
@@ -188,6 +213,12 @@ function toggleWebcam() {
       document.getElementById('webcamBtn').textContent = 'Stop Cam';
       document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
       startLoop();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      const btn = document.getElementById('webcamBtn');
+      btn.textContent = 'Cam denied';
+      setTimeout(() => { btn.textContent = 'Webcam'; }, 2000);
     });
 }
 
