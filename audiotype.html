@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — AudioType: audio-reactive typography visualizer. Upload text or images + music, watch letters pulse with sound.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — AudioType</title>
-<link rel="stylesheet" href="shared/style.css?v=20260610-fix1">
+<link rel="stylesheet" href="shared/style.css?v=20260610-ux1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
-<script src="shared/recorder.js?v=20260610-fix1"></script>
-<script src="shared/ui.js?v=20260610-fix1"></script>
+<script src="shared/recorder.js?v=20260610-ux1"></script>
+<script src="shared/ui.js?v=20260610-ux1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; background: #000; }
@@ -118,18 +118,18 @@
     <div class="section-title">Color Levels</div>
     <div class="range-row"><span class="range-label">Levels</span><input type="range" id="colorLevels" min="2" max="8" value="4"><span class="range-value" id="colorLevelsVal">4</span></div>
     <div id="colorLevelInputs">
-      <div class="color-level-row"><label>1</label><input type="color" id="lv0" value="#000000"></div>
-      <div class="color-level-row"><label>2</label><input type="color" id="lv1" value="#6622cc"></div>
-      <div class="color-level-row"><label>3</label><input type="color" id="lv2" value="#ff6600"></div>
-      <div class="color-level-row"><label>4</label><input type="color" id="lv3" value="#ffffff"></div>
-      <div class="color-level-row" style="display:none;"><label>5</label><input type="color" id="lv4" value="#ff0066"></div>
-      <div class="color-level-row" style="display:none;"><label>6</label><input type="color" id="lv5" value="#00ccff"></div>
-      <div class="color-level-row" style="display:none;"><label>7</label><input type="color" id="lv6" value="#ffff00"></div>
-      <div class="color-level-row" style="display:none;"><label>8</label><input type="color" id="lv7" value="#00ff88"></div>
+      <div class="color-level-row"><label>1</label><input type="color" id="lv0" value="#1A1818"></div>
+      <div class="color-level-row"><label>2</label><input type="color" id="lv1" value="#1B5A4E"></div>
+      <div class="color-level-row"><label>3</label><input type="color" id="lv2" value="#2A8A7A"></div>
+      <div class="color-level-row"><label>4</label><input type="color" id="lv3" value="#5FB3A3"></div>
+      <div class="color-level-row" style="display:none;"><label>5</label><input type="color" id="lv4" value="#99E0D2"></div>
+      <div class="color-level-row" style="display:none;"><label>6</label><input type="color" id="lv5" value="#B08830"></div>
+      <div class="color-level-row" style="display:none;"><label>7</label><input type="color" id="lv6" value="#D4A040"></div>
+      <div class="color-level-row" style="display:none;"><label>8</label><input type="color" id="lv7" value="#E8C97E"></div>
     </div>
     <div class="color-section-row" style="margin-top:6px;">
       <span class="range-label">Background</span>
-      <input type="color" id="bgColor" value="#000000">
+      <input type="color" id="bgColor" value="#F8F5F0">
     </div>
   </div>
 
@@ -601,11 +601,11 @@ function resetAll() {
   setVal('colorLevels', 4);
   document.getElementById('barMode').value = 'h-bars';
   document.getElementById('shrinkAxis').value = 'height';
-  setCol('lv0', '#000000'); setCol('lv1', '#6622cc');
-  setCol('lv2', '#ff6600'); setCol('lv3', '#ffffff');
-  setCol('lv4', '#ff0066'); setCol('lv5', '#00ccff');
-  setCol('lv6', '#ffff00'); setCol('lv7', '#00ff88');
-  setCol('bgColor', '#000000');
+  setCol('lv0', '#1A1818'); setCol('lv1', '#1B5A4E');
+  setCol('lv2', '#2A8A7A'); setCol('lv3', '#5FB3A3');
+  setCol('lv4', '#99E0D2'); setCol('lv5', '#B08830');
+  setCol('lv6', '#D4A040'); setCol('lv7', '#E8C97E');
+  setCol('bgColor', '#F8F5F0');
   updateColorLevelVisibility();
   buildTextBuffer();
 }

@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Danger</title>
-<link rel="stylesheet" href="shared/style.css?v=20260610-fix1">
+<link rel="stylesheet" href="shared/style.css?v=20260610-ux1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
-<script src="shared/recorder.js?v=20260610-fix1"></script>
-<script src="shared/ui.js?v=20260610-fix1"></script>
+<script src="shared/recorder.js?v=20260610-ux1"></script>
+<script src="shared/ui.js?v=20260610-ux1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -23,7 +23,7 @@
 <body>
 
 <div class="tipo-panel" id="panel">
-  <h1>Danger <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+  <h1>Danger <span style="display:flex;gap:8px;"><a href="index.html#2d" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
     <div class="section-title">Text</div>
@@ -69,9 +69,9 @@
     <div class="section-title">Color</div>
     <div class="color-section-row">
       <span class="range-label">Text</span>
-      <input type="color" id="typeColor" value="#000000">
+      <input type="color" id="typeColor" value="#1A1818">
       <button class="swap-btn" onclick="swapColors()" title="Swap colors">&#8646;</button>
-      <input type="color" id="bgColor" value="#ffffff">
+      <input type="color" id="bgColor" value="#F8F5F0">
       <span class="range-label">Bg</span>
     </div>
   </div>
@@ -365,8 +365,8 @@ function resetAll() {
   setVal('noiseSpeed', 20); setVal('radiusNoise', 25); setVal('tumult', 63);
   setVal('columns', 45); setVal('rows', 45);
   setVal('fontSize', 170); setVal('leading', 60); setVal('invert', false);
-  document.getElementById('typeColor').value = '#000000';
-  document.getElementById('bgColor').value = '#ffffff';
+  document.getElementById('typeColor').value = '#1A1818';
+  document.getElementById('bgColor').value = '#F8F5F0';
   lastText = '';
 }
 

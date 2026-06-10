@@ -25,6 +25,10 @@
   /* Theme toggle */
   .tipo-theme-toggle { position: fixed; top: 12px; right: 12px; z-index: 200; width: 32px; height: 32px; background: #222; border: 1px solid #444; border-radius: 50%; color: #aaa; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; line-height: 1; padding: 0; }
   .tipo-theme-toggle:hover { border-color: #4488ff; color: #fff; }
+  .tipo-back-btn { position: fixed; top: 12px; left: 12px; z-index: 200; width: 32px; height: 32px; background: #222; border: 1px solid #444; border-radius: 50%; color: #aaa; font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; line-height: 1; text-decoration: none; }
+  .tipo-back-btn:hover { border-color: #4488ff; color: #fff; }
+  html[data-theme="light"] .tipo-back-btn { background: #e0e0e0; border-color: #ccc; color: #555; }
+  html[data-theme="light"] .tipo-back-btn:hover { border-color: #2266dd; color: #000; }
   html[data-theme="light"] .tipo-theme-toggle { background: #e0e0e0; border-color: #ccc; color: #555; }
   html[data-theme="light"] .tipo-theme-toggle:hover { border-color: #2266dd; color: #000; }
 
@@ -1745,7 +1749,7 @@ function applyPalette(index) {
 // THEME TOGGLE
 // ============================================================
 (function initTheme() {
-  const saved = localStorage.getItem('tipo-theme') || 'dark';
+  const saved = localStorage.getItem('tipo-theme') || 'light';
   document.documentElement.setAttribute('data-theme', saved);
   const btn = document.createElement('button');
   btn.className = 'tipo-theme-toggle';
@@ -1759,6 +1763,14 @@ function applyPalette(index) {
     btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
   });
   document.body.appendChild(btn);
+
+  // Back button
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.title = 'Back to menu';
+  back.textContent = '\u2190';
+  document.body.appendChild(back);
 })();
 
 // ============================================================

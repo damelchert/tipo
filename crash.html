@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Crash</title>
-<link rel="stylesheet" href="shared/style.css?v=20260610-fix1">
+<link rel="stylesheet" href="shared/style.css?v=20260610-ux1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
-<script src="shared/recorder.js?v=20260610-fix1"></script>
-<script src="shared/ui.js?v=20260610-fix1"></script>
+<script src="shared/recorder.js?v=20260610-ux1"></script>
+<script src="shared/ui.js?v=20260610-ux1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -22,7 +22,7 @@
 </head>
 <body>
 <div class="tipo-panel" id="panel">
-  <h1>Crash <span style="display:flex;gap:8px;"><a href="index.html#kinetic" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+  <h1>Crash <span style="display:flex;gap:8px;"><a href="index.html#animation" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
   <div class="section"><div class="section-title">Text</div><input type="text" id="textInput" value="TIPÓ" placeholder="Type here..."></div>
   <div class="section"><div class="section-title">Presets</div>
     <div class="preset-grid">
@@ -41,7 +41,7 @@
     <div class="range-row"><span class="range-label">Friction</span><input type="range" id="friction" min="0" max="100" value="20"><span class="range-value" id="frictionVal">20</span></div>
   </div>
   <div class="section"><div class="section-title">Color</div>
-    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#ffffff"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#000000"><span class="range-label">Bg</span></div>
+    <div class="color-section-row"><span class="range-label">Text</span><input type="color" id="typeColor" value="#1A1818"><button class="swap-btn" onclick="swapColors()" title="Swap">&#8646;</button><input type="color" id="bgColor" value="#F8F5F0"><span class="range-label">Bg</span></div>
   </div>
   <div class="section section-divider"><div class="section-title">Export</div><div class="btn-row"><button class="btn" onclick="savePNG()">PNG</button><button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button></div><div class="record-timer" id="recTimer"></div></div>
   <div style="height:40px;"></div>
@@ -126,7 +126,7 @@ function draw() {
 }
 
 function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
-function resetAll() { prideMode = false; setVal('fontSize',80);setVal('gravity',50);setVal('bounce',60);setVal('friction',20); document.getElementById('typeColor').value='#ffffff';document.getElementById('bgColor').value='#000000'; bodies=[]; }
+function resetAll() { prideMode = false; setVal('fontSize',80);setVal('gravity',50);setVal('bounce',60);setVal('friction',20); document.getElementById('typeColor').value='#1A1818';document.getElementById('bgColor').value='#F8F5F0'; bodies=[]; }
 const PRESETS = {
   heavy: () => { resetAll(); setVal('gravity',100);setVal('bounce',30);setVal('fontSize',120); },
   bouncy: () => { resetAll(); setVal('bounce',95);setVal('gravity',40);setVal('friction',5); },

@@ -70,51 +70,43 @@ Atacar ANTES de criar ferramentas novas — polir o que existe primeiro.
 - Funciona automaticamente em TODAS as 27 ferramentas
 - **Status:** [x] Implementado
 
-### FASE 7.5 — UI/UX Polish + Brand Identity (PRÓXIMA SESSÃO)
+### FASE 7.5 — UI/UX Polish + Brand Identity (executada em 2026-06-10 — falta só 7.5.2 e smoke test visual)
 
 Prioridade máxima — arrumar experiência antes de features novas.
 
 #### 7.5.1 — Light mode como padrão
-- [ ] Mudar default do localStorage para `light` em todas as tools
-- [ ] Manter toggle dark/light funcionando
-- [ ] Testar TODAS as 28 ferramentas em light mode
+- [x] Mudar default do localStorage para `light` em todas as tools (+ base do :root no CSS invertida pra light, sem flash)
+- [x] Manter toggle dark/light funcionando
+- [ ] Testar TODAS as 28 ferramentas em light mode (smoke test visual pendente)
 
-#### 7.5.2 — Header disruptivo
+#### 7.5.2 — Header disruptivo (PENDENTE — criativo, precisa feedback visual do Daniel)
 - [ ] Melhorar GSAP animations do header (mais impacto, menos espaço vazio)
 - [ ] Ghost text mais expressivo
 - [ ] Animação da linha gradient mais impactante
 
 #### 7.5.3 — Paleta brand nos presets default
-- [ ] TODAS as ferramentas devem abrir com cores da paleta Athos (light mode):
+- [x] TODAS as ferramentas devem abrir com cores da paleta Athos (light mode):
   - Background: `#F8F5F0`, texto: `#1A1818`, accent: `#2A8A7A`, stroke: `#D4A040`
-- [ ] Presets criativos mantêm suas paletas próprias — só o default muda
-- [ ] Auditar os 28 arquivos HTML um por um
+- [x] Presets criativos mantêm suas paletas próprias — só o default muda (resetAll também atualizado)
+- [x] Auditar os 28 arquivos HTML um por um (109 color inputs; exceções: overlay baseColor, dithering)
 
 #### 7.5.4 — Fix: edição de hex nos color pickers
-- [ ] Input de cor hex não aceita digitação manual em vários browsers
-- [ ] Investigar se é limitação do `<input type="color">` nativo
-- [ ] Solução: adicionar campo de texto hex ao lado do color picker
+- [x] Solução: campo de texto hex ao lado do color picker (TipoUI.initHexInputs, sync bidirecional + morph de presets)
 
 #### 7.5.5 — Fix: gravação MP4/WebM
-- [ ] Auditar recorder em TODAS as ferramentas
-- [ ] Verificar: WebCodecs MP4 vs MediaRecorder WebM vs Chrome nativo
-- [ ] Testar: início, parada, export, tamanho do arquivo
-- [ ] Corrigir bugs de frames vazios, codec não suportado, etc.
+- [x] Coberto pelo stability pass de 2026-06-10 (race do _stopping, guard document.hidden, revoke timeout)
 
 #### 7.5.6 — Auditoria geral de bugs
-- [ ] Percorrer todas as 28 ferramentas
-- [ ] Identificar: travamentos, performance, inflação de memória, leaks de canvas
-- [ ] Listar bugs encontrados e priorizar
+- [x] Coberto pelo stability pass de 2026-06-10 (leaks de object URL, AudioContext, p5.Graphics, TipoMouse, RAF stacking)
 
 #### 7.5.7 — Cards dos menus: identidade visual
-- [ ] Visual Tools cards: quadrado preview com fundo `#2b8a7c` (teal), letra inicial em âmbar `#D4A040`
-- [ ] Kinetic Type quadrantes: mesma lógica — fundo teal, letras iniciais em âmbar
-- [ ] Não alterar animações/ícones existentes dos quadrantes
+- [x] Visual Tools cards: preview fundo `#2b8a7c` (teal), letra inicial em âmbar `#D4A040`
+- [x] Kinetic Type quadrantes: fundo teal, canvases desenhando em âmbar
+- [x] Animações/ícones existentes preservados (vars --text-* remapeadas no escopo do preview)
 
 #### 7.5.8 — Botão Voltar em todas as páginas
-- [ ] Adicionar botão de voltar consistente em TODAS as 28 ferramentas
-- [ ] Comportamento: retorna ao menu anterior (Visual Tools ou categoria Kinetic)
-- [ ] Estilo: discreto, integrado ao header da tool
+- [x] Botão flutuante `←` consistente em TODAS as 28 ferramentas (TipoUI.initBackButton + manual em overlay/dithering)
+- [x] Retorna ao menu correto (Visual Tools ou categoria Kinetic); back-links dos painéis corrigidos pra categoria certa
 
 ---
 

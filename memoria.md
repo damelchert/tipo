@@ -132,6 +132,74 @@
 
 ---
 
+## 2026-06-10
+
+### Sessão 1 — Stability Pass (commit 44c213f, pushed)
+Auditoria com 3 agents paralelos + verificação manual de cada claim antes de agir.
+
+**Bugs críticos corrigidos**
+- `stripes.html` / `coil.html`: presets sobrescreviam o texto digitado (violava regra do projeto) — removido de 1 preset no stripes, 8 presets + resetAll no coil
+- `shared/recorder.js`: race no Record — clicar Record durante o flush do stop anterior corrompia as duas gravações → flag `_stopping` bloqueia start durante flush
+- `shared/recorder.js`: aba oculta capturava frames congelados → guard `document.hidden` no timer MP4 e no stream fallback (com `frameCount > 0` pra proteger captura do 1º frame)
+- `shared/recorder.js`: timeout de revoke do download 5s → 60s (downloads grandes truncavam)
+
+**Memory leaks corrigidos**
+- Object URLs revogados em reticula/glitch/ascii/overlay/audiotype (padrão `setMediaUrl()`); overlay ganhou `releaseVideo()` que libera o decoder do vídeo antigo
+- `audiotype.html`: `pagehide` fecha AudioContext, para mic, revoga URL de áudio
+- `danger.html`: `buildTextures()` agora chama `.remove()` nos p5.Graphics antigos (morph de preset vazava ~18 buffers full-width por clique)
+- `shared/ui.js`: TipoMouse ganhou `destroy()` + guard contra listeners duplicados no re-init
+
+**Performance**
+- `index.html`: cada navegação por hash empilhava 4 loops RAF + timelines GSAP (goKineticType → initQuadCanvases sem guard) → guard `_quadCanvasesInited`; loops pulam trabalho com `!cvs.offsetParent`
+
+**Falsos alarmes dos agents (verificados e descartados)**
+- badge.html "leak de buffers" — já faz cache + remove
+- applyPreset "race condition" — comportamento correto (JS single-threaded)
+- dithering.html "tema dessincronizado" — já usa a chave `tipo-theme`
+
+### Sessão 2 — FASE 7.5 UI/UX Polish (5 de 6 itens — NÃO COMMITADO ainda)
+
+**7.5.1 — Light mode default**
+- `shared/style.css`: base do `:root` invertida pra light (sem flash dark no 1º acesso); vars de fonte/layout movidas pra bloco `:root` neutro
+- Default `'dark'` → `'light'` em: shared/ui.js, index.html, overlay.html, dithering.html
+
+**7.5.8 — Botão Voltar (28 páginas)**
+- `TipoUI.initBackButton()` + mapa `_backTargets` (modo → hash da categoria); botão flutuante `←` top-left (CSS `.tipo-back-btn` no shared, espelho do theme toggle)
+- Manual em overlay.html e dithering.html (não usam TipoUI)
+- Mobile: `.tipo-back-btn { top: 60px }` pra não colidir com o hambúrguer `.tipo-panel-toggle`
+- Back-links existentes nos painéis apontavam genericamente pra `#kinetic` → corrigidos pra categoria certa em 22 páginas
+
+**7.5.4 — Hex input nos color pickers**
+- `TipoUI.initHexInputs()`: campo texto hex após cada `input[type=color]`, sync bidirecional, aceita 3/6 dígitos com/sem `#`, dispara `input`/`change`
+- `_syncHex()` chamado em setCol, swapColors e no morph de presets
+- CSS `.tipo-hex-input` + `flex-wrap: wrap` nas rows de cor
+- Standalone no overlay.html; dithering ficou fora (já tem hex display click-to-copy próprio)
+
+**7.5.7 — Cards teal/âmbar**
+- `.tipo-mode-card-preview`: fundo `#2b8a7c`, cor `#D4A040`, vars `--text-3..6` remapeadas pra tons âmbar (previews animados intactos)
+- `.quad-preview`: fundo teal constante; `fg` dos quad canvases = âmbar fixo (MutationObserver de tema removido — não é mais necessário)
+
+**7.5.3 — Paleta Athos nos defaults**
+- 109 color inputs auditados; ~100 alterados em 26 tools. Família: ink `#1A1818`, cream `#F8F5F0`, teal `#2A8A7A`, mint `#99E0D2`, âmbar `#D4A040`, âmbar escuro `#B08830`, teal escuro `#1B5A4E`, âmbar claro `#E8C97E`
+- 96 valores hardcoded dentro dos `resetAll()` atualizados via script Python (escopo limitado ao corpo da função — presets criativos intactos)
+- Não alterados: overlay baseColor (#808080 funcional), dithering (sistema de paletas próprio)
+- audiotype: ramp de 8 níveis dark→light na família Athos
+
+**Infra**
+- Cache-bust: `?v=20260610-fix1` (sessão 1) → `?v=20260610-ux1` (sessão 2), 27 páginas
+- Sintaxe validada: `node --check` em shared/ui.js, shared/recorder.js e todos os scripts inline modificados
+
+**PENDENTE da Fase 7.5**
+- 7.5.2 — Header disruptivo: trabalho criativo, precisa do olho do Daniel (header já foi retrabalhado recentemente com GSAP/ghost text/10 entradas)
+- Smoke test visual em browser (light mode nas 28 ferramentas, hex inputs, cards teal/âmbar)
+- 7.5.5/7.5.6 (gravação + auditoria de bugs) considerados cobertos pela Sessão 1
+
+**Deferred (sessões futuras, aprovado pelo Daniel)**
+- Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
+- Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados
+
+---
+
 ## 2026-05-26
 
 ### Fase 7 — Cavalry-Level Polish (COMPLETA)
@@ -285,16 +353,16 @@ Implementadas 4 melhorias em shared/ui.js + 8 páginas modificadas:
   - **Composition:** texto orbitando em anéis concêntricos (badge circular)
   - **Animation:** 6 GSAP timelines ciclando (snap, flash, pow, crash, vessel, shine)
 
-### Próxima sessão: FASE 7.5 — UI/UX Polish + Brand Identity
+### FASE 7.5 — UI/UX Polish + Brand Identity (executada em 2026-06-10, ver entrada acima)
 Plano detalhado no ATTACK_PLAN.md. Itens:
-1. Light mode como padrão ao acessar
-2. Header mais disruptivo (menos espaço vazio, mais impacto)
-3. Paleta brand Athos em TODOS os presets default (light mode)
-4. Fix: edição de hex nos color pickers (não aceita digitação)
-5. Fix: gravação MP4/WebM em todas as ferramentas
-6. Auditoria geral de bugs (travamentos, memória, performance)
-7. Cards dos menus: fundo teal `#2b8a7c`, letra inicial em âmbar `#D4A040`
-8. Botão Voltar em TODAS as 28 páginas
+1. ~~Light mode como padrão ao acessar~~ FEITO
+2. Header mais disruptivo (menos espaço vazio, mais impacto) — PENDENTE (criativo, precisa feedback visual)
+3. ~~Paleta brand Athos em TODOS os presets default (light mode)~~ FEITO
+4. ~~Fix: edição de hex nos color pickers (não aceita digitação)~~ FEITO
+5. ~~Fix: gravação MP4/WebM em todas as ferramentas~~ FEITO (stability pass)
+6. ~~Auditoria geral de bugs (travamentos, memória, performance)~~ FEITO (stability pass)
+7. ~~Cards dos menus: fundo teal `#2b8a7c`, letra inicial em âmbar `#D4A040`~~ FEITO
+8. ~~Botão Voltar em TODAS as 28 páginas~~ FEITO
 
 ---
 

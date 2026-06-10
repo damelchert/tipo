@@ -8,7 +8,7 @@
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap');
 
-:root, :root[data-theme="dark"] {
+:root[data-theme="dark"] {
   --bg-0: #0C0C0A;
   --bg-1: #141412;
   --bg-2: #1C1C1A;
@@ -29,12 +29,9 @@
   --accent-warm: #D4A040;
   --red: #CC4840;
   --green: #3A7848;
-  --font-ui: 'IBM Plex Mono', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-  --panel-width: 320px;
 }
 
-:root[data-theme="light"] {
+:root, :root[data-theme="light"] {
   --bg-0: #F8F5F0;
   --bg-1: #EEEAE4;
   --bg-2: #E2DED6;
@@ -57,6 +54,12 @@
   --green: #2E6838;
 }
 
+:root {
+  --font-ui: 'IBM Plex Mono', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --panel-width: 320px;
+}
+
 /* Theme toggle button */
 .tipo-theme-toggle {
   position: fixed;
@@ -76,6 +79,26 @@
   padding: 0;
 }
 .tipo-theme-toggle:hover { border-color: var(--accent); color: var(--text-0); }
+
+/* Back button (returns to landing-page menu) */
+.tipo-back-btn {
+  position: fixed;
+  top: 12px; left: 12px;
+  z-index: 200;
+  width: 32px; height: 32px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 50%;
+  color: var(--text-2);
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-ui);
+  line-height: 1;
+  text-decoration: none;
+}
+.tipo-back-btn:hover { border-color: var(--accent); color: var(--text-0); }
 
 body {
   background: var(--bg-0);
@@ -246,6 +269,25 @@ input[type="color"] {
 }
 input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+/* Editable hex field next to each color picker (added by TipoUI.initHexInputs) */
+.tipo-hex-input {
+  width: 56px;
+  flex: 0 1 56px;
+  min-width: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 5px;
+  text-transform: lowercase;
+}
+.tipo-hex-input:focus { outline: none; border-color: var(--accent); color: var(--text-0); }
+
+/* Let color rows wrap when the hex fields don't fit */
+.color-section-row, .color-row, .color-level-row, .color-grid { flex-wrap: wrap; }
 
 /* ============================================================
    BUTTONS
@@ -596,6 +638,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   .tipo-panel.open { transform: translateX(0); }
   .tipo-panel-toggle { display: flex !important; }
   #canvasContainer { width: 100vw !important; }
+  .tipo-back-btn { top: 60px; } /* below the mobile panel toggle */
 }
 
 .tipo-panel-toggle {

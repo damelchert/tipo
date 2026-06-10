@@ -239,12 +239,82 @@ const TipoUI = {
 
     // Setup theme toggle
     this.initTheme();
+
+    // Setup back button (returns to the right menu on the landing page)
+    this.initBackButton();
+
+    // Add editable hex fields next to every color picker
+    this.initHexInputs();
+  },
+
+  /** Add a small editable hex text field after each color input (two-way sync) */
+  initHexInputs() {
+    document.querySelectorAll('input[type="color"]').forEach(el => {
+      if (el.dataset.hexBound) return;
+      el.dataset.hexBound = '1';
+      const hex = document.createElement('input');
+      hex.type = 'text';
+      hex.className = 'tipo-hex-input';
+      hex.maxLength = 7;
+      hex.spellcheck = false;
+      hex.value = el.value;
+      el.insertAdjacentElement('afterend', hex);
+      el.addEventListener('input', () => { hex.value = el.value; });
+      const commit = () => {
+        let v = hex.value.trim();
+        if (v && v[0] !== '#') v = '#' + v;
+        if (/^#[0-9a-fA-F]{3}$/.test(v)) v = '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+          el.value = v.toLowerCase();
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        hex.value = el.value; // snap back to valid value
+      };
+      hex.addEventListener('change', commit);
+      hex.addEventListener('keydown', (e) => { if (e.key === 'Enter') { commit(); hex.blur(); } });
+    });
+  },
+
+  /** Keep the hex field next to a color input in sync after programmatic changes */
+  _syncHex(el) {
+    const n = el.nextElementSibling;
+    if (n && n.classList && n.classList.contains('tipo-hex-input')) n.value = el.value;
+  },
+
+  /** Category map: mode name → index.html hash */
+  _backTargets: {
+    // Visual tools
+    dithering: 'visual', reticula: 'visual', glitch: 'visual',
+    overlay: 'visual', ascii: 'visual', audiotype: 'visual',
+    // Kinetic — 3D
+    cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
+    flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
+    // Kinetic — 2D
+    layers: '2d', danger: '2d', string: '2d',
+    // Kinetic — Composition
+    badge: 'composition', clutter: 'composition', construct: 'composition',
+    // Kinetic — Animation
+    snap: 'animation', flash: 'animation', pow: 'animation', crash: 'animation',
+    crashclock: 'animation', vessel: 'animation', shine: 'animation', boost: 'animation'
+  },
+
+  /** Create a fixed back button linking to the correct landing-page menu */
+  initBackButton() {
+    if (document.querySelector('.tipo-back-btn')) return;
+    const hash = this._backTargets[this.modeName];
+    const a = document.createElement('a');
+    a.className = 'tipo-back-btn';
+    a.href = 'index.html' + (hash ? '#' + hash : '');
+    a.title = 'Back to menu';
+    a.textContent = '\u2190';
+    document.body.appendChild(a);
   },
 
   /** Initialize theme toggle button and restore saved preference */
   initTheme() {
     // Restore saved theme
-    const saved = localStorage.getItem('tipo-theme') || 'dark';
+    const saved = localStorage.getItem('tipo-theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
 
     // Create toggle button if not already present
@@ -318,7 +388,7 @@ const TipoUI = {
   /** Set color input value */
   setCol(id, v) {
     const el = document.getElementById(id);
-    if (el) el.value = v;
+    if (el) { el.value = v; this._syncHex(el); }
   },
 
   /** Swap two color inputs */
@@ -329,6 +399,8 @@ const TipoUI = {
       const tmp = a.value;
       a.value = b.value;
       b.value = tmp;
+      this._syncHex(a);
+      this._syncHex(b);
     }
   },
 
@@ -413,6 +485,7 @@ const TipoUI = {
         const to = newColors[el.id];
         if (from && to && from !== to) {
           el.value = self._lerpHex(from, to, eased);
+          self._syncHex(el);
         }
       });
 
@@ -422,7 +495,7 @@ const TipoUI = {
         self._morphAnim = null;
         // Ensure final values are exact
         sliders.forEach(el => { el.value = newState[el.id]; });
-        colors.forEach(el => { el.value = newColors[el.id]; });
+        colors.forEach(el => { el.value = newColors[el.id]; self._syncHex(el); });
       }
     }
 
