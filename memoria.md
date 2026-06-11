@@ -60,7 +60,7 @@
   # SHARED
   shared/
     style.css                  — design system (#99E0D2 accent, dark/light theme, responsive)
-    recorder.js                — TipoRecorder (MP4 via VideoEncoder para 2D, WebM via captureStream para WEBGL)
+    recorder.js                — TipoRecorder (MP4 via WebCodecs pra 2D E WEBGL; stream/WebM só como fallback)
     ui.js                      — TipoUI: sliders, presets, export, recorder init, formatters, theme toggle
   assets/
     fonts/IBMPlexMono-Regular.ttf
@@ -190,9 +190,54 @@ Auditoria com 3 agents paralelos + verificação manual de cada claim antes de a
 - Sintaxe validada: `node --check` em shared/ui.js, shared/recorder.js e todos os scripts inline modificados
 
 **PENDENTE da Fase 7.5**
-- 7.5.2 — Header disruptivo: trabalho criativo, precisa do olho do Daniel (header já foi retrabalhado recentemente com GSAP/ghost text/10 entradas)
+- ~~7.5.2 — Header disruptivo~~ FEITO na Sessão 3 (ghost marquee + comet line)
 - Smoke test visual em browser (light mode nas 28 ferramentas, hex inputs, cards teal/âmbar)
-- 7.5.5/7.5.6 (gravação + auditoria de bugs) considerados cobertos pela Sessão 1
+- 7.5.5/7.5.6 (gravação + auditoria de bugs) — gravação foi de fato corrigida só na Sessão 3 (ver abaixo)
+
+### Sessão 3 — Light mode dithering, Header disruptivo, FASE 7.6 Export Pro (commits d60b2ab → 0dc4451, pushed)
+
+**Dithering — light mode padronizado (d60b2ab)**
+- Causa raiz: overrides antigos miravam classe `.panel` que NÃO EXISTE (painel real é `#controlPanel`) — light mode nunca estilizou o painel
+- Reescrito bloco completo `html[data-theme="light"]` na paleta Athos (painel, labels, sliders, selects, chips, btns, dropzone, scrollbars, toggle/back buttons)
+- Decisões deliberadas: swatches de state preview, modal de shapes e overlay de export ficam DARK nos dois temas (SVGs usam recortes pretos; cores claras precisam de fundo escuro)
+- 100% CSS — zero mudança funcional (pedido explícito do Daniel: "não caga ela")
+
+**7.5.2 — Header disruptivo (389acd1)**
+- Ghost text virou MARQUEE gigante: "TIPÓ" 88px outline (`-webkit-text-stroke`), 12 palavras (2 metades de 6 pra loop seamless de `xPercent: -50`), cortado pelo header de 56px; a cada 3 palavras uma preenchida em âmbar (classe `.filled`)
+- Hover no logo acelera o marquee 5x (`timeScale` no tween); magnetic hover dos ghosts removido (incompatível com marquee em movimento)
+- `.header-line-comet`: cometa âmbar de 140px atravessa a linha gradient em loop (3.4s + delay); a cada navegação faz sprint rápido (1.1s power3.in) + flash de opacity na linha; versão light usa `#B08830→#1A1818`
+- 10 entradas aleatórias mantidas; staggers dos ghosts reduzidos (~0.012-0.02) pros 48 chars
+- Fase 7.6 adicionada ao ATTACK_PLAN no mesmo commit
+
+**FASE 7.6.1 — Gravação (340a070 + 5db3587 + 0dc4451)**
+Três bugs reais encontrados e corrigidos:
+1. **WEBGL caía em WebM/MediaRecorder** (sem duração/cues → playback travado). Agora WebCodecs MP4 pra todos: p5 WEBGL tem `preserveDrawingBuffer: true` e `captureFrame()` roda dentro do draw() → drawImage do canvas WEBGL funciona. Stream/WebM virou só fallback (sempre via copy canvas)
+2. **H.264 level fixo `avc1.42001f` (Baseline 3.1, máx ~720p)**: canvas maior (retina! dithering com vídeo!) → encoder errava ASSÍNCRONO e fechava → próximo `encode()` lançava exceção no RAF loop (preview congelado) → flush nunca resolvia (sem export). Fix: `_pickAvcCodec()` por resolução (3.1/4.0/5.1), cap de 4K aspect-preserving, `VideoEncoder.isConfigSupported` antes de gravar c/ fallback, `encode()` em try/catch (loop nunca morre), flush c/ timeout 15s no dithering
+3. **Muxer do dithering sem `firstTimestampBehavior: 'offset'`**: TODOS os chunks rejeitados ("first chunk must have a timestamp of 0", 1º frame chega ~16ms) → MP4 de 581 bytes (só header). Era O bug do arquivo que o Daniel não conseguia abrir. Fix de 1 linha
+- Outras melhorias: captura aspect-fit letterboxed em canvas fixo (pode mexer em QUALQUER parâmetro durante a gravação, até os que redimensionam o canvas), keyframes por TEMPO (1s) em vez de a cada 60 frames (seek confiável), throttle derivado do fps alvo
+
+**FASE 7.6.2 — PNG (340a070)**
+- `TipoUI.savePNG` reescrito em `canvas.toBlob` (sem depender do p5 saveCanvas)
+- `TipoUI.savePNGAlpha`: PNG com fundo transparente — chroma-key da cor do `#bgColor` com un-mixing das bordas antialiased (diff 0-8 transparente, 8-48 ramp com un-mix, >48 opaco)
+- Botão "PNG α" AUTO-INJETADO via `TipoUI.initAlphaButton()` nos 25 tools com `#bgColor` (glitch é image-based, fica fora)
+- dithering: `exportPNGAlpha()` próprio com keying exato ±4 (pixels duros, sem antialias) + botão no painel
+
+**Testes Playwright (NOVO — test-recording.mjs / test-recording-kinetic.mjs)**
+- Playwright instalado como devDependency (browsers em ~/Library/Caches/ms-playwright)
+- Sandbox bloqueia rede do browser → TODA rede interceptada via `ctx.route`: localhost → disco, CDN → fetch do Node com cache
+- Precisa `http://localhost/...` (secure context pra getUserMedia); webcam fake via `--use-fake-device-for-media-stream`
+- Pegadinha: `TipoUI` é `const` → NÃO existe em `window.TipoUI`; usar `typeof TipoUI !== 'undefined'` no waitForFunction
+- Validado com ffmpeg: dithering 3.3s MP4 decode limpo; cylinder WEBGL 3.5s com slider+cor mudados NO MEIO da gravação; PNG/PNG-α RGBA válidos (fundo 99% transparente, tipo opaco)
+- Rodar: `node test-recording.mjs` (dithering+webcam) / `node test-recording-kinetic.mjs <tool>.html`
+
+**Infra**
+- Cache-bust: `ux2` → `rec1` → `rec2`
+- Commits: d60b2ab (dithering light), 389acd1 (header + plano 7.6), 340a070 (Export Pro), 5db3587 (H.264 level), 0dc4451 (muxer timestamp + testes)
+
+**PENDENTE / próxima sessão**
+- Daniel validar no Vercel: gravação no dithering e nos tools 3D (mexendo em parâmetros), PNG α, header novo, dithering em light mode
+- Rodar test-recording-kinetic.mjs nos outros 26 tools (só cylinder testado de fato)
+- Smoke test visual light mode (28 ferramentas) continua pendente
 
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
