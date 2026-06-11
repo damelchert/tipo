@@ -110,20 +110,18 @@ Prioridade máxima — arrumar experiência antes de features novas.
 
 ---
 
-### FASE 7.6 — Export Pro: gravação de vídeo + PNG (TODAS as ferramentas)
+### FASE 7.6 — Export Pro: gravação de vídeo + PNG (TODAS as ferramentas) ✅ (2026-06-10)
 
-Bug conhecido NÃO resolvido pelo stability pass — prioridade alta.
+#### 7.6.1 — Gravação de vídeo com interação ao vivo ✅
+- [x] Parâmetros ao vivo durante gravação (letterbox aspect-fit no record canvas — resize seguro)
+- [x] Vídeo exporta perfeito (codec H.264 por resolução, cap 4K, isConfigSupported, firstTimestampBehavior offset)
+- [x] Play fluido (keyframes por tempo a cada 1s, timestamps real-time, fastStart in-memory)
+- [x] Validado nas 28 ferramentas via Playwright (test-recording.mjs + test-recording-kinetic.mjs + overlay dedicado) — MP4 decode clean no ffmpeg
 
-#### 7.6.1 — Gravação de vídeo com interação ao vivo
-- [ ] Tem que dar pra mexer nos parâmetros da ferramenta ENQUANTO grava (sliders, cores, texto, presets) e tudo entrar no vídeo
-- [ ] Vídeo exportado tem que sair perfeito (sem frames dropados, sem corrupção, duração correta)
-- [ ] Play do vídeo exportado não pode travar (seek/playback fluido — verificar keyframes/moov atom no mp4-muxer, timestamps monotônicos)
-- [ ] Testar em todas as 28 ferramentas (cada uma usa TipoRecorder ou pipeline próprio como dithering/overlay)
-
-#### 7.6.2 — Export PNG
-- [ ] Export PNG precisa funcionar em todas as ferramentas (auditar — hoje quebra/falta em algumas)
-- [ ] Opção de PNG com ALPHA (fundo transparente): render num canvas sem background, só o conteúdo tipográfico
-- [ ] UI: botão/checkbox "PNG transparente" ao lado do export normal
+#### 7.6.2 — Export PNG ✅
+- [x] savePNG reescrito em toBlob (28/28 OK)
+- [x] PNG alpha via chroma-key do bgColor (ramp de borda + un-mixing); exato no dithering
+- [x] Botão "PNG α" injetado automaticamente (TipoUI.initAlphaButton); glitch sem alpha por design (não tem bgColor)
 
 ---
 
@@ -138,34 +136,22 @@ Engenharia reversa do Dither Boy 6.0.3 (Electron app, Studio AAA) revelou:
 
 Fonte da análise: `/tmp/ditherboy-src/` (app.asar extraído)
 
-#### 8.1 — Pipeline de Efeitos Encadeado no dithering.html
-Refatorar dithering.html para suportar pipeline multi-estágio:
-- **Adjustments** (pre): brightness, contrast, saturation, midtones, highlights, hue, blur, denoise
-- **Dither** (core): algoritmo selecionado + paleta
-- **Post-Processing**: sharpen, blur, invert, hue shift
-- **Tint/Color Overlay**: cor + 16 blend modes (multiply, screen, overlay, dodge, burn, soft-light, etc.)
-- **Referência:** Pipeline do Dither Boy (código extraído, legível)
-- **Status:** [ ] A implementar
+#### 8.1 — Pipeline de Efeitos Encadeado no dithering.html ✅ (2026-06-10)
+- [x] **Adjustments** (pre): brightness, contrast, saturation, hue, midtones (gamma), blur — via canvas filter no downsample + gamma na luminância
+- [x] **Dither** (core): algoritmo selecionado + paleta (computeStateGrid compartilhado entre render e exportSVG)
+- [x] **Tint/Color Overlay**: cor + 15 blend modes + opacity (pós-render; effectiveBgColor mantém PNG α correto com tint ligado)
+- [ ] Post-processing extra (sharpen, denoise) — adiado (precisa convolução, custo por frame)
 
-#### 8.2 — Error Diffusion Clássicos (algoritmos públicos)
-Implementar os algoritmos de error diffusion a partir dos papers originais:
-- **Floyd-Steinberg** (1976) — O mais usado, referência universal
-- **Atkinson** (1984) — Estética Macintosh, alto contraste
-- **Stucki** (1981) — Distribuição ampla, qualidade alta
-- **Burkes** (1988) — Distribuição horizontal balanceada
-- **Sierra / Sierra Lite / Two-Row Sierra** — Variações de peso
-- **Jarvis-Judice-Ninke** (1976) — Distribuição 12-pixel
-- **Controles comuns:** Serpentine scan toggle, Error strength slider
-- **Referência:** Papers originais + metadados extraídos do Dither Boy (ranges, defaults)
-- **Status:** [ ] A implementar
+#### 8.2 — Error Diffusion Clássicos ✅ (2026-06-10)
+- [x] **Floyd-Steinberg** (1976), **Atkinson** (1984), **Stucki** (1981), **Burkes** (1988)
+- [x] **Sierra / Sierra Lite / Two-Row Sierra**, **Jarvis-Judice-Ninke** (1976)
+- [x] Serpentine scan toggle + Strength slider (0-100%)
+- [x] Integrado na quantização dos 7 estados — funciona com shapes, scale, rotation, paletas, SVG export
+- [x] Validado via Playwright (test-dither-engine.mjs): 13 algoritmos distintos, MP4 clean, 25 renders/s @ gridRes 160 + JJN
 
-#### 8.3 — Ordered Dithering + Patterned
-- **Bayer Matrix** (2x2, 4x4, 8x8, 16x16) — Paper de Bayer 1973
-- **Bit Tone** — Dots por nível de cinza
-- **Crosshatch** — Linhas cruzadas por luminância
-- **Stippling** — Pontos randômicos weighted
-- **Diamond / Checkers** — Padrões geométricos
-- **Status:** [ ] A implementar
+#### 8.3 — Ordered Dithering + Patterned ✅ parcial (2026-06-10)
+- [x] **Bayer Matrix** (2x2, 4x4, 8x8, 16x16) — geração recursiva, spread de ±1 nível de quantização
+- [ ] Bit Tone / Crosshatch / Stippling / Diamond / Checkers — já parcialmente cobertos pelo sistema de shapes (60+ shapes por estado); avaliar se valem como algoritmos próprios
 
 #### 8.4 — COLOR HALFTONE (CMYK)
 Imagem → separação CMYK com dots em ângulos diferentes por canal.
@@ -195,12 +181,9 @@ Simulação de impressão Risograph no browser:
 - **Export:** PNG (composite), PNG por camada (separação), MP4
 - **Status:** [ ] A implementar — FEATURE EXCLUSIVA
 
-#### 8.7 — Paletas de Cores Expandidas
-Incorporar paletas curadas ao dithering.html:
-- 82 paletas extraídas do Dither Boy (RGB values — são dados, não código)
-- Categorias: Retro, Nature, Neon, Pastel, Monochrome, Film, etc.
-- Formato: Array de hex colors por paleta
-- **Status:** [ ] A implementar
+#### 8.7 — Paletas de Cores Expandidas ✅ parcial (2026-06-10)
+- [x] +16 paletas curadas (40 total): Athos (brand), Game Boy, CGA, C64, Apple II, Riso R/B, Riso Zine, Riso Poster, Sepia, Newsprint, Teal&Orange, Infrared, Pastel, Term Amber, Blueprint, Acid
+- [ ] Expandir mais se necessário (Dither Boy tinha 82 — /tmp/ditherboy-src foi perdido, recriar do app se precisar)
 
 #### 8.8 — Efeitos Glitch Avançados (códigos extraídos)
 Turbinar o glitch.html existente com efeitos do Dither Boy:
