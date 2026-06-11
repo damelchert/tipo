@@ -1116,6 +1116,9 @@ async function startRecording(btn) {
         target,
         video: { codec: 'avc', width: encW, height: encH },
         fastStart: 'in-memory',
+        // Without this the muxer requires the very first frame timestamp to be
+        // exactly 0 and throws away every chunk otherwise → empty MP4 export.
+        firstTimestampBehavior: 'offset',
       });
 
       mp4Encoder = new VideoEncoder({
