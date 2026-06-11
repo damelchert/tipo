@@ -110,6 +110,23 @@ Prioridade máxima — arrumar experiência antes de features novas.
 
 ---
 
+### FASE 7.6 — Export Pro: gravação de vídeo + PNG (TODAS as ferramentas)
+
+Bug conhecido NÃO resolvido pelo stability pass — prioridade alta.
+
+#### 7.6.1 — Gravação de vídeo com interação ao vivo
+- [ ] Tem que dar pra mexer nos parâmetros da ferramenta ENQUANTO grava (sliders, cores, texto, presets) e tudo entrar no vídeo
+- [ ] Vídeo exportado tem que sair perfeito (sem frames dropados, sem corrupção, duração correta)
+- [ ] Play do vídeo exportado não pode travar (seek/playback fluido — verificar keyframes/moov atom no mp4-muxer, timestamps monotônicos)
+- [ ] Testar em todas as 28 ferramentas (cada uma usa TipoRecorder ou pipeline próprio como dithering/overlay)
+
+#### 7.6.2 — Export PNG
+- [ ] Export PNG precisa funcionar em todas as ferramentas (auditar — hoje quebra/falta em algumas)
+- [ ] Opção de PNG com ALPHA (fundo transparente): render num canvas sem background, só o conteúdo tipográfico
+- [ ] UI: botão/checkbox "PNG transparente" ao lado do export normal
+
+---
+
 ### FASE 8 — Dithering Engine Pro (inspirado na análise do Dither Boy)
 
 Engenharia reversa do Dither Boy 6.0.3 (Electron app, Studio AAA) revelou:
