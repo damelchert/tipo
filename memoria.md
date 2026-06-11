@@ -310,6 +310,11 @@ Três bugs reais encontrados e corrigidos:
 - test-glitch-adv.mjs (committado): 5 efeitos novos + 3 regressões mudam render, presets distintos, PNG, MP4 com preset trocado no meio decode clean, fps check — ALL PASS
 - Chromatic Aberration do plano: já coberta pelo Channel Shift existente (tint ADD R/G/B deslocados)
 
+**8.13 DATAMOSH planejado (pedido do Daniel — ferramenta nova, pegada After/Cavalry)**
+- Spec completa escrita no ATTACK_PLAN 8.13: simulação de codec (block matching → motion vectors → canvas acumulado), 4 modos (Smear/Melt/Hybrid/Cross-Mosh com 2 sources), ~12 parâmetros (block size, search radius, mosh amount, melt iterations, vector multiplier/jitter/bias, decay, threshold, channel mosh), keyframe drop manual/auto/sweep recovery + clique no canvas como trigger VJ, 8 presets
+- Diferencial: datamosh paramétrico em tempo real no browser (concorrência = Avidemux/plugin pago de AE, offline e destrutivo)
+- Obs: Daniel referenciou .agents/skills/data-squad e devops-squad — são squads de negócio/infra (skip design visual), não se aplicam ao design da ferramenta; design feito direto da referência técnica de codec
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

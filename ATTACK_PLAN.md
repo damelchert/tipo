@@ -262,6 +262,46 @@ Upload imagem/video → pixel sorting artístico.
 - **Video+webcam input**
 - **Status:** [ ] A implementar
 
+#### 8.13 — DATAMOSH (ferramenta nova, pegada profissional After/Cavalry)
+Datamosh real é abuso de compressão de vídeo: remover I-frames (keyframes) faz os P-frames
+aplicarem motion vectors sobre conteúdo errado → a imagem "derrete" e se arrasta.
+No browser não dá pra mexer no stream H.264 — a técnica é SIMULAR o codec:
+estimar motion vectors por bloco (block matching, igual MPEG) e aplicá-los num
+canvas acumulado em vez de desenhar o frame novo.
+
+**Arquitetura (pipeline)**
+1. Frame N e N-1 em baixa resolução (half-res grayscale) → block matching por grid
+   (blocos 8/16/32px, busca ±radius) → campo de motion vectors
+2. Canvas acumulado ("decoded frame"): em vez de pintar o frame novo, cada bloco do
+   canvas acumulado é movido pelo vector correspondente (copy por bloco)
+3. Keyframe drop/restore controla quando o frame real entra de volta
+
+**Modos (o coração da ferramenta)**
+- **Smear (I-frame drop):** frame novo nunca entra; só os vectors movem o conteúdo antigo — o clássico "pessoa atravessa a cena arrastando o fundo"
+- **Melt (P-frame duplication):** os mesmos vectors aplicados N vezes por frame — tudo escorre na direção do movimento (efeito "bloom" do datamosh)
+- **Hybrid:** mistura com blend slider (% de frame real que vaza de volta)
+- **Cross-Mosh (PRO, diferencial):** motion de um vídeo B aplicado sobre imagem/vídeo A — ex: dança dirigindo o derretimento de um retrato (estilo style-transfer de movimento)
+
+**Controles (nível After/Cavalry)**
+- Block Size (4-64) + Search Radius (qualidade da estimativa, 2-16)
+- Mosh Amount (0-100: % de blocos que sofrem mosh vs frame real)
+- Melt Iterations (1-8: repetição dos vectors por frame)
+- Vector Multiplier (0.5-4x: amplifica o movimento estimado)
+- Vector Jitter (ruído aleatório nos vectors)
+- Direction Bias (vetor fixo somado: derrete pra baixo/cima/lado, com angle+força)
+- Decay/Persistence (fade do acumulado de volta pro real, 0 = mosh eterno)
+- Threshold de movimento (blocos parados não mosham — preserva fundo)
+- Keyframe: botão "Drop Keyframe" (reset manual, momento de impacto), auto-interval (a cada N seg), e "Sweep Recovery" (keyframe entra por wipe linha a linha, como stream se recuperando)
+- Channel Mosh: aplicar vectors só em R, G ou B (rasgo cromático)
+- **Trigger por clique no canvas** = drop keyframe naquele momento (performático, tipo VJ)
+- **Presets:** Classic Mosh, Melt Down, Bloom, Ghost Trail, Channel Tear, Cross-Mosh, Subtle Drift, Total Collapse
+- **Input:** vídeo (principal), webcam, imagem (precisa de motion source externo ou jitter procedural); Cross-Mosh aceita 2 sources
+- **Export:** MP4 (TipoRecorder), PNG do frame atual
+- **Performance:** block matching em half-res grayscale (Uint8Array), grid ~40×30 blocos, busca em espiral com early-exit; alvo 30fps @ 720p. Se JS não der, fallback: diamond search ou redução do search radius. (WebGL/WASM só se necessário)
+- **UI:** seção Codec (block size, search), seção Mosh (modo, amount, melt, decay), seção Vectors (multiplier, jitter, bias), seção Keyframe (drop, auto, sweep), help tooltips em tudo
+- **Por que é exclusivo:** datamosh hoje = Avidemux/AE com plugins pagos (Datamosher Pro ~US$40) e workflow destrutivo offline. Ninguém tem datamosh paramétrico em tempo real no browser com webcam.
+- **Status:** [ ] A implementar — planejado em 2026-06-11, próximo da fila junto com 8.5 Epsilon Glow
+
 ### FASE 9 — Features Transversais (todas as ferramentas)
 
 #### 9.1 — Custom Font Upload
