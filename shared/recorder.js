@@ -59,17 +59,16 @@ class TipoRecorder {
     // WebCodecs MP4 works for both 2D and WEBGL canvases: frames are copied
     // via drawImage into a 2D record canvas (p5 WEBGL keeps
     // preserveDrawingBuffer=true, and captureFrame() runs inside draw()).
+    let mp4Started = false;
     if (this.hasMp4Support && !this.preferStream) {
       try {
-        this._startMP4(bitrate);
+        mp4Started = await this._startMP4(bitrate);
       } catch (err) {
         console.warn('MP4 encoder unavailable, falling back to stream recorder:', err);
         this._resetSession();
-        this._startStream(bitrate);
       }
-    } else {
-      this._startStream(bitrate);
     }
+    if (!mp4Started) this._startStream(bitrate);
 
     this.isRecording = true;
     if (this.encoder) {
@@ -82,11 +81,40 @@ class TipoRecorder {
     this.onStatusChange('recording');
   }
 
-  _startMP4(bitrate) {
+  // H.264 level must match the resolution — a fixed low level makes the
+  // encoder error out asynchronously on big (e.g. retina) canvases, after
+  // which every encode() throws and nothing can be exported.
+  static _pickAvcCodec(w, h) {
+    const px = w * h;
+    if (px <= 921600) return 'avc1.42001f';   // ≤720p  — level 3.1
+    if (px <= 2097152) return 'avc1.420028';  // ≤1080p — level 4.0
+    return 'avc1.420033';                     // ≤4K    — level 5.1
+  }
+
+  async _startMP4(bitrate) {
+    // Cap encode size at 4K, aspect-preserving (retina canvases can exceed it)
     const w = this.canvas.width;
     const h = this.canvas.height;
-    this.encW = w + (w % 2);
-    this.encH = h + (h % 2);
+    const fit = Math.min(1, 3840 / w, 2160 / h);
+    let encW = Math.round(w * fit); encW += encW % 2;
+    let encH = Math.round(h * fit); encH += encH % 2;
+
+    const config = {
+      codec: TipoRecorder._pickAvcCodec(encW, encH),
+      width: encW,
+      height: encH,
+      bitrate,
+      framerate: this.fps,
+      latencyMode: 'realtime',
+    };
+    const support = await VideoEncoder.isConfigSupported(config).catch(() => null);
+    if (!support || !support.supported) {
+      console.warn('MP4 config unsupported, falling back to stream recorder:', config);
+      return false;
+    }
+
+    this.encW = encW;
+    this.encH = encH;
     this._lastKeyTsUs = -1;
 
     const target = new Mp4Muxer.ArrayBufferTarget();
@@ -102,17 +130,11 @@ class TipoRecorder {
       error: (e) => console.error('VideoEncoder error:', e),
     });
 
-    this.encoder.configure({
-      codec: 'avc1.42001f',
-      width: this.encW,
-      height: this.encH,
-      bitrate,
-      framerate: this.fps,
-      latencyMode: 'realtime',
-    });
+    this.encoder.configure(config);
 
     this.frameCount = 0;
     this.lastCaptureTime = -1;
+    return true;
   }
 
   _startStream(bitrate) {
@@ -257,13 +279,18 @@ class TipoRecorder {
     if (!this._recCanvas) this._createStreamCanvas();
     this._paintRecCanvas();
 
-    const frame = new VideoFrame(this._recCanvas, { timestamp: timestampUs });
-    // Time-based keyframes (every 1s of real time) → reliable seeking/playback
-    const keyFrame = this._lastKeyTsUs < 0 || (timestampUs - this._lastKeyTsUs) >= 1000000;
-    if (keyFrame) this._lastKeyTsUs = timestampUs;
-    this.encoder.encode(frame, { keyFrame });
-    frame.close();
-    this.frameCount++;
+    // Never let an encoder exception propagate into the tool's draw loop
+    try {
+      const frame = new VideoFrame(this._recCanvas, { timestamp: timestampUs });
+      // Time-based keyframes (every 1s of real time) → reliable seeking/playback
+      const keyFrame = this._lastKeyTsUs < 0 || (timestampUs - this._lastKeyTsUs) >= 1000000;
+      if (keyFrame) this._lastKeyTsUs = timestampUs;
+      this.encoder.encode(frame, { keyFrame });
+      frame.close();
+      this.frameCount++;
+    } catch (err) {
+      console.error('TipoRecorder encode failed:', err);
+    }
   }
 
   async stop() {

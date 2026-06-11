@@ -1070,56 +1070,78 @@ async function toggleRecording() {
   }
 }
 
+// H.264 baseline level must match the resolution, otherwise the encoder
+// errors out asynchronously and every later encode() throws (frozen preview,
+// nothing to export).
+function pickAvcCodec(w, h) {
+  const px = w * h;
+  if (px <= 921600) return 'avc1.42001f';   // ≤720p  — level 3.1
+  if (px <= 2097152) return 'avc1.420028';  // ≤1080p — level 4.0
+  return 'avc1.420033';                     // ≤4K    — level 5.1
+}
+
 async function startRecording(btn) {
   const hasMp4 = typeof VideoEncoder !== 'undefined' && typeof Mp4Muxer !== 'undefined' && Mp4Muxer.Muxer;
   const selectedBitrate = parseInt(document.getElementById('videoBitrate').value);
   const bitrateLabel = selectedBitrate >= 16000000 ? '16 Mbps' : '8 Mbps';
 
+  let mp4Ready = false;
   if (hasMp4) {
     // --- Direct MP4 recording with back-pressure control ---
+    // Cap encode size at 4K (large grid/scale outputs exceed encoder limits)
     const w = outputCanvas.width;
     const h = outputCanvas.height;
-    const encW = w + (w % 2);
-    const encH = h + (h % 2);
-    mp4EncW = encW;
-    mp4EncH = encH;
-    recordCanvas.width = encW;
-    recordCanvas.height = encH;
+    const fit = Math.min(1, 3840 / w, 2160 / h);
+    let encW = Math.round(w * fit); encW += encW % 2;
+    let encH = Math.round(h * fit); encH += encH % 2;
 
-    const target = new Mp4Muxer.ArrayBufferTarget();
-    mp4Muxer = new Mp4Muxer.Muxer({
-      target,
-      video: { codec: 'avc', width: encW, height: encH },
-      fastStart: 'in-memory',
-    });
-
-    mp4Encoder = new VideoEncoder({
-      output: (chunk, meta) => { mp4Muxer.addVideoChunk(chunk, meta); },
-      error: (e) => console.error('VideoEncoder error:', e),
-    });
-
-    // Use baseline profile for faster encoding
-    mp4Encoder.configure({
-      codec: 'avc1.42001f',
+    const config = {
+      codec: pickAvcCodec(encW, encH),
       width: encW,
       height: encH,
       bitrate: selectedBitrate,
       framerate: MP4_FPS,
       latencyMode: 'realtime',
-    });
+    };
+    const support = await VideoEncoder.isConfigSupported(config).catch(() => null);
 
-    mp4FrameCount = 0;
-    mp4RecordStart = performance.now();
-    mp4LastCaptureTime = -1;
-    mp4LastKeyTs = -1;
-    isRecording = true;
+    if (support && support.supported) {
+      mp4EncW = encW;
+      mp4EncH = encH;
+      recordCanvas.width = encW;
+      recordCanvas.height = encH;
 
-    btn.textContent = '⏹ Stop Recording';
-    btn.style.borderColor = '#f44';
-    document.getElementById('videoBitrate').disabled = true;
-    showStatus(`Recording MP4 (${bitrateLabel})...`);
-    startRecordTimer();
-  } else {
+      const target = new Mp4Muxer.ArrayBufferTarget();
+      mp4Muxer = new Mp4Muxer.Muxer({
+        target,
+        video: { codec: 'avc', width: encW, height: encH },
+        fastStart: 'in-memory',
+      });
+
+      mp4Encoder = new VideoEncoder({
+        output: (chunk, meta) => { mp4Muxer.addVideoChunk(chunk, meta); },
+        error: (e) => console.error('VideoEncoder error:', e),
+      });
+      mp4Encoder.configure(config);
+
+      mp4FrameCount = 0;
+      mp4RecordStart = performance.now();
+      mp4LastCaptureTime = -1;
+      mp4LastKeyTs = -1;
+      isRecording = true;
+      mp4Ready = true;
+
+      btn.textContent = '⏹ Stop Recording';
+      btn.style.borderColor = '#f44';
+      document.getElementById('videoBitrate').disabled = true;
+      showStatus(`Recording MP4 (${bitrateLabel})...`);
+      startRecordTimer();
+    } else {
+      console.warn('MP4 config unsupported, falling back to WebM:', config);
+    }
+  }
+
+  if (!mp4Ready) {
     // --- WebM fallback ---
     const stream = outputCanvas.captureStream(MP4_FPS);
     mediaRecorder = new MediaRecorder(stream, {
@@ -1169,16 +1191,31 @@ function maybeCaptureMP4Frame() {
     recordCtx.drawImage(outputCanvas, (mp4EncW - dw) / 2, (mp4EncH - dh) / 2, dw, dh);
   }
 
-  const frame = new VideoFrame(recordCanvas, {
-    timestamp: timestampUs,
-  });
+  // Never let an encoder exception kill the RAF render loop (frozen preview)
+  try {
+    const frame = new VideoFrame(recordCanvas, {
+      timestamp: timestampUs,
+    });
 
-  // Time-based keyframes (every 1s of real time) → reliable seeking/playback
-  const keyFrame = mp4LastKeyTs < 0 || (timestampUs - mp4LastKeyTs) >= 1000000;
-  if (keyFrame) mp4LastKeyTs = timestampUs;
-  mp4Encoder.encode(frame, { keyFrame });
-  frame.close();
-  mp4FrameCount++;
+    // Time-based keyframes (every 1s of real time) → reliable seeking/playback
+    const keyFrame = mp4LastKeyTs < 0 || (timestampUs - mp4LastKeyTs) >= 1000000;
+    if (keyFrame) mp4LastKeyTs = timestampUs;
+    mp4Encoder.encode(frame, { keyFrame });
+    frame.close();
+    mp4FrameCount++;
+  } catch (err) {
+    console.error('MP4 capture failed, aborting recording:', err);
+    isRecording = false;
+    stopRecordTimer();
+    try { mp4Encoder.close(); } catch (_) {}
+    mp4Encoder = null;
+    mp4Muxer = null;
+    const btn = document.getElementById('recordBtn');
+    btn.textContent = 'Record Video';
+    btn.style.borderColor = '#333';
+    document.getElementById('videoBitrate').disabled = false;
+    showStatus('Recording failed — encoder error');
+  }
 }
 
 async function stopRecording(btn) {
@@ -1207,32 +1244,46 @@ async function stopRecording(btn) {
       progressInfo.textContent = `Flushing ${totalFrames} frames (${videoDuration}s)... ${el}s`;
     }, 200);
 
-    await mp4Encoder.flush();
-    clearInterval(progTimer);
+    try {
+      // A hung/errored encoder must never leave the UI stuck on "Finalizing"
+      await Promise.race([
+        mp4Encoder.flush(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('MP4 flush timed out')), 15000)),
+      ]);
+      clearInterval(progTimer);
 
-    progressBar.style.width = '80%';
-    progressInfo.textContent = 'Closing encoder...';
-    mp4Encoder.close();
-    mp4Encoder = null;
+      progressBar.style.width = '80%';
+      progressInfo.textContent = 'Closing encoder...';
+      mp4Encoder.close();
+      mp4Encoder = null;
 
-    progressBar.style.width = '90%';
-    progressInfo.textContent = 'Muxing MP4...';
-    await new Promise(r => setTimeout(r, 30));
+      progressBar.style.width = '90%';
+      progressInfo.textContent = 'Muxing MP4...';
+      await new Promise(r => setTimeout(r, 30));
 
-    mp4Muxer.finalize();
-    const buffer = mp4Muxer.target.buffer;
-    mp4Muxer = null;
+      mp4Muxer.finalize();
+      const buffer = mp4Muxer.target.buffer;
+      mp4Muxer = null;
 
-    progressBar.style.width = '100%';
-    const blob = new Blob([buffer], { type: 'video/mp4' });
-    const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
-    const totalTime = ((performance.now() - flushStart) / 1000).toFixed(1);
-    progressInfo.textContent = `Done! ${videoDuration}s, ${sizeMB} MB (took ${totalTime}s)`;
+      progressBar.style.width = '100%';
+      const blob = new Blob([buffer], { type: 'video/mp4' });
+      const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+      const totalTime = ((performance.now() - flushStart) / 1000).toFixed(1);
+      progressInfo.textContent = `Done! ${videoDuration}s, ${sizeMB} MB (took ${totalTime}s)`;
 
-    downloadBlob(blob, 'dithered-output.mp4');
-    showStatus(`MP4 exported (${videoDuration}s, ${sizeMB} MB)`);
+      downloadBlob(blob, 'dithered-output.mp4');
+      showStatus(`MP4 exported (${videoDuration}s, ${sizeMB} MB)`);
 
-    setTimeout(() => { progressEl.classList.remove('open'); }, 2500);
+      setTimeout(() => { progressEl.classList.remove('open'); }, 2500);
+    } catch (err) {
+      console.error('MP4 finalize failed:', err);
+      clearInterval(progTimer);
+      try { if (mp4Encoder) mp4Encoder.close(); } catch (_) {}
+      mp4Encoder = null;
+      mp4Muxer = null;
+      progressEl.classList.remove('open');
+      showStatus('Export failed — see console');
+    }
   } else if (mediaRecorder) {
     // --- Finalize WebM ---
     btn.textContent = 'Processing...';
