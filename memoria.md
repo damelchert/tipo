@@ -279,6 +279,7 @@ Três bugs reais encontrados e corrigidos:
 - Exports: PNG composite 2x, separações transparentes por camada (staggered 400ms, `tipo-riso-ink{n}-{hex}.png`), MP4
 - **test-riso.mjs** (committado): demo render, 5 presets → 5 hashes, toggle de camada, PNG 7MB, 3 separações, MP4 decode clean, reroll, help icons — 8/8 PASS
 - Card "Ri" adicionado no index (Visual Tools, depois do Overlay)
+- Pós-feedback do Daniel: botão renomeado "Re-roll Registration" → "Re-roll Offset" + help icon `?` próprio explicando (sorteia a DIREÇÃO do desalinhamento; intensidade vem do slider Misregist.; atalho dblclick no canvas). 4 help icons no riso agora
 
 **Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.8 glitch avançado, 8.10-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
 

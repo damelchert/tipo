@@ -71,7 +71,7 @@
     <div class="section-title">Imperfection<span class="help-icon" data-help="Misregistration: desalinhamento entre as camadas — a marca registrada do Riso (cada passada de tinta sai ligeiramente fora do registro). Grain: granulado orgânico da tinta no papel. Re-roll sorteia um novo desalinhamento aleatório.">?</span></div>
     <div class="range-row"><span class="range-label">Misregist.</span><input type="range" id="misreg" min="0" max="30" value="6"><span class="range-value" id="misregVal">6</span></div>
     <div class="range-row"><span class="range-label">Grain</span><input type="range" id="grain" min="0" max="100" value="25"><span class="range-value" id="grainVal">25</span></div>
-    <button class="btn btn-secondary" onclick="rerollSeed()" style="font-size:10px;">Re-roll Registration</button>
+    <div style="display:flex;align-items:center;gap:4px;"><button class="btn btn-secondary" onclick="rerollSeed()" style="font-size:10px;">Re-roll Offset</button><span class="help-icon" data-help="Sorteia uma nova direção de desalinhamento entre as camadas de tinta. A intensidade vem do slider Misregist. — o re-roll só muda PRA ONDE cada camada desloca. Como reimprimir a folha na Riso e torcer por um 'erro' mais bonito. Atalho: dblclick no canvas.">?</span></div>
   </div>
 
   <div class="section">
