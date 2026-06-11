@@ -236,8 +236,32 @@ Três bugs reais encontrados e corrigidos:
 
 **PENDENTE / próxima sessão**
 - Daniel validar no Vercel: gravação no dithering e nos tools 3D (mexendo em parâmetros), PNG α, header novo, dithering em light mode
-- Rodar test-recording-kinetic.mjs nos outros 26 tools (só cylinder testado de fato)
+- ~~Rodar test-recording-kinetic.mjs nos outros 26 tools~~ FEITO na Sessão 4 (28/28 PASS)
 - Smoke test visual light mode (28 ferramentas) continua pendente
+
+### Sessão 4 — Validação 7.6 (28/28) + FASE 8 Dithering Engine Pro (commits c5850d7 → 6c4a0ec, pushed)
+
+**Validação 7.6 — 28/28 PASS**
+- Suite rodada em loop nos 27 tools restantes via test-recording-kinetic.mjs: TODOS gravaram MP4 (WebCodecs, ~106 frames/3.5s) com slider+cor mudados no meio, PNG e PNG α OK
+- glitch: "PNG alpha: no button" — por design (image-based, sem #bgColor)
+- overlay não usa TipoUI (recorder próprio lazy via TipoRecorder) → teste dedicado: MP4 1MB + composite PNG + tile PNG OK
+- ffmpeg decode clean; warning inofensivo de dts duplicado (35>=35) num MP4 — rounding de timestamp, não afeta playback
+- ATTACK_PLAN: 7.6 marcada ✅ completa
+- Pegadinha node: scripts .mjs precisam rodar DENTRO do projeto (playwright resolve de node_modules local; /tmp não resolve)
+
+**FASE 8.1/8.2/8.3/8.7 — Dithering Engine Pro (6c4a0ec)**
+- /tmp/ditherboy-src PERDIDO (tmp limpo) — implementado 100% via papers públicos; se precisar das 82 paletas/efeitos do Dither Boy, re-extrair o app.asar
+- **Arquitetura central**: `computeStateGrid(pixelData, cols, rows)` — quantização compartilhada entre `render()` e `exportSVG()`. Retorna `{lumArr (contínua, pós-gamma/invert — usada pro scale dos shapes), stateArr (0=highlight..6=shadow, ditherizada)}`. Dithering opera NA QUANTIZAÇÃO dos 7 estados → funciona com shapes, scale, rotation, paletas e SVG export sem mudar nada do resto
+- **8.2 Error diffusion** (`DITHER_KERNELS`): Floyd-Steinberg, Atkinson, Stucki, Burkes, Sierra, Two-Row Sierra, Sierra Lite, JJN — serpentine scan (espelha kernel em linhas ímpares) + strength slider (multiplica o erro difundido)
+- **8.3 Bayer 2/4/8/16**: matriz recursiva cacheada (`getBayer`), threshold `(M+0.5)/área - 0.5` com spread `strength/3` (≈ ±1 nível de quantização)
+- **8.1 Pipeline**: Adjustments pré-dither via `hidCtx.filter` no downsample (brightness/contrast/saturate/hue-rotate/blur — GPU, de graça) + gamma (midtones) aplicada na luminância em JS; Tint/Color Overlay pós-render (`applyTint`: globalAlpha + globalCompositeOperation, 15 blend modes)
+- **`effectiveBgColor()`**: compõe bg+tint num canvas 1×1 e lê o pixel → PNG α continua keyando certo com tint ligado
+- Checkbox "enable mapping" OFF agora mostra o padrão de dither cru (quadrados cinza QUANTIZADOS em vez de contínuos)
+- **8.7**: +16 paletas (40 total): Athos (brand!), Game Boy, CGA, C64, Apple II, Riso R/B, Riso Zine, Riso Poster, Sepia, Newsprint, Teal&Orange, Infrared, Pastel, Term Amber, Blueprint, Acid
+- **test-dither-engine.mjs** (committado): 13 algoritmos → 13 hashes distintos, adjustments/tint mudam e resetam, PNG/SVG/PNG-α(tinted, 86% transparente) OK, gravação trocando algoritmo+paleta no meio → MP4 decode clean, 25 renders/s no pior caso (JJN @ gridRes 160)
+- **UX nota (feedback do Daniel)**: diferença entre algoritmos é SUTIL na prática — dithering em 7 níveis só aparece em gradientes suaves; com "Scale Shapes with Midtones" ligado (default) o scale contínuo mascara o banding. Pra ver: gradiente suave + min=max no scale + None↔Floyd-Steinberg. Possível melhoria futura: quantizar o scale junto quando dithering ativo, ou um preview A/B
+
+**Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.6 Risograph (exclusivo), 8.8 glitch avançado, 8.9-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
 
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
