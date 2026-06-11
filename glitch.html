@@ -19,6 +19,9 @@
   .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
   .back-link:hover { color: var(--accent); }
   .drop-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--text-5); font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: var(--accent); color: var(--accent); }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text-2); font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
 </style>
 </head>
 <body>
@@ -67,7 +70,17 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Effects</div>
+    <div class="section-title">Blocks<span class="help-icon" data-help="Corrupção por blocos, como arquivo de vídeo quebrado. Shift: desloca blocos da imagem pra posições erradas. Scramble: troca blocos de lugar entre si. Channel Swap: em alguns blocos os canais R/G/B trocam de lugar (cores erradas localizadas). Block Size define o tamanho do grid.">?</span></div>
+    <div class="range-row"><span class="range-label">Block Size</span><input type="range" id="blockSize" min="4" max="64" value="16"><span class="range-value" id="blockSizeVal">16</span></div>
+    <div class="range-row"><span class="range-label">Shift</span><input type="range" id="blockShift" min="0" max="100" value="0"><span class="range-value" id="blockShiftVal">0</span></div>
+    <div class="range-row"><span class="range-label">Scramble</span><input type="range" id="blockScramble" min="0" max="100" value="0"><span class="range-value" id="blockScrambleVal">0</span></div>
+    <div class="range-row"><span class="range-label">Channel Swap</span><input type="range" id="channelSwap" min="0" max="100" value="0"><span class="range-value" id="channelSwapVal">0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Effects<span class="help-icon" data-help="Scanline Offset: linhas aleatórias deslocam horizontalmente (sinal de TV ruim). Interlace: linhas pares/ímpares deslocam em direções opostas (vídeo entrelaçado corrompido). Pixel Sort: trechos de pixels reordenados por brilho. Noise: pixels de estática. Color Bleed: os canais de cor vazam pros lados.">?</span></div>
+    <div class="range-row"><span class="range-label">Scanline Offset</span><input type="range" id="scanOffset" min="0" max="100" value="0"><span class="range-value" id="scanOffsetVal">0</span></div>
+    <div class="range-row"><span class="range-label">Interlace</span><input type="range" id="interlace" min="0" max="100" value="0"><span class="range-value" id="interlaceVal">0</span></div>
     <div class="range-row"><span class="range-label">Pixel Sort</span><input type="range" id="pixelSort" min="0" max="100" value="0"><span class="range-value" id="pixelSortVal">0</span></div>
     <div class="range-row"><span class="range-label">Scanline Opacity</span><input type="range" id="scanlineOpacity" min="0" max="100" value="0"><span class="range-value" id="scanlineOpacityVal">0</span></div>
     <div class="range-row"><span class="range-label">Scanline Gap</span><input type="range" id="scanlineGap" min="1" max="8" value="3"><span class="range-value" id="scanlineGapVal">3</span></div>
@@ -111,6 +124,7 @@ function setMediaUrl(url) {
 let sourceType = null; // 'image' | 'video' | 'webcam'
 let glitchBuffer = null;
 let sortBuffer = null;
+let rowScratch = null; // reusable buffer for row shifts
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
@@ -263,6 +277,12 @@ function draw() {
   const scanGap = val('scanlineGap');
   const noiseN = val('noiseAmt');
   const bleed = val('colorBleed');
+  const blockSz = val('blockSize');
+  const blockShift = val('blockShift');
+  const blockScr = val('blockScramble');
+  const chanSwap = val('channelSwap');
+  const scanOff = val('scanOffset');
+  const interlaceAmt = val('interlace');
   const spd = val('speed') / 100;
 
   // Animation time factor
@@ -333,44 +353,149 @@ function draw() {
     }
   }
 
-  // --- Pixel Sorting ---
-  if (pxSort > 0) {
+  // --- Block Shift (displaced blocks, like broken video file) ---
+  if (blockShift > 0) {
+    const n = floor(map(blockShift, 0, 100, 2, 40));
+    const doIt = spd > 0 ? (random() < 0.35 + spd * 0.5) : true;
+    if (doIt) {
+      for (let i = 0; i < n; i++) {
+        const bw = blockSz * (1 + floor(random(4)));
+        const bh = blockSz;
+        const bx = floor(random(ox, ox + iw - bw));
+        const by = floor(random(oy, oy + ih - bh));
+        const dx = floor(random(-1, 1) * blockShift * iw / 300);
+        const dy = floor(random(-1, 1) * blockShift * ih / 1000);
+        copy(bx, by, bw, bh, bx + dx, by + dy, bw, bh);
+      }
+    }
+  }
+
+  // --- Block Scramble (blocks swap places) ---
+  if (blockScr > 0) {
+    const n = floor(map(blockScr, 0, 100, 1, 22));
+    const doIt = spd > 0 ? (random() < 0.3 + spd * 0.5) : true;
+    if (doIt) {
+      for (let i = 0; i < n; i++) {
+        const bw = blockSz * (1 + floor(random(3)));
+        const bh = blockSz;
+        const x1 = floor(random(ox, ox + iw - bw));
+        const y1 = floor(random(oy, oy + ih - bh));
+        const x2 = floor(random(ox, ox + iw - bw));
+        const y2 = floor(random(oy, oy + ih - bh));
+        const tmp = get(x1, y1, bw, bh);
+        copy(x2, y2, bw, bh, x1, y1, bw, bh);
+        image(tmp, x2, y2);
+      }
+    }
+  }
+
+  // --- Pixel-level pass (single loadPixels for all) ---
+  if (pxSort > 0 || noiseN > 0 || scanOff > 0 || interlaceAmt > 0 || chanSwap > 0) {
     loadPixels();
     const d = pixelDensity();
     const pw = width * d;
     const ph = height * d;
-    const sortProb = pxSort / 100;
-    const sortLen = floor(map(pxSort, 0, 100, 5, 80));
+    const rowBytes = pw * 4;
+    if (!rowScratch || rowScratch.length < rowBytes) rowScratch = new Uint8ClampedArray(rowBytes);
 
-    // Sort some random horizontal runs
-    const numRuns = floor(ph * sortProb * 0.3);
-    for (let r = 0; r < numRuns; r++) {
-      const y = floor(random(ph));
-      const startX = floor(random(pw - sortLen));
-      const runLen = min(sortLen + floor(random(sortLen)), pw - startX);
+    const shiftRowWrap = (y, shiftPx) => {
+      let s = ((shiftPx % pw) + pw) % pw;
+      if (s === 0) return;
+      s *= 4;
+      const row = pixels.subarray(y * rowBytes, (y + 1) * rowBytes);
+      rowScratch.set(row);
+      row.set(rowScratch.subarray(rowBytes - s, rowBytes), 0);
+      row.set(rowScratch.subarray(0, rowBytes - s), s);
+    };
 
-      // Extract run
-      const run = [];
-      for (let x = startX; x < startX + runLen; x++) {
-        const idx = (y * pw + x) * 4;
-        run.push({
-          r: pixels[idx], g: pixels[idx+1], b: pixels[idx+2], a: pixels[idx+3],
-          bright: pixels[idx] * 0.299 + pixels[idx+1] * 0.587 + pixels[idx+2] * 0.114
-        });
-      }
-
-      // Sort by brightness
-      run.sort((a, b) => a.bright - b.bright);
-
-      // Write back
-      for (let i = 0; i < run.length; i++) {
-        const idx = (y * pw + startX + i) * 4;
-        pixels[idx]   = run[i].r;
-        pixels[idx+1] = run[i].g;
-        pixels[idx+2] = run[i].b;
-        pixels[idx+3] = run[i].a;
+    // Scanline Offset: random rows shifted horizontally (bad TV signal)
+    if (scanOff > 0) {
+      const rows = floor(ph * scanOff / 100 * 0.25);
+      const maxShift = scanOff * pw / 600;
+      for (let r = 0; r < rows; r++) {
+        const y = floor(random(ph));
+        shiftRowWrap(y, floor(random(-maxShift, maxShift)));
       }
     }
+
+    // Interlace Corruption: even/odd lines shift opposite ways
+    if (interlaceAmt > 0) {
+      const base = max(1, floor(interlaceAmt * pw / 2000));
+      const wob = spd > 0 ? 1 + sin(t * 7) * 0.6 : 1;
+      const shiftPx = max(1, floor(base * wob));
+      for (let y = 0; y < ph; y += 2) {
+        shiftRowWrap(y, (y % 4 === 0) ? shiftPx : -shiftPx);
+      }
+    }
+
+    // Channel Swap: random blocks get their RGB channels permuted
+    if (chanSwap > 0) {
+      const d2 = d;
+      const n = floor(map(chanSwap, 0, 100, 1, 18));
+      const doIt = spd > 0 ? (random() < 0.35 + spd * 0.5) : true;
+      if (doIt) {
+        for (let b = 0; b < n; b++) {
+          const bw = floor(blockSz * d2 * (1 + floor(random(4))));
+          const bh = floor(blockSz * d2);
+          const bx = floor(random(0, pw - bw));
+          const by = floor(random(0, ph - bh));
+          const mode = floor(random(3)); // 0: r<->g, 1: g<->b, 2: r<->b
+          for (let yy = by; yy < by + bh; yy++) {
+            let idx = (yy * pw + bx) * 4;
+            for (let xx = 0; xx < bw; xx++, idx += 4) {
+              if (mode === 0) { const t2 = pixels[idx]; pixels[idx] = pixels[idx + 1]; pixels[idx + 1] = t2; }
+              else if (mode === 1) { const t2 = pixels[idx + 1]; pixels[idx + 1] = pixels[idx + 2]; pixels[idx + 2] = t2; }
+              else { const t2 = pixels[idx]; pixels[idx] = pixels[idx + 2]; pixels[idx + 2] = t2; }
+            }
+          }
+        }
+      }
+    }
+
+    // Pixel Sorting
+    if (pxSort > 0) {
+      const sortProb = pxSort / 100;
+      const sortLen = floor(map(pxSort, 0, 100, 5, 80));
+      const numRuns = floor(ph * sortProb * 0.3);
+      for (let r = 0; r < numRuns; r++) {
+        const y = floor(random(ph));
+        const startX = floor(random(pw - sortLen));
+        const runLen = min(sortLen + floor(random(sortLen)), pw - startX);
+        const run = [];
+        for (let x = startX; x < startX + runLen; x++) {
+          const idx = (y * pw + x) * 4;
+          run.push({
+            r: pixels[idx], g: pixels[idx+1], b: pixels[idx+2], a: pixels[idx+3],
+            bright: pixels[idx] * 0.299 + pixels[idx+1] * 0.587 + pixels[idx+2] * 0.114
+          });
+        }
+        run.sort((a, b) => a.bright - b.bright);
+        for (let i = 0; i < run.length; i++) {
+          const idx = (y * pw + startX + i) * 4;
+          pixels[idx]   = run[i].r;
+          pixels[idx+1] = run[i].g;
+          pixels[idx+2] = run[i].b;
+          pixels[idx+3] = run[i].a;
+        }
+      }
+    }
+
+    // Noise Overlay
+    if (noiseN > 0) {
+      const total = pw * ph;
+      const prob = noiseN / 400;
+      for (let i = 0; i < total; i++) {
+        if (random() < prob) {
+          const idx = i * 4;
+          const v = random(255);
+          pixels[idx]   = v;
+          pixels[idx+1] = v;
+          pixels[idx+2] = v;
+          pixels[idx+3] = 255;
+        }
+      }
+    }
+
     updatePixels();
   }
 
@@ -383,25 +508,6 @@ function draw() {
       line(0, y, width, y);
     }
     noStroke();
-  }
-
-  // --- Noise Overlay ---
-  if (noiseN > 0) {
-    loadPixels();
-    const d = pixelDensity();
-    const total = width * height * d * d;
-    const prob = noiseN / 400;
-    for (let i = 0; i < total; i++) {
-      if (random() < prob) {
-        const idx = i * 4;
-        const v = random(255);
-        pixels[idx]   = v;
-        pixels[idx+1] = v;
-        pixels[idx+2] = v;
-        pixels[idx+3] = 255;
-      }
-    }
-    updatePixels();
   }
 
   // Capture frame for recording
@@ -423,6 +529,12 @@ function resetAll() {
   document.getElementById('shiftDir').value = 'both';
   setVal('sliceCount', 10);
   setVal('sliceIntensity', 30);
+  setVal('blockSize', 16);
+  setVal('blockShift', 0);
+  setVal('blockScramble', 0);
+  setVal('channelSwap', 0);
+  setVal('scanOffset', 0);
+  setVal('interlace', 0);
   setVal('pixelSort', 0);
   setVal('scanlineOpacity', 0);
   setVal('scanlineGap', 3);
@@ -442,23 +554,28 @@ const PRESETS = {
     setVal('channelShift', 15); document.getElementById('shiftDir').value = 'horizontal';
     setVal('sliceCount', 6); setVal('sliceIntensity', 15);
     setVal('scanlineOpacity', 50); setVal('scanlineGap', 3);
+    setVal('scanOffset', 22); setVal('interlace', 15);
     setVal('noiseAmt', 12); setVal('colorBleed', 20); setVal('speed', 20);
   },
   corrupt: () => {
     resetAll();
     setVal('channelShift', 50); setVal('sliceCount', 30); setVal('sliceIntensity', 80);
+    setVal('blockShift', 45); setVal('blockScramble', 25); setVal('channelSwap', 20);
     setVal('pixelSort', 40); setVal('noiseAmt', 15); setVal('speed', 50);
   },
   datamosh: () => {
     resetAll();
     setVal('channelShift', 30); document.getElementById('shiftDir').value = 'both';
     setVal('sliceCount', 20); setVal('sliceIntensity', 60);
+    setVal('blockShift', 35); setVal('blockScramble', 50); setVal('channelSwap', 30);
+    setVal('blockSize', 24);
     setVal('pixelSort', 70); setVal('colorBleed', 30); setVal('speed', 40);
   },
   crt: () => {
     resetAll();
     setVal('channelShift', 8); document.getElementById('shiftDir').value = 'horizontal';
     setVal('sliceCount', 0); setVal('scanlineOpacity', 70); setVal('scanlineGap', 2);
+    setVal('interlace', 8);
     setVal('noiseAmt', 5); setVal('colorBleed', 15); setVal('speed', 10);
   },
   rgb: () => {
@@ -471,12 +588,15 @@ const PRESETS = {
     resetAll();
     setVal('channelShift', 3); setVal('sliceCount', 0);
     setVal('noiseAmt', 80); setVal('scanlineOpacity', 30); setVal('scanlineGap', 2);
+    setVal('scanOffset', 12);
     setVal('speed', 60);
   },
   chaos: () => {
     resetAll();
     setVal('channelShift', 80); document.getElementById('shiftDir').value = 'both';
     setVal('sliceCount', 50); setVal('sliceIntensity', 100);
+    setVal('blockShift', 70); setVal('blockScramble', 60); setVal('channelSwap', 50);
+    setVal('scanOffset', 50); setVal('interlace', 35);
     setVal('pixelSort', 60); setVal('scanlineOpacity', 40); setVal('scanlineGap', 2);
     setVal('noiseAmt', 35); setVal('colorBleed', 50); setVal('speed', 80);
   }
@@ -486,6 +606,36 @@ function applyPreset(name) {
   TipoUI.applyPreset(name, PRESETS);
   loop(); redraw();
 }
+
+// --- Help tooltips (same pattern as riso.html) ---
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null;
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px'; tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (pinned === el) hide(); else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('panel').addEventListener('scroll', hide);
+})();
 </script>
 </body>
 </html>

@@ -300,6 +300,16 @@ Três bugs reais encontrados e corrigidos:
 - test-riso.mjs estendido: cmyk mode, gcr muda render, 4 separações, newsprint distinto, volta pro spot (3 blocks) — 13/13 PASS
 - Card do index atualizado (CMYK process, 9 presets, plates)
 
+**8.8 Glitch avançado (glitch.html turbinado)**
+- 5 efeitos novos do Dither Boy: **Block Shift** (blocos deslocados via copy()), **Block Scramble** (blocos trocam de lugar, get+copy+image), **Channel Swap** (permuta R/G/B por bloco, 3 modos), **Scanline Offset** (linhas aleatórias deslocam com wrap), **Interlace** (linhas pares/ímpares em direções opostas, wobble com speed)
+- Seção "Blocks" nova (Block Size 4-64 + 3 sliders); Scanline Offset + Interlace na seção Effects
+- **Refactor perf**: pixel sort, noise e os novos efeitos pixel-level agora rodam num ÚNICO loadPixels/updatePixels (antes eram 2 separados); `shiftRowWrap` usa rowScratch reutilizável (sem GC churn); 30fps no preset chaos com tudo ligado
+- Presets atualizados: vhs (+scanOffset/interlace), corrupt (+blocks), datamosh (+scramble/channelSwap, blockSize 24), crt (+interlace), static (+scanOffset), chaos (tudo)
+- Help tooltips (2 ícones: Blocks, Effects) — padrão riso replicado
+- **Pegadinha de teste**: channelSwap parecia não funcionar — a imagem demo é CINZA (r=g=b), trocar canais não muda nada. Teste usa source colorido injetado via createGraphics
+- test-glitch-adv.mjs (committado): 5 efeitos novos + 3 regressões mudam render, presets distintos, PNG, MP4 com preset trocado no meio decode clean, fps check — ALL PASS
+- Chromatic Aberration do plano: já coberta pelo Channel Shift existente (tint ADD R/G/B deslocados)
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

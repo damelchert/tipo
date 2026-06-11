@@ -194,7 +194,7 @@ Turbinar o glitch.html existente com efeitos do Dither Boy:
 - **Interlace Corruption** — Corrupção de linhas entrelaçadas
 - **Chromatic Aberration** — Displacement per-channel (R/G/B independentes)
 - **Referência:** Código completo extraído (funções legíveis no worker)
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-11) — Block Shift, Block Scramble, Channel Swap (por bloco), Scanline Offset, Interlace adicionados ao glitch.html (Chromatic Aberration já coberta pelo Channel Shift existente). Pixel sort + noise + novos efeitos pixel-level unificados num único loadPixels (perf). Presets vhs/corrupt/datamosh/crt/static/chaos atualizados. Help tooltips. 30fps no chaos. Validado via Playwright
 
 #### 8.9 — AUDIOTYPE (Audio Visualizer Tipográfico — EXCLUSIVO TIPÓ)
 Tipografia reativa a áudio — letras compostas por barras coloridas que pulsam com a música.
