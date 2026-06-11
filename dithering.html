@@ -76,6 +76,12 @@
   #controlPanel h1 { font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: #fff; padding-bottom: 10px; padding-left: 36px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
   .section { display: flex; flex-direction: column; gap: 8px; }
   .section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #99E0D2; font-weight: 600; margin-bottom: 4px; }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid #444; color: #777; font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: #99E0D2; color: #99E0D2; }
+  html[data-theme="light"] .help-icon { border-color: #C4C0B8; color: #8A8680; }
+  html[data-theme="light"] .help-icon:hover { border-color: #1B7A6A; color: #1B7A6A; }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: #161616; border: 1px solid #333; color: #bbb; font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  html[data-theme="light"] #helpTooltip { background: #FFFFFF; border-color: #C4C0B8; color: #4A4540; box-shadow: 0 4px 16px rgba(26,24,24,.12); }
   .nav-links { display: flex; gap: 8px; }
   .nav-links a { font-size: 9px; color: #555; text-decoration: none; letter-spacing: 1px; }
   .nav-links a:hover { color: #4488ff; }
@@ -313,7 +319,7 @@
 
   <!-- OVERALL SCALE -->
   <div class="section">
-    <div class="section-title">Overall Scale</div>
+    <div class="section-title">Overall Scale<span class="help-icon" data-help="Tamanho de cada célula em pixels no resultado final. Não muda o desenho, só a resolução do export (PNG/vídeo maior ou menor).">?</span></div>
     <div class="range-row">
       <input type="range" id="overallScale" min="10" max="200" value="100">
       <span class="range-value" id="overallScaleVal">100%</span>
@@ -322,7 +328,7 @@
 
   <!-- GRID RESOLUTION -->
   <div class="section">
-    <div class="section-title">Grid Resolution (Scale)</div>
+    <div class="section-title">Grid Resolution (Scale)<span class="help-icon" data-help="Quantas células na horizontal. Mais células = mais detalhe (menos 'pixelado'), porém shapes menores. É a resolução do dithering em si.">?</span></div>
     <div class="range-row">
       <input type="range" id="gridResolution" min="4" max="200" value="48">
       <span class="range-value" id="gridResolutionVal">48</span>
@@ -332,7 +338,7 @@
 
   <!-- DITHER ALGORITHM -->
   <div class="section">
-    <div class="section-title">Dither Algorithm</div>
+    <div class="section-title">Dither Algorithm<span class="help-icon" data-help="Como a imagem é reduzida aos 7 estados. None: corte direto por faixa de luminosidade (gera 'banding' — degraus visíveis em gradientes). Error Diffusion (Floyd-Steinberg etc.): espalha o erro de arredondamento pros vizinhos, quebrando os degraus em textura granulada. Ordered (Bayer): matriz fixa de threshold, padrão xadrez retrô tipo Game Boy. O efeito é mais visível em gradientes suaves (céu, sombras).">?</span></div>
     <select id="ditherAlgo">
       <option value="none">None (Threshold)</option>
       <optgroup label="Error Diffusion">
@@ -353,10 +359,10 @@
       </optgroup>
     </select>
     <label class="checkbox-label" style="margin-top:6px;">
-      <input type="checkbox" id="serpentine" checked> Serpentine Scan
+      <input type="checkbox" id="serpentine" checked> Serpentine Scan<span class="help-icon" data-help="Varre as linhas em zigue-zague (uma da esquerda pra direita, a próxima da direita pra esquerda). Evita que o erro difundido acumule sempre pro mesmo lado, o que cria padrões direcionais ('minhocas'). Só afeta os algoritmos de Error Diffusion.">?</span>
     </label>
     <div class="range-row">
-      <span style="font-size:10px; color:#666;">STRENGTH</span>
+      <span style="font-size:10px; color:#666;">STRENGTH<span class="help-icon" data-help="Intensidade do dithering. 100% = difusão completa do erro; 0% = desligado (igual ao None). Nos Bayer, controla o quanto a matriz desloca o threshold.">?</span></span>
       <input type="range" id="ditherStrength" min="0" max="100" value="100">
       <span class="range-value" id="ditherStrengthVal">100%</span>
     </div>
@@ -365,7 +371,7 @@
   <!-- ADJUSTMENTS (pre-dither) -->
   <div class="section">
     <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-      Adjustments
+      <span>Adjustments<span class="help-icon" data-help="Ajustes aplicados na imagem ANTES do dithering — útil pra realçar contraste ou clarear antes de quantizar. Midtones = gamma: clareia/escurece os tons médios sem mexer nos extremos preto/branco.">?</span></span>
       <button class="state-file-btn" style="flex:0; padding:3px 8px;" onclick="resetAdjustments()" title="Reset adjustments">&#8634;</button>
     </div>
     <div class="range-row">
@@ -402,7 +408,7 @@
 
   <!-- TINT / COLOR OVERLAY (post) -->
   <div class="section">
-    <div class="section-title">Tint / Color Overlay</div>
+    <div class="section-title">Tint / Color Overlay<span class="help-icon" data-help="Camada de cor aplicada POR CIMA do resultado final, com blend mode (como no Photoshop: Multiply escurece, Screen clareia, Overlay aumenta contraste...). Opacity 0 = desligado. O PNG transparente continua funcionando com tint ligado.">?</span></div>
     <div class="range-row">
       <input type="color" id="tintColor" value="#d4a040">
       <select id="tintBlend" style="flex:1;">
@@ -445,7 +451,7 @@
       <input type="checkbox" id="fillSolid" checked> Fill SVG Shapes (Solid)
     </label>
     <label class="checkbox-label">
-      <input type="checkbox" id="invertMapping"> Quick Invert Mapping
+      <input type="checkbox" id="invertMapping"> Quick Invert Mapping<span class="help-icon" data-help="Inverte o mapeamento claro↔escuro (efeito negativo): áreas claras recebem os shapes de shadow e vice-versa.">?</span>
     </label>
   </div>
 
@@ -481,7 +487,7 @@
   <!-- 7-STATE MIDTONE MAPPING -->
   <div class="section">
     <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-      7-State Midtone Mapping
+      <span>7-State Midtone Mapping<span class="help-icon" data-help="Divide a luminosidade em 7 faixas (highlights → shadows), cada uma com shape e cor próprios. Desligado, mostra só quadrados cinza — ótimo pra visualizar o padrão de dither cru.">?</span></span>
       <label class="checkbox-label" style="font-size:10px;">
         <input type="checkbox" id="enableMapping" checked> On
       </label>
@@ -492,7 +498,7 @@
   <!-- SCALE WITH MIDTONES -->
   <div class="section">
     <label class="checkbox-label">
-      <input type="checkbox" id="scaleWithMidtones" checked> Scale Shapes with Midtones
+      <input type="checkbox" id="scaleWithMidtones" checked> Scale Shapes with Midtones<span class="help-icon" data-help="Shapes maiores em áreas claras e menores em escuras (gradiente contínuo de tamanho). Obs: isso mascara o efeito do Dither Algorithm — pra ver o dither puro, deixe MIN = MAX ou desligue.">?</span>
     </label>
     <div class="range-row">
       <span style="font-size:10px; color:#666;">MIN SIZE (%)</span>
@@ -509,7 +515,7 @@
   <!-- ROTATION -->
   <div class="section">
     <label class="checkbox-label">
-      <input type="checkbox" id="enableRotation"> Enable 90° Snap Rotation
+      <input type="checkbox" id="enableRotation"> Enable 90° Snap Rotation<span class="help-icon" data-help="Gira cada shape em passos de 90° seguindo um padrão fixo pela posição na grade — quebra a repetição visual quando todos os shapes são iguais.">?</span>
     </label>
     <div class="range-row">
       <span style="font-size:10px; color:#666;">ROTATION INTERVAL</span>
@@ -2171,6 +2177,43 @@ function applyPalette(index) {
   back.title = 'Back to menu';
   back.textContent = '\u2190';
   document.body.appendChild(back);
+})();
+
+// ============================================================
+// HELP TOOLTIPS
+// ============================================================
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null; // icon clicked (touch/mobile)
+
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px';
+    tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (pinned === el) { hide(); } else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('controlPanel').addEventListener('scroll', hide);
 })();
 
 // ============================================================

@@ -261,6 +261,12 @@ Três bugs reais encontrados e corrigidos:
 - **test-dither-engine.mjs** (committado): 13 algoritmos → 13 hashes distintos, adjustments/tint mudam e resetam, PNG/SVG/PNG-α(tinted, 86% transparente) OK, gravação trocando algoritmo+paleta no meio → MP4 decode clean, 25 renders/s no pior caso (JJN @ gridRes 160)
 - **UX nota (feedback do Daniel)**: diferença entre algoritmos é SUTIL na prática — dithering em 7 níveis só aparece em gradientes suaves; com "Scale Shapes with Midtones" ligado (default) o scale contínuo mascara o banding. Pra ver: gradiente suave + min=max no scale + None↔Floyd-Steinberg. Possível melhoria futura: quantizar o scale junto quando dithering ativo, ou um preview A/B
 
+**Help tooltips no dithering (pedido do Daniel — "não sei o que é serpentine")**
+- 11 ícones `?` (`.help-icon` + `data-help`) nos parâmetros: Dither Algorithm, Serpentine, Strength, Adjustments, Tint, Grid Resolution, Overall Scale, 7-State Mapping, Scale with Midtones, Invert, Rotation
+- Tooltip único `#helpTooltip` position:fixed (não corta no painel com scroll), posicionado via getBoundingClientRect com clamp no viewport; hover mostra, clique pina (mobile), clique fora/scroll esconde; `preventDefault` no clique pra não togglar o checkbox pai
+- Textos em PT-BR; dark + light mode
+- Ideia futura: replicar o padrão nas outras ferramentas via TipoUI (ex: `TipoUI.initHelp(map)`)
+
 **Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.6 Risograph (exclusivo), 8.8 glitch avançado, 8.9-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
 
 **Deferred (sessões futuras, aprovado pelo Daniel)**
