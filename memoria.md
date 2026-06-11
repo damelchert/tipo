@@ -283,6 +283,23 @@ Três bugs reais encontrados e corrigidos:
 
 **Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.8 glitch avançado, 8.10-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
 
+### Sessão 5 (2026-06-11) — 8.4 CMYK Halftone integrado no riso.html
+
+**Decisão do Daniel**: comecei halftone.html standalone (clone do riso) mas ele preferiu INTEGRAR no riso — e faz sentido: gráficas riso fazem impressão 4 cores de verdade. halftone.html deletado.
+
+**Modo CMYK no riso.html**
+- Toggle **Spot Inks | CMYK** (seção Mode, `setMode`/`syncModeUI`); `activeLayers()` retorna `layers` (3 spot) ou `cmykChannels` (4 fixos C/M/Y/K)
+- **Separação RGB→CMYK com GCR**: `c=1-r, k=min(c,m,y)*gcr, c'=(c-k)/(1-k)` — slider GCR (0=só CMY, 100=todo cinza vira K), aparece só no modo CMYK (`#gcrRow`)
+- Ângulos clássicos de offset: C 15° / M 75° / Y 0° / K 45°; cores de canal editáveis (picker); slider "Ink" por canal (mesmo coverage/50 do spot)
+- Grain, misreg, dot gain, overprint multiply: valem nos DOIS modos (é riso imprimindo CMYK, não offset limpa)
+- `renderRiso` agora branch: `cmykArr[4]` Float32Arrays ou `lum`; densidade do dot: `cmykArr[slot][i]*covMul` vs `pow(1-lum[i], gamma)*covMul`; `layerCanvases` virou 4 slots
+- Demo colorido no modo CMYK (gradiente rainbow + "RISO") pra separação ser visível
+- 3 presets novos com `mode:'cmyk'`: CMYK, Newsprint (cell 13, gain 50, gcr 90, papel jornal), Comic (cell 16, vivid); applyPreset troca de modo automaticamente
+- exportLayers no CMYK: 4 plates transparentes `tipo-riso-cmyk-{c,m,y,k}.png`
+- buildLayerUI dinâmico: título "Ink Layers" ↔ "CMYK Channels", sem select de tinta no CMYK, label Coverage↔Ink
+- test-riso.mjs estendido: cmyk mode, gcr muda render, 4 separações, newsprint distinto, volta pro spot (3 blocks) — 13/13 PASS
+- Card do index atualizado (CMYK process, 9 presets, plates)
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

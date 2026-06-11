@@ -100,6 +100,32 @@ const pRec = '/tmp/tipo-riso-test.mp4';
 await rec.saveAs(pRec);
 console.log('recording:', rec.suggestedFilename(), fs.statSync(pRec).size, 'bytes');
 
+// 6b. CMYK mode: render differs, GCR changes output, 4 separations
+await page.evaluate(() => applyPreset('cmyk'));
+await page.waitForTimeout(500);
+const modeNow = await page.evaluate(() => mode);
+const hCmyk = await hashCanvas();
+await page.evaluate(() => { document.getElementById('gcr').value = 0; document.getElementById('gcr').dispatchEvent(new Event('input')); });
+await page.waitForTimeout(400);
+const hGcr0 = await hashCanvas();
+console.log('cmyk mode active:', modeNow === 'cmyk' ? 'OK' : 'FAIL', '| gcr changes render:', hCmyk !== hGcr0 ? 'OK' : 'FAIL');
+const cmykTitle = await page.evaluate(() => document.getElementById('layersTitle').firstChild.textContent.trim());
+console.log('layers title in cmyk:', cmykTitle);
+const sepsBefore = seps.length;
+await page.evaluate(() => exportLayers());
+await page.waitForTimeout(2800);
+const cmykSeps = seps.slice(sepsBefore).map(d => d.suggestedFilename());
+console.log('cmyk separations:', cmykSeps.length, cmykSeps.length === 4 ? 'OK' : 'FAIL', cmykSeps.join(' '));
+// newsprint preset distinct, then back to spot
+await page.evaluate(() => applyPreset('newsprint'));
+await page.waitForTimeout(400);
+const hNews = await hashCanvas();
+console.log('newsprint distinct from cmyk:', hNews !== hGcr0 ? 'OK' : 'FAIL');
+await page.evaluate(() => setMode('spot'));
+await page.waitForTimeout(400);
+const backMode = await page.evaluate(() => ({ m: mode, title: document.getElementById('layersTitle').firstChild.textContent.trim(), blocks: document.querySelectorAll('.layer-block').length }));
+console.log('back to spot:', JSON.stringify(backMode), backMode.m === 'spot' && backMode.blocks === 3 ? 'OK' : 'FAIL');
+
 // 7. Reroll seed changes render
 const hS1 = await hashCanvas();
 await page.evaluate(() => rerollSeed());

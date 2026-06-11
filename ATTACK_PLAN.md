@@ -159,7 +159,7 @@ Imagem → separação CMYK com dots em ângulos diferentes por canal.
 - **Controles:** Cell size, dot gain, ângulos por canal (C:15° M:75° Y:0° K:45°), GCR, supersample
 - **Referência:** Código extraído do Dither Boy (halftone completo no worker) + processo offset real
 - **Video+webcam input**
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-11) — integrado no riso.html como modo "CMYK Process" (decisão do Daniel: uma ferramenta só). Separação RGB→CMYK com GCR slider, 4 canais nos ângulos clássicos (C 15° / M 75° / Y 0° / K 45°), cores editáveis, Ink amount por canal, grain/misreg/dot gain valem nos 2 modos, 3 presets CMYK (CMYK, Newsprint, Comic), separações exportam 4 plates transparentes. Validado via Playwright (13/13)
 
 #### 8.5 — Epsilon Glow (efeito exclusivo extraído)
 Glow seletivo baseado em luminância com distance map:

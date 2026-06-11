@@ -43,6 +43,14 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Mode<span class="help-icon" data-help="Spot Inks: 1-3 tintas de cor única separadas por tom (o clássico do Riso). CMYK Process: impressão 4 cores — a imagem colorida é separada em Cyan, Magenta, Yellow e Key (preto), cada canal numa retícula com ângulo próprio (15°/75°/0°/45°), como gráficas riso fazem impressão full color.">?</span></div>
+    <div class="btn-row">
+      <button class="btn" id="modeSpotBtn" onclick="setMode('spot')">Spot Inks</button>
+      <button class="btn btn-secondary" id="modeCmykBtn" onclick="setMode('cmyk')">CMYK</button>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
       <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
@@ -51,12 +59,15 @@
       <span class="preset-chip" onclick="applyPreset('editorial')">Editorial</span>
       <span class="preset-chip" onclick="applyPreset('punk')">Punk</span>
       <span class="preset-chip" onclick="applyPreset('mono')">Mono</span>
+      <span class="preset-chip" onclick="applyPreset('cmyk')">CMYK</span>
+      <span class="preset-chip" onclick="applyPreset('newsprint')">Newsprint</span>
+      <span class="preset-chip" onclick="applyPreset('comic')">Comic</span>
       <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Ink Layers<span class="help-icon" data-help="Cada camada é uma tinta (cor spot) impressa separadamente, como numa Risograph real. A separação por tons é automática: a camada 1 pega as sombras, a 2 os meios-tons, a 3 cobre faixas amplas. Coverage controla quanta tinta cada camada deposita.">?</span></div>
+    <div class="section-title" id="layersTitle">Ink Layers<span class="help-icon" data-help="Cada camada é uma tinta (cor spot) impressa separadamente, como numa Risograph real. No modo Spot a separação por tons é automática: camada 1 pega sombras, 2 meios-tons, 3 faixas amplas. No modo CMYK cada camada é um canal de cor (C/M/Y/K) extraído da imagem colorida. Ink/Coverage controla quanta tinta cada camada deposita.">?</span></div>
     <div id="layersContainer"></div>
   </div>
 
@@ -65,6 +76,7 @@
     <div class="range-row"><span class="range-label">Halftone</span><input type="range" id="cellSize" min="4" max="24" value="9"><span class="range-value" id="cellSizeVal">9</span></div>
     <div class="range-row"><span class="range-label">Dot Gain</span><input type="range" id="dotGain" min="0" max="100" value="20"><span class="range-value" id="dotGainVal">20</span></div>
     <div class="range-row"><span class="range-label">Overprint</span><input type="range" id="inkOpacity" min="40" max="100" value="92"><span class="range-value" id="inkOpacityVal">92</span></div>
+    <div class="range-row" id="gcrRow" style="display:none;"><span class="range-label">GCR</span><input type="range" id="gcr" min="0" max="100" value="70"><span class="range-value" id="gcrVal">70</span><span class="help-icon" data-help="Gray Component Replacement: substitui cinzas feitos de C+M+Y sobreposto por tinta preta (K). 0% = sem preto, tudo vem das 3 cores. 100% = todo componente cinza vira K — mais limpo e econômico, como offset real.">?</span></div>
   </div>
 
   <div class="section">
@@ -131,6 +143,19 @@ const layers = [
   { enabled: false, ink: '#ffb511', angle: 45, coverage: 50 },
 ];
 
+// CMYK process mode (riso 4-color printing)
+let mode = 'spot'; // 'spot' | 'cmyk'
+const CMYK_DEFS = [
+  { key: 'C', name: 'Cyan' }, { key: 'M', name: 'Magenta' },
+  { key: 'Y', name: 'Yellow' }, { key: 'K', name: 'Key' },
+];
+const cmykChannels = [
+  { enabled: true, ink: '#00aeef', angle: 15, coverage: 50 },
+  { enabled: true, ink: '#ec008c', angle: 75, coverage: 50 },
+  { enabled: true, ink: '#fff200', angle: 0,  coverage: 50 },
+  { enabled: true, ink: '#1a1a1a', angle: 45, coverage: 50 },
+];
+
 let seed = 12.345;
 let sourceImg = null;
 let sourceVideo = null;
@@ -141,8 +166,24 @@ let animFrame = null;
 let mediaUrl = null;
 let renderPending = false;
 
-// Per-layer offscreen canvases (reused)
-const layerCanvases = [null, null, null];
+// Per-layer offscreen canvases (reused; 4 = max CMYK channels)
+const layerCanvases = [null, null, null, null];
+
+function activeLayers() { return mode === 'cmyk' ? cmykChannels : layers; }
+
+function syncModeUI() {
+  document.getElementById('modeSpotBtn').className = mode === 'spot' ? 'btn' : 'btn btn-secondary';
+  document.getElementById('modeCmykBtn').className = mode === 'cmyk' ? 'btn' : 'btn btn-secondary';
+  document.getElementById('gcrRow').style.display = mode === 'cmyk' ? '' : 'none';
+}
+
+function setMode(m) {
+  if (mode === m) return;
+  mode = m;
+  syncModeUI();
+  buildLayerUI();
+  requestRender();
+}
 
 function seededRand(n) {
   const x = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453;
@@ -157,29 +198,39 @@ function val(id) { return Number(document.getElementById(id).value); }
 function buildLayerUI() {
   const container = document.getElementById('layersContainer');
   container.innerHTML = '';
-  layers.forEach((layer, i) => {
+  const list = activeLayers();
+  document.getElementById('layersTitle').firstChild.textContent = mode === 'cmyk' ? 'CMYK Channels' : 'Ink Layers';
+  list.forEach((layer, i) => {
     const block = document.createElement('div');
     block.className = 'layer-block' + (layer.enabled ? '' : ' off');
     block.id = 'layerBlock' + i;
-    const inkOptions = RISO_INKS.map(([name, hex]) =>
-      `<option value="${hex}" ${hex === layer.ink ? 'selected' : ''}>${name}</option>`).join('') +
-      `<option value="custom" ${RISO_INKS.every(([, h]) => h !== layer.ink) ? 'selected' : ''}>Custom</option>`;
-    block.innerHTML = `
-      <div class="layer-head">
-        <label class="checkbox-label"><input type="checkbox" ${layer.enabled ? 'checked' : ''}
-          onchange="setLayer(${i}, 'enabled', this.checked)"> INK ${i + 1}</label>
-        <input type="color" value="${layer.ink}" id="layerColor${i}"
-          oninput="setLayerInk(${i}, this.value, true)">
-      </div>
+    let head, inkRow = '';
+    if (mode === 'cmyk') {
+      head = `${CMYK_DEFS[i].key} &mdash; ${CMYK_DEFS[i].name}`;
+    } else {
+      head = `INK ${i + 1}`;
+      const inkOptions = RISO_INKS.map(([name, hex]) =>
+        `<option value="${hex}" ${hex === layer.ink ? 'selected' : ''}>${name}</option>`).join('') +
+        `<option value="custom" ${RISO_INKS.every(([, h]) => h !== layer.ink) ? 'selected' : ''}>Custom</option>`;
+      inkRow = `
       <div class="ink-row">
         <select id="layerInkSel${i}" onchange="if (this.value !== 'custom') setLayerInk(${i}, this.value, false)">
           ${inkOptions}
         </select>
+      </div>`;
+    }
+    block.innerHTML = `
+      <div class="layer-head">
+        <label class="checkbox-label"><input type="checkbox" ${layer.enabled ? 'checked' : ''}
+          onchange="setLayer(${i}, 'enabled', this.checked)"> ${head}</label>
+        <input type="color" value="${layer.ink}" id="layerColor${i}"
+          oninput="setLayerInk(${i}, this.value, true)">
       </div>
+      ${inkRow}
       <div class="range-row"><span class="range-label">Angle</span>
         <input type="range" min="0" max="90" value="${layer.angle}" oninput="setLayer(${i}, 'angle', Number(this.value)); this.nextElementSibling.textContent = this.value + '\u00B0';">
         <span class="range-value">${layer.angle}&deg;</span></div>
-      <div class="range-row"><span class="range-label">Coverage</span>
+      <div class="range-row"><span class="range-label">${mode === 'cmyk' ? 'Ink' : 'Coverage'}</span>
         <input type="range" min="0" max="100" value="${layer.coverage}" oninput="setLayer(${i}, 'coverage', Number(this.value)); this.nextElementSibling.textContent = this.value;">
         <span class="range-value">${layer.coverage}</span></div>
     `;
@@ -188,18 +239,18 @@ function buildLayerUI() {
 }
 
 function setLayer(i, prop, value) {
-  layers[i][prop] = value;
+  activeLayers()[i][prop] = value;
   if (prop === 'enabled') document.getElementById('layerBlock' + i).classList.toggle('off', !value);
   requestRender();
 }
 
 function setLayerInk(i, hex, fromPicker) {
-  layers[i].ink = hex;
+  activeLayers()[i].ink = hex;
   document.getElementById('layerColor' + i).value = hex;
   const hexInput = document.getElementById('layerColor' + i).nextElementSibling;
   if (hexInput && hexInput.classList && hexInput.classList.contains('tipo-hex-input')) hexInput.value = hex;
   const sel = document.getElementById('layerInkSel' + i);
-  if (fromPicker) {
+  if (sel && fromPicker) {
     sel.value = RISO_INKS.some(([, h]) => h === hex) ? hex : 'custom';
   }
   requestRender();
@@ -312,6 +363,29 @@ function requestRender() {
 // DEMO SOURCE (so the tool is never empty)
 // ============================================================
 function drawDemo(ctx, w, h) {
+  if (mode === 'cmyk') {
+    // colorful demo so the CMYK separation is visible
+    const rb = ctx.createLinearGradient(0, 0, w, 0);
+    rb.addColorStop(0.00, '#e8334a');
+    rb.addColorStop(0.25, '#f5a623');
+    rb.addColorStop(0.50, '#27ae60');
+    rb.addColorStop(0.75, '#2980d9');
+    rb.addColorStop(1.00, '#8e44ad');
+    ctx.fillStyle = rb;
+    ctx.fillRect(0, 0, w, h);
+    const v = ctx.createLinearGradient(0, 0, 0, h);
+    v.addColorStop(0, 'rgba(255,255,255,0.92)');
+    v.addColorStop(0.55, 'rgba(255,255,255,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#111';
+    ctx.font = `900 ${Math.round(h * 0.34)}px "IBM Plex Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('RISO', w / 2, h * 0.6);
+    return;
+  }
   const g = ctx.createLinearGradient(0, 0, w, h);
   g.addColorStop(0, '#ffffff');
   g.addColorStop(1, '#202020');
@@ -379,10 +453,30 @@ function renderRiso(targetCtx, w, h, opts) {
     drawDemo(srcCtx, w, h);
   }
   const data = srcCtx.getImageData(0, 0, w, h).data;
-  const lum = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const j = i * 4;
-    lum[i] = (0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]) / 255;
+  const n = w * h;
+  let lum = null, cmykArr = null;
+  if (mode === 'cmyk') {
+    // RGB → CMYK separation with GCR (gray component replacement)
+    cmykArr = [new Float32Array(n), new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+    const gcr = (opts.gcr !== undefined ? opts.gcr : 70) / 100;
+    for (let i = 0; i < n; i++) {
+      const j = i * 4;
+      let c = 1 - data[j] / 255, m = 1 - data[j + 1] / 255, y = 1 - data[j + 2] / 255;
+      const k = Math.min(c, m, y) * gcr;
+      if (k < 1) {
+        const inv = 1 / (1 - k);
+        c = (c - k) * inv; m = (m - k) * inv; y = (y - k) * inv;
+      } else {
+        c = m = y = 0;
+      }
+      cmykArr[0][i] = c; cmykArr[1][i] = m; cmykArr[2][i] = y; cmykArr[3][i] = k;
+    }
+  } else {
+    lum = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const j = i * 4;
+      lum[i] = (0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]) / 255;
+    }
   }
 
   // 2. Paper
@@ -398,7 +492,7 @@ function renderRiso(targetCtx, w, h, opts) {
   const diag = Math.sqrt(w * w + h * h) / 2 + opts.cell;
   const grainImg = getGrainCanvas();
 
-  layers.forEach((layer, slot) => {
+  activeLayers().forEach((layer, slot) => {
     if (!layer.enabled) return;
     if (opts.soloLayer !== undefined && opts.soloLayer !== slot) return;
 
@@ -428,7 +522,9 @@ function renderRiso(targetCtx, w, h, opts) {
         if (x < -cell || x > w + cell || y < -cell || y > h + cell) continue;
         const xi = Math.min(w - 1, Math.max(0, x | 0));
         const yi = Math.min(h - 1, Math.max(0, y | 0));
-        let dens = Math.pow(1 - lum[yi * w + xi], gamma) * covMul;
+        let dens = cmykArr
+          ? cmykArr[slot][yi * w + xi] * covMul
+          : Math.pow(1 - lum[yi * w + xi], gamma) * covMul;
         if (dens <= 0.02) continue;
         if (dens > 1) dens = 1;
         let r = cell * 0.5 * Math.sqrt(dens * 1.18) * gainMul;
@@ -475,6 +571,7 @@ function currentOpts(scaleMult = 1) {
     misregPx: val('misreg') * scaleMult,
     grainAmt: val('grain'),
     inkOp: val('inkOpacity'),
+    gcr: val('gcr'),
     paper: document.getElementById('paperColor').value,
   };
 }
@@ -532,7 +629,8 @@ function exportPNG() {
 function exportLayers() {
   const { w, h } = workingSize();
   const mult = 2;
-  const enabled = layers.map((l, i) => l.enabled ? i : -1).filter(i => i >= 0);
+  const list = activeLayers();
+  const enabled = list.map((l, i) => l.enabled ? i : -1).filter(i => i >= 0);
   enabled.forEach((slot, k) => {
     setTimeout(() => {
       const c = document.createElement('canvas');
@@ -540,7 +638,10 @@ function exportLayers() {
       const opts = currentOpts(mult);
       opts.soloLayer = slot;
       renderRiso(c.getContext('2d'), w * mult, h * mult, opts);
-      downloadCanvas(c, `tipo-riso-ink${slot + 1}-${layers[slot].ink.slice(1)}.png`);
+      const name = mode === 'cmyk'
+        ? `tipo-riso-cmyk-${CMYK_DEFS[slot].key.toLowerCase()}.png`
+        : `tipo-riso-ink${slot + 1}-${list[slot].ink.slice(1)}.png`;
+      downloadCanvas(c, name);
     }, k * 400);
   });
 }
@@ -575,17 +676,32 @@ const PRESETS = {
   editorial: { inks: ['#1a1a1a', '#00838a', null],        angles: [45, 15, 75], cov: [55, 40, 50], cell: 7,  gain: 12, misreg: 3,  grain: 15, op: 92, paper: '#f8f5ee' },
   punk:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [30, 60, 45], cov: [65, 70, 50], cell: 14, gain: 45, misreg: 22, grain: 65, op: 96, paper: '#ece7d8' },
   mono:      { inks: ['#1a1a1a', null, null],             angles: [45, 75, 15], cov: [60, 50, 50], cell: 8,  gain: 18, misreg: 0,  grain: 30, op: 95, paper: '#f5f0e4' },
+  // CMYK process presets
+  cmyk:      { mode: 'cmyk', on: [1,1,1,1], cov: [50,50,50,50], angles: [15,75,0,45], cell: 8,  gain: 18, misreg: 4, grain: 22, op: 92, gcr: 70, paper: '#f9f6ef' },
+  newsprint: { mode: 'cmyk', on: [1,1,1,1], cov: [45,45,42,55], angles: [15,75,0,45], cell: 13, gain: 50, misreg: 6, grain: 45, op: 94, gcr: 90, paper: '#efe9da' },
+  comic:     { mode: 'cmyk', on: [1,1,1,1], cov: [60,62,58,50], angles: [15,75,0,45], cell: 16, gain: 28, misreg: 8, grain: 25, op: 95, gcr: 55, paper: '#f6f1e2' },
 };
 
 function applyPreset(name) {
   const p = PRESETS[name];
   if (!p) return;
-  layers.forEach((layer, i) => {
-    layer.enabled = p.inks[i] !== null;
-    if (p.inks[i]) layer.ink = p.inks[i];
-    layer.angle = p.angles[i];
-    layer.coverage = p.cov[i];
-  });
+  mode = p.mode || 'spot';
+  syncModeUI();
+  if (mode === 'cmyk') {
+    cmykChannels.forEach((ch, i) => {
+      ch.enabled = !!p.on[i];
+      ch.angle = p.angles[i];
+      ch.coverage = p.cov[i];
+    });
+    document.getElementById('gcr').value = p.gcr;
+  } else {
+    layers.forEach((layer, i) => {
+      layer.enabled = p.inks[i] !== null;
+      if (p.inks[i]) layer.ink = p.inks[i];
+      layer.angle = p.angles[i];
+      layer.coverage = p.cov[i];
+    });
+  }
   document.getElementById('cellSize').value = p.cell;
   document.getElementById('dotGain').value = p.gain;
   document.getElementById('misreg').value = p.misreg;
@@ -604,7 +720,7 @@ function applyPreset(name) {
 }
 
 function updateLabels() {
-  ['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity'].forEach(id => {
+  ['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity', 'gcr'].forEach(id => {
     document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
   });
 }
@@ -612,7 +728,7 @@ function updateLabels() {
 // ============================================================
 // BINDINGS
 // ============================================================
-['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity', 'paperColor'].forEach(id => {
+['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity', 'gcr', 'paperColor'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => {
     updateLabels();
     requestRender();
