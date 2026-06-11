@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Pixel Sort. Classic Asendorf-style pixel sorting with arbitrary angle, 6 sort keys and threshold masking.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Pixel Sort</title>
+<link rel="stylesheet" href="shared/style.css?v=20260610-rec2">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260610-rec2"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
+  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--text-5); font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: var(--accent); color: var(--accent); }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text-2); font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Pixel Sort <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('veils')">Veils</span>
+      <span class="preset-chip" onclick="applyPreset('shatter')">Shatter</span>
+      <span class="preset-chip" onclick="applyPreset('spectrum')">Spectrum</span>
+      <span class="preset-chip" onclick="applyPreset('scanwave')">Scanwave</span>
+      <span class="preset-chip" onclick="applyPreset('subtle')">Subtle</span>
+      <span class="preset-chip" onclick="applyPreset('chaos')">Chaos</span>
+      <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Sort<span class="help-icon" data-help="Sort By: critério de ordenação dos pixels dentro de cada intervalo (brightness = clássico Asendorf; hue = arco-íris). Angle: direção das faixas — 0° horizontal, 90° vertical, qualquer ângulo no meio (rotação interna). Reverse inverte a ordem (claro→escuro vira escuro→claro).">?</span></div>
+    <div class="range-row"><span class="range-label">Sort By</span>
+      <select id="sortBy" style="flex:1;">
+        <option value="brightness" selected>Brightness</option>
+        <option value="hue">Hue</option>
+        <option value="saturation">Saturation</option>
+        <option value="red">Red</option>
+        <option value="green">Green</option>
+        <option value="blue">Blue</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">Angle</span><input type="range" id="angle" min="0" max="360" value="0"><span class="range-value" id="angleVal">0</span></div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="reverse"> Reverse order</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Threshold Mask<span class="help-icon" data-help="Só pixels com brightness ENTRE Low e High entram nos intervalos de sorting — o resto fica intacto (é o que preserva a estrutura da imagem). Invert: sorteia o que está FORA da faixa. Low=0 + High=100 = imagem inteira derretida.">?</span></div>
+    <div class="range-row"><span class="range-label">Low</span><input type="range" id="thrLow" min="0" max="100" value="25"><span class="range-value" id="thrLowVal">25</span></div>
+    <div class="range-row"><span class="range-label">High</span><input type="range" id="thrHigh" min="0" max="100" value="75"><span class="range-value" id="thrHighVal">75</span></div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="invertMask"> Invert mask</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Structure<span class="help-icon" data-help="Max Span: comprimento máximo dos intervalos sorteados (0 = sem limite, faixas atravessam a imagem inteira). Randomness: chance de quebrar um intervalo no meio — gera textura fragmentada em vez de faixas limpas. Mix: mistura o resultado com o original (100 = só sorted).">?</span></div>
+    <div class="range-row"><span class="range-label">Max Span</span><input type="range" id="maxSpan" min="0" max="100" value="0"><span class="range-value" id="maxSpanVal">0</span></div>
+    <div class="range-row"><span class="range-label">Randomness</span><input type="range" id="randomness" min="0" max="100" value="0"><span class="range-value" id="randomnessVal">0</span></div>
+    <div class="range-row"><span class="range-label">Mix</span><input type="range" id="mix" min="0" max="100" value="100"><span class="range-value" id="mixVal">100</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motion<span class="help-icon" data-help="Drift: anima a janela de threshold ao longo do tempo — as faixas sorteadas respiram e varrem a imagem. É o que dá vida a uma imagem parada na gravação de MP4. Vídeo e webcam já são re-sorteados a cada frame mesmo com Drift 0.">?</span></div>
+    <div class="range-row"><span class="range-label">Drift</span><input type="range" id="drift" min="0" max="100" value="0"><span class="range-value" id="driftVal">0</span></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video &bull; demo mode</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TIPÓ — PIXEL SORT (Kim Asendorf style)
+// Interval-based pixel sorting: threshold mask defines runs of
+// pixels along a line (any angle), each run sorted by a key.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
+const workCanvas = document.createElement('canvas');
+const workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
+const rotCanvas = document.createElement('canvas');
+const rotCtx = rotCanvas.getContext('2d', { willReadFrequently: true });
+
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // null (demo) | 'image' | 'video' | 'webcam'
+let recorder = null;
+let mediaUrl = null;
+let needsRender = true;
+let driftT = 0;
+
+// reusable per-line buffers
+let keyBuf = null, idxBuf = null, pxBuf = null;
+
+function val(id) { return Number(document.getElementById(id).value); }
+function requestRender() { needsRender = true; }
+
+// ============================================================
+// SOURCE / MEDIA
+// ============================================================
+function setMediaUrl(url) { if (mediaUrl) URL.revokeObjectURL(mediaUrl); mediaUrl = url; }
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  sourceVideo = null;
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    setMediaUrl(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); sourceImg = img; sourceType = 'image'; requestRender(); };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  } else if (file.type.startsWith('video/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play();
+    sourceVideo = vid; sourceImg = null; sourceType = 'video';
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    requestRender();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    releaseVideo();
+    sourceType = sourceImg ? 'image' : null;
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    requestRender();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      releaseVideo();
+      setMediaUrl(null);
+      const vid = document.createElement('video');
+      vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
+      vid.play();
+      sourceVideo = vid; sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      requestRender();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      const btn = document.getElementById('webcamBtn');
+      btn.textContent = 'Cam denied';
+      setTimeout(() => { btn.textContent = 'Webcam'; }, 2000);
+    });
+}
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg; // null = demo
+}
+
+// ============================================================
+// DEMO SOURCE
+// ============================================================
+let demoCanvas = null;
+function getDemo() {
+  if (demoCanvas) return demoCanvas;
+  demoCanvas = document.createElement('canvas');
+  demoCanvas.width = 800; demoCanvas.height = 600;
+  const g = demoCanvas.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, 600);
+  sky.addColorStop(0, '#0c1030'); sky.addColorStop(0.55, '#ff48b0'); sky.addColorStop(0.78, '#D4A040'); sky.addColorStop(1, '#1a1a22');
+  g.fillStyle = sky; g.fillRect(0, 0, 800, 600);
+  g.fillStyle = '#fff8e0';
+  g.beginPath(); g.arc(560, 270, 110, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#10131f';
+  g.beginPath();
+  g.moveTo(0, 600); g.lineTo(0, 430); g.lineTo(170, 330); g.lineTo(330, 470); g.lineTo(470, 380); g.lineTo(640, 500); g.lineTo(800, 420); g.lineTo(800, 600);
+  g.closePath(); g.fill();
+  g.fillStyle = '#2A8A7A';
+  g.fillRect(60, 90, 150, 90);
+  g.fillStyle = '#f2efe6';
+  g.font = '900 120px "IBM Plex Mono", monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('SORT', 400, 150);
+  return demoCanvas;
+}
+
+// ============================================================
+// SORT CORE
+// ============================================================
+function lum(d, p) { return (0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2]) / 255; }
+
+function makeKeyFn(mode) {
+  if (mode === 'brightness') return lum;
+  if (mode === 'red') return (d, p) => d[p] / 255;
+  if (mode === 'green') return (d, p) => d[p + 1] / 255;
+  if (mode === 'blue') return (d, p) => d[p + 2] / 255;
+  if (mode === 'saturation') return (d, p) => {
+    const r = d[p], g = d[p + 1], b = d[p + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    return mx === 0 ? 0 : (mx - mn) / mx;
+  };
+  // hue
+  return (d, p) => {
+    const r = d[p] / 255, g = d[p + 1] / 255, b = d[p + 2] / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (mx === mn) return 0;
+    const c = mx - mn;
+    let hh;
+    if (mx === r) hh = ((g - b) / c + 6) % 6;
+    else if (mx === g) hh = (b - r) / c + 2;
+    else hh = (r - g) / c + 4;
+    return hh / 6;
+  };
+}
+
+// Sort one run [from, to) of pixels along a line (start + i*stride)
+function sortRun(d, start, stride, from, to, keyFn, desc) {
+  const n = to - from;
+  if (n < 2) return;
+  for (let j = 0; j < n; j++) {
+    const p = start + (from + j) * stride;
+    keyBuf[j] = keyFn(d, p);
+    idxBuf[j] = j;
+    const q = j * 4;
+    pxBuf[q] = d[p]; pxBuf[q + 1] = d[p + 1]; pxBuf[q + 2] = d[p + 2]; pxBuf[q + 3] = d[p + 3];
+  }
+  const view = idxBuf.subarray(0, n);
+  view.sort(desc ? (a, b) => keyBuf[b] - keyBuf[a] : (a, b) => keyBuf[a] - keyBuf[b]);
+  for (let j = 0; j < n; j++) {
+    const p = start + (from + j) * stride;
+    const q = view[j] * 4;
+    d[p] = pxBuf[q]; d[p + 1] = pxBuf[q + 1]; d[p + 2] = pxBuf[q + 2]; d[p + 3] = pxBuf[q + 3];
+  }
+}
+
+// Walk one line, find masked intervals, sort each
+function sortLine(d, start, stride, count, opts) {
+  let runStart = -1;
+  for (let i = 0; i <= count; i++) {
+    let inMask = false;
+    if (i < count) {
+      const p = start + i * stride;
+      if (d[p + 3] > 8) { // skip transparent (rotation padding)
+        const l = lum(d, p);
+        inMask = (l >= opts.lo && l <= opts.hi);
+        if (opts.invert) inMask = !inMask;
+      }
+    }
+    if (inMask && runStart >= 0) {
+      if (opts.maxSpan > 0 && i - runStart >= opts.maxSpan) {
+        sortRun(d, start, stride, runStart, i, opts.keyFn, opts.desc);
+        runStart = i;
+      } else if (opts.breakP > 0 && Math.random() < opts.breakP) {
+        sortRun(d, start, stride, runStart, i, opts.keyFn, opts.desc);
+        runStart = i;
+      }
+    }
+    if (inMask && runStart < 0) runStart = i;
+    if (!inMask && runStart >= 0) {
+      sortRun(d, start, stride, runStart, i, opts.keyFn, opts.desc);
+      runStart = -1;
+    }
+  }
+}
+
+function ensureBufs(maxLine) {
+  if (!keyBuf || keyBuf.length < maxLine) {
+    keyBuf = new Float32Array(maxLine);
+    idxBuf = new Uint32Array(maxLine);
+    pxBuf = new Uint8ClampedArray(maxLine * 4);
+  }
+}
+
+function sortImageData(id, w, h, opts) {
+  const d = id.data;
+  if (opts.vertical) {
+    ensureBufs(h);
+    for (let x = 0; x < w; x++) sortLine(d, x * 4, w * 4, h, opts);
+  } else {
+    ensureBufs(w);
+    for (let y = 0; y < h; y++) sortLine(d, y * w * 4, 4, w, opts);
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function workingSize() {
+  const frame = getCurrentFrame() || getDemo();
+  const sw = frame.videoWidth || frame.naturalWidth || frame.width;
+  const sh = frame.videoHeight || frame.naturalHeight || frame.height;
+  const cap = sourceType === 'image' || sourceType === null ? 900 : 640;
+  const sc = Math.min(1, cap / Math.max(sw, sh));
+  return { w: Math.max(2, Math.round(sw * sc)), h: Math.max(2, Math.round(sh * sc)) };
+}
+
+function render() {
+  const frame = getCurrentFrame() || getDemo();
+  if ((sourceType === 'video' || sourceType === 'webcam') && frame.readyState < 2) return;
+  const { w, h } = workingSize();
+  if (mainCanvas.width !== w || mainCanvas.height !== h) { mainCanvas.width = w; mainCanvas.height = h; }
+  if (workCanvas.width !== w || workCanvas.height !== h) { workCanvas.width = w; workCanvas.height = h; }
+
+  // source → work canvas (cover fit)
+  const sw = frame.videoWidth || frame.naturalWidth || frame.width;
+  const sh = frame.videoHeight || frame.naturalHeight || frame.height;
+  const sc = Math.max(w / sw, h / sh);
+  const cw = w / sc, ch = h / sc;
+  workCtx.drawImage(frame, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, w, h);
+
+  // threshold window (+ drift animation)
+  let lo = val('thrLow') / 100, hi = val('thrHigh') / 100;
+  if (lo > hi) { const t = lo; lo = hi; hi = t; }
+  const drift = val('drift') / 100;
+  if (drift > 0) {
+    const span = hi - lo;
+    const center = (lo + hi) / 2 + Math.sin(driftT) * drift * 0.45;
+    lo = Math.max(0, Math.min(1, center - span / 2));
+    hi = Math.max(0, Math.min(1, center + span / 2));
+  }
+
+  const opts = {
+    lo, hi,
+    invert: document.getElementById('invertMask').checked,
+    keyFn: makeKeyFn(document.getElementById('sortBy').value),
+    desc: document.getElementById('reverse').checked,
+    maxSpan: val('maxSpan') > 0 ? Math.max(2, Math.round(val('maxSpan') / 100 * Math.max(w, h))) : 0,
+    breakP: val('randomness') > 0 ? Math.pow(val('randomness') / 100, 2) * 0.35 : 0,
+    vertical: false,
+  };
+
+  const angle = val('angle') % 360;
+  if (angle % 180 === 0) {
+    // fast path: horizontal
+    const id = workCtx.getImageData(0, 0, w, h);
+    opts.desc = angle === 180 ? !opts.desc : opts.desc;
+    sortImageData(id, w, h, opts);
+    mainCtx.putImageData(id, 0, 0);
+  } else if (angle % 180 === 90) {
+    // fast path: vertical
+    const id = workCtx.getImageData(0, 0, w, h);
+    opts.vertical = true;
+    opts.desc = angle === 270 ? !opts.desc : opts.desc;
+    sortImageData(id, w, h, opts);
+    mainCtx.putImageData(id, 0, 0);
+  } else {
+    // arbitrary angle: rotate → sort horizontal → rotate back
+    const rad = angle * Math.PI / 180;
+    const D = Math.ceil(Math.hypot(w, h));
+    if (rotCanvas.width !== D || rotCanvas.height !== D) { rotCanvas.width = D; rotCanvas.height = D; }
+    rotCtx.clearRect(0, 0, D, D);
+    rotCtx.save();
+    rotCtx.translate(D / 2, D / 2);
+    rotCtx.rotate(-rad);
+    rotCtx.drawImage(workCanvas, -w / 2, -h / 2);
+    rotCtx.restore();
+    const id = rotCtx.getImageData(0, 0, D, D);
+    sortImageData(id, D, D, opts);
+    rotCtx.putImageData(id, 0, 0);
+    mainCtx.save();
+    mainCtx.translate(w / 2, h / 2);
+    mainCtx.rotate(rad);
+    mainCtx.drawImage(rotCanvas, -D / 2, -D / 2);
+    mainCtx.restore();
+  }
+
+  // mix with original
+  const mix = val('mix') / 100;
+  if (mix < 1) {
+    mainCtx.save();
+    mainCtx.globalAlpha = 1 - mix;
+    mainCtx.drawImage(workCanvas, 0, 0);
+    mainCtx.restore();
+  }
+
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ============================================================
+// LOOP — continuous only when dynamic (video/webcam/drift/rec)
+// ============================================================
+function isDynamic() {
+  return sourceType === 'video' || sourceType === 'webcam' || val('drift') > 0 || (recorder && recorder.isRecording);
+}
+
+let last = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - last < 33) return; // ~30fps
+  last = now;
+  if (isDynamic()) {
+    driftT += 0.045;
+    render();
+    needsRender = false;
+  } else if (needsRender) {
+    render();
+    needsRender = false;
+  }
+}
+requestAnimationFrame(loop);
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportPNG() {
+  mainCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'tipo-pixelsort.png';
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+  }
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+const PRESETS = {
+  classic:  { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 25, thrHigh: 75, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
+  veils:    { sortBy: 'brightness', angle: 90,  reverse: true,  thrLow: 0,  thrHigh: 62, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
+  shatter:  { sortBy: 'brightness', angle: 45,  reverse: false, thrLow: 18, thrHigh: 85, invertMask: false, maxSpan: 24, randomness: 55, mix: 100, drift: 0 },
+  spectrum: { sortBy: 'hue',        angle: 0,   reverse: false, thrLow: 10, thrHigh: 92, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
+  scanwave: { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 35, thrHigh: 65, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 55 },
+  subtle:   { sortBy: 'brightness', angle: 90,  reverse: false, thrLow: 30, thrHigh: 70, invertMask: false, maxSpan: 18, randomness: 20, mix: 40,  drift: 0 },
+  chaos:    { sortBy: 'saturation', angle: 135, reverse: true,  thrLow: 5,  thrHigh: 95, invertMask: false, maxSpan: 35, randomness: 70, mix: 100, drift: 30 },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  ['angle', 'thrLow', 'thrHigh', 'maxSpan', 'randomness', 'mix', 'drift'].forEach(id => {
+    document.getElementById(id).value = p[id];
+  });
+  document.getElementById('sortBy').value = p.sortBy;
+  document.getElementById('reverse').checked = p.reverse;
+  document.getElementById('invertMask').checked = p.invertMask;
+  updateLabels();
+  requestRender();
+  if (typeof event !== 'undefined' && event && event.target) {
+    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+}
+
+function updateLabels() {
+  ['angle', 'thrLow', 'thrHigh', 'maxSpan', 'randomness', 'mix', 'drift'].forEach(id => {
+    document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
+  });
+}
+
+// ============================================================
+// BINDINGS
+// ============================================================
+['angle', 'thrLow', 'thrHigh', 'maxSpan', 'randomness', 'mix', 'drift'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { updateLabels(); requestRender(); });
+});
+['sortBy'].forEach(id => document.getElementById(id).addEventListener('change', requestRender));
+['reverse', 'invertMask'].forEach(id => document.getElementById(id).addEventListener('change', requestRender));
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// ============================================================
+// HELP TOOLTIPS
+// ============================================================
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null;
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px'; tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (pinned === el) hide(); else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('panel').addEventListener('scroll', hide);
+})();
+
+// ============================================================
+// THEME + BACK (standalone, same as riso/datamosh)
+// ============================================================
+(function initTheme() {
+  const saved = localStorage.getItem('tipo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.title = 'Toggle light/dark theme';
+  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+  });
+  document.body.appendChild(btn);
+
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.title = 'Back to menu';
+  back.textContent = '\u2190';
+  document.body.appendChild(back);
+})();
+
+// Init
+updateLabels();
+requestRender();
+</script>
+</body>
+</html>

@@ -260,7 +260,7 @@ Upload imagem/video → pixel sorting artístico.
 - **Controles:** Direction (H/V/diagonal), threshold, sort by (brightness/hue/sat), range
 - **Referência:** Kim Asendorf pixel sorting, glitch art community
 - **Video+webcam input**
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-11) — pixelsort.html standalone. Sorting por intervalos (máscara de threshold low/high + invert), 6 sort keys (brightness/hue/sat/R/G/B), angle 0-360° (fast paths 0/90/180/270 + rotação interna pra ângulos arbitrários com gate de alpha), max span, randomness (quebra de intervalos), mix com original, drift animado (janela de threshold varre com seno — anima imagem parada pra MP4). 7 presets, 4 help icons. 14/14 testes Playwright (inclui verificação de monotonicidade da linha sorteada), 30fps no pior caso.
 
 #### 8.13 — DATAMOSH (ferramenta nova, pegada profissional After/Cavalry)
 Datamosh real é abuso de compressão de vídeo: remover I-frames (keyframes) faz os P-frames

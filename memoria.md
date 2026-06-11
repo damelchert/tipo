@@ -337,6 +337,16 @@ Três bugs reais encontrados e corrigidos:
 - test-glow.mjs: 12/12 PASS primeira rodada — glow só ADICIONA luz (screen, mean 77.9→92.6), threshold=100 mata glow, joelho epsilon (ε=0.02 mean 146.5 > ε=1.0 87.5), direção anamórfica muda render, radius/falloff/dist mudam, interop com tint, PNG, MP4 com webcam válido, perf
 - Card do dithering no index atualizado (13 algoritmos, tint, anamorphic epsilon glow)
 
+**8.12 Pixel Sort construído (pixelsort.html — standalone, padrão riso/datamosh)**
+- Asendorf clássico: máscara de threshold (brightness entre low/high, invert opcional) define intervalos por linha; cada intervalo ordenado por key (brightness/hue/sat/R/G/B), asc/desc
+- **Angle 0-360°**: fast paths horizontal/vertical (0/90/180/270, com desc flip pra 180/270); ângulos arbitrários via rotate → sort horizontal → rotate back em canvas D=hypot; pixels alpha<8 (padding da rotação) nunca entram em intervalos
+- sortRun com buffers reutilizáveis (keyBuf Float32 / idxBuf Uint32 / pxBuf): sort de índices por key, escrita permutada — sem alocação por frame
+- Structure: Max Span (limite de comprimento do intervalo), Randomness (`(r/100)²*0.35` chance de quebra por pixel), Mix (blend com original)
+- **Drift**: janela de threshold varre com seno (driftT) — anima imagem estática pra gravação; loop só re-renderiza quando dinâmico (video/webcam/drift/rec) senão requestRender
+- 7 presets (classic/veils/shatter/spectrum/scanwave/subtle/chaos), 4 help icons, demo "SORT" colorido (pôr-do-sol + montanhas)
+- test-pixelsort.mjs: 14/14 PASS primeira rodada — inclui teste de MONOTONICIDADE (linha inteira sorteada deve ser não-decrescente em luminância), 6 keys distintas, 3 ângulos distintos, drift anima, MP4 válido, 30fps no pior caso (45° full mask)
+- Card "Ps" no index antes do Overlay; nota: o slider pixelSort do glitch.html continua lá (efeito rápido), pixelsort.html é a versão pro
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados
