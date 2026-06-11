@@ -134,6 +134,7 @@ body {
   text-transform: uppercase;
   color: var(--text-0);
   padding-bottom: 10px;
+  padding-left: 36px; /* clears the floating back button */
   border-bottom: 1px solid var(--border-2);
   display: flex;
   justify-content: space-between;
@@ -639,6 +640,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   .tipo-panel-toggle { display: flex !important; }
   #canvasContainer { width: 100vw !important; }
   .tipo-back-btn { top: 60px; } /* below the mobile panel toggle */
+  .tipo-panel h1 { padding-left: 0; } /* back button isn't over the panel on mobile */
 }
 
 .tipo-panel-toggle {
