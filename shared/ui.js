@@ -245,6 +245,23 @@ const TipoUI = {
 
     // Add editable hex fields next to every color picker
     this.initHexInputs();
+
+    // Inject "PNG α" (transparent background) button next to the PNG button
+    this.initAlphaButton();
+  },
+
+  /** Add a transparent-PNG export button when the tool has a flat bg color */
+  initAlphaButton() {
+    const pngBtn = document.querySelector('button[onclick^="savePNG"]');
+    if (!pngBtn || !document.getElementById('bgColor') || document.getElementById('pngAlphaBtn')) return;
+    const b = document.createElement('button');
+    b.id = 'pngAlphaBtn';
+    b.type = 'button';
+    b.className = pngBtn.className;
+    b.textContent = 'PNG α';
+    b.title = 'PNG with transparent background';
+    b.addEventListener('click', () => this.savePNGAlpha());
+    pngBtn.insertAdjacentElement('afterend', b);
   },
 
   /** Add a small editable hex text field after each color input (two-way sync) */
@@ -512,10 +529,63 @@ const TipoUI = {
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + bv).toString(16).slice(1);
   },
 
+  /** Find the tool's main canvas */
+  _exportCanvas() {
+    return (this.recorder && this.recorder.canvas)
+      || document.querySelector('#canvasContainer canvas')
+      || document.querySelector('canvas');
+  },
+
+  _downloadBlob(blob, filename) {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  },
+
   /** Save canvas as PNG */
   savePNG() {
-    saveCanvas('tipo-' + this.modeName, 'png');
-    this.showToast('PNG saved');
+    const src = this._exportCanvas();
+    if (!src) { this.showToast('No canvas found'); return; }
+    src.toBlob(blob => {
+      if (!blob) { this.showToast('PNG export failed'); return; }
+      this._downloadBlob(blob, 'tipo-' + this.modeName + '.png');
+      this.showToast('PNG saved');
+    }, 'image/png');
+  },
+
+  /** Save canvas as PNG with transparent background (keys out the bg color) */
+  savePNGAlpha() {
+    const bgInput = document.getElementById('bgColor');
+    const src = this._exportCanvas();
+    if (!src || !bgInput) { this.showToast('Alpha PNG unavailable'); return; }
+    const w = src.width, h = src.height;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(src, 0, 0);
+    const img = ctx.getImageData(0, 0, w, h), d = img.data;
+    const bg = bgInput.value;
+    const br = parseInt(bg.slice(1, 3), 16), bgr = parseInt(bg.slice(3, 5), 16), bb = parseInt(bg.slice(5, 7), 16);
+    for (let i = 0; i < d.length; i += 4) {
+      const diff = Math.max(Math.abs(d[i] - br), Math.abs(d[i + 1] - bgr), Math.abs(d[i + 2] - bb));
+      // diff 0–8 → transparent, 8–48 → edge ramp, >48 → opaque
+      const a = (diff - 8) / 40;
+      if (a <= 0) { d[i + 3] = 0; continue; }
+      if (a >= 1) continue;
+      // un-mix the bg contribution from antialiased edge pixels
+      d[i]     = Math.min(255, Math.max(0, Math.round((d[i]     - (1 - a) * br)  / a)));
+      d[i + 1] = Math.min(255, Math.max(0, Math.round((d[i + 1] - (1 - a) * bgr) / a)));
+      d[i + 2] = Math.min(255, Math.max(0, Math.round((d[i + 2] - (1 - a) * bb)  / a)));
+      d[i + 3] = Math.round(a * 255);
+    }
+    ctx.putImageData(img, 0, 0);
+    c.toBlob(blob => {
+      if (!blob) { this.showToast('Alpha PNG failed'); return; }
+      this._downloadBlob(blob, 'tipo-' + this.modeName + '-alpha.png');
+      this.showToast('Alpha PNG saved');
+    }, 'image/png');
   },
 
   /** Toggle MP4/WebM recording */

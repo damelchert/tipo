@@ -23,6 +23,7 @@ class TipoRecorder {
     this.encW = 0;
     this.encH = 0;
     this._firstTimestampUs = null;
+    this._lastKeyTsUs = -1;
 
     // MediaRecorder state
     this._mediaRecorder = null;
@@ -55,18 +56,19 @@ class TipoRecorder {
 
     this._resetSession();
 
-    // Check if canvas is WEBGL (getContext('2d') returns null on WEBGL canvas)
-    const is2D = !!this.canvas.getContext('2d');
-    if (is2D && this.hasMp4Support && !this.preferStream) {
+    // WebCodecs MP4 works for both 2D and WEBGL canvases: frames are copied
+    // via drawImage into a 2D record canvas (p5 WEBGL keeps
+    // preserveDrawingBuffer=true, and captureFrame() runs inside draw()).
+    if (this.hasMp4Support && !this.preferStream) {
       try {
         this._startMP4(bitrate);
       } catch (err) {
         console.warn('MP4 encoder unavailable, falling back to stream recorder:', err);
         this._resetSession();
-        this._startStream(bitrate, is2D);
+        this._startStream(bitrate);
       }
     } else {
-      this._startStream(bitrate, is2D);
+      this._startStream(bitrate);
     }
 
     this.isRecording = true;
@@ -85,6 +87,7 @@ class TipoRecorder {
     const h = this.canvas.height;
     this.encW = w + (w % 2);
     this.encH = h + (h % 2);
+    this._lastKeyTsUs = -1;
 
     const target = new Mp4Muxer.ArrayBufferTarget();
     this.muxer = new Mp4Muxer.Muxer({
@@ -112,11 +115,13 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
   }
 
-  _startStream(bitrate, copyCanvas = false) {
+  _startStream(bitrate) {
     this.encW = this.canvas.width + (this.canvas.width % 2);
     this.encH = this.canvas.height + (this.canvas.height % 2);
-    const sourceCanvas = copyCanvas ? this._createStreamCanvas() : this.canvas;
-    if (copyCanvas) this._paintStreamCanvas();
+    // Always record through a fixed-size 2D copy canvas: keeps even dimensions
+    // and survives mid-recording source canvas resizes (param changes).
+    const sourceCanvas = this._createStreamCanvas();
+    this._paintRecCanvas();
 
     let stream = sourceCanvas.captureStream(this.fps);
     this._streamTrack = stream.getVideoTracks()[0] || null;
@@ -166,6 +171,7 @@ class TipoRecorder {
     this.encW = 0;
     this.encH = 0;
     this._firstTimestampUs = null;
+    this._lastKeyTsUs = -1;
     this._chunks = null;
     this._streamFormat = null;
     this._streamTrack = null;
@@ -185,7 +191,7 @@ class TipoRecorder {
     const minDelta = 1000 / this.fps * 0.75;
     if (!force && this._lastStreamFrameTime >= 0 && now - this._lastStreamFrameTime < minDelta) return false;
     this._lastStreamFrameTime = now;
-    this._paintStreamCanvas();
+    this._paintRecCanvas();
     if (this._streamTrack && typeof this._streamTrack.requestFrame === 'function') {
       this._streamTrack.requestFrame();
     }
@@ -201,11 +207,18 @@ class TipoRecorder {
     return this._recCanvas;
   }
 
-  _paintStreamCanvas() {
+  // Paint the source canvas into the fixed-size record canvas, aspect-fit
+  // (letterboxed). Tolerates the source canvas being resized mid-recording
+  // when the user changes tool parameters.
+  _paintRecCanvas() {
     if (!this._recCtx) return;
+    const cw = this.canvas.width, ch = this.canvas.height;
+    if (!cw || !ch) return;
     this._recCtx.fillStyle = '#000';
     this._recCtx.fillRect(0, 0, this.encW, this.encH);
-    this._recCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+    const s = Math.min(this.encW / cw, this.encH / ch);
+    const dw = cw * s, dh = ch * s;
+    this._recCtx.drawImage(this.canvas, (this.encW - dw) / 2, (this.encH - dh) / 2, dw, dh);
   }
 
   // Call this every frame from your render loop
@@ -231,7 +244,9 @@ class TipoRecorder {
 
     const now = performance.now();
     const elapsed = now - this.startTime;
-    if (this.lastCaptureTime >= 0 && (elapsed - this.lastCaptureTime) < 16) return;
+    // Throttle relative to target fps (not a hard-coded 60fps ceiling)
+    const minDelta = (1000 / this.fps) * 0.75;
+    if (this.lastCaptureTime >= 0 && (elapsed - this.lastCaptureTime) < minDelta) return;
 
     this.lastCaptureTime = elapsed;
     const rawTimestampUs = Math.round(elapsed * 1000);
@@ -239,19 +254,13 @@ class TipoRecorder {
     const timestampUs = rawTimestampUs - this._firstTimestampUs;
 
     // Lazy-create record canvas
-    if (!this._recCanvas) {
-      this._recCanvas = document.createElement('canvas');
-      this._recCanvas.width = this.encW;
-      this._recCanvas.height = this.encH;
-      this._recCtx = this._recCanvas.getContext('2d');
-    }
-
-    this._recCtx.fillStyle = '#000';
-    this._recCtx.fillRect(0, 0, this.encW, this.encH);
-    this._recCtx.drawImage(this.canvas, 0, 0, this.encW, this.encH);
+    if (!this._recCanvas) this._createStreamCanvas();
+    this._paintRecCanvas();
 
     const frame = new VideoFrame(this._recCanvas, { timestamp: timestampUs });
-    const keyFrame = this.frameCount % 60 === 0;
+    // Time-based keyframes (every 1s of real time) → reliable seeking/playback
+    const keyFrame = this._lastKeyTsUs < 0 || (timestampUs - this._lastKeyTsUs) >= 1000000;
+    if (keyFrame) this._lastKeyTsUs = timestampUs;
     this.encoder.encode(frame, { keyFrame });
     frame.close();
     this.frameCount++;
