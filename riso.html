@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Risograph Simulator. Spot-color ink separation, halftone, misregistration and grain in the browser.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Riso</title>
+<link rel="stylesheet" href="shared/style.css?v=20260610-rec2">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260610-rec2"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
+  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  .layer-block { border: 1px solid var(--border-2); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .layer-block.off { opacity: 0.45; }
+  .layer-head { display: flex; align-items: center; justify-content: space-between; }
+  .layer-head .checkbox-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+  .ink-row { display: flex; gap: 6px; align-items: center; }
+  .ink-row select { flex: 1; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--text-5); font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: var(--accent); color: var(--accent); }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text-2); font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Riso <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('zine')">Zine</span>
+      <span class="preset-chip" onclick="applyPreset('poster')">Poster</span>
+      <span class="preset-chip" onclick="applyPreset('editorial')">Editorial</span>
+      <span class="preset-chip" onclick="applyPreset('punk')">Punk</span>
+      <span class="preset-chip" onclick="applyPreset('mono')">Mono</span>
+      <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ink Layers<span class="help-icon" data-help="Cada camada é uma tinta (cor spot) impressa separadamente, como numa Risograph real. A separação por tons é automática: a camada 1 pega as sombras, a 2 os meios-tons, a 3 cobre faixas amplas. Coverage controla quanta tinta cada camada deposita.">?</span></div>
+    <div id="layersContainer"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Print<span class="help-icon" data-help="Halftone: tamanho da retícula de pontos de cada tinta (cada camada tem o próprio ângulo, como impressão real). Dot gain: os pontos 'crescem' ao absorver no papel. Overprint: opacidade da tinta — onde as cores sobrepõem, elas se multiplicam (mistura subtrativa).">?</span></div>
+    <div class="range-row"><span class="range-label">Halftone</span><input type="range" id="cellSize" min="4" max="24" value="9"><span class="range-value" id="cellSizeVal">9</span></div>
+    <div class="range-row"><span class="range-label">Dot Gain</span><input type="range" id="dotGain" min="0" max="100" value="20"><span class="range-value" id="dotGainVal">20</span></div>
+    <div class="range-row"><span class="range-label">Overprint</span><input type="range" id="inkOpacity" min="40" max="100" value="92"><span class="range-value" id="inkOpacityVal">92</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Imperfection<span class="help-icon" data-help="Misregistration: desalinhamento entre as camadas — a marca registrada do Riso (cada passada de tinta sai ligeiramente fora do registro). Grain: granulado orgânico da tinta no papel. Re-roll sorteia um novo desalinhamento aleatório.">?</span></div>
+    <div class="range-row"><span class="range-label">Misregist.</span><input type="range" id="misreg" min="0" max="30" value="6"><span class="range-value" id="misregVal">6</span></div>
+    <div class="range-row"><span class="range-label">Grain</span><input type="range" id="grain" min="0" max="100" value="25"><span class="range-value" id="grainVal">25</span></div>
+    <button class="btn btn-secondary" onclick="rerollSeed()" style="font-size:10px;">Re-roll Registration</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Paper</div>
+    <div class="color-section-row">
+      <span class="range-label">Color</span>
+      <input type="color" id="paperColor" value="#f5f0e4">
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn" onclick="exportLayers()">Layers PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+    <div style="font-size:9px;color:var(--text-5);margin-top:6px">PNG = composite 2x &bull; Layers = separação por tinta (transparente) &bull; MP4 = vídeo</div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video &bull; demo mode</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TIPÓ — RISOGRAPH SIMULATOR (exclusivo)
+// Spot-color separation + halftone per layer + misregistration
+// + ink grain + multiply overprint. Image/Video/Webcam + MP4.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+const srcCanvas = document.createElement('canvas');
+const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+
+const RISO_INKS = [
+  ['Black', '#1a1a1a'], ['Bright Red', '#f15060'], ['Red', '#ff665e'],
+  ['Orange', '#ff6c2f'], ['Sunflower', '#ffb511'], ['Yellow', '#ffe800'],
+  ['Green', '#00a95c'], ['Mint', '#82d8d5'], ['Teal', '#00838a'],
+  ['Blue', '#0078bf'], ['Cornflower', '#62a8e5'], ['Federal Blue', '#3d5588'],
+  ['Violet', '#765ba7'], ['Fluo Pink', '#ff48b0'], ['Burgundy', '#914e72'],
+  ['Hunter Green', '#407060'], ['Brown', '#925f52'], ['Flat Gold', '#bb8b41'],
+];
+
+// Tonal separation curve per layer slot: gamma weights
+// (slot 0 = shadows-heavy, slot 1 = midtones, slot 2 = broad/highlights)
+const SLOT_GAMMA = [1.7, 1.0, 0.65];
+const DEFAULT_ANGLES = [15, 75, 45];
+
+const layers = [
+  { enabled: true,  ink: '#0078bf', angle: 15, coverage: 55 },
+  { enabled: true,  ink: '#f15060', angle: 75, coverage: 50 },
+  { enabled: false, ink: '#ffb511', angle: 45, coverage: 50 },
+];
+
+let seed = 12.345;
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // null (demo) | 'image' | 'video' | 'webcam'
+let recorder = null;
+let animFrame = null;
+let mediaUrl = null;
+let renderPending = false;
+
+// Per-layer offscreen canvases (reused)
+const layerCanvases = [null, null, null];
+
+function seededRand(n) {
+  const x = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function val(id) { return Number(document.getElementById(id).value); }
+
+// ============================================================
+// LAYER UI
+// ============================================================
+function buildLayerUI() {
+  const container = document.getElementById('layersContainer');
+  container.innerHTML = '';
+  layers.forEach((layer, i) => {
+    const block = document.createElement('div');
+    block.className = 'layer-block' + (layer.enabled ? '' : ' off');
+    block.id = 'layerBlock' + i;
+    const inkOptions = RISO_INKS.map(([name, hex]) =>
+      `<option value="${hex}" ${hex === layer.ink ? 'selected' : ''}>${name}</option>`).join('') +
+      `<option value="custom" ${RISO_INKS.every(([, h]) => h !== layer.ink) ? 'selected' : ''}>Custom</option>`;
+    block.innerHTML = `
+      <div class="layer-head">
+        <label class="checkbox-label"><input type="checkbox" ${layer.enabled ? 'checked' : ''}
+          onchange="setLayer(${i}, 'enabled', this.checked)"> INK ${i + 1}</label>
+        <input type="color" value="${layer.ink}" id="layerColor${i}"
+          oninput="setLayerInk(${i}, this.value, true)">
+      </div>
+      <div class="ink-row">
+        <select id="layerInkSel${i}" onchange="if (this.value !== 'custom') setLayerInk(${i}, this.value, false)">
+          ${inkOptions}
+        </select>
+      </div>
+      <div class="range-row"><span class="range-label">Angle</span>
+        <input type="range" min="0" max="90" value="${layer.angle}" oninput="setLayer(${i}, 'angle', Number(this.value)); this.nextElementSibling.textContent = this.value + '\u00B0';">
+        <span class="range-value">${layer.angle}&deg;</span></div>
+      <div class="range-row"><span class="range-label">Coverage</span>
+        <input type="range" min="0" max="100" value="${layer.coverage}" oninput="setLayer(${i}, 'coverage', Number(this.value)); this.nextElementSibling.textContent = this.value;">
+        <span class="range-value">${layer.coverage}</span></div>
+    `;
+    container.appendChild(block);
+  });
+}
+
+function setLayer(i, prop, value) {
+  layers[i][prop] = value;
+  if (prop === 'enabled') document.getElementById('layerBlock' + i).classList.toggle('off', !value);
+  requestRender();
+}
+
+function setLayerInk(i, hex, fromPicker) {
+  layers[i].ink = hex;
+  document.getElementById('layerColor' + i).value = hex;
+  const hexInput = document.getElementById('layerColor' + i).nextElementSibling;
+  if (hexInput && hexInput.classList && hexInput.classList.contains('tipo-hex-input')) hexInput.value = hex;
+  const sel = document.getElementById('layerInkSel' + i);
+  if (fromPicker) {
+    sel.value = RISO_INKS.some(([, h]) => h === hex) ? hex : 'custom';
+  }
+  requestRender();
+}
+
+// ============================================================
+// SOURCE / MEDIA (same pattern as overlay.html)
+// ============================================================
+function setMediaUrl(url) { if (mediaUrl) URL.revokeObjectURL(mediaUrl); mediaUrl = url; }
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  sourceVideo = null;
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    setMediaUrl(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); sourceImg = img; sourceType = 'image'; stopLoop(); requestRender(); };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  } else if (file.type.startsWith('video/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play();
+    sourceVideo = vid; sourceImg = null; sourceType = 'video';
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    startLoop();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    releaseVideo();
+    sourceType = sourceImg ? 'image' : null;
+    stopLoop(); requestRender();
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      releaseVideo();
+      setMediaUrl(null);
+      const vid = document.createElement('video');
+      vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
+      vid.play();
+      sourceVideo = vid; sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      startLoop();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      const btn = document.getElementById('webcamBtn');
+      btn.textContent = 'Cam denied';
+      setTimeout(() => { btn.textContent = 'Webcam'; }, 2000);
+    });
+}
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg; // null = demo mode
+}
+
+function startLoop() {
+  if (animFrame) return;
+  let last = 0;
+  function loop(now) {
+    animFrame = requestAnimationFrame(loop);
+    if (now - last < 33) return; // ~30fps cap (halftone is heavy)
+    last = now;
+    render();
+    if (recorder && recorder.isRecording) recorder.captureFrame();
+  }
+  animFrame = requestAnimationFrame(loop);
+}
+
+function stopLoop() {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+}
+
+function requestRender() {
+  if (animFrame) return; // loop already renders
+  if (renderPending) return;
+  renderPending = true;
+  requestAnimationFrame(() => { renderPending = false; render(); });
+}
+
+// ============================================================
+// DEMO SOURCE (so the tool is never empty)
+// ============================================================
+function drawDemo(ctx, w, h) {
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, '#202020');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  // Radial spot
+  const r = ctx.createRadialGradient(w * 0.7, h * 0.32, 0, w * 0.7, h * 0.32, w * 0.38);
+  r.addColorStop(0, 'rgba(0,0,0,0.85)');
+  r.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = r;
+  ctx.beginPath();
+  ctx.arc(w * 0.7, h * 0.32, w * 0.38, 0, Math.PI * 2);
+  ctx.fill();
+  // Big type
+  ctx.fillStyle = '#000';
+  ctx.font = `900 ${Math.round(h * 0.34)}px "IBM Plex Mono", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('RISO', w / 2, h * 0.62);
+}
+
+// ============================================================
+// GRAIN (generated once, tiled)
+// ============================================================
+let grainCanvas = null;
+function getGrainCanvas() {
+  if (grainCanvas) return grainCanvas;
+  const S = 512;
+  grainCanvas = document.createElement('canvas');
+  grainCanvas.width = S; grainCanvas.height = S;
+  const ctx = grainCanvas.getContext('2d');
+  const img = ctx.createImageData(S, S);
+  const d = img.data;
+  for (let i = 0; i < S * S; i++) {
+    const x = i % S, y = (i / S) | 0;
+    // fine noise + coarse blotches = organic ink texture
+    const fine = Math.random();
+    const coarse = (Math.sin(x * 0.11 + Math.sin(y * 0.07) * 3) + Math.sin(y * 0.13 + Math.sin(x * 0.05) * 3)) * 0.25 + 0.5;
+    const v = fine * 0.65 + coarse * 0.35;
+    const j = i * 4;
+    d[j] = d[j + 1] = d[j + 2] = 255;
+    d[j + 3] = Math.round(Math.pow(v, 2.2) * 255); // sparse, organic
+  }
+  ctx.putImageData(img, 0, 0);
+  return grainCanvas;
+}
+
+// ============================================================
+// RISO RENDER PIPELINE
+// ============================================================
+function renderRiso(targetCtx, w, h, opts) {
+  // opts: { cell, dotGain, misregPx, grainAmt, inkOp, paper, soloLayer (optional, for separations) }
+  const frame = getCurrentFrame();
+
+  // 1. Source → srcCanvas, get luminance
+  srcCanvas.width = w; srcCanvas.height = h;
+  if (frame) {
+    const sw = frame.videoWidth || frame.naturalWidth || frame.width;
+    const sh = frame.videoHeight || frame.naturalHeight || frame.height;
+    // cover-fit crop
+    const sc = Math.max(w / sw, h / sh);
+    const cw = w / sc, ch = h / sc;
+    srcCtx.drawImage(frame, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, w, h);
+  } else {
+    drawDemo(srcCtx, w, h);
+  }
+  const data = srcCtx.getImageData(0, 0, w, h).data;
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const j = i * 4;
+    lum[i] = (0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]) / 255;
+  }
+
+  // 2. Paper
+  if (opts.soloLayer === undefined) {
+    targetCtx.fillStyle = opts.paper;
+    targetCtx.fillRect(0, 0, w, h);
+  } else {
+    targetCtx.clearRect(0, 0, w, h);
+  }
+
+  // 3. Each ink layer: halftone → grain → composite with misregistration
+  const cx = w / 2, cy = h / 2;
+  const diag = Math.sqrt(w * w + h * h) / 2 + opts.cell;
+  const grainImg = getGrainCanvas();
+
+  layers.forEach((layer, slot) => {
+    if (!layer.enabled) return;
+    if (opts.soloLayer !== undefined && opts.soloLayer !== slot) return;
+
+    // layer canvas
+    let lc = layerCanvases[slot];
+    if (!lc || lc.width !== w || lc.height !== h) {
+      lc = layerCanvases[slot] = document.createElement('canvas');
+      lc.width = w; lc.height = h;
+    }
+    const lctx = lc.getContext('2d');
+    lctx.clearRect(0, 0, w, h);
+    lctx.fillStyle = layer.ink;
+
+    const gamma = SLOT_GAMMA[slot];
+    const covMul = layer.coverage / 50; // 50 = neutral
+    const a = layer.angle * Math.PI / 180;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const cell = opts.cell;
+    const gainMul = 1 + opts.dotGain / 100 * 0.5;
+    const maxR = cell * 0.72;
+
+    lctx.beginPath();
+    for (let v = -diag; v <= diag; v += cell) {
+      for (let u = -diag; u <= diag; u += cell) {
+        const x = cx + u * cos - v * sin;
+        const y = cy + u * sin + v * cos;
+        if (x < -cell || x > w + cell || y < -cell || y > h + cell) continue;
+        const xi = Math.min(w - 1, Math.max(0, x | 0));
+        const yi = Math.min(h - 1, Math.max(0, y | 0));
+        let dens = Math.pow(1 - lum[yi * w + xi], gamma) * covMul;
+        if (dens <= 0.02) continue;
+        if (dens > 1) dens = 1;
+        let r = cell * 0.5 * Math.sqrt(dens * 1.18) * gainMul;
+        if (r > maxR) r = maxR;
+        lctx.moveTo(x + r, y);
+        lctx.arc(x, y, r, 0, Math.PI * 2);
+      }
+    }
+    lctx.fill();
+
+    // grain: eat into the ink
+    if (opts.grainAmt > 0) {
+      lctx.save();
+      lctx.globalCompositeOperation = 'destination-out';
+      lctx.globalAlpha = opts.grainAmt / 100 * 0.85;
+      for (let gy = 0; gy < h; gy += grainImg.height) {
+        for (let gx = 0; gx < w; gx += grainImg.width) {
+          lctx.drawImage(grainImg, gx, gy);
+        }
+      }
+      lctx.restore();
+    }
+
+    // composite with misregistration + multiply overprint
+    const dx = (seededRand(slot * 7 + 1) - 0.5) * 2 * opts.misregPx;
+    const dy = (seededRand(slot * 7 + 2) - 0.5) * 2 * opts.misregPx;
+    const rot = (seededRand(slot * 7 + 3) - 0.5) * opts.misregPx * 0.0015;
+    targetCtx.save();
+    if (opts.soloLayer === undefined) {
+      targetCtx.globalCompositeOperation = 'multiply';
+      targetCtx.globalAlpha = opts.inkOp / 100;
+    }
+    targetCtx.translate(cx + dx, cy + dy);
+    targetCtx.rotate(rot);
+    targetCtx.drawImage(lc, -cx, -cy);
+    targetCtx.restore();
+  });
+}
+
+function currentOpts(scaleMult = 1) {
+  return {
+    cell: val('cellSize') * scaleMult,
+    dotGain: val('dotGain'),
+    misregPx: val('misreg') * scaleMult,
+    grainAmt: val('grain'),
+    inkOp: val('inkOpacity'),
+    paper: document.getElementById('paperColor').value,
+  };
+}
+
+function workingSize() {
+  const frame = getCurrentFrame();
+  let sw = 1000, sh = 750;
+  if (frame) {
+    sw = frame.videoWidth || frame.naturalWidth || frame.width || sw;
+    sh = frame.videoHeight || frame.naturalHeight || frame.height || sh;
+  }
+  const cap = (sourceType === 'video' || sourceType === 'webcam') ? 860 : 1100;
+  const sc = Math.min(1, cap / Math.max(sw, sh));
+  let w = Math.round(sw * sc), h = Math.round(sh * sc);
+  w += w % 2; h += h % 2;
+  return { w, h };
+}
+
+function render() {
+  const { w, h } = workingSize();
+  if (mainCanvas.width !== w || mainCanvas.height !== h) {
+    mainCanvas.width = w; mainCanvas.height = h;
+  }
+  renderRiso(mainCtx, w, h, currentOpts());
+}
+
+function rerollSeed() {
+  seed = Math.random() * 1000;
+  requestRender();
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function downloadCanvas(canvas, filename) {
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+function exportPNG() {
+  const { w, h } = workingSize();
+  const mult = 2; // hi-res composite
+  const c = document.createElement('canvas');
+  c.width = w * mult; c.height = h * mult;
+  renderRiso(c.getContext('2d'), w * mult, h * mult, currentOpts(mult));
+  downloadCanvas(c, 'tipo-riso.png');
+}
+
+function exportLayers() {
+  const { w, h } = workingSize();
+  const mult = 2;
+  const enabled = layers.map((l, i) => l.enabled ? i : -1).filter(i => i >= 0);
+  enabled.forEach((slot, k) => {
+    setTimeout(() => {
+      const c = document.createElement('canvas');
+      c.width = w * mult; c.height = h * mult;
+      const opts = currentOpts(mult);
+      opts.soloLayer = slot;
+      renderRiso(c.getContext('2d'), w * mult, h * mult, opts);
+      downloadCanvas(c, `tipo-riso-ink${slot + 1}-${layers[slot].ink.slice(1)}.png`);
+    }, k * 400);
+  });
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+    if (!animFrame) startLoop(); // record even static sources
+  } else {
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+    if (sourceType === 'image' || !sourceType) stopLoop();
+  }
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+const PRESETS = {
+  classic:   { inks: ['#0078bf', '#f15060', null],        angles: [15, 75, 45], cov: [55, 50, 50], cell: 9,  gain: 20, misreg: 6,  grain: 25, op: 92, paper: '#f5f0e4' },
+  zine:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [45, 15, 75], cov: [50, 60, 50], cell: 10, gain: 25, misreg: 10, grain: 40, op: 94, paper: '#f2efe6' },
+  poster:    { inks: ['#3d5588', '#ffb511', '#f15060'],   angles: [15, 75, 45], cov: [55, 60, 45], cell: 12, gain: 30, misreg: 5,  grain: 20, op: 90, paper: '#f5f0e4' },
+  editorial: { inks: ['#1a1a1a', '#00838a', null],        angles: [45, 15, 75], cov: [55, 40, 50], cell: 7,  gain: 12, misreg: 3,  grain: 15, op: 92, paper: '#f8f5ee' },
+  punk:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [30, 60, 45], cov: [65, 70, 50], cell: 14, gain: 45, misreg: 22, grain: 65, op: 96, paper: '#ece7d8' },
+  mono:      { inks: ['#1a1a1a', null, null],             angles: [45, 75, 15], cov: [60, 50, 50], cell: 8,  gain: 18, misreg: 0,  grain: 30, op: 95, paper: '#f5f0e4' },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  layers.forEach((layer, i) => {
+    layer.enabled = p.inks[i] !== null;
+    if (p.inks[i]) layer.ink = p.inks[i];
+    layer.angle = p.angles[i];
+    layer.coverage = p.cov[i];
+  });
+  document.getElementById('cellSize').value = p.cell;
+  document.getElementById('dotGain').value = p.gain;
+  document.getElementById('misreg').value = p.misreg;
+  document.getElementById('grain').value = p.grain;
+  document.getElementById('inkOpacity').value = p.op;
+  document.getElementById('paperColor').value = p.paper;
+  const paperHex = document.getElementById('paperColor').nextElementSibling;
+  if (paperHex && paperHex.classList && paperHex.classList.contains('tipo-hex-input')) paperHex.value = p.paper;
+  updateLabels();
+  buildLayerUI();
+  requestRender();
+  if (typeof event !== 'undefined' && event && event.target) {
+    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+}
+
+function updateLabels() {
+  ['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity'].forEach(id => {
+    document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
+  });
+}
+
+// ============================================================
+// BINDINGS
+// ============================================================
+['cellSize', 'dotGain', 'misreg', 'grain', 'inkOpacity', 'paperColor'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    updateLabels();
+    requestRender();
+  });
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+wrap.addEventListener('dblclick', rerollSeed);
+
+// ============================================================
+// HELP TOOLTIPS
+// ============================================================
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null;
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px'; tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (pinned === el) hide(); else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('panel').addEventListener('scroll', hide);
+})();
+
+// ============================================================
+// THEME + BACK + HEX (standalone, same as overlay.html)
+// ============================================================
+(function initTheme() {
+  const saved = localStorage.getItem('tipo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.title = 'Toggle light/dark theme';
+  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+  });
+  document.body.appendChild(btn);
+
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.title = 'Back to menu';
+  back.textContent = '\u2190';
+  document.body.appendChild(back);
+
+  document.querySelectorAll('input[type="color"]').forEach(el => {
+    const hex = document.createElement('input');
+    hex.type = 'text';
+    hex.className = 'tipo-hex-input';
+    hex.maxLength = 7;
+    hex.spellcheck = false;
+    hex.value = el.value;
+    el.insertAdjacentElement('afterend', hex);
+    el.addEventListener('input', () => { hex.value = el.value; });
+    const commit = () => {
+      let v = hex.value.trim();
+      if (v && v[0] !== '#') v = '#' + v;
+      if (/^#[0-9a-fA-F]{3}$/.test(v)) v = '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+        el.value = v.toLowerCase();
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      hex.value = el.value;
+    };
+    hex.addEventListener('change', commit);
+    hex.addEventListener('keydown', (e) => { if (e.key === 'Enter') { commit(); hex.blur(); } });
+  });
+})();
+
+// Init
+buildLayerUI();
+updateLabels();
+render();
+</script>
+</body>
+</html>

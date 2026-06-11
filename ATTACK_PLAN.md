@@ -179,7 +179,7 @@ Simulação de impressão Risograph no browser:
 - **Presets:** Classic Riso (red+blue), Zine (black+pink), Poster (3 cores), Editorial, Punk
 - **Image+video+webcam input**
 - **Export:** PNG (composite), PNG por camada (separação), MP4
-- **Status:** [ ] A implementar — FEATURE EXCLUSIVA
+- **Status:** ✅ Implementado (2026-06-10) — riso.html: 18 tintas Riso reais, 1-3 camadas com separação tonal (gamma por slot), halftone rotado por camada (15°/75°/45°), dot gain, grão de tinta orgânico (destination-out), misreg com seed + reroll, overprint multiply sobre cor de papel, 6 presets, demo source, export PNG 2x + separações por camada + MP4. Validado via Playwright (8/8)
 
 #### 8.7 — Paletas de Cores Expandidas ✅ parcial (2026-06-10)
 - [x] +16 paletas curadas (40 total): Athos (brand), Game Boy, CGA, C64, Apple II, Riso R/B, Riso Zine, Riso Poster, Sepia, Newsprint, Teal&Orange, Infrared, Pastel, Term Amber, Blueprint, Acid
@@ -343,7 +343,7 @@ Upload imagem/video → pixel sorting artístico.
 3. **MP4 recording nativo** (sem ffmpeg, sem servidor)
 4. **Overlay Generator** procedural seamless (substitui packs pagos)
 5. **27 ferramentas** em HTML puro sem build tools
-6. **Risograph simulator** no browser (planejado — Fase 8.6)
+6. **Risograph simulator** no browser ✅ (riso.html — Fase 8.6)
 7. **Zero install** — 100% web, não precisa baixar app desktop
 8. **Easing curves profissionais** com 10 curvas + 3 direções em todos os modos
 9. **Mouse interaction** reativa em modos kinetic type

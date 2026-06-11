@@ -267,7 +267,20 @@ Três bugs reais encontrados e corrigidos:
 - Textos em PT-BR; dark + light mode
 - Ideia futura: replicar o padrão nas outras ferramentas via TipoUI (ex: `TipoUI.initHelp(map)`)
 
-**Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.6 Risograph (exclusivo), 8.8 glitch avançado, 8.9-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
+**8.6 Risograph — riso.html (FEATURE EXCLUSIVA, novo tool #29)**
+- Esqueleto baseado no overlay.html (standalone, sem TipoUI: theme/back/hex init manual, recorder lazy via TipoRecorder)
+- **Pipeline `renderRiso(ctx,w,h,opts)`** parametrizada — live render, PNG 2x e separações usam a MESMA função (opts escala cell/misreg; `opts.soloLayer` isola camada com fundo transparente)
+- **Separação tonal**: 1-3 camadas com gamma por slot `SLOT_GAMMA=[1.7,1.0,0.65]` (slot 1 pega sombras, slot 3 pega tudo) — simula como riso real separa tons em tintas
+- **Halftone por camada**: grid rotado (ângulos default 15°/75°/45° como impressão real), dot gain no raio do dot
+- **Grão de tinta**: canvas de noise 512px pré-gerado (fine noise + blotches senoidais) aplicado via `destination-out` — tinta "falha" organicamente
+- **Misregistration**: offsets com seed (`seededRand(slot*7+n)`) + micro-rotação; botão re-roll + dblclick no canvas
+- **Overprint**: composite `multiply` com `globalAlpha=inkOpacity` sobre cor de papel
+- 18 tintas Riso reais, 6 presets (classic/zine/poster/editorial/punk/mono), demo source (gradiente + "RISO") pra nunca abrir vazio, image/video/webcam
+- Exports: PNG composite 2x, separações transparentes por camada (staggered 400ms, `tipo-riso-ink{n}-{hex}.png`), MP4
+- **test-riso.mjs** (committado): demo render, 5 presets → 5 hashes, toggle de camada, PNG 7MB, 3 separações, MP4 decode clean, reroll, help icons — 8/8 PASS
+- Card "Ri" adicionado no index (Visual Tools, depois do Overlay)
+
+**Restante da FASE 8** (blocos grandes): 8.4 CMYK halftone, 8.5 Epsilon Glow, 8.8 glitch avançado, 8.10-8.12 tools novas (obs: audiotype.html JÁ EXISTE — plano 8.9 desatualizado)
 
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
