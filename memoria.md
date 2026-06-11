@@ -328,6 +328,15 @@ Três bugs reais encontrados e corrigidos:
 - test-datamosh.mjs: 12/12 PASS primeira rodada — temporal, amount=0 congela acc, divergência do frame real (diff 52.8), keyframe reseta (→10.0), sweep completa, channel R difere, bias em still, presets distintos, PNG, MP4 válido (ffmpeg), 28.5fps no collapse
 - Card no index (preview "Dm", depois do Glitch); ATTACK_PLAN 8.13 ✅
 
+**8.5 Epsilon Glow construído (seção nova no dithering.html, pós-tint)**
+- Ordem do pipeline Dither Boy: dither → tint → epsilon glow; chamado em render() depois de applyTint
+- Pipeline: soft threshold (smoothstep thr±smoothing na luminância) → bright pass → 3 oitavas de blur gaussian (raios `baseR*(1+distScale)^k`, pesos `falloff^k` normalizados = distance map aproximado) → normalização epsilon `g/(g+ε)*(1+ε)` (joelho do bloom: ε baixo = brilhos fracos estouram) → screen composite
+- **Anamórfico com direção**: squeeze do eixo forte antes do blur isotrópico (blur efetivo = r×aspect), rotação ±dir em canvas quadrado D=hypot pra streak em qualquer ângulo (lens streak J.J. Abrams)
+- Perf: glow computado a ≤420px (low-frequency) e upscaled com smoothing — ~23 renders/sec no pior caso (anamórfico+rotação); canvases de trabalho module-level reutilizados (_glowSrc/_glowRot/_glowSq/_glowAcc)
+- 9 controles (Intensity 0-200 / Threshold / Smoothing / Radius / Epsilon / Falloff / Dist Scale / Aspect 0.1-4 / Direction 0-180°), Intensity 0 = off; help icon na seção
+- test-glow.mjs: 12/12 PASS primeira rodada — glow só ADICIONA luz (screen, mean 77.9→92.6), threshold=100 mata glow, joelho epsilon (ε=0.02 mean 146.5 > ε=1.0 87.5), direção anamórfica muda render, radius/falloff/dist mudam, interop com tint, PNG, MP4 com webcam válido, perf
+- Card do dithering no index atualizado (13 algoritmos, tint, anamorphic epsilon glow)
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

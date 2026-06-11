@@ -166,7 +166,7 @@ Glow seletivo baseado em luminância com distance map:
 - **Técnica:** Luminance threshold → soft mask → distance map → gaussian blur (aspect-aware) → weighted composite
 - **Controles:** Threshold, smoothing, radius, intensity, aspect ratio, direction, falloff, epsilon, distance scale
 - **Referência:** Código completo extraído do Dither Boy worker (funções legíveis)
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-11) — seção "Epsilon Glow" no dithering.html, pós-tint (ordem do pipeline Dither Boy). Soft threshold smoothstep → 3 oitavas de blur anamórfico (squeeze+rotate, distance map aproximado) → normalização g/(g+ε) → screen composite, computado a ≤420px (low-frequency). 9 controles. 12/12 testes Playwright, ~23 renders/sec no pior caso (anamórfico rotacionado).
 
 #### 8.6 — RISOGRAPH (EXCLUSIVO TIPÓ — não existe no Dither Boy!)
 Simulação de impressão Risograph no browser:

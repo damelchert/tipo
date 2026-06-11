@@ -436,6 +436,56 @@
     </div>
   </div>
 
+  <!-- EPSILON GLOW (post) -->
+  <div class="section">
+    <div class="section-title">Epsilon Glow<span class="help-icon" data-help="Glow seletivo por luminância (extraído do Dither Boy): áreas acima do Threshold emitem brilho. Epsilon controla o 'joelho' do bloom — baixo = até brilhos fracos estouram (bloom analógico), alto = só os mais fortes. Aspect + Direction fazem glow anamórfico (streak de lente, tipo J.J. Abrams). Falloff e Dist Scale controlam o alcance das camadas externas do halo. Intensity 0 = desligado.">?</span></div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">INTENSITY</span>
+      <input type="range" id="glowIntensity" min="0" max="200" value="0">
+      <span class="range-value" id="glowIntensityVal">0%</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">THRESHOLD</span>
+      <input type="range" id="glowThreshold" min="0" max="100" value="60">
+      <span class="range-value" id="glowThresholdVal">60%</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">SMOOTHING</span>
+      <input type="range" id="glowSmooth" min="0" max="50" value="15">
+      <span class="range-value" id="glowSmoothVal">15%</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">RADIUS</span>
+      <input type="range" id="glowRadius" min="1" max="100" value="25">
+      <span class="range-value" id="glowRadiusVal">25</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">EPSILON</span>
+      <input type="range" id="glowEpsilon" min="1" max="100" value="40">
+      <span class="range-value" id="glowEpsilonVal">0.40</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">FALLOFF</span>
+      <input type="range" id="glowFalloff" min="0" max="100" value="50">
+      <span class="range-value" id="glowFalloffVal">50%</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">DIST SCALE</span>
+      <input type="range" id="glowDist" min="50" max="300" value="100">
+      <span class="range-value" id="glowDistVal">1.00</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">ASPECT</span>
+      <input type="range" id="glowAspect" min="10" max="400" value="100">
+      <span class="range-value" id="glowAspectVal">1.00</span>
+    </div>
+    <div class="range-row">
+      <span style="font-size:10px; color:#666;">DIRECTION</span>
+      <input type="range" id="glowDir" min="0" max="180" value="0">
+      <span class="range-value" id="glowDirVal">0&deg;</span>
+    </div>
+  </div>
+
   <!-- BACKGROUND COLOR -->
   <div class="section">
     <div class="section-title">Background Color</div>
@@ -757,6 +807,127 @@ function applyTint(ctx, w, h) {
   ctx.globalCompositeOperation = document.getElementById('tintBlend').value;
   ctx.fillStyle = document.getElementById('tintColor').value;
   ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+// ============================================================
+// EPSILON GLOW (post) — técnica do Dither Boy:
+// luminance threshold → soft mask → multi-octave anamorphic
+// gaussian blur → epsilon-normalized weighted composite (screen)
+// ============================================================
+const _glowSrc = document.createElement('canvas');
+const _glowRot = document.createElement('canvas');
+const _glowSq = document.createElement('canvas');
+const _glowAcc = document.createElement('canvas');
+
+// Blur src into dst (additive, weight=alpha). Anamorphic: squeeze the
+// strong axis before an isotropic blur, rotated by dir.
+function glowBlurInto(dctx, src, gw2, gh2, r, aspect, dir, alpha) {
+  if (Math.abs(aspect - 1) < 0.02 || r < 0.5) {
+    dctx.save();
+    dctx.globalCompositeOperation = 'lighter';
+    dctx.globalAlpha = alpha;
+    dctx.filter = `blur(${r}px)`;
+    dctx.drawImage(src, 0, 0);
+    dctx.restore();
+    return;
+  }
+  const D = Math.ceil(Math.hypot(gw2, gh2));
+  const sqX = 1 / Math.max(1, aspect);        // aspect>1 = streak horizontal
+  const sqY = 1 / Math.max(1, 1 / aspect);
+  // 1. rotate -dir into square padded canvas
+  if (_glowRot.width !== D || _glowRot.height !== D) { _glowRot.width = D; _glowRot.height = D; }
+  const rctx = _glowRot.getContext('2d');
+  rctx.clearRect(0, 0, D, D);
+  rctx.save();
+  rctx.translate(D / 2, D / 2);
+  rctx.rotate(-dir);
+  rctx.drawImage(src, -gw2 / 2, -gh2 / 2);
+  rctx.restore();
+  // 2. squeeze strong axis + isotropic blur (eff. blur = r/squeeze)
+  const sw = Math.max(4, Math.round(D * sqX)), sh = Math.max(4, Math.round(D * sqY));
+  if (_glowSq.width !== sw || _glowSq.height !== sh) { _glowSq.width = sw; _glowSq.height = sh; }
+  const sctx = _glowSq.getContext('2d');
+  sctx.clearRect(0, 0, sw, sh);
+  sctx.filter = `blur(${r}px)`;
+  sctx.drawImage(_glowRot, 0, 0, sw, sh);
+  sctx.filter = 'none';
+  // 3. un-squeeze + un-rotate, add into accumulator
+  dctx.save();
+  dctx.globalCompositeOperation = 'lighter';
+  dctx.globalAlpha = alpha;
+  dctx.translate(gw2 / 2, gh2 / 2);
+  dctx.rotate(dir);
+  dctx.drawImage(_glowSq, 0, 0, sw, sh, -D / 2, -D / 2, D, D);
+  dctx.restore();
+}
+
+function applyEpsilonGlow(ctx, w, h) {
+  const intensity = parseInt(document.getElementById('glowIntensity').value) / 100;
+  if (intensity <= 0) return;
+  const thr = parseInt(document.getElementById('glowThreshold').value) / 100;
+  const smooth = parseInt(document.getElementById('glowSmooth').value) / 100;
+  const radius = parseInt(document.getElementById('glowRadius').value);
+  const eps = parseInt(document.getElementById('glowEpsilon').value) / 100;
+  const falloff = parseInt(document.getElementById('glowFalloff').value) / 100;
+  const distScale = parseInt(document.getElementById('glowDist').value) / 100;
+  const aspect = parseInt(document.getElementById('glowAspect').value) / 100;
+  const dir = parseInt(document.getElementById('glowDir').value) * Math.PI / 180;
+
+  // Glow computed at low res (glow é low-frequency) — perf
+  const gs = Math.min(1, 420 / Math.max(w, h));
+  const gw2 = Math.max(8, Math.round(w * gs));
+  const gh2 = Math.max(8, Math.round(h * gs));
+  if (_glowSrc.width !== gw2 || _glowSrc.height !== gh2) { _glowSrc.width = gw2; _glowSrc.height = gh2; }
+  const sctx = _glowSrc.getContext('2d', { willReadFrequently: true });
+  sctx.drawImage(ctx.canvas, 0, 0, gw2, gh2);
+
+  // 1. Soft luminance mask (smoothstep threshold) → bright pass
+  const id = sctx.getImageData(0, 0, gw2, gh2);
+  const d = id.data;
+  const lo = thr - smooth, span = Math.max(0.001, smooth * 2);
+  for (let i = 0; i < d.length; i += 4) {
+    const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+    let m = (l - lo) / span;
+    m = m < 0 ? 0 : m > 1 ? 1 : m;
+    m = m * m * (3 - 2 * m);
+    d[i] *= m; d[i + 1] *= m; d[i + 2] *= m; d[i + 3] = 255;
+  }
+  sctx.putImageData(id, 0, 0);
+
+  // 2. Multi-octave blur (distance map approximado por escadas de raio)
+  if (_glowAcc.width !== gw2 || _glowAcc.height !== gh2) { _glowAcc.width = gw2; _glowAcc.height = gh2; }
+  const actx = _glowAcc.getContext('2d', { willReadFrequently: true });
+  actx.globalCompositeOperation = 'source-over';
+  actx.fillStyle = '#000';
+  actx.fillRect(0, 0, gw2, gh2);
+  const baseR = Math.max(0.5, radius / 100 * Math.min(gw2, gh2) * 0.3);
+  const weights = [1, falloff, falloff * falloff];
+  const wSum = weights[0] + weights[1] + weights[2];
+  for (let k = 0; k < 3; k++) {
+    if (weights[k] / wSum < 0.02) continue;
+    const rk = baseR * Math.pow(1 + distScale, k);
+    glowBlurInto(actx, _glowSrc, gw2, gh2, rk, aspect, dir, weights[k] / wSum);
+  }
+
+  // 3. Epsilon-normalized composite: g/(g+ε) — joelho do bloom
+  const gid = actx.getImageData(0, 0, gw2, gh2);
+  const gd = gid.data;
+  const knee = 1 + eps; // mantém g=1 → 1
+  for (let i = 0; i < gd.length; i += 4) {
+    for (let c = 0; c < 3; c++) {
+      const v = gd[i + c] / 255;
+      gd[i + c] = Math.min(255, (v / (v + eps)) * knee * intensity * 255);
+    }
+    gd[i + 3] = 255;
+  }
+  actx.putImageData(gid, 0, 0);
+
+  // 4. Screen composite de volta no resultado, upscale suave
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(_glowAcc, 0, 0, w, h);
   ctx.restore();
 }
 
@@ -1151,8 +1322,9 @@ function render() {
     }
   }
 
-  // Post: tint/color overlay
+  // Post: tint/color overlay → epsilon glow (ordem do pipeline Dither Boy)
   applyTint(outCtx, outW, outH);
+  applyEpsilonGlow(outCtx, outW, outH);
 }
 
 // ============================================================
@@ -1177,6 +1349,27 @@ bindRange('adjBrightness', 'adjBrightnessVal', '%');
 bindRange('adjContrast', 'adjContrastVal', '%');
 bindRange('adjSaturation', 'adjSaturationVal', '%');
 bindRange('tintOpacity', 'tintOpacityVal', '%');
+bindRange('glowIntensity', 'glowIntensityVal', '%');
+bindRange('glowThreshold', 'glowThresholdVal', '%');
+bindRange('glowSmooth', 'glowSmoothVal', '%');
+bindRange('glowRadius', 'glowRadiusVal');
+bindRange('glowFalloff', 'glowFalloffVal', '%');
+document.getElementById('glowEpsilon').addEventListener('input', (e) => {
+  document.getElementById('glowEpsilonVal').textContent = (e.target.value / 100).toFixed(2);
+  requestRender();
+});
+document.getElementById('glowDist').addEventListener('input', (e) => {
+  document.getElementById('glowDistVal').textContent = (e.target.value / 100).toFixed(2);
+  requestRender();
+});
+document.getElementById('glowAspect').addEventListener('input', (e) => {
+  document.getElementById('glowAspectVal').textContent = (e.target.value / 100).toFixed(2);
+  requestRender();
+});
+document.getElementById('glowDir').addEventListener('input', (e) => {
+  document.getElementById('glowDirVal').textContent = e.target.value + '\u00B0';
+  requestRender();
+});
 
 document.getElementById('adjHue').addEventListener('input', (e) => {
   document.getElementById('adjHueVal').textContent = e.target.value + '\u00B0';
