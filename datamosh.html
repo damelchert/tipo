@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Datamosh. Real-time parametric datamoshing in the browser: motion-vector codec simulation with keyframe control.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Datamosh</title>
+<link rel="stylesheet" href="shared/style.css?v=20260610-rec2">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260610-rec2"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
+  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); cursor: crosshair; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--text-5); font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: var(--accent); color: var(--accent); }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text-2); font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+  .kf-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Datamosh <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motion Source<span class="help-icon" data-help="De onde vêm os motion vectors. Self: o movimento do próprio source derrete a imagem (datamosh clássico). External video (Cross-Mosh): o movimento de um SEGUNDO vídeo dirige o derretimento do source principal — ex: alguém dançando derretendo um retrato parado.">?</span></div>
+    <div class="btn-row">
+      <button class="btn" id="motionSelfBtn" onclick="setMotionSelf()">Self</button>
+      <button class="btn btn-secondary" id="motionExtBtn" onclick="document.getElementById('motionInput').click()">Video B</button>
+    </div>
+    <input type="file" id="motionInput" accept="video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
+      <span class="preset-chip" onclick="applyPreset('melt')">Melt Down</span>
+      <span class="preset-chip" onclick="applyPreset('bloom')">Bloom</span>
+      <span class="preset-chip" onclick="applyPreset('ghost')">Ghost Trail</span>
+      <span class="preset-chip" onclick="applyPreset('tear')">Channel Tear</span>
+      <span class="preset-chip" onclick="applyPreset('drift')">Subtle Drift</span>
+      <span class="preset-chip" onclick="applyPreset('collapse')">Collapse</span>
+      <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mosh<span class="help-icon" data-help="Amount: % dos blocos em movimento que sofrem mosh (em vez de mostrar o frame real). Melt: quantas vezes os vectors são re-aplicados por frame — mais = a imagem escorre. Recover: quanto do frame real vaza de volta por frame (0 = mosh eterno, alto = efeito sutil). Threshold: blocos com movimento abaixo disso não mosham (preserva fundo parado).">?</span></div>
+    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="amount" min="0" max="100" value="100"><span class="range-value" id="amountVal">100</span></div>
+    <div class="range-row"><span class="range-label">Melt</span><input type="range" id="melt" min="1" max="6" value="1"><span class="range-value" id="meltVal">1</span></div>
+    <div class="range-row"><span class="range-label">Recover</span><input type="range" id="recover" min="0" max="60" value="0"><span class="range-value" id="recoverVal">0</span></div>
+    <div class="range-row"><span class="range-label">Threshold</span><input type="range" id="threshold" min="0" max="20" value="2"><span class="range-value" id="thresholdVal">2</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Vectors<span class="help-icon" data-help="Multiplier: amplifica o movimento estimado (2x = derrete o dobro da velocidade real). Jitter: ruído aleatório somado aos vectors (tremido sujo). Bias: um vetor fixo somado a todos os blocos — força a imagem a escorrer numa direção (Angle = pra onde, Force = quanto).">?</span></div>
+    <div class="range-row"><span class="range-label">Multiplier</span><input type="range" id="vecMult" min="0" max="40" value="10"><span class="range-value" id="vecMultVal">10</span></div>
+    <div class="range-row"><span class="range-label">Jitter</span><input type="range" id="jitter" min="0" max="100" value="0"><span class="range-value" id="jitterVal">0</span></div>
+    <div class="range-row"><span class="range-label">Bias Angle</span><input type="range" id="biasAngle" min="0" max="360" value="90"><span class="range-value" id="biasAngleVal">90</span></div>
+    <div class="range-row"><span class="range-label">Bias Force</span><input type="range" id="biasForce" min="0" max="100" value="0"><span class="range-value" id="biasForceVal">0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Codec<span class="help-icon" data-help="Simulação do codec de vídeo. Block Size: tamanho dos macroblocos (como MPEG usa 16px) — menor = derretimento fino, maior = blocão chunky. Search: raio de busca da estimativa de movimento — maior captura movimentos rápidos mas custa mais. Channel: aplica o mosh só num canal de cor (R/G/B) — rasgo cromático.">?</span></div>
+    <div class="range-row"><span class="range-label">Block Size</span><input type="range" id="blockSize" min="8" max="48" value="16" step="4"><span class="range-value" id="blockSizeVal">16</span></div>
+    <div class="range-row"><span class="range-label">Search</span><input type="range" id="searchRad" min="1" max="8" value="4"><span class="range-value" id="searchRadVal">4</span></div>
+    <div class="range-row"><span class="range-label">Channel</span>
+      <select id="channel" style="flex:1;">
+        <option value="all" selected>All (RGB)</option>
+        <option value="r">Red only</option>
+        <option value="g">Green only</option>
+        <option value="b">Blue only</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Keyframe<span class="help-icon" data-help="No datamosh real, remover keyframes (I-frames) é o que causa o efeito. Drop Keyframe: reinjeta o frame real AGORA (reset do mosh — use no momento de impacto). Auto: re-injeta sozinho a cada N segundos. Sweep: em vez de reset instantâneo, o frame real entra varrendo de cima pra baixo, como stream se recuperando. Clique no canvas = drop keyframe (modo VJ).">?</span></div>
+    <button class="btn" onclick="dropKeyframe()" style="width:100%;">Drop Keyframe</button>
+    <div class="range-row" style="margin-top:8px;"><span class="range-label">Auto (sec)</span><input type="range" id="autoKf" min="0" max="10" value="0"><span class="range-value" id="autoKfVal">0</span></div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="sweepKf"> Sweep recovery</label>
+    <div class="kf-hint">Click on canvas = drop keyframe</div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop video or image &bull; demo mode &bull; click = keyframe</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TIPÓ — DATAMOSH (exclusivo)
+// Real-time codec simulation: block-matching motion estimation
+// → motion vectors applied to an accumulator canvas instead of
+// the real frame (= removed I-frames). Smear / Melt / Cross-Mosh.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+
+// Offscreen: accumulator ping-pong + source frame + motion estimation
+const accA = document.createElement('canvas');
+const accB = document.createElement('canvas');
+const frameCanvas = document.createElement('canvas');
+const frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
+const estCanvas = document.createElement('canvas');
+const estCtx = estCanvas.getContext('2d', { willReadFrequently: true });
+
+let acc = accA, accAlt = accB;
+
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // null (demo) | 'image' | 'video' | 'webcam'
+let motionVideo = null;     // external motion source (cross-mosh)
+let motionUrl = null;
+let recorder = null;
+let animFrame = null;
+let mediaUrl = null;
+
+// Motion estimation state
+let grayCur = null, grayPrev = null;
+let gw = 0, gh = 0;
+let needKeyframe = true;
+let sweepRow = -1;          // -1 = no sweep in progress
+let lastAutoKf = 0;
+let demoT = 0;
+
+const SPIRAL_CACHE = {};
+function spiralOffsets(r) {
+  if (SPIRAL_CACHE[r]) return SPIRAL_CACHE[r];
+  const out = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) out.push([dx, dy, dx * dx + dy * dy]);
+  out.sort((a, b) => a[2] - b[2]);
+  SPIRAL_CACHE[r] = out;
+  return out;
+}
+
+function val(id) { return Number(document.getElementById(id).value); }
+
+// ============================================================
+// SOURCE / MEDIA
+// ============================================================
+function setMediaUrl(url) { if (mediaUrl) URL.revokeObjectURL(mediaUrl); mediaUrl = url; }
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  sourceVideo = null;
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    setMediaUrl(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); sourceImg = img; sourceType = 'image'; resetMosh(); };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  } else if (file.type.startsWith('video/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play();
+    sourceVideo = vid; sourceImg = null; sourceType = 'video';
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    resetMosh();
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    releaseVideo();
+    sourceType = sourceImg ? 'image' : null;
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    resetMosh();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      releaseVideo();
+      setMediaUrl(null);
+      const vid = document.createElement('video');
+      vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
+      vid.play();
+      sourceVideo = vid; sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      resetMosh();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      const btn = document.getElementById('webcamBtn');
+      btn.textContent = 'Cam denied';
+      setTimeout(() => { btn.textContent = 'Webcam'; }, 2000);
+    });
+}
+
+// Motion source (cross-mosh)
+function setMotionSelf() {
+  if (motionVideo) { motionVideo.pause(); motionVideo = null; }
+  if (motionUrl) { URL.revokeObjectURL(motionUrl); motionUrl = null; }
+  document.getElementById('motionSelfBtn').className = 'btn';
+  document.getElementById('motionExtBtn').className = 'btn btn-secondary';
+  document.getElementById('motionExtBtn').textContent = 'Video B';
+  grayPrev = null;
+}
+
+document.getElementById('motionInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (motionUrl) URL.revokeObjectURL(motionUrl);
+  motionUrl = URL.createObjectURL(file);
+  const vid = document.createElement('video');
+  vid.src = motionUrl;
+  vid.loop = true; vid.muted = true; vid.playsInline = true;
+  vid.play();
+  motionVideo = vid;
+  document.getElementById('motionSelfBtn').className = 'btn btn-secondary';
+  document.getElementById('motionExtBtn').className = 'btn';
+  document.getElementById('motionExtBtn').textContent = file.name.length > 14 ? file.name.slice(0, 12) + '…' : file.name;
+  grayPrev = null;
+});
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg; // null = demo
+}
+
+function getMotionFrame() {
+  if (motionVideo && motionVideo.readyState >= 2) return motionVideo;
+  return null; // null = self
+}
+
+// ============================================================
+// DEMO SOURCE (animated, so self-mosh always has motion)
+// ============================================================
+function drawDemo(ctx, w, h, t) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#1c2030');
+  g.addColorStop(1, '#0c0d12');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const blobs = [
+    ['#ff48b0', 0.9, 0.00], ['#2A8A7A', 1.3, 2.09], ['#D4A040', 0.7, 4.18],
+  ];
+  blobs.forEach(([col, spd, ph], i) => {
+    const x = w * (0.5 + 0.33 * Math.sin(t * spd + ph));
+    const y = h * (0.5 + 0.3 * Math.cos(t * spd * 0.8 + ph * 1.7));
+    const r = Math.min(w, h) * (0.16 + 0.05 * Math.sin(t * 1.7 + i));
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = '#f2efe6';
+  ctx.font = `900 ${Math.round(h * 0.22)}px "IBM Plex Mono", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const tx = w / 2 + Math.sin(t * 0.9) * w * 0.12;
+  const ty = h * 0.52 + Math.cos(t * 1.3) * h * 0.1;
+  ctx.fillText('MOSH', tx, ty);
+}
+
+// ============================================================
+// SIZES
+// ============================================================
+function workingSize() {
+  const frame = getCurrentFrame();
+  let sw = 800, sh = 600;
+  if (frame) {
+    sw = frame.videoWidth || frame.naturalWidth || frame.width || sw;
+    sh = frame.videoHeight || frame.naturalHeight || frame.height || sh;
+  }
+  const cap = sourceType === 'image' ? 900 : 720;
+  const sc = Math.min(1, cap / Math.max(sw, sh));
+  let w = Math.round(sw * sc), h = Math.round(sh * sc);
+  w += w % 2; h += h % 2;
+  return { w, h };
+}
+
+function ensureSizes(w, h) {
+  if (mainCanvas.width !== w || mainCanvas.height !== h) {
+    [mainCanvas, accA, accB, frameCanvas].forEach(c => { c.width = w; c.height = h; });
+    needKeyframe = true;
+  }
+  // estimation buffer ~192px wide grayscale
+  const tw = 192;
+  const th = Math.max(8, Math.round(h * tw / w));
+  if (gw !== tw || gh !== th) {
+    gw = tw; gh = th;
+    estCanvas.width = gw; estCanvas.height = gh;
+    grayCur = new Uint8Array(gw * gh);
+    grayPrev = null;
+  }
+}
+
+// ============================================================
+// MOTION ESTIMATION (block matching on grayscale)
+// ============================================================
+function updateGray(motionFrame, w, h) {
+  // draw the motion frame (or current source frame) at est size
+  if (motionFrame) {
+    const mw = motionFrame.videoWidth || motionFrame.width;
+    const mh = motionFrame.videoHeight || motionFrame.height;
+    const sc = Math.max(gw / mw, gh / mh);
+    const cw = gw / sc, ch = gh / sc;
+    estCtx.drawImage(motionFrame, (mw - cw) / 2, (mh - ch) / 2, cw, ch, 0, 0, gw, gh);
+  } else {
+    estCtx.drawImage(frameCanvas, 0, 0, w, h, 0, 0, gw, gh);
+  }
+  const d = estCtx.getImageData(0, 0, gw, gh).data;
+  const tmp = grayPrev && grayPrev.length === gw * gh ? grayPrev : new Uint8Array(gw * gh);
+  for (let i = 0; i < gw * gh; i++) {
+    const j = i * 4;
+    tmp[i] = (d[j] + d[j + 1] * 2 + d[j + 2]) >> 2;
+  }
+  grayPrev = grayCur;
+  grayCur = tmp;
+}
+
+// Returns array of [bx, by, vx, vy] in working px for moving blocks
+function computeVectors(w, h, blockPx, radius, threshPx) {
+  if (!grayPrev) return [];
+  const ES = gw / w;
+  const bsE = Math.max(3, Math.round(blockPx * ES));
+  const half = bsE >> 1;
+  const offsets = spiralOffsets(radius);
+  const vectors = [];
+  const earlyExit = bsE * bsE * 3;
+  for (let by = 0; by + blockPx <= h + blockPx - 1; by += blockPx) {
+    for (let bx = 0; bx + blockPx <= w + blockPx - 1; bx += blockPx) {
+      // block center in est coords
+      const ex = Math.min(gw - half - radius - 1, Math.max(radius + half, Math.round((bx + blockPx / 2) * ES)));
+      const ey = Math.min(gh - half - radius - 1, Math.max(radius + half, Math.round((by + blockPx / 2) * ES)));
+      let best = Infinity, bdx = 0, bdy = 0;
+      for (let o = 0; o < offsets.length; o++) {
+        const dx = offsets[o][0], dy = offsets[o][1];
+        let sad = 0;
+        for (let yy = -half; yy < half; yy++) {
+          const rowC = (ey + yy) * gw + ex;
+          const rowP = (ey + yy + dy) * gw + ex + dx;
+          for (let xx = -half; xx < half; xx++) {
+            sad += Math.abs(grayCur[rowC + xx] - grayPrev[rowP + xx]);
+            if (sad >= best) break;
+          }
+          if (sad >= best) break;
+        }
+        if (sad < best) { best = sad; bdx = dx; bdy = dy; }
+        if (best < earlyExit && o > 0) break;
+      }
+      const vx = bdx / ES, vy = bdy / ES;
+      if (Math.abs(vx) >= threshPx || Math.abs(vy) >= threshPx) {
+        vectors.push([bx, by, vx, vy]);
+      }
+    }
+  }
+  return vectors;
+}
+
+// ============================================================
+// MOSH STEP
+// ============================================================
+function resetMosh() { needKeyframe = true; sweepRow = -1; }
+
+function dropKeyframe() {
+  if (document.getElementById('sweepKf').checked) sweepRow = 0;
+  else needKeyframe = true;
+}
+
+function step(now) {
+  const { w, h } = workingSize();
+  ensureSizes(w, h);
+
+  // 1. Real frame → frameCanvas
+  const frame = getCurrentFrame();
+  if (frame) {
+    if ((sourceType === 'video' || sourceType === 'webcam') && frame.readyState < 2) return;
+    const sw2 = frame.videoWidth || frame.naturalWidth || frame.width;
+    const sh2 = frame.videoHeight || frame.naturalHeight || frame.height;
+    const sc = Math.max(w / sw2, h / sh2);
+    const cw = w / sc, ch = h / sc;
+    frameCtx.drawImage(frame, (sw2 - cw) / 2, (sh2 - ch) / 2, cw, ch, 0, 0, w, h);
+  } else {
+    demoT += 0.02;
+    drawDemo(frameCtx, w, h, demoT);
+  }
+
+  // 2. Keyframe handling
+  if (needKeyframe) {
+    acc.getContext('2d').drawImage(frameCanvas, 0, 0);
+    needKeyframe = false;
+    grayPrev = null;
+    lastAutoKf = now;
+  }
+  const autoSec = val('autoKf');
+  if (autoSec > 0 && now - lastAutoKf > autoSec * 1000) {
+    dropKeyframe();
+    lastAutoKf = now;
+  }
+
+  // 3. Motion estimation
+  updateGray(getMotionFrame(), w, h);
+  const blockPx = val('blockSize');
+  const radius = val('searchRad');
+  const thresh = val('threshold');
+  const vectors = computeVectors(w, h, blockPx, radius, thresh);
+
+  // 4. Warp accumulator (motion compensation without the real frame)
+  const amount = val('amount') / 100;
+  const meltIters = val('melt');
+  const mult = val('vecMult') / 10;
+  const jit = val('jitter');
+  const bForce = val('biasForce') / 10;
+  const bAng = val('biasAngle') * Math.PI / 180;
+  const bvx = Math.cos(bAng) * bForce;
+  const bvy = Math.sin(bAng) * bForce;
+
+  for (let it = 0; it < meltIters; it++) {
+    const dctx = accAlt.getContext('2d');
+    dctx.drawImage(acc, 0, 0);
+    for (let i = 0; i < vectors.length; i++) {
+      if (amount < 1 && Math.random() > amount) continue;
+      const [bx, by, vx0, vy0] = vectors[i];
+      let vx = vx0 * mult + bvx;
+      let vy = vy0 * mult + bvy;
+      if (jit > 0) { vx += (Math.random() - 0.5) * jit * 0.2; vy += (Math.random() - 0.5) * jit * 0.2; }
+      // pull content from where the block came from
+      const sx = Math.round(bx - vx), sy = Math.round(by - vy);
+      const cx = Math.max(0, sx), cy = Math.max(0, sy);
+      const cw2 = Math.min(blockPx, acc.width - cx, blockPx + sx - cx);
+      const ch2 = Math.min(blockPx, acc.height - cy, blockPx + sy - cy);
+      if (cw2 <= 0 || ch2 <= 0) continue;
+      dctx.drawImage(acc, cx, cy, cw2, ch2, bx + (cx - sx), by + (cy - sy), cw2, ch2);
+    }
+    // bias-only mosh when nothing moves but bias is set (images, stills)
+    if (vectors.length === 0 && (bForce > 0 || jit > 0)) {
+      const jx = (Math.random() - 0.5) * jit * 0.2;
+      const jy = (Math.random() - 0.5) * jit * 0.2;
+      dctx.drawImage(acc, bvx + jx, bvy + jy);
+    }
+    const t2 = acc; acc = accAlt; accAlt = t2;
+  }
+
+  // 5. Recover: real frame bleeds back
+  const recover = val('recover') / 100;
+  if (recover > 0) {
+    const actx = acc.getContext('2d');
+    actx.globalAlpha = recover;
+    actx.drawImage(frameCanvas, 0, 0);
+    actx.globalAlpha = 1;
+  }
+
+  // 6. Sweep recovery (keyframe wipes in top→bottom)
+  if (sweepRow >= 0) {
+    const rows = Math.max(4, Math.round(h / 30));
+    const actx = acc.getContext('2d');
+    actx.drawImage(frameCanvas, 0, sweepRow, w, rows, 0, sweepRow, w, rows);
+    sweepRow += rows;
+    if (sweepRow >= h) sweepRow = -1;
+  }
+
+  // 7. Display composite (channel mosh = display-only channel mix)
+  const channel = document.getElementById('channel').value;
+  if (channel === 'all') {
+    mainCtx.drawImage(acc, 0, 0);
+  } else {
+    // real frame + moshed single channel
+    mainCtx.drawImage(frameCanvas, 0, 0);
+    const real = mainCtx.getImageData(0, 0, w, h);
+    const moshed = acc.getContext('2d').getImageData(0, 0, w, h);
+    const off = channel === 'r' ? 0 : channel === 'g' ? 1 : 2;
+    const rd = real.data, md = moshed.data;
+    for (let i = off; i < rd.length; i += 4) rd[i] = md[i];
+    mainCtx.putImageData(real, 0, 0);
+  }
+
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ============================================================
+// LOOP (always running — datamosh is temporal)
+// ============================================================
+function startLoop() {
+  if (animFrame) return;
+  let last = 0;
+  function loop(now) {
+    animFrame = requestAnimationFrame(loop);
+    if (now - last < 33) return; // ~30fps
+    last = now;
+    step(now);
+  }
+  animFrame = requestAnimationFrame(loop);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportPNG() {
+  mainCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'tipo-datamosh.png';
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+  }
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+const PRESETS = {
+  classic:  { amount: 100, melt: 1, recover: 0,  threshold: 2, vecMult: 10, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
+  melt:     { amount: 100, melt: 3, recover: 0,  threshold: 1, vecMult: 16, jitter: 5,  biasAngle: 90, biasForce: 25, blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
+  bloom:    { amount: 100, melt: 4, recover: 4,  threshold: 1, vecMult: 22, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 12, searchRad: 5, channel: 'all', autoKf: 0, sweep: false },
+  ghost:    { amount: 70,  melt: 1, recover: 12, threshold: 2, vecMult: 12, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
+  tear:     { amount: 100, melt: 2, recover: 0,  threshold: 1, vecMult: 14, jitter: 10, biasAngle: 0,  biasForce: 8,  blockSize: 16, searchRad: 4, channel: 'r',   autoKf: 4, sweep: true },
+  drift:    { amount: 45,  melt: 1, recover: 20, threshold: 3, vecMult: 8,  jitter: 4,  biasAngle: 90, biasForce: 3,  blockSize: 24, searchRad: 3, channel: 'all', autoKf: 0, sweep: false },
+  collapse: { amount: 100, melt: 5, recover: 0,  threshold: 0, vecMult: 28, jitter: 35, biasAngle: 90, biasForce: 40, blockSize: 32, searchRad: 6, channel: 'all', autoKf: 6, sweep: false },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  ['amount', 'melt', 'recover', 'threshold', 'vecMult', 'jitter', 'biasAngle', 'biasForce', 'blockSize', 'searchRad', 'autoKf'].forEach(id => {
+    document.getElementById(id).value = p[id];
+  });
+  document.getElementById('channel').value = p.channel;
+  document.getElementById('sweepKf').checked = p.sweep;
+  updateLabels();
+  dropKeyframe();
+  if (typeof event !== 'undefined' && event && event.target) {
+    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+}
+
+function updateLabels() {
+  ['amount', 'melt', 'recover', 'threshold', 'vecMult', 'jitter', 'biasAngle', 'biasForce', 'blockSize', 'searchRad', 'autoKf'].forEach(id => {
+    document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
+  });
+}
+
+// ============================================================
+// BINDINGS
+// ============================================================
+['amount', 'melt', 'recover', 'threshold', 'vecMult', 'jitter', 'biasAngle', 'biasForce', 'blockSize', 'searchRad', 'autoKf'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateLabels);
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+mainCanvas.addEventListener('click', dropKeyframe);
+
+// ============================================================
+// HELP TOOLTIPS
+// ============================================================
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null;
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px'; tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (pinned === el) hide(); else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('panel').addEventListener('scroll', hide);
+})();
+
+// ============================================================
+// THEME + BACK + HEX (standalone, same as riso.html)
+// ============================================================
+(function initTheme() {
+  const saved = localStorage.getItem('tipo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.title = 'Toggle light/dark theme';
+  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+  });
+  document.body.appendChild(btn);
+
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.title = 'Back to menu';
+  back.textContent = '\u2190';
+  document.body.appendChild(back);
+})();
+
+// Init
+updateLabels();
+startLoop();
+</script>
+</body>
+</html>

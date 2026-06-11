@@ -300,7 +300,7 @@ canvas acumulado em vez de desenhar o frame novo.
 - **Performance:** block matching em half-res grayscale (Uint8Array), grid ~40×30 blocos, busca em espiral com early-exit; alvo 30fps @ 720p. Se JS não der, fallback: diamond search ou redução do search radius. (WebGL/WASM só se necessário)
 - **UI:** seção Codec (block size, search), seção Mosh (modo, amount, melt, decay), seção Vectors (multiplier, jitter, bias), seção Keyframe (drop, auto, sweep), help tooltips em tudo
 - **Por que é exclusivo:** datamosh hoje = Avidemux/AE com plugins pagos (Datamosher Pro ~US$40) e workflow destrutivo offline. Ninguém tem datamosh paramétrico em tempo real no browser com webcam.
-- **Status:** [ ] A implementar — planejado em 2026-06-11, próximo da fila junto com 8.5 Epsilon Glow
+- **Status:** ✅ Implementado (datamosh.html) — block matching espiral em grayscale 192px, acumulador ping-pong, melt 1-6x, recover, sweep recovery, cross-mosh (Video B), channel mosh display-only, bias/jitter, click=keyframe, 7 presets, 5 help tooltips. 12/12 testes Playwright, ~28fps no preset mais pesado.
 
 ### FASE 9 — Features Transversais (todas as ferramentas)
 

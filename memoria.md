@@ -315,6 +315,19 @@ Três bugs reais encontrados e corrigidos:
 - Diferencial: datamosh paramétrico em tempo real no browser (concorrência = Avidemux/plugin pago de AE, offline e destrutivo)
 - Obs: Daniel referenciou .agents/skills/data-squad e devops-squad — são squads de negócio/infra (skip design visual), não se aplicam ao design da ferramenta; design feito direto da referência técnica de codec
 
+**8.13 DATAMOSH construído (datamosh.html — ferramenta nova, exclusiva)**
+- Standalone (sem p5/TipoUI, padrão riso): mainCanvas 2D + acumulador ping-pong (accA/accB) + frameCanvas (frame real) + estCanvas (192px grayscale pra motion estimation)
+- **Block matching**: SAD por bloco em grayscale downscaled, busca espiral cacheada (`spiralOffsets`) com early-exit; vectors em px do working size; threshold descarta blocos parados
+- **Mosh**: em vez de pintar o frame novo, vectors PUXAM conteúdo do acumulador (`src = pos - v`); melt = re-aplica N vezes/frame; recover = frame real vaza com globalAlpha; amount = % dos blocos
+- **Keyframes**: botão Drop, auto a cada N seg, sweep recovery (frame real entra linha a linha), clique no canvas = drop (VJ)
+- **Cross-Mosh**: Video B como motion source (`motionVideo` dirige updateGray, source A derrete com o movimento de B)
+- **Channel mosh display-only**: acc mantém o mosh completo; display = frame real + 1 canal do acc (rasgo cromático sem matar a evolução temporal)
+- Bias (angle+force) + jitter; ainda funcionam com imagem parada (drift no caminho vectors-vazios)
+- Demo animado (3 blobs + "MOSH" quicando) pra self-mosh sempre ter movimento
+- 7 presets (classic/melt/bloom/ghost/tear/drift/collapse), 5 help tooltips, PNG + MP4 (TipoRecorder), loop sempre rodando ~30fps
+- test-datamosh.mjs: 12/12 PASS primeira rodada — temporal, amount=0 congela acc, divergência do frame real (diff 52.8), keyframe reseta (→10.0), sweep completa, channel R difere, bias em still, presets distintos, PNG, MP4 válido (ffmpeg), 28.5fps no collapse
+- Card no index (preview "Dm", depois do Glitch); ATTACK_PLAN 8.13 ✅
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados
