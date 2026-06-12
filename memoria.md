@@ -369,6 +369,15 @@ Três bugs reais encontrados e corrigidos:
 - test-depth.mjs: 15/15 PASS — inclui depth map manual virando rampa no depthCanvas, parallax mexendo mesh.rotation, webcam com VideoTexture, presets 6/6 distintos. Pegadinha: checkbox dispara 'input' (não só 'change') — listener do invertDepth ouve os dois
 - Card "3d" no index antes do Overlay. AI depth não testado em headless (download 40MB) — testar manual no deploy
 
+**8.11 Gradient Map construído (gradientmap.html — standalone, 2D canvas) — FECHA A FASE 8**
+- Photoshop gradient map ao vivo: luminância → rampa de cor, com video/webcam e cycle animado
+- Editor de gradiente custom (sem lib): 2-10 stops absolutamente posicionados sobre canvas da rampa; click na barra adiciona stop sampleando a cor atual da LUT naquela posição, pointer drag move (setPointerCapture no container), dblclick remove (guard mín. 2), Distribute equaliza, color picker edita o selecionado, reverse
+- Pipeline: LUT Uint8ClampedArray 256×3 (stops sorted + lerp) + tone curve Uint8Array 256 (brightness shift, contraste S `0.5+tanh((t-.5)k)/(2tanh(.5k))` k=1+c*6, posterize quantize, cycle = wrap shift `(t+cycleT%1)%1`); por pixel: `tone[(r*77+g*150+b*29)>>8]` → LUT, com mix blend
+- Loop contínuo só quando dinâmico (video/webcam/cycle>0/recording); imagem parada = render on-demand via needsRender — segue o padrão da varredura de recording
+- 8 presets: Athos (brand 4 stops), Duotone, Sunset, Infrared, Chrome, Neon, Sepia, Acid (posterize 6 + cycle 24)
+- test-gradientmap.mjs: 14/14 PASS — LUT endpoints exatos por valor, reverse flip, stops add/move/remove/min-2, added stop sampleia a rampa, tone controls, cycle anima no tempo, webcam, PNG, MP4 limpo (h264 900×620 30fps), ~637 renders/s no demo. reverseGrad ouve 'input'+'change' (mesma pegadinha do depth)
+- Card "Gm" no index antes do Overlay. Fase 8 inteira marcada ✅ no ATTACK_PLAN
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

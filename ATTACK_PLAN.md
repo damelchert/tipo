@@ -125,7 +125,7 @@ Prioridade máxima — arrumar experiência antes de features novas.
 
 ---
 
-### FASE 8 — Dithering Engine Pro (inspirado na análise do Dither Boy)
+### FASE 8 — Dithering Engine Pro (inspirado na análise do Dither Boy) ✅ COMPLETA (2026-06-12)
 
 Engenharia reversa do Dither Boy 6.0.3 (Electron app, Studio AAA) revelou:
 - 73 algoritmos de dithering (bytecode protegido, mas todos são algoritmos públicos)
@@ -252,7 +252,7 @@ Upload imagem → mapeia luminosidade pra paleta de cores custom.
 - **Controles:** 5-10 color stops arrastáveis, curva de contraste, mix com original
 - **Referência:** Gradient Map do Photoshop
 - **Video+webcam input**
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-12) — gradientmap.html standalone. Editor de gradiente com 2-10 stops arrastáveis (click na barra adiciona stop sampleando a cor atual da rampa, drag move, dblclick remove, Distribute equaliza, color picker no selecionado, reverse). LUT 256 entradas + tone curve: contraste S (tanh), brightness, posterize 0-16 (look serigrafia), mix com original. Cycle anima a rampa pela imagem no tempo (MP4 de imagem parada). Loop contínuo só quando dinâmico (video/webcam/cycle/rec). 8 presets (Athos brand/Duotone/Sunset/Infrared/Chrome/Neon/Sepia/Acid). 14/14 testes Playwright (LUT endpoints exatos, reverse, stops, tone, cycle anima, webcam, PNG, MP4 limpo 30fps, ~637 renders/s demo).
 
 #### 8.12 — PIXEL SORT
 Upload imagem/video → pixel sorting artístico.
