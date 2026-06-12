@@ -92,10 +92,13 @@ class TipoRecorder {
   }
 
   async _startMP4(bitrate) {
-    // Cap encode size at 4K, aspect-preserving (retina canvases can exceed it)
+    // Cap encode size at 1080p-class, aspect-preserving. Retina (DPR=2)
+    // canvases would otherwise force a near-4K software H.264 encode that
+    // starves the page's draw loop and makes the MP4 stutter.
     const w = this.canvas.width;
     const h = this.canvas.height;
-    const fit = Math.min(1, 3840 / w, 2160 / h);
+    const long = Math.max(w, h), short = Math.min(w, h);
+    const fit = Math.min(1, 1920 / long, 1080 / short);
     let encW = Math.round(w * fit); encW += encW % 2;
     let encH = Math.round(h * fit); encH += encH % 2;
 
@@ -138,8 +141,13 @@ class TipoRecorder {
   }
 
   _startStream(bitrate) {
-    this.encW = this.canvas.width + (this.canvas.width % 2);
-    this.encH = this.canvas.height + (this.canvas.height % 2);
+    // Same 1080p-class cap as the MP4 path (see _startMP4).
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const long = Math.max(w, h), short = Math.min(w, h);
+    const fit = Math.min(1, 1920 / long, 1080 / short);
+    this.encW = Math.round(w * fit); this.encW += this.encW % 2;
+    this.encH = Math.round(h * fit); this.encH += this.encH % 2;
     // Always record through a fixed-size 2D copy canvas: keeps even dimensions
     // and survives mid-recording source canvas resizes (param changes).
     const sourceCanvas = this._createStreamCanvas();

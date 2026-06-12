@@ -138,6 +138,8 @@ function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
 function setup() {
   setAttributes('preserveDrawingBuffer', true);
+  // Full retina density makes this WEBGL grid fill-rate bound (~16fps). 1.5 keeps it fluid.
+  pixelDensity(Math.min(displayDensity(), 1.5));
   const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight, WEBGL);
   c.parent('canvasContainer');
   textFont(font);
@@ -152,6 +154,12 @@ function setup() {
     }
   });
   recorder = TipoUI.recorder;
+  // Retina fill-rate is the bottleneck on this WEBGL grid; the MP4 encodes at
+  // ≤1080p anyway, so drop to density 1 while recording for a fluid capture.
+  if (recorder) {
+    const fullDensity = pixelDensity();
+    recorder.onStatusChange = (s) => pixelDensity(s === 'recording' ? 1 : fullDensity);
+  }
   TipoMouse.init(c);
 }
 

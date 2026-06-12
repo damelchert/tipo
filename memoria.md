@@ -347,6 +347,14 @@ Três bugs reais encontrados e corrigidos:
 - test-pixelsort.mjs: 14/14 PASS primeira rodada — inclui teste de MONOTONICIDADE (linha inteira sorteada deve ser não-decrescente em luminância), 6 keys distintas, 3 ângulos distintos, drift anima, MP4 válido, 30fps no pior caso (45° full mask)
 - Card "Ps" no index antes do Overlay; nota: o slider pixelSort do glitch.html continua lá (efeito rápido), pixelsort.html é a versão pro
 
+**Varredura de fluidez de recording (pedido do Daniel: "a grande maioria ainda trava o play na hora do recording")**
+- Criado `test-rec-sweep.mjs`: mede fps do draw-loop antes/durante recording em TODAS as ferramentas + analisa o MP4 exportado via ffmpeg showinfo (deltas entre frames; stutter = >80ms, dupe = ≤1ms). Rodar com `DPR=2 node test-rec-sweep.mjs` (emula retina, que era o que reproduzia o problema); `ONLY=field,riso` filtra ferramentas
+- **Causa raiz global**: recorder aceitava encode até 4K — canvas retina (DPR=2) virava encode H.264 de ~3000px em software, roubando o main thread. Fix em `shared/recorder.js`: cap de encode em classe 1080p (`min(1, 1920/long, 1080/short)`) nos paths MP4 e stream
+- **riso.html**: loop de gravação re-rodava o renderRiso completo (~60ms) por frame mesmo com fonte estática → MP4 a 16fps. Fix: loop só re-renderiza se fonte dinâmica (video/webcam) ou `loopDirty` (param mudou); recorder duplica frames estáticos a 30fps. Deltas: 62.5ms → 28ms
+- **field.html**: fill-rate bound em retina (16fps idle @ density 2; 30fps @ density 1; geometria ok). Fixes: `pixelDensity(min(displayDensity(), 1.5))` permanente (26fps idle) + `recorder.onStatusChange` derruba pra density 1 durante gravação (MP4 encoda ≤1080p, retina não agrega nada) → gravação a 30fps cravados
+- Sweep final DPR=2: todas as 16 ferramentas com 0 stutters, 0 dupes, avg ~33ms (riso 28ms, dithering 17ms). reticula/ascii/riso mostram 0 fps idle por design (render on-demand)
+- test-riso, test-recording, test-recording-kinetic re-rodados: tudo PASS
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

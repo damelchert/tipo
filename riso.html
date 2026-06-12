@@ -335,14 +335,20 @@ function getCurrentFrame() {
   return sourceImg; // null = demo mode
 }
 
+let loopDirty = false;
 function startLoop() {
   if (animFrame) return;
   let last = 0;
+  loopDirty = true; // render at least once
   function loop(now) {
     animFrame = requestAnimationFrame(loop);
-    if (now - last < 33) return; // ~30fps cap (halftone is heavy)
-    last = now;
-    render();
+    const dynamic = sourceType === 'video' || sourceType === 'webcam';
+    if (dynamic) {
+      if (now - last >= 33) { last = now; render(); } // ~30fps cap (halftone is heavy)
+    } else if (loopDirty) {
+      loopDirty = false;
+      render(); // static source: render only when params change
+    }
     if (recorder && recorder.isRecording) recorder.captureFrame();
   }
   animFrame = requestAnimationFrame(loop);
@@ -353,7 +359,7 @@ function stopLoop() {
 }
 
 function requestRender() {
-  if (animFrame) return; // loop already renders
+  if (animFrame) { loopDirty = true; return; } // loop renders on next frame
   if (renderPending) return;
   renderPending = true;
   requestAnimationFrame(() => { renderPending = false; render(); });
