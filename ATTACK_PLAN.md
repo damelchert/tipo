@@ -234,7 +234,7 @@ Inspirado no "Line Dither Engine" do @antoncreations (Instagram reel).
 - **Presets:** Equalizer, Waveform, Spectrum, Pulse, Minimal
 - **Diferencial vs reel original:** O cara usa Gemini+After Effects (multi-step manual). Tipó faz tudo no browser, em tempo real, com export direto.
 - **Stack:** Web Audio API (AnalyserNode + FFT), Canvas 2D, TipoRecorder
-- **Status:** [ ] A implementar — FEATURE EXCLUSIVA
+- **Status:** ✅ Implementado (2026-06-10, audiotype.html) — texto/imagem → grid de barras, AnalyserNode+FFT, 3 modos (horizontal/vertical/pixel grid), 2-8 níveis de cor, áudio upload + microfone, idle animation, 8 presets, export PNG+MP4. Na landing como Visual Tool. Itens não implementados do spec: JPG por letra individual (avaliar demanda)
 
 #### 8.10 — DEPTH (Image → 3D) 
 Upload imagem 2D → gera depth map → cria mesh 3D interativo.
