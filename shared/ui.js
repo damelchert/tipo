@@ -248,6 +248,9 @@ const TipoUI = {
 
     // Inject "PNG α" (transparent background) button next to the PNG button
     this.initAlphaButton();
+
+    // Inject "~" behavior buttons (catches sliders added after DOMContentLoaded)
+    if (typeof TipoBehavior !== 'undefined') TipoBehavior.scan();
   },
 
   /** Add a transparent-PNG export button when the tool has a flat bg color */
@@ -464,6 +467,9 @@ const TipoUI = {
 
     if (!changed) return;
 
+    // Behaviors pause during the morph and re-center on the preset values
+    if (typeof TipoBehavior !== 'undefined') TipoBehavior.paused = true;
+
     // Cancel any running morph
     if (this._morphAnim) cancelAnimationFrame(this._morphAnim);
 
@@ -513,6 +519,10 @@ const TipoUI = {
         // Ensure final values are exact
         sliders.forEach(el => { el.value = newState[el.id]; });
         colors.forEach(el => { el.value = newColors[el.id]; self._syncHex(el); });
+        if (typeof TipoBehavior !== 'undefined') {
+          TipoBehavior.resync();
+          TipoBehavior.paused = false;
+        }
       }
     }
 
@@ -638,3 +648,281 @@ const TipoUI = {
     if (this.recorder) this.recorder.captureFrame();
   }
 };
+
+
+/* ============================================================
+   TIPÓ — Behaviors (Cavalry-style)
+   Any slider can oscillate by itself: click the "~" button next
+   to it, pick a behavior type (oscillate/noise/loop/ping-pong/
+   random step), amount and speed. A single central rAF updates
+   all animated sliders at ~30fps and dispatches 'input' so every
+   tool reacts exactly as if the user were dragging.
+   Auto-initialized on DOMContentLoaded for any page that loads
+   this file. Sliders with the data-nobhv attribute are skipped.
+   ============================================================ */
+
+const TipoBehavior = {
+  TYPES: ['sine', 'noise', 'loop', 'pingpong', 'step'],
+  active: new Map(), // sliderId -> behavior state
+  paused: false,
+  _raf: null,
+  _pop: null,
+  _popFor: null,
+  _seed: 0,
+  _autoId: 0,
+  _css: false,
+
+  /** Self-contained styles (with var fallbacks) so behaviors work even on
+   *  pages that don't load shared/style.css (e.g. dithering.html) */
+  _injectCSS() {
+    if (this._css) return;
+    this._css = true;
+    const s = document.createElement('style');
+    s.textContent = `
+.tipo-bhv-btn { flex:none; width:18px; height:18px; padding:0; border:1px solid var(--border-2,#3a3a3a); border-radius:4px; background:transparent; color:var(--text-5,#777); font-size:12px; line-height:1; font-family:var(--font-mono,monospace); cursor:pointer; }
+.tipo-bhv-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+.tipo-bhv-btn.on { background:var(--accent,#2A8A7A); border-color:var(--accent,#2A8A7A); color:var(--bg-0,#0a0a0a); animation:tipo-bhv-pulse 1.4s ease-in-out infinite; }
+@keyframes tipo-bhv-pulse { 50% { opacity:0.55; } }
+.range-row.bhv-on .range-label, .range-row.bhv-on .range-value { color:var(--accent,#2A8A7A); }
+#tipoBhvPop { position:fixed; z-index:10000; width:200px; background:var(--bg-1,#161616); border:1px solid var(--border-2,#3a3a3a); border-radius:6px; padding:10px 12px; box-shadow:0 6px 24px rgba(0,0,0,0.35); display:none; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
+#tipoBhvPop.open { display:block; }
+.bhv-pop-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.bhv-pop-head span { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--accent,#2A8A7A); }
+#bhvPopOff { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-4,#999); font-size:9px; letter-spacing:1px; text-transform:uppercase; padding:2px 7px; border-radius:4px; cursor:pointer; font-family:inherit; }
+#bhvPopOff:hover { border-color:var(--red,#CC4840); color:var(--red,#CC4840); }
+.bhv-pop-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.bhv-pop-row span { font-size:9px; color:var(--text-4,#999); min-width:42px; text-transform:uppercase; letter-spacing:0.5px; }
+.bhv-pop-row input[type="range"] { flex:1; min-width:0; width:auto; }
+.bhv-pop-row select { flex:1; width:auto; background:var(--bg-2,#1e1e1e); color:var(--text-1,#e0e0e0); border:1px solid var(--border-2,#3a3a3a); padding:3px 4px; font-size:10px; font-family:inherit; }
+`;
+    document.head.appendChild(s);
+  },
+
+  /** Inject "~" buttons next to every .range-row slider (idempotent) */
+  scan(root = document) {
+    this._injectCSS();
+    root.querySelectorAll('.range-row input[type="range"]').forEach(el => {
+      if (el.dataset.bhvBound || el.dataset.nobhv !== undefined) return;
+      if (!el.id) el.id = 'tipoBhvAuto' + (++this._autoId);
+      el.dataset.bhvBound = '1';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tipo-bhv-btn';
+      btn.textContent = '~';
+      btn.title = 'Animate this slider (behavior)';
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        this._onButton(el, btn);
+      });
+      el.closest('.range-row').appendChild(btn);
+      // a real user drag re-centers the behavior on the new value
+      el.addEventListener('input', e => {
+        const b = this.active.get(el.id);
+        if (b && e.isTrusted) b.center = Number(el.value);
+      });
+    });
+  },
+
+  /** Start animating a slider. opts: { type, amp (1-100 % of range), speed (1-100) } */
+  start(id, opts = {}) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const min = Number(el.min || 0), max = Number(el.max || 100);
+    const step = Number(el.step) || 1;
+    const b = {
+      el, id, min, max, step,
+      range: max - min,
+      type: opts.type || 'sine',
+      amp: opts.amp !== undefined ? Number(opts.amp) : 35,
+      speed: opts.speed !== undefined ? Number(opts.speed) : 50,
+      center: Number(el.value),
+      t: 0,
+      seed: (++this._seed) * 17.13,
+      stepTimer: 0,
+      stepTarget: Number(el.value),
+      lastOut: null,
+    };
+    this.active.set(id, b);
+    this._mark(el, true);
+    this._ensureLoop();
+    return b;
+  },
+
+  /** Stop a behavior and restore the slider to its center value */
+  stop(id) {
+    const b = this.active.get(id);
+    if (!b) return;
+    this.active.delete(id);
+    this._mark(b.el, false);
+    b.el.value = b.center;
+    b.el.dispatchEvent(new Event('input', { bubbles: true }));
+    if (this._popFor === id) this.closePopover();
+  },
+
+  stopAll() { [...this.active.keys()].forEach(id => this.stop(id)); },
+
+  /** Re-capture centers from current slider values (after presets) */
+  resync() { this.active.forEach(b => { b.center = Number(b.el.value); }); },
+
+  _mark(el, on) {
+    const row = el.closest('.range-row');
+    if (!row) return;
+    row.classList.toggle('bhv-on', on);
+    const btn = row.querySelector('.tipo-bhv-btn');
+    if (btn) btn.classList.toggle('on', on);
+  },
+
+  _ensureLoop() {
+    if (this._raf) return;
+    let last = 0;
+    const tick = (now) => {
+      if (!this.active.size) { this._raf = null; return; }
+      this._raf = requestAnimationFrame(tick);
+      if (now - last < 33) return;
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.033;
+      last = now;
+      if (this.paused) return;
+      this.active.forEach(b => this._update(b, dt));
+    };
+    this._raf = requestAnimationFrame(tick);
+  },
+
+  _update(b, dt) {
+    if (!b.el.isConnected) { this.stop(b.id); return; } // slider was rebuilt/removed
+    const spd = 0.2 + (b.speed / 100) * 2.8; // ~0.2..3 cycles factor
+    b.t += dt * spd;
+    const A = (b.amp / 100) * b.range;
+    let v;
+    switch (b.type) {
+      case 'noise': {
+        const n = Math.sin(b.seed + b.t * 2.1) * 0.5 +
+                  Math.sin(b.seed * 1.7 + b.t * 3.7) * 0.3 +
+                  Math.sin(b.seed * 2.3 + b.t * 5.9) * 0.2;
+        v = b.center + n * A;
+        break;
+      }
+      case 'loop': { // sawtooth across the window, wraps
+        const ph = (b.t * 0.5) % 1;
+        v = b.center - A + ph * 2 * A;
+        break;
+      }
+      case 'pingpong': { // triangle wave
+        const ph = (b.t * 0.5) % 2;
+        const tri = ph < 1 ? ph : 2 - ph;
+        v = b.center - A + tri * 2 * A;
+        break;
+      }
+      case 'step': { // random target at intervals
+        b.stepTimer -= dt * spd;
+        if (b.stepTimer <= 0) {
+          b.stepTimer = 0.5;
+          b.stepTarget = b.center + (Math.random() * 2 - 1) * A;
+        }
+        v = b.stepTarget;
+        break;
+      }
+      default: // sine oscillator
+        v = b.center + Math.sin(b.t * Math.PI) * A;
+    }
+    this._apply(b, v);
+  },
+
+  _apply(b, v) {
+    v = Math.max(b.min, Math.min(b.max, v));
+    v = Math.round(v / b.step) * b.step;
+    if (b.step < 1) v = Number(v.toFixed(4));
+    if (v === b.lastOut) return;
+    b.lastOut = v;
+    b.el.value = v;
+    b.el.dispatchEvent(new Event('input', { bubbles: true }));
+  },
+
+  // ---- "~" button + popover UI ----
+
+  _onButton(el, btn) {
+    if (this._popFor === el.id) { this.closePopover(); return; }
+    if (!this.active.has(el.id)) this.start(el.id);
+    this.openPopover(el, btn);
+  },
+
+  _buildPop() {
+    if (this._pop) return;
+    const p = document.createElement('div');
+    p.id = 'tipoBhvPop';
+    p.innerHTML =
+      '<div class="bhv-pop-head"><span id="bhvPopName"></span>' +
+      '<button type="button" id="bhvPopOff" title="Stop animating">off</button></div>' +
+      '<div class="bhv-pop-row"><span>Type</span><select id="bhvPopType" data-nobhv>' +
+      '<option value="sine">Oscillate</option><option value="noise">Noise</option>' +
+      '<option value="loop">Loop</option><option value="pingpong">Ping-Pong</option>' +
+      '<option value="step">Random Step</option></select></div>' +
+      '<div class="bhv-pop-row"><span>Amount</span><input type="range" id="bhvPopAmp" min="1" max="100" value="35" data-nobhv></div>' +
+      '<div class="bhv-pop-row"><span>Speed</span><input type="range" id="bhvPopSpeed" min="1" max="100" value="50" data-nobhv></div>';
+    document.body.appendChild(p);
+    p.addEventListener('click', e => e.stopPropagation());
+    p.querySelector('#bhvPopOff').addEventListener('click', () => {
+      if (this._popFor) this.stop(this._popFor);
+    });
+    p.querySelector('#bhvPopType').addEventListener('change', e => {
+      const b = this.active.get(this._popFor);
+      if (b) { b.type = e.target.value; b.t = 0; b.stepTimer = 0; }
+    });
+    p.querySelector('#bhvPopAmp').addEventListener('input', e => {
+      const b = this.active.get(this._popFor);
+      if (b) b.amp = Number(e.target.value);
+    });
+    p.querySelector('#bhvPopSpeed').addEventListener('input', e => {
+      const b = this.active.get(this._popFor);
+      if (b) b.speed = Number(e.target.value);
+    });
+    document.addEventListener('click', () => this.closePopover());
+    const panel = document.querySelector('.tipo-panel');
+    if (panel) panel.addEventListener('scroll', () => this.closePopover());
+    this._pop = p;
+  },
+
+  openPopover(el, btn) {
+    this._buildPop();
+    const b = this.active.get(el.id);
+    if (!b) return;
+    this._popFor = el.id;
+    const row = el.closest('.range-row');
+    const label = row && row.querySelector('.range-label');
+    this._pop.querySelector('#bhvPopName').textContent = (label ? label.textContent : el.id) + ' ~';
+    this._pop.querySelector('#bhvPopType').value = b.type;
+    this._pop.querySelector('#bhvPopAmp').value = b.amp;
+    this._pop.querySelector('#bhvPopSpeed').value = b.speed;
+    this._pop.classList.add('open');
+    const r = btn.getBoundingClientRect();
+    const pw = this._pop.offsetWidth, ph = this._pop.offsetHeight;
+    let x = r.right + 8, y = r.top - 8;
+    if (x + pw > window.innerWidth - 8) x = Math.max(8, r.left - pw - 8);
+    if (y + ph > window.innerHeight - 8) y = Math.max(8, window.innerHeight - ph - 8);
+    this._pop.style.left = x + 'px';
+    this._pop.style.top = y + 'px';
+  },
+
+  closePopover() {
+    if (this._pop) this._pop.classList.remove('open');
+    this._popFor = null;
+  },
+};
+
+// Auto-init: inject "~" buttons once the DOM is ready, and re-scan when
+// tools create sliders dynamically (e.g. riso CMYK section, dithering panel)
+if (typeof document !== 'undefined') {
+  const boot = () => {
+    TipoBehavior.scan();
+    let pending = null;
+    new MutationObserver(() => {
+      if (pending) return;
+      pending = setTimeout(() => { pending = null; TipoBehavior.scan(); }, 200);
+    }).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+}

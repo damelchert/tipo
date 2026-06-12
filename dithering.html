@@ -8,8 +8,12 @@
 <meta name="theme-color" content="#0a0a0a">
 <title>Advanced SVG Dithering Tool</title>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/ui.js?v=20260612-bhv"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* vars consumed by the TipoBehavior UI (this page doesn't load shared/style.css) */
+  :root { --accent: #2A8A7A; --bg-0: #0a0a0a; --bg-1: #161616; --bg-2: #1e1e1e; --border-2: #3a3a3a; --text-1: #e0e0e0; --text-4: #999; --text-5: #777; --red: #CC4840; }
+  html[data-theme="light"] { --accent: #1B7A6A; --bg-0: #F8F5F0; --bg-1: #EEEAE4; --bg-2: #E2DED6; --border-2: #C4C0B8; --text-1: #2A2826; --text-4: #7A7670; --text-5: #9A9690; --red: #BB3830; }
   body { background: #0a0a0a; color: #e0e0e0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
   /* Light mode support — Athos palette (matches shared/style.css light theme) */

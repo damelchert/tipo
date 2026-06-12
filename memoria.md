@@ -378,6 +378,16 @@ Três bugs reais encontrados e corrigidos:
 - test-gradientmap.mjs: 14/14 PASS — LUT endpoints exatos por valor, reverse flip, stops add/move/remove/min-2, added stop sampleia a rampa, tone controls, cycle anima no tempo, webcam, PNG, MP4 limpo (h264 900×620 30fps), ~637 renders/s no demo. reverseGrad ouve 'input'+'change' (mesma pegadinha do depth)
 - Card "Gm" no index antes do Overlay. Fase 8 inteira marcada ✅ no ATTACK_PLAN
 
+**9.1 Behaviors construído (TipoBehavior em shared/ui.js — Cavalry Mode começou)**
+- Qualquer slider de qualquer ferramenta ganha botão "~": clique inicia oscilação + abre popover (Type/Amount/Speed + off). 5 tipos: sine, noise (3 senos somados), loop (sawtooth), ping-pong (triângulo), random step
+- rAF central único a ~30fps: clamp em [min,max], snap no step, dispara `input` com bubbles só quando o valor muda — ferramentas render-on-demand re-renderizam, labels seguem
+- Auto-init: DOMContentLoaded + MutationObserver debounced 200ms (pega sliders dinâmicos — layers do riso, painel inteiro do dithering que monta via JS). Sliders sem id ganham `tipoBhvAutoN`; behavior se auto-desliga se o elemento sai do DOM (innerHTML rebuild)
+- Drag manual re-centraliza (checa `e.isTrusted` — eventos sintéticos do próprio behavior não). Preset morph do TipoUI seta `TipoBehavior.paused` e chama `resync()` no fim
+- CSS injetado pelo próprio ui.js com fallbacks `var(--accent, #2A8A7A)` — funciona até no dithering.html que não carrega shared/style.css (lá adicionei só as vars :root pro light mode)
+- ui.js agora incluído nas 7 ferramentas standalone (datamosh/depth/dithering/gradientmap/overlay/pixelsort/riso) — sem conflito, TipoUI.init não é chamado nelas. Cache bust geral: ?v=20260612-bhv (ui+style), recorder unificado em ?v=20260612-cap
+- test-behaviors.mjs 14/14 PASS (gradientmap standalone + cylinder TipoUI: injeção, popover, 5 tipos movem, clamp, off restaura center, múltiplos simultâneos, morph pause/resync) + smoke nas 33 páginas (botões = sliders, zero pageerror). test-gradientmap e test-riso re-rodados OK
+- Opt-out por slider: atributo `data-nobhv`
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

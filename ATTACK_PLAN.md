@@ -316,7 +316,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - UI: clique no "~" abre mini-popover (tipo/amp/speed); slider animado ganha highlight visual
 - Persiste no preset morph (behaviors pausam durante transição)
 - **Impacto:** tudo vira animável sem keyframe — muda completamente a gravação de MP4
-- **Status:** [ ] A implementar (PRIMEIRO da fase)
+- **Status:** ✅ Implementado (2026-06-12) — TipoBehavior em shared/ui.js, auto-init via DOMContentLoaded + MutationObserver (pega sliders criados dinamicamente, ex: layers do riso e painel do dithering). Botão "~" injetado em todo `.range-row input[type=range]` das 33 ferramentas; clique inicia behavior + abre popover (Type: Oscillate/Noise/Loop/Ping-Pong/Random Step, Amount %, Speed) com botão off. rAF central ~30fps atualiza sliders e dispara `input` (bubbles) — labels e renders reagem como drag real. Drag manual (evento trusted) re-centraliza; preset morph do TipoUI pausa e re-sincroniza centers no fim. CSS auto-injetado com fallbacks de var (funciona no dithering.html self-contained). Sliders sem id ganham id automático; behavior para sozinho se o slider for removido do DOM. Opt-out via `data-nobhv`. test-behaviors.mjs 14/14 + smoke nas 33 páginas.
 
 #### 9.2 — Stagger / Delay por índice
 - Tudo que é multi-elemento (field, stripes, cascade, duplicator) ganha "Stagger": offset de fase por índice/linha/coluna/distância do centro
