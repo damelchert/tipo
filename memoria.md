@@ -130,6 +130,23 @@
 | Text primary | #ffffff | #000000 |
 | Text secondary | #aaaaaa | #555555 |
 
+### Paleta default do canvas (REGRA — toda ferramenta nova segue isso)
+Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default segue a identidade da Tipó — referência: Coil. O usuário muda depois; o primeiro contato é sempre brand.
+
+| Slot | Cor | Nome |
+|------|-----|------|
+| c1 | #2A8A7A | teal |
+| c2 | #D4A040 | gold |
+| c3 | #1A1818 | preto |
+| c4 | #99E0D2 | mint |
+| c5 | #1A1818 | preto |
+| bg | #F8F5F0 | cream |
+
+- **numColors default: 4** (mostra teal/gold/preto/mint)
+- Single-color tools: type #1A1818 no bg #F8F5F0
+- resetAll sempre restaura esses valores (manter HTML inputs e resetAll em sincronia)
+- Aplicado em 2026-06-12: cascade, flag, stripes, ribbon, string (os demais já seguiam)
+
 ---
 
 ## 2026-06-10
