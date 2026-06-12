@@ -398,6 +398,13 @@ Três bugs reais encontrados e corrigidos:
 - test-stagger.mjs 20/20 PASS: unit math (ends 0/1, center, random range/distinct, off/amount-0, escala, curva) + render determinístico (noLoop + frameCount fixo + redraw + loadPixels hash — funciona em 2D e WEBGL) nos 3 tools: 5 modos ≠ off e distintos entre si, amount 0 == off, curva muda render, resetAll. Smoke 34 páginas zero pageerror
 - Truque de teste novo: `frameCount = 99; redraw()` → draw vê 100 sempre (redraw incrementa antes) = frames comparáveis byte a byte
 
+**Paleta brand como default de entrada (pedido do Daniel, screenshot do Coil)**
+- Daniel: "ao entrar em cada ferramenta, especialmente as de kinetic type, o padrão é esse do coil (e da tipó)" — o default de entrada deve seguir a identidade do site; usuário muda depois
+- Paleta canônica (ordem do Coil): c1 #2A8A7A (teal) → c2 #D4A040 (gold) → c3 #1A1818 (preto) → c4 #99E0D2 (mint), c5 #1A1818, bg #F8F5F0, **numColors 4**
+- Audit mostrou que os inputs já eram brand em quase tudo; o problema era numColors baixo e ordem trocada. Corrigidos: **cascade** (era cream/preto n=2), **flag** (mint/preto n=2), **stripes** (n=3→4), **ribbon** e **string** (ordem antiga com #B08830, n=5→4)
+- resetAll sincronizado com os novos defaults nos 5 (verificado via Playwright); presets não mexidos
+- Já estavam brand e ficaram como estão: coil (referência), clutter, construct, layers, reticula, crashclock, audiotype (rampa de 8 níveis), e todas as single-color (preto no cream = brand)
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - **Upgrade do Overlay Generator** — Daniel (2026-06-12): "tá meio meme (tosca) ainda, precisava dar um upgrade nela; depois vamos voltar nela". Repensar patterns/controles/presets.
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância

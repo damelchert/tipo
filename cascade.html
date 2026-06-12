@@ -96,12 +96,12 @@
 
   <div class="section">
     <div class="section-title">Colors</div>
-    <div class="color-row"><input type="color" id="c1" value="#F8F5F0"><label>1</label>
-      <input type="color" id="c2" value="#1A1818"><label>2</label>
-      <input type="color" id="c3" value="#2A8A7A"><label>3</label></div>
-    <div class="color-row"><input type="color" id="c4" value="#D4A040"><label>4</label>
+    <div class="color-row"><input type="color" id="c1" value="#2A8A7A"><label>1</label>
+      <input type="color" id="c2" value="#D4A040"><label>2</label>
+      <input type="color" id="c3" value="#1A1818"><label>3</label></div>
+    <div class="color-row"><input type="color" id="c4" value="#99E0D2"><label>4</label>
       <input type="color" id="c5" value="#1A1818"><label>5</label></div>
-    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="2"><span class="range-value" id="numColorsVal">2</span></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="5" value="4"><span class="range-value" id="numColorsVal">4</span></div>
     <div class="color-section-row">
       <span class="range-label">Background</span>
       <input type="color" id="bgColor" value="#F8F5F0">
@@ -397,11 +397,11 @@ function resetAll() {
   setVal('waveLen', 13); setVal('waveSpeed', 1); setVal('slope', 10);
   document.getElementById('stgMode').value = 'off'; setVal('stgAmt', 100);
   document.getElementById('stgCurve').value = 'linear';
-  setVal('numColors', 2);
-  document.getElementById('c1').value = '#F8F5F0';
-  document.getElementById('c2').value = '#1A1818';
-  document.getElementById('c3').value = '#2A8A7A';
-  document.getElementById('c4').value = '#D4A040';
+  setVal('numColors', 4);
+  document.getElementById('c1').value = '#2A8A7A';
+  document.getElementById('c2').value = '#D4A040';
+  document.getElementById('c3').value = '#1A1818';
+  document.getElementById('c4').value = '#99E0D2';
   document.getElementById('c5').value = '#1A1818';
   document.getElementById('bgColor').value = '#F8F5F0';
 }
