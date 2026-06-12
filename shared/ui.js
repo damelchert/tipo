@@ -651,6 +651,59 @@ const TipoUI = {
 
 
 /* ============================================================
+   TIPÓ — Stagger (Cavalry-style, 9.2)
+   Per-element phase offset for multi-element modes (field,
+   stripes, cascade, ...). Order modes: index, row, col, distance
+   from center, deterministic random. Eased with TipoEase.
+   Usage in a draw loop:
+     const stg = TipoStagger.phase(mode, col, row, cols, rows, amount, curve);
+     ... sinEng(offset + stg, ...) ...
+   ============================================================ */
+
+const TipoStagger = {
+  MODES: ['off', 'index', 'row', 'col', 'center', 'random'],
+
+  _hash(i) {
+    const s = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  },
+
+  /** Normalized stagger position 0..1 for an element in a cols×rows grid */
+  t(mode, col, row, cols, rows) {
+    switch (mode) {
+      case 'index': {
+        const n = cols * rows;
+        return n > 1 ? (row * cols + col) / (n - 1) : 0;
+      }
+      case 'row': return rows > 1 ? row / (rows - 1) : 0;
+      case 'col': return cols > 1 ? col / (cols - 1) : 0;
+      case 'center': {
+        const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
+        const m = Math.hypot(cx, cy) || 1;
+        return Math.hypot(col - cx, row - cy) / m;
+      }
+      case 'random': return this._hash(row * 8191 + col + 1);
+      default: return 0;
+    }
+  },
+
+  /** Phase offset in radians.
+   * @param {string} mode - off|index|row|col|center|random
+   * @param {number} amount - 0..200 (% of one full wave cycle)
+   * @param {string} curve - linear|inOut|in|out (TipoEase cubic)
+   */
+  phase(mode, col, row, cols, rows, amount, curve) {
+    if (!mode || mode === 'off' || !amount) return 0;
+    let t = this.t(mode, col, row, cols, rows);
+    if (curve === 'inOut') t = TipoEase.inOut.cubic(t);
+    else if (curve === 'in') t = TipoEase.in.cubic(t);
+    else if (curve === 'out') t = TipoEase.out.cubic(t);
+    return t * (amount / 100) * Math.PI * 2;
+  },
+};
+
+
+/* ============================================================
    TIPÓ — Behaviors (Cavalry-style)
    Any slider can oscillate by itself: click the "~" button next
    to it, pick a behavior type (oscillate/noise/loop/ping-pong/

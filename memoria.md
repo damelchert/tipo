@@ -388,7 +388,18 @@ Três bugs reais encontrados e corrigidos:
 - test-behaviors.mjs 14/14 PASS (gradientmap standalone + cylinder TipoUI: injeção, popover, 5 tipos movem, clamp, off restaura center, múltiplos simultâneos, morph pause/resync) + smoke nas 33 páginas (botões = sliders, zero pageerror). test-gradientmap e test-riso re-rodados OK
 - Opt-out por slider: atributo `data-nobhv`
 
+**9.2 Stagger construído (TipoStagger em shared/ui.js)**
+- `TipoStagger.t(mode, col, row, cols, rows)` → 0..1 normalizado: index (posição linear no grid), row, col, center (distância do centro / máximo), random (hash senoidal determinístico — mesmo seed por célula, não pisca)
+- `TipoStagger.phase(...)` = eased(t) × (amount/100) × 2π em radianos; curvas linear/inOut/in/out via TipoEase.cubic. amount 0–200 (200 = 2 ciclos de defasagem)
+- Integração = somar a fase no offset do wave engine de cada tool: **field** (7 call sites: zW/xW/yW/zRot/xStW/strX/strY), **stripes** (sinEng ganhou 7º param `ph`; stgAt(i,k) com constrain nos 5 call sites; labels Row→"Ribbon", Col→"Character"), **cascade** (sinEng + ph; grids normal e mirror — mirror usa `ri` invertido pra simetria bater)
+- UI padrão (3 tools): seção Stagger — Mode select (Off/Index/Row/Col/Center/Random) + Amount range + Curve select; selects com `style="flex:1"` dentro de `.range-row`; resetAll restaura off/100/linear
+- Cascade: stagger só age com waveSpeed > 0 (wSpd=0 pula o engine inteiro — comportamento original mantido)
+- Cache bust ui.js: ?v=20260612-stg nas 33 páginas (TipoStagger entrou depois do bump -bhv)
+- test-stagger.mjs 20/20 PASS: unit math (ends 0/1, center, random range/distinct, off/amount-0, escala, curva) + render determinístico (noLoop + frameCount fixo + redraw + loadPixels hash — funciona em 2D e WEBGL) nos 3 tools: 5 modos ≠ off e distintos entre si, amount 0 == off, curva muda render, resetAll. Smoke 34 páginas zero pageerror
+- Truque de teste novo: `frameCount = 99; redraw()` → draw vê 100 sempre (redraw incrementa antes) = frames comparáveis byte a byte
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
+- **Upgrade do Overlay Generator** — Daniel (2026-06-12): "tá meio meme (tosca) ainda, precisava dar um upgrade nela; depois vamos voltar nela". Repensar patterns/controles/presets.
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados
 

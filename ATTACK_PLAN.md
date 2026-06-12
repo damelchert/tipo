@@ -321,7 +321,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 #### 9.2 — Stagger / Delay por índice
 - Tudo que é multi-elemento (field, stripes, cascade, duplicator) ganha "Stagger": offset de fase por índice/linha/coluna/distância do centro
 - Curvas de stagger usando TipoEase (linear, inOut, random)
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-12) — `TipoStagger` em shared/ui.js: `t(mode, col, row, cols, rows)` normalizado 0..1 (index/row/col/center/random com hash senoidal determinístico) e `phase(...)` = eased(t) × (amount/100) × 2π; curvas linear/inOut/in/out via TipoEase.cubic. Integrado no **field** (offset somado nos 7 engine calls: zW/xW/yW/zRot/strX/strY), **stripes** (sinEng ganhou param `ph`, stgAt(i,k) nos 5 call sites; labels Row→"Ribbon", Col→"Character") e **cascade** (sinEng + ph nos grids normal e mirror). UI padrão: seção Stagger com Mode (Off/Index/Row/Col/Center/Random), Amount 0–200, Curve; resetAll restaura. test-stagger.mjs 20/20 PASS (unit math + render determinístico via noLoop + frameCount fixo + redraw nos 3 tools) + smoke 34 páginas OK. Duplicator (9.3) já nasce com stagger.
 
 #### 9.3 — Duplicator (ferramenta nova)
 - Texto ou forma duplicado em distribuições: grid, círculo, espiral, linha, path desenhado à mão
