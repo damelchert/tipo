@@ -302,16 +302,51 @@ canvas acumulado em vez de desenhar o frame novo.
 - **Por que é exclusivo:** datamosh hoje = Avidemux/AE com plugins pagos (Datamosher Pro ~US$40) e workflow destrutivo offline. Ninguém tem datamosh paramétrico em tempo real no browser com webcam.
 - **Status:** ✅ Implementado (datamosh.html) — block matching espiral em grayscale 192px, acumulador ping-pong, melt 1-6x, recover, sweep recovery, cross-mosh (Video B), channel mosh display-only, bias/jitter, click=keyframe, 7 presets, 5 help tooltips. 12/12 testes Playwright, ~28fps no preset mais pesado.
 
-### FASE 9 — Features Transversais (todas as ferramentas)
+### FASE 9 — CAVALRY MODE (animação fluida e intuitiva, aprovado pelo Daniel 2026-06-12)
 
-#### 9.1 — Custom Font Upload
+O Daniel quer a sensação de animação do Cavalry dentro da Tipó ("o Cavalry é mais a cara da Tipó").
+Não é clonar o Cavalry (scene graph completo = inviável) — é trazer os 4 conceitos que fazem
+a animação dele ser fluida e profissional. Ordem de implementação: maior ganho pelo menor custo.
+
+#### 9.1 — Behaviors (oscilar qualquer slider — o coração do Cavalry)
+- Qualquer slider de qualquer ferramenta ganha um botão "~" (animate): o valor passa a oscilar sozinho
+- **Tipos de behavior:** Oscillator (senoide), Noise (TipoNoise orgânico), Loop (sawtooth/ping-pong), Random Step
+- **Controles por behavior:** amplitude (% do range do slider), velocidade, fase, centro (valor base)
+- Implementar em `shared/ui.js` (TipoBehavior) — um rAF central atualiza todos os sliders animados e dispara `input`
+- UI: clique no "~" abre mini-popover (tipo/amp/speed); slider animado ganha highlight visual
+- Persiste no preset morph (behaviors pausam durante transição)
+- **Impacto:** tudo vira animável sem keyframe — muda completamente a gravação de MP4
+- **Status:** [ ] A implementar (PRIMEIRO da fase)
+
+#### 9.2 — Stagger / Delay por índice
+- Tudo que é multi-elemento (field, stripes, cascade, duplicator) ganha "Stagger": offset de fase por índice/linha/coluna/distância do centro
+- Curvas de stagger usando TipoEase (linear, inOut, random)
+- **Status:** [ ] A implementar
+
+#### 9.3 — Duplicator (ferramenta nova)
+- Texto ou forma duplicado em distribuições: grid, círculo, espiral, linha, path desenhado à mão
+- Offset por índice: rotação, escala, cor (gradiente entre 2 cores), opacity
+- Combina com Behaviors (9.1) + Stagger (9.2) → animação em cascata estilo Cavalry
+- Export MP4/PNG padrão
+- **Status:** [ ] A implementar
+
+#### 9.4 — Mini-Timeline com keyframes + easing curves
+- GSAP já está no projeto — usar gsap.timeline() como engine
+- Gravar keyframes de qualquer slider em pontos no tempo; curva de easing visual entre keyframes (TipoEase picker)
+- Scrub, play/pause, loop, duração configurável; export MP4 do trecho exato (frame-accurate)
+- O mais ambicioso da fase — fazer por último, quando 9.1-9.3 validarem a UX
+- **Status:** [ ] A implementar
+
+### FASE 12 — Features Transversais (todas as ferramentas)
+
+#### 12.1 — Custom Font Upload
 - Upload de .ttf/.otf/.woff2 via drag & drop
 - loadFont() do p5.js aceita TTF/OTF
 - Fallback pra IBM Plex Mono se falhar
 - **Impacto:** Alto — criadores querem suas fontes
 - **Status:** [ ] A implementar
 
-#### 9.2 — GIF Loop Export
+#### 12.2 — GIF Loop Export
 - Gravar N frames → encodar como GIF animado
 - Lib: gif.js (WebWorker-based) ou CCapture.js
 - Botão "Export GIF" ao lado de PNG/MP4
@@ -319,14 +354,14 @@ canvas acumulado em vez de desenhar o frame novo.
 - **Impacto:** Alto — formato mais compartilhável em redes sociais
 - **Status:** [ ] A implementar
 
-#### 9.3 — Share via URL
+#### 12.3 — Share via URL
 - Serializar estado dos sliders + cores + preset no URL hash
 - Ex: `cylinder.html#r=250&s=8&c=ff0000`
 - Botão "Copy Link" que copia URL com state
 - **Impacto:** Alto — compartilhar criações sem export
 - **Status:** [ ] A implementar
 
-#### 9.4 — Fullscreen Mode
+#### 12.4 — Fullscreen Mode
 - Botão F para fullscreen (esconde panel, canvas 100vw×100vh)
 - ESC pra sair
 - **Status:** [ ] A implementar
@@ -390,11 +425,11 @@ canvas acumulado em vez de desenhar o frame novo.
 
 ### Features que a concorrência tem e o Tipó não
 1. Font engine vetorial (STG) → **Fase 10**
-2. GIF export loop → **Fase 9.2**
-3. Custom font upload → **Fase 9.1**
+2. GIF export loop → **Fase 12.2**
+3. Custom font upload → **Fase 12.1**
 4. Mouse interaction → **Fase 7.2** ✅ (implementado em Field, Danger, Pow)
-5. Share via URL → **Fase 9.3**
-6. Image → 3D depth mesh → **Fase 8.9**
+5. Share via URL → **Fase 12.3**
+6. Image → 3D depth mesh → **Fase 8.10**
 7. 73 algoritmos de dithering (Dither Boy) → **Fase 8.2/8.3** (implementar via papers públicos)
 8. Pipeline de efeitos encadeado (Dither Boy) → **Fase 8.1**
 9. CMYK Halftone profissional (Dither Boy) → **Fase 8.4**
