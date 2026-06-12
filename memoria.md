@@ -355,6 +355,20 @@ Três bugs reais encontrados e corrigidos:
 - Sweep final DPR=2: todas as 16 ferramentas com 0 stutters, 0 dupes, avg ~33ms (riso 28ms, dithering 17ms). reticula/ascii/riso mostram 0 fps idle por design (render on-demand)
 - test-riso, test-recording, test-recording-kinetic re-rodados: tudo PASS
 
+**Fase 9 — Cavalry Mode planejada (aprovado pelo Daniel)**
+- Daniel perguntou se dava pra ter "todas as funcionalidades do Cavalry"; resposta: clone completo inviável, mas os 4 conceitos centrais cabem. Fase 9 criada no ATTACK_PLAN: 9.1 Behaviors (oscilar qualquer slider — PRIMEIRO), 9.2 Stagger por índice, 9.3 Duplicator, 9.4 Mini-timeline com keyframes (GSAP). Features transversais antigas viraram Fase 12.
+
+**8.10 Depth construído (depth.html — standalone, three.js)**
+- three.js r146 UMD + ShaderMaterial: vertex shader desloca PlaneGeometry (16-400 segs, rebuild on change) pelo canal R do depth map; fragment com shading fake (normais por derivada do depth, slider Shading 0-100)
+- **3 fontes de depth**: Luminance (default, instantânea, atualiza por frame com video/webcam), AI Depth Anything V2 small (transformers.js via import dinâmico do CDN, dtype q8, ~40MB lazy com progress; snapshot 768px do frame atual; RawImage → canvas grayscale) e upload manual
+- Depth pós-processado num canvas ≤320px com ctx.filter (grayscale + contrast + blur + invert), preview ao vivo no painel; depthDirty flag evita rebuild desnecessário
+- Mouse parallax suavizado (lerp 0.07) + órbita senoidal (Rotate/Speed — anima MP4 sozinho), zoom por camera.z, wireframe toggle (lindo com tipografia)
+- Texturas: VideoTexture pra video/webcam, CanvasTexture capada em 2048px pra imagens; renderer 1080p classe, pixelRatio 1, preserveDrawingBuffer pro recorder
+- 6 presets (relief/pop/wire/orbit/canyon/hologram), demo "TIPÓ" com anéis concêntricos (relevo bonito), 4 help icons
+- Export: PNG, Depth PNG (1024px reescalado), MP4 (TipoRecorder)
+- test-depth.mjs: 15/15 PASS — inclui depth map manual virando rampa no depthCanvas, parallax mexendo mesh.rotation, webcam com VideoTexture, presets 6/6 distintos. Pegadinha: checkbox dispara 'input' (não só 'change') — listener do invertDepth ouve os dois
+- Card "3d" no index antes do Overlay. AI depth não testado em headless (download 40MB) — testar manual no deploy
+
 **Deferred (sessões futuras, aprovado pelo Daniel)**
 - Refactor shared/ (~400 linhas duplicadas): shared/media.js pros visual tools, boilerplate p5 dos 22 modos, util de luminância
 - Performance restante: glyphWidth caching em WEBGL, cache de objetos de cor, debounce de resize, frameRate(30) em 11 arquivos pesados

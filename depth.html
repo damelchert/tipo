@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Depth. Turn any image into an interactive 3D relief: depth-map displacement mesh with parallax, orbit and AI depth estimation.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Depth</title>
+<link rel="stylesheet" href="shared/style.css?v=20260610-rec2">
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
+  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--text-5); font-size: 9px; font-weight: 400; cursor: help; margin-left: 6px; flex: none; user-select: none; text-transform: none; letter-spacing: 0; vertical-align: middle; }
+  .help-icon:hover { border-color: var(--accent); color: var(--accent); }
+  #helpTooltip { position: fixed; z-index: 9999; max-width: 250px; background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text-2); font-size: 11px; line-height: 1.55; padding: 9px 11px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+  #aiStatus { font-size: 10px; color: var(--text-5); margin-top: 5px; min-height: 13px; letter-spacing: 0.5px; }
+  #depthPreview { width: 100%; border: 1px solid var(--border-2); display: block; margin-top: 6px; image-rendering: auto; background: #000; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Depth <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('relief')">Relief</span>
+      <span class="preset-chip" onclick="applyPreset('pop')">Pop</span>
+      <span class="preset-chip" onclick="applyPreset('wire')">Wire</span>
+      <span class="preset-chip" onclick="applyPreset('orbit')">Orbit</span>
+      <span class="preset-chip" onclick="applyPreset('canyon')">Canyon</span>
+      <span class="preset-chip" onclick="applyPreset('hologram')">Hologram</span>
+      <span class="preset-chip" onclick="applyPreset('relief')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Depth Map<span class="help-icon" data-help="De onde vem a profundidade. Luminance: claro = perto, instantâneo, funciona ao vivo com vídeo/webcam. AI: rede neural (Depth Anything V2) estima a profundidade real da cena — baixa ~40MB na primeira vez e roda no browser. Upload: use seu próprio depth map em grayscale.">?</span></div>
+    <div class="range-row"><span class="range-label">Mode</span>
+      <select id="depthMode" style="flex:1;">
+        <option value="lum" selected>Luminance</option>
+        <option value="ai">AI (Depth Anything)</option>
+        <option value="upload">Upload depth map</option>
+      </select>
+    </div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="aiBtn" onclick="generateAIDepth()">Generate AI Depth</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('depthFileInput').click()">Upload Depth</button>
+    </div>
+    <input type="file" id="depthFileInput" accept="image/*" style="display:none">
+    <div id="aiStatus"></div>
+    <div class="range-row"><span class="range-label">Contrast</span><input type="range" id="depthContrast" min="20" max="300" value="100"><span class="range-value" id="depthContrastVal">100</span></div>
+    <div class="range-row"><span class="range-label">Smooth</span><input type="range" id="depthSmooth" min="0" max="20" value="3"><span class="range-value" id="depthSmoothVal">3</span></div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="invertDepth"> Invert depth</label>
+    <canvas id="depthPreview" width="160" height="100"></canvas>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3D Mesh<span class="help-icon" data-help="Displacement: o quanto o relevo salta da superfície. Resolution: subdivisões da malha — mais = relevo detalhado (custa GPU). Wireframe: mostra só as arestas da malha — ótimo com tipografia. Zoom aproxima a câmera.">?</span></div>
+    <div class="range-row"><span class="range-label">Displace</span><input type="range" id="displace" min="0" max="100" value="35"><span class="range-value" id="displaceVal">35</span></div>
+    <div class="range-row"><span class="range-label">Resolution</span><input type="range" id="meshRes" min="16" max="400" value="220"><span class="range-value" id="meshResVal">220</span></div>
+    <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="zoom" min="50" max="200" value="100"><span class="range-value" id="zoomVal">100</span></div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="wireframe"> Wireframe</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motion<span class="help-icon" data-help="Parallax: a malha inclina seguindo o mouse sobre o canvas (suavizado). Rotate: órbita automática senoidal — perfeita pra gravar um loop em MP4 sem tocar em nada. Speed controla a velocidade da órbita.">?</span></div>
+    <div class="range-row"><span class="range-label">Parallax</span><input type="range" id="parallax" min="0" max="100" value="55"><span class="range-value" id="parallaxVal">55</span></div>
+    <div class="range-row"><span class="range-label">Rotate</span><input type="range" id="rotate" min="0" max="100" value="20"><span class="range-value" id="rotateVal">20</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="rotSpeed" min="1" max="100" value="30"><span class="range-value" id="rotSpeedVal">30</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Light<span class="help-icon" data-help="Shading: iluminação fake calculada a partir do próprio depth map (normais por derivada) — dá volume sem luzes reais. 0 = cores originais puras.">?</span></div>
+    <div class="range-row"><span class="range-label">Shading</span><input type="range" id="shading" min="0" max="100" value="35"><span class="range-value" id="shadingVal">35</span></div>
+    <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#F8F5F0" style="flex:1;height:26px;border:1px solid var(--border-2);background:var(--bg-2);"></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" onclick="exportDepthPNG()">Depth PNG</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()" style="flex:1;">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video &bull; demo mode</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TIPÓ — DEPTH (image → interactive 3D relief)
+// Plane mesh displaced by a depth map in the vertex shader.
+// Depth sources: luminance (live), AI (Depth Anything V2 in-browser),
+// or manual grayscale upload. Fake shading from depth derivatives.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null; // null (demo) | 'image' | 'video' | 'webcam'
+let recorder = null;
+let mediaUrl = null;
+
+// depth state
+let aiDepthCanvas = null;     // result of AI estimation (per source snapshot)
+let uploadDepthImg = null;    // user-provided depth map
+let aiPipe = null;            // transformers.js pipeline (lazy)
+let depthDirty = true;
+
+function val(id) { return Number(document.getElementById(id).value); }
+function chk(id) { return document.getElementById(id).checked; }
+
+// ============================================================
+// SOURCE / MEDIA
+// ============================================================
+function setMediaUrl(url) { if (mediaUrl) URL.revokeObjectURL(mediaUrl); mediaUrl = url; }
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  sourceVideo = null;
+}
+
+function onSourceChanged() {
+  aiDepthCanvas = null; // AI depth belongs to the previous source
+  depthDirty = true;
+  rebuildTextures();
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('image/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    setMediaUrl(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); sourceImg = img; sourceType = 'image'; onSourceChanged(); };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+  } else if (file.type.startsWith('video/')) {
+    if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+    releaseVideo();
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play();
+    sourceVideo = vid; sourceImg = null; sourceType = 'video';
+    vid.addEventListener('loadeddata', onSourceChanged, { once: true });
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    releaseVideo();
+    sourceType = sourceImg ? 'image' : null;
+    document.getElementById('webcamBtn').textContent = 'Webcam';
+    document.getElementById('webcamBtn').style.borderColor = '';
+    onSourceChanged();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      webcamStream = stream;
+      releaseVideo();
+      setMediaUrl(null);
+      const vid = document.createElement('video');
+      vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
+      vid.play();
+      sourceVideo = vid; sourceType = 'webcam';
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').textContent = 'Stop Cam';
+      document.getElementById('webcamBtn').style.borderColor = 'var(--red)';
+      vid.addEventListener('loadeddata', onSourceChanged, { once: true });
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      const btn = document.getElementById('webcamBtn');
+      btn.textContent = 'Cam denied';
+      setTimeout(() => { btn.textContent = 'Webcam'; }, 2000);
+    });
+}
+
+function getCurrentFrame() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) return sourceVideo;
+  return sourceImg; // null = demo
+}
+
+// ============================================================
+// DEMO SOURCE — typography pops beautifully in relief
+// ============================================================
+let demoCanvas = null;
+function getDemo() {
+  if (demoCanvas) return demoCanvas;
+  demoCanvas = document.createElement('canvas');
+  demoCanvas.width = 1000; demoCanvas.height = 700;
+  const g = demoCanvas.getContext('2d');
+  const bg = g.createRadialGradient(500, 350, 60, 500, 350, 620);
+  bg.addColorStop(0, '#2A8A7A');
+  bg.addColorStop(0.65, '#123c36');
+  bg.addColorStop(1, '#070d0c');
+  g.fillStyle = bg; g.fillRect(0, 0, 1000, 700);
+  // concentric ridges
+  g.strokeStyle = 'rgba(212,160,64,0.30)';
+  for (let r = 80; r < 720; r += 56) {
+    g.lineWidth = 10;
+    g.beginPath(); g.arc(500, 350, r, 0, Math.PI * 2); g.stroke();
+  }
+  g.fillStyle = '#f2efe6';
+  g.font = '900 230px "IBM Plex Mono", monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('TIPÓ', 500, 330);
+  g.font = '700 44px "IBM Plex Mono", monospace';
+  g.fillStyle = '#D4A040';
+  g.fillText('DEPTH', 500, 505);
+  return demoCanvas;
+}
+
+function frameOrDemo() { return getCurrentFrame() || getDemo(); }
+function frameSize(f) {
+  return { w: f.videoWidth || f.naturalWidth || f.width, h: f.videoHeight || f.naturalHeight || f.height };
+}
+function frameReady(f) {
+  if (f === sourceVideo) return f.readyState >= 2;
+  return true;
+}
+
+// ============================================================
+// DEPTH MAP — built into depthCanvas (≤320px), uploaded as texture
+// ============================================================
+const DEPTH_RES = 320;
+const depthCanvas = document.createElement('canvas');
+const depthCtx = depthCanvas.getContext('2d', { willReadFrequently: true });
+const depthSrcCanvas = document.createElement('canvas'); // pre-filter scratch
+const depthSrcCtx = depthSrcCanvas.getContext('2d');
+
+function activeDepthSource() {
+  const mode = document.getElementById('depthMode').value;
+  if (mode === 'ai' && aiDepthCanvas) return aiDepthCanvas;
+  if (mode === 'upload' && uploadDepthImg) return uploadDepthImg;
+  return frameOrDemo(); // luminance (or fallback when ai/upload unavailable)
+}
+
+function updateDepthCanvas() {
+  const src = activeDepthSource();
+  if (!frameReady(src === sourceVideo ? src : frameOrDemo())) return;
+  const { w: sw, h: sh } = frameSize(src);
+  if (!sw || !sh) return;
+  const sc = Math.min(1, DEPTH_RES / Math.max(sw, sh));
+  const w = Math.max(2, Math.round(sw * sc));
+  const h = Math.max(2, Math.round(sh * sc));
+  if (depthCanvas.width !== w || depthCanvas.height !== h) { depthCanvas.width = w; depthCanvas.height = h; }
+  if (depthSrcCanvas.width !== w || depthSrcCanvas.height !== h) { depthSrcCanvas.width = w; depthSrcCanvas.height = h; }
+
+  depthSrcCtx.filter = 'none';
+  depthSrcCtx.drawImage(src, 0, 0, w, h);
+
+  const smooth = val('depthSmooth');
+  const contrast = val('depthContrast') / 100;
+  const invert = chk('invertDepth');
+  let filter = 'grayscale(1)';
+  if (contrast !== 1) filter += ` contrast(${contrast})`;
+  if (smooth > 0) filter += ` blur(${smooth}px)`;
+  if (invert) filter += ' invert(1)';
+  depthCtx.filter = filter;
+  depthCtx.fillStyle = '#000';
+  depthCtx.fillRect(0, 0, w, h);
+  depthCtx.drawImage(depthSrcCanvas, 0, 0, w, h);
+  depthCtx.filter = 'none';
+
+  if (depthTexture) depthTexture.needsUpdate = true;
+
+  // small preview in the panel
+  const pv = document.getElementById('depthPreview');
+  const pw = 160, ph = Math.round(160 * h / w);
+  if (pv.width !== pw || pv.height !== ph) { pv.width = pw; pv.height = ph; }
+  pv.getContext('2d').drawImage(depthCanvas, 0, 0, pw, ph);
+}
+
+// ============================================================
+// AI DEPTH — Depth Anything V2 small via transformers.js (lazy)
+// ============================================================
+async function generateAIDepth() {
+  const status = document.getElementById('aiStatus');
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  try {
+    if (!aiPipe) {
+      status.textContent = 'Loading model (~40MB, first time only)…';
+      const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2');
+      aiPipe = await pipeline('depth-estimation', 'onnx-community/depth-anything-v2-small', {
+        dtype: 'q8',
+        progress_callback: (p) => {
+          if (p.status === 'progress' && p.total) {
+            status.textContent = `Downloading model… ${Math.round(p.loaded / p.total * 100)}%`;
+          }
+        },
+      });
+    }
+    status.textContent = 'Estimating depth…';
+    // snapshot current frame at moderate res
+    const f = frameOrDemo();
+    const { w: sw, h: sh } = frameSize(f);
+    const sc = Math.min(1, 768 / Math.max(sw, sh));
+    const snap = document.createElement('canvas');
+    snap.width = Math.round(sw * sc); snap.height = Math.round(sh * sc);
+    snap.getContext('2d').drawImage(f, 0, 0, snap.width, snap.height);
+    const out = await aiPipe(snap.toDataURL('image/jpeg', 0.9));
+    const depth = out.depth; // RawImage, 1 channel, near = bright
+    const c = document.createElement('canvas');
+    c.width = depth.width; c.height = depth.height;
+    const id = c.getContext('2d').createImageData(depth.width, depth.height);
+    for (let i = 0; i < depth.data.length; i++) {
+      const v = depth.data[i];
+      id.data[i * 4] = v; id.data[i * 4 + 1] = v; id.data[i * 4 + 2] = v; id.data[i * 4 + 3] = 255;
+    }
+    c.getContext('2d').putImageData(id, 0, 0);
+    aiDepthCanvas = c;
+    document.getElementById('depthMode').value = 'ai';
+    depthDirty = true;
+    status.textContent = 'AI depth ready ✓';
+    setTimeout(() => { if (status.textContent === 'AI depth ready ✓') status.textContent = ''; }, 4000);
+  } catch (e) {
+    console.error('AI depth failed:', e);
+    status.textContent = 'AI depth failed — using luminance';
+  }
+  btn.disabled = false;
+}
+
+document.getElementById('depthFileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    uploadDepthImg = img;
+    document.getElementById('depthMode').value = 'upload';
+    depthDirty = true;
+  };
+  img.src = url;
+});
+
+// ============================================================
+// THREE.JS SCENE
+// ============================================================
+const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 20);
+
+let colorTexture = null, depthTexture = null, videoTexture = null;
+let mesh = null, geometry = null;
+
+const uniforms = {
+  map:       { value: null },
+  depthMap:  { value: null },
+  displace:  { value: 0.35 },
+  shading:   { value: 0.35 },
+  texel:     { value: new THREE.Vector2(1 / DEPTH_RES, 1 / DEPTH_RES) },
+};
+
+const material = new THREE.ShaderMaterial({
+  uniforms,
+  vertexShader: `
+    uniform sampler2D depthMap;
+    uniform float displace;
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      float d = texture2D(depthMap, uv).r;
+      vec3 p = position + vec3(0.0, 0.0, (d - 0.5) * displace);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D map;
+    uniform sampler2D depthMap;
+    uniform float shading;
+    uniform float displace;
+    uniform vec2 texel;
+    varying vec2 vUv;
+    void main() {
+      vec4 col = texture2D(map, vUv);
+      if (shading > 0.001) {
+        float dx = texture2D(depthMap, vUv + vec2(texel.x, 0.0)).r - texture2D(depthMap, vUv - vec2(texel.x, 0.0)).r;
+        float dy = texture2D(depthMap, vUv + vec2(0.0, texel.y)).r - texture2D(depthMap, vUv - vec2(0.0, texel.y)).r;
+        vec3 n = normalize(vec3(-dx * displace * 14.0, -dy * displace * 14.0, 0.55));
+        float light = clamp(dot(n, normalize(vec3(0.45, 0.55, 0.72))), 0.0, 1.0);
+        col.rgb *= mix(1.0, 0.35 + light * 0.95, shading);
+      }
+      gl_FragColor = col;
+    }
+  `,
+  side: THREE.DoubleSide,
+});
+
+function sourceAspect() {
+  const f = frameOrDemo();
+  const { w, h } = frameSize(f);
+  return (w && h) ? w / h : 4 / 3;
+}
+
+function rebuildMesh() {
+  const aspect = sourceAspect();
+  const seg = val('meshRes');
+  const segX = Math.max(8, Math.round(aspect >= 1 ? seg : seg * aspect));
+  const segY = Math.max(8, Math.round(aspect >= 1 ? seg / aspect : seg));
+  const w = aspect >= 1 ? 1 : aspect;
+  const h = aspect >= 1 ? 1 / aspect : 1;
+  // keep longest side = 1.3 world units
+  const scale = 1.3 / Math.max(w, h);
+  if (geometry) geometry.dispose();
+  geometry = new THREE.PlaneGeometry(w * scale, h * scale, segX, segY);
+  if (!mesh) {
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+  } else {
+    mesh.geometry = geometry;
+  }
+}
+
+function rebuildTextures() {
+  const f = frameOrDemo();
+  if (videoTexture) { videoTexture.dispose(); videoTexture = null; }
+  if (colorTexture && colorTexture.isCanvasTexture) colorTexture.dispose();
+  if (f === sourceVideo) {
+    videoTexture = new THREE.VideoTexture(f);
+    videoTexture.minFilter = THREE.LinearFilter;
+    colorTexture = videoTexture;
+  } else {
+    colorTexture = new THREE.CanvasTexture(toTextureCanvas(f));
+    colorTexture.minFilter = THREE.LinearFilter;
+  }
+  uniforms.map.value = colorTexture;
+  if (!depthTexture) {
+    depthTexture = new THREE.CanvasTexture(depthCanvas);
+    depthTexture.minFilter = THREE.LinearFilter;
+    uniforms.depthMap.value = depthTexture;
+  }
+  resizeRendererToSource();
+  rebuildMesh();
+}
+
+// images go through a capped canvas so huge photos don't blow VRAM
+function toTextureCanvas(f) {
+  const { w: sw, h: sh } = frameSize(f);
+  const sc = Math.min(1, 2048 / Math.max(sw, sh));
+  const c = document.createElement('canvas');
+  c.width = Math.max(2, Math.round(sw * sc));
+  c.height = Math.max(2, Math.round(sh * sc));
+  c.getContext('2d').drawImage(f, 0, 0, c.width, c.height);
+  return c;
+}
+
+function resizeRendererToSource() {
+  const aspect = sourceAspect();
+  const long = 1080;
+  let w, h;
+  if (aspect >= 1) { w = long; h = Math.round(long / aspect); }
+  else { h = long; w = Math.round(long * aspect); }
+  w += w % 2; h += h % 2;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+// ============================================================
+// INTERACTION + ANIMATION LOOP
+// ============================================================
+let mouseX = 0, mouseY = 0;        // target (-1..1)
+let smX = 0, smY = 0;              // smoothed
+let rotT = 0;
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouseX = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouseY = ((e.clientY - r.top) / r.height) * 2 - 1;
+});
+wrap.addEventListener('pointerleave', () => { mouseX = 0; mouseY = 0; });
+
+let last = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  if (now - last < 33) return; // ~30fps
+  last = now;
+  if (!mesh) return;
+
+  // live depth for video/webcam in luminance mode; otherwise only when dirty
+  const live = (sourceType === 'video' || sourceType === 'webcam') && document.getElementById('depthMode').value === 'lum';
+  if (live || depthDirty) {
+    updateDepthCanvas();
+    depthDirty = false;
+  }
+
+  uniforms.displace.value = val('displace') / 100 * 0.85;
+  uniforms.shading.value = val('shading') / 100;
+  material.wireframe = chk('wireframe');
+  uniforms.texel.value.set(1 / depthCanvas.width, 1 / depthCanvas.height);
+
+  // camera
+  camera.position.z = 2.1 * (100 / val('zoom'));
+  camera.position.x = 0; camera.position.y = 0;
+  camera.lookAt(0, 0, 0);
+
+  // parallax (smoothed) + auto orbit
+  const par = val('parallax') / 100;
+  smX += (mouseX - smX) * 0.07;
+  smY += (mouseY - smY) * 0.07;
+  rotT += 0.02 * (val('rotSpeed') / 30);
+  const rotAmp = val('rotate') / 100;
+  mesh.rotation.y = smX * par * 0.55 + Math.sin(rotT) * rotAmp * 0.5;
+  mesh.rotation.x = -smY * par * 0.45 + Math.cos(rotT * 0.8) * rotAmp * 0.22;
+
+  renderer.setClearColor(document.getElementById('bgColor').value, 1);
+  renderer.render(scene, camera);
+
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportPNG() {
+  renderer.render(scene, camera);
+  mainCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'tipo-depth.png';
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+function exportDepthPNG() {
+  updateDepthCanvas();
+  // export at higher res, resampled from the working depth
+  const out = document.createElement('canvas');
+  const sc = 1024 / Math.max(depthCanvas.width, depthCanvas.height);
+  out.width = Math.round(depthCanvas.width * sc);
+  out.height = Math.round(depthCanvas.height * sc);
+  const g = out.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(depthCanvas, 0, 0, out.width, out.height);
+  out.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'tipo-depth-map.png';
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = document.getElementById('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    const result = await recorder.stop();
+    TipoRecorder.download(result.blob, result.filename);
+    btn.textContent = 'Record MP4';
+    btn.style.borderColor = '';
+  }
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+const PRESETS = {
+  relief:   { displace: 35, meshRes: 220, zoom: 100, wireframe: false, parallax: 55, rotate: 20, rotSpeed: 30, shading: 35, depthContrast: 100, depthSmooth: 3,  invertDepth: false },
+  pop:      { displace: 75, meshRes: 280, zoom: 110, wireframe: false, parallax: 70, rotate: 12, rotSpeed: 25, shading: 55, depthContrast: 140, depthSmooth: 2,  invertDepth: false },
+  wire:     { displace: 55, meshRes: 110, zoom: 100, wireframe: true,  parallax: 60, rotate: 28, rotSpeed: 35, shading: 0,  depthContrast: 120, depthSmooth: 4,  invertDepth: false },
+  orbit:    { displace: 45, meshRes: 240, zoom: 92,  wireframe: false, parallax: 0,  rotate: 70, rotSpeed: 45, shading: 40, depthContrast: 110, depthSmooth: 3,  invertDepth: false },
+  canyon:   { displace: 95, meshRes: 320, zoom: 120, wireframe: false, parallax: 45, rotate: 35, rotSpeed: 18, shading: 75, depthContrast: 180, depthSmooth: 6,  invertDepth: false },
+  hologram: { displace: 60, meshRes: 64,  zoom: 100, wireframe: true,  parallax: 80, rotate: 45, rotSpeed: 60, shading: 0,  depthContrast: 150, depthSmooth: 8,  invertDepth: true  },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  ['displace', 'meshRes', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading', 'depthContrast', 'depthSmooth'].forEach(id => {
+    document.getElementById(id).value = p[id];
+  });
+  document.getElementById('wireframe').checked = p.wireframe;
+  document.getElementById('invertDepth').checked = p.invertDepth;
+  updateLabels();
+  depthDirty = true;
+  rebuildMesh();
+  if (typeof event !== 'undefined' && event && event.target) {
+    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+}
+
+function updateLabels() {
+  ['displace', 'meshRes', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading', 'depthContrast', 'depthSmooth'].forEach(id => {
+    document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
+  });
+}
+
+// ============================================================
+// BINDINGS
+// ============================================================
+['displace', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateLabels);
+});
+['depthContrast', 'depthSmooth'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { updateLabels(); depthDirty = true; });
+});
+['input', 'change'].forEach(ev => document.getElementById('invertDepth').addEventListener(ev, () => { depthDirty = true; }));
+document.getElementById('depthMode').addEventListener('change', () => { depthDirty = true; });
+document.getElementById('meshRes').addEventListener('input', () => { updateLabels(); rebuildMesh(); });
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// ============================================================
+// HELP TOOLTIPS
+// ============================================================
+(function initHelp() {
+  const tip = document.createElement('div');
+  tip.id = 'helpTooltip';
+  document.body.appendChild(tip);
+  let pinned = null;
+  function show(el) {
+    tip.textContent = el.dataset.help;
+    tip.style.left = '0px'; tip.style.top = '0px';
+    tip.style.opacity = '1';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+    if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.opacity = '0'; pinned = null; }
+  document.querySelectorAll('.help-icon').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', () => { if (pinned !== el) hide(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (pinned === el) hide(); else { pinned = el; show(el); }
+    });
+  });
+  document.addEventListener('click', () => { if (pinned) hide(); });
+  document.getElementById('panel').addEventListener('scroll', hide);
+})();
+
+// ============================================================
+// THEME + BACK (standalone, same as riso/datamosh/pixelsort)
+// ============================================================
+(function initTheme() {
+  const saved = localStorage.getItem('tipo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.title = 'Toggle light/dark theme';
+  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+  });
+  document.body.appendChild(btn);
+
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.title = 'Back to menu';
+  back.textContent = '\u2190';
+  document.body.appendChild(back);
+})();
+
+// Init
+updateLabels();
+rebuildTextures();
+depthDirty = true;
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

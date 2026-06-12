@@ -244,7 +244,7 @@ Upload imagem 2D → gera depth map → cria mesh 3D interativo.
 - **Controles:** Displacement strength, mesh resolution, rotation speed, zoom, lighting
 - **Export:** PNG (screenshot 3D), MP4 (rotation loop), depth map PNG
 - **Stack:** three.js ou raw WebGL, nada de p5.js (performance)
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-06-12) — depth.html standalone com three.js (UMD r146). PlaneGeometry subdividida (16-400 segs) + ShaderMaterial: vertex desloca por depth texture, fragment com shading fake por derivadas do depth. 3 fontes de depth: Luminance (instantânea, ao vivo com video/webcam), AI (Depth Anything V2 small via transformers.js, lazy ~40MB, q8) e upload manual de depth map. Contrast/smooth/invert pós-processam o depth (canvas filter ≤320px) com preview no painel. Mouse parallax suavizado + órbita senoidal automática (perfeita pra loop MP4), zoom, wireframe. 6 presets (relief/pop/wire/orbit/canyon/hologram). Export PNG + Depth PNG (1024px) + MP4. 15/15 testes Playwright.
 
 #### 8.11 — GRADIENT MAP
 Upload imagem → mapeia luminosidade pra paleta de cores custom.
