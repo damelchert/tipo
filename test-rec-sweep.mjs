@@ -28,6 +28,7 @@ const TOOLS = [
   { file: 'audiotype.html', kind: 'p5' },
   { file: 'riso.html', kind: 'custom', fn: 'renderRiso', toggle: 'toggleRec()' },
   { file: 'datamosh.html', kind: 'custom', fn: 'step', toggle: 'toggleRec()' },
+  { file: 'rastro.html', kind: 'custom', fn: 'render', toggle: 'toggleRec()', pre: "applyPreset('sports')" },
   { file: 'pixelsort.html', kind: 'custom', fn: 'render', toggle: 'toggleRec()', pre: "applyPreset('scanwave')" },
   { file: 'dithering.html', kind: 'dither', fn: 'render', toggle: "document.getElementById('recordBtn').click()" },
 ];

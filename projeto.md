@@ -15,6 +15,11 @@ Suite de ferramentas visuais generativas para motion type, kinetic typography e 
 ### Dithering Tool
 Transforma imagens e vídeos em arte visual usando SVGs customizados no lugar de pixels. Cada pixel é substituído por um shape (círculo, quadrado, letra, emoji, forma orgânica) baseado na luminosidade. 7 níveis de shadow-to-highlight, cada um com shape e cor independente.
 
+### Visual Tools
+Ferramentas generativas para imagem, vídeo e webcam: Dithering, Retícula, Glitch, Datamosh, Rastro, Pixel Sort, Depth, Gradient Map, Overlay, Risograph, ASCII e AudioType.
+
+**Rastro** cria Echo Effect temporal para imagem, vídeo e webcam: Echo Time, Number of Echoes, Intensity, Decay, escala/posição da fonte, drag no canvas para puxar a imagem criando echo, motion matte automático, máscara desenhada e export PNG com alpha para composição.
+
 ### Kinetic Type (22 modos)
 Tipografia animada/cinética em tempo real. Digita texto e vê ele se transformar em:
 - **Formas 3D:** Cylinder, Coil, Ribbon, Flag

@@ -6,17 +6,23 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 28 ferramentas (6 visual tools + 22 kinetic type modes)
+- **Total:** 34 ferramentas (12 visual tools + 22 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
 /tipo/
   index.html                   — landing page (navegação progressiva com hash routing)
   
-  # VISUAL TOOLS (6)
+  # VISUAL TOOLS (12)
   dithering.html               — SVG dithering tool (FUNCIONAL — gold standard)
   reticula.html                — halftone grid, 11 shapes, video+webcam+MP4 (FUNCIONAL)
   glitch.html                  — RGB shift, pixel sort, slicing, video+webcam+MP4 (FUNCIONAL)
+  datamosh.html                — motion-vector codec simulation, cross-mosh, keyframes (FUNCIONAL)
+  rastro.html                  — Adobe-style temporal Echo Effect, motion/drawn matte, PNG alpha (FUNCIONAL)
+  pixelsort.html               — Asendorf pixel sorting, arbitrary angle, threshold mask (FUNCIONAL)
+  depth.html                   — image/video → 3D depth mesh, AI/manual/luminance depth (FUNCIONAL)
+  gradientmap.html             — luminance → draggable color gradient map (FUNCIONAL)
+  riso.html                    — risograph + CMYK halftone simulator, plates export (FUNCIONAL)
   ascii.html                   — 4 charsets, 3 color modes, video+webcam+MP4 (FUNCIONAL)
   overlay.html                 — gerador de texturas seamless, 12 patterns, image+video+webcam (FUNCIONAL)
   audiotype.html               — audio-reactive typography, text/image + audio/mic, 2-8 color levels (FUNCIONAL)
@@ -148,6 +154,63 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - Aplicado em 2026-06-12: cascade, flag, stripes, ribbon, string (os demais já seguiam)
 
 ---
+
+## 2026-06-23
+
+### Rastro — Visual Tool de Echo Effect temporal
+- **Nome escolhido:** Rastro — literal em PT-BR, curto, alinhado com a personalidade brasileira da Tipó e com o efeito pedido pelo Daniel.
+- **Arquivo novo:** `rastro.html` (standalone Canvas 2D, carrega `shared/recorder.js` + `shared/ui.js` para recorder, theme/back, hex inputs e TipoBehavior).
+- **Conceito V3 (rebuild após feedback do Daniel):** engine reescrita como Echo Effect de verdade, seguindo a lógica Adobe: compor frames temporais do mesmo layer com `Echo Time`, `Number of Echoes`, `Starting Intensity`, `Decay` e `Echo Operator`.
+- **Operadores:** Composite In Front, Composite In Back, Add, Screen, Maximum, Minimum e Blend, mapeados para blend/composite modes de Canvas.
+- **Layer/matte:** `Full Layer` para Echo puro; `Motion Difference` como preset Sports para isolar movimento automaticamente; `Drawn Mask` para circular/desenhar a área que deve repetir; Chroma Key e Luma Bright/Dark como fallbacks.
+- **Alpha/compositing:** `Background: Source` coloca o echo em cima do próprio vídeo/foto; `Transparent` preserva alpha real; `Solid` preenche cor. Export `PNG Alpha` força transparente e remove guias. MP4/H.264 continua sem alpha portátil; para composição transparente usar PNG alpha (futuro: sequência PNG/WebM alpha).
+- **Source Transform:** escala + Move X/Y da fonte, com `Drag canvas to pull source`; arrastar o canvas move a imagem/fonte sem resetar o histórico, então o echo nasce do puxão e sai gravado no MP4.
+- **Default V4:** demo e preset Sports migrados para paleta Tipó minimalista (`#F8F5F0`, teal, gold, preto), sem fundo laranja/blocos; Sports usa Motion Difference mais forte para manter o frame atual limpo e o rastro visível.
+- **Still images:** `Still Motion` (Orbit/Spin/Push/Zoom) cria variação temporal em imagem parada, porque Echo só aparece quando o layer muda no tempo.
+- **Landing:** card "Rastro" adicionado em `index.html` depois de Datamosh.
+- **Shared:** `shared/ui.js` `_backTargets` atualizado com visual tools novas, incluindo `rastro`.
+- **Testes:** `test-rastro.mjs` criado e passou: default compõe echo sobre source, Count/Decay mudam render, escala muda render, drag move source e alimenta history, operadores distintos, drawn mask isola alpha, motion matte tem transparência + pixels visíveis, Still Motion anima, 15 behavior buttons, PNG alpha export, MP4 export, screenshot em `/tmp/tipo-rastro-shot.png`.
+- **Recording sweep:** `test-rec-sweep.mjs` inclui `rastro.html` com preset `sports`.
+
+### Rastro V5 — Melhorias visuais (feedback do Daniel: "muito sutil e feio")
+Daniel mandou 5 referências de echo circular/espiral dramático (atletas com rastro em vórtice, tipografia com repetição agressiva). O efeito original era muito fraco — só alpha-fading de cópias posicionais, sem transformação entre echoes.
+
+**Canvas fullscreen**
+- Removido cap de 960×720 no `#mainCanvas`; agora `width:100%; height:100%` preenchendo todo o `#canvasWrap` (lado direito da tela)
+- `setCanvasSize()` usa `wrap.clientWidth/clientHeight` com aspect ratio do source
+- `ResizeObserver` no wrap garante resize dinâmico
+- CSS: removido `max-width`/`max-height`, adicionado `display:block`
+
+**Echo Transform (nova seção — o core da melhoria)**
+- 4 controles novos: Rotate (-180°..180°), Scale Step (80%..120%), Shift X, Shift Y
+- Cada echo acumula a transformação cumulativamente: `totalRot = echoRotate * (age+1)`, `totalScale = echoScale^(age+1)`, `totalShift = shift * (age+1)`
+- Isso cria o efeito de espiral/vórtice das referências — as cópias giram e encolhem progressivamente ao redor do centro do canvas
+- Chave: Scale Step precisa ser sutil (98% não 92%) senão 0.92^40 = 0.04 e a imagem some
+
+**Demo novo — células tipográficas brand**
+- Substituído o stick figure por grid 2×2 de letras T, I, P, Ó
+- Cada célula em cor brand: teal (#2A8A7A), gold (#D4A040), preto (#1A1818), mint (#99E0D2)
+- Texto em IBM Plex Mono 900 (bold), tamanho proporcional ao canvas
+- Float animation suave pra gerar frames diferentes
+
+**Presets recalibrados**
+- **Sports** (default): orbit forte + rotate -7° + scale 98% → espiral dramática imediata
+- **Spiral** (NOVO): orbit + rotate -8° + scale 98% → espiral mais fechada
+- **Vortex** (NOVO): spin + rotate -6° + scale 97% → vórtice com rotação contínua
+- **Streak**: orbit + shiftX 3 → rastro horizontal sutil
+- **Smear**: spin + blur 6 + rotate 3° → borrão rotacional
+- Todos agora com `matteMode: 'full'` (não 'motion') pra máxima visibilidade do echo
+- Intensity/Decay recalibrados pra cópias ficarem visíveis por mais tempo
+
+**Scale expandido**
+- Slider de 10%–400% (era 25%–220%) pra uploads maiores/menores
+
+**Possíveis melhorias futuras**
+- Export de sequência PNG alpha para vídeo/compositing real em After/Resolve.
+- WebM VP9 alpha opcional (compatibilidade variável) se for importante entregar vídeo com alpha direto.
+- Segmentação AI/MediaPipe para recorte automático de pessoas sem chroma/luma.
+- Mask tracking/optical flow para a drawn mask acompanhar o sujeito em vídeo.
+- Freeze/hold de um frame e burst manual para performance/VJ.
 
 ## 2026-06-10
 

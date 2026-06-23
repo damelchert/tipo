@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-28 ferramentas ativas: 6 visual tools + 22 kinetic type modes.
+34 ferramentas ativas: 12 visual tools + 22 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
@@ -27,8 +27,15 @@ Todos implementados e funcionais. Ver detalhes na memoria.md.
 - [x] **DITHERING** — Gold standard. 7-state luminance, 60+ shapes, video+webcam, MP4/PNG/SVG
 - [x] **RETÍCULA** — 11 shapes, multi-tone, video+webcam, 9 presets
 - [x] **GLITCH** — RGB shift, pixel sort, slicing, scanlines, video+webcam, 8 presets
+- [x] **DATAMOSH** — Motion-vector codec simulation, cross-mosh, keyframe drops
+- [x] **RASTRO** — Adobe-style Echo Effect, motion/drawn matte, blend operators, PNG alpha
+- [x] **PIXEL SORT** — Asendorf-style sorting, arbitrary angle, threshold mask, drift
+- [x] **DEPTH** — Image/video to 3D depth mesh, AI/manual/luminance depth
+- [x] **GRADIENT MAP** — Luminance to draggable color ramp, tone curve, cycle
+- [x] **RISOGRAPH** — Spot inks + CMYK halftone, overprint, grain, plates
 - [x] **ASCII** — 4 charsets, 3 color modes, video+webcam, 8 presets
 - [x] **OVERLAY** — 12 patterns seamless, image+video+webcam, live compositing, tile export
+- [x] **AUDIOTYPE** — Audio-reactive typography, mic/audio upload, bar grids
 
 ---
 
@@ -302,6 +309,19 @@ canvas acumulado em vez de desenhar o frame novo.
 - **Por que é exclusivo:** datamosh hoje = Avidemux/AE com plugins pagos (Datamosher Pro ~US$40) e workflow destrutivo offline. Ninguém tem datamosh paramétrico em tempo real no browser com webcam.
 - **Status:** ✅ Implementado (datamosh.html) — block matching espiral em grayscale 192px, acumulador ping-pong, melt 1-6x, recover, sweep recovery, cross-mosh (Video B), channel mosh display-only, bias/jitter, click=keyframe, 7 presets, 5 help tooltips. 12/12 testes Playwright, ~28fps no preset mais pesado.
 
+#### 8.14 — RASTRO (Temporal Echo / Afterimage Trails)
+Ferramenta nova pedida pelo Daniel a partir de referências de rastro circular, repetição temporal e smear/mesh em vídeo.
+- **Conceito:** imagem/vídeo/webcam vira Echo Effect temporal, usando frames anteriores do próprio layer. Pode ser arquivo final ou elemento com fundo alpha para composição.
+- **Modelo:** Adobe-like `Echo Time`, `Number of Echoes`, `Starting Intensity`, `Decay`, `Echo Operator`.
+- **Operadores:** Composite In Front, Composite In Back, Add, Screen, Maximum, Minimum, Blend.
+- **Controles Cavalry-like:** todos os ranges recebem TipoBehavior `~`; Echo Time, Echoes, Intensity, Decay, Source Scale, Move X/Y, Threshold, Softness, Feather, Still Motion, Trail Blur, Exposure.
+- **Interação:** `Drag canvas to pull source` move a imagem/fonte no canvas, sem resetar o histórico; o puxão gera echo temporal e é gravado no MP4.
+- **Matte/Alpha:** Full Layer, Motion Difference, Drawn Mask, Chroma Key, Luma Bright/Dark; Background Source/Transparent/Solid; export `PNG alpha`.
+- **Default visual:** preset Sports e demo em paleta Tipó minimalista (`#F8F5F0`, teal, gold, preto), sem fundo laranja/blocos.
+- **Still image:** Orbit/Spin/Push/Zoom cria variação temporal para imagem parada, porque Echo só aparece quando o layer muda no tempo.
+- **Observação técnica:** MP4/H.264 não preserva alpha portável. A ferramenta entrega PNG alpha agora; futuro possível: sequência PNG alpha, WebM VP9 alpha ou mask tracking/optical flow.
+- **Status:** ✅ Rebuild implementado (2026-06-23) — `rastro.html`, card no index, `_backTargets` atualizado, `test-rastro.mjs` PASS (source composite, Count/Decay, scale, drag/pull history, operadores, drawn mask alpha, motion matte, Still Motion, behaviors, PNG alpha, MP4), incluído no `test-rec-sweep.mjs` com preset `sports`.
+
 ### FASE 9 — CAVALRY MODE (animação fluida e intuitiva, aprovado pelo Daniel 2026-06-12)
 
 O Daniel quer a sensação de animação do Cavalry dentro da Tipó ("o Cavalry é mais a cara da Tipó").
@@ -316,7 +336,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - UI: clique no "~" abre mini-popover (tipo/amp/speed); slider animado ganha highlight visual
 - Persiste no preset morph (behaviors pausam durante transição)
 - **Impacto:** tudo vira animável sem keyframe — muda completamente a gravação de MP4
-- **Status:** ✅ Implementado (2026-06-12) — TipoBehavior em shared/ui.js, auto-init via DOMContentLoaded + MutationObserver (pega sliders criados dinamicamente, ex: layers do riso e painel do dithering). Botão "~" injetado em todo `.range-row input[type=range]` das 33 ferramentas; clique inicia behavior + abre popover (Type: Oscillate/Noise/Loop/Ping-Pong/Random Step, Amount %, Speed) com botão off. rAF central ~30fps atualiza sliders e dispara `input` (bubbles) — labels e renders reagem como drag real. Drag manual (evento trusted) re-centraliza; preset morph do TipoUI pausa e re-sincroniza centers no fim. CSS auto-injetado com fallbacks de var (funciona no dithering.html self-contained). Sliders sem id ganham id automático; behavior para sozinho se o slider for removido do DOM. Opt-out via `data-nobhv`. test-behaviors.mjs 14/14 + smoke nas 33 páginas.
+- **Status:** ✅ Implementado (2026-06-12) — TipoBehavior em shared/ui.js, auto-init via DOMContentLoaded + MutationObserver (pega sliders criados dinamicamente, ex: layers do riso e painel do dithering). Botão "~" injetado em todo `.range-row input[type=range]` das 34 ferramentas; clique inicia behavior + abre popover (Type: Oscillate/Noise/Loop/Ping-Pong/Random Step, Amount %, Speed) com botão off. rAF central ~30fps atualiza sliders e dispara `input` (bubbles) — labels e renders reagem como drag real. Drag manual (evento trusted) re-centraliza; preset morph do TipoUI pausa e re-sincroniza centers no fim. CSS auto-injetado com fallbacks de var (funciona no dithering.html self-contained). Sliders sem id ganham id automático; behavior para sozinho se o slider for removido do DOM. Opt-out via `data-nobhv`. test-behaviors.mjs 14/14 + smoke nas 33 páginas históricas; `test-rastro.mjs` valida behaviors do Rastro.
 
 #### 9.2 — Stagger / Delay por índice
 - Tudo que é multi-elemento (field, stripes, cascade, duplicator) ganha "Stagger": offset de fase por índice/linha/coluna/distância do centro

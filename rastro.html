@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Rastro. Adobe-style temporal Echo Effect for video, image, webcam, masks and alpha export.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Rastro</title>
+<link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260612-stg"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(42,138,122,0.10), transparent 36%),
+      var(--bg-0);
+  }
+  #canvasWrap.alpha-bg {
+    background-image:
+      linear-gradient(45deg, rgba(128,128,128,.18) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(128,128,128,.18) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(128,128,128,.18) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.18) 75%);
+    background-size: 28px 28px;
+    background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+    background-color: var(--bg-0);
+  }
+  #mainCanvas {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    background: transparent;
+    display: block;
+  }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-5);
+    font-size: 10px;
+    letter-spacing: 2px;
+    pointer-events: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .small-status {
+    color: var(--text-4);
+    font-size: 10px;
+    line-height: 1.45;
+    min-height: 15px;
+    font-family: var(--font-mono);
+  }
+  .field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .field-row select { flex: 1; min-width: 0; }
+  .field-row input[type="color"] { flex: none; }
+  .mini-btn {
+    flex: none;
+    background: transparent;
+    border: 1px solid var(--border-2);
+    color: var(--text-3);
+    border-radius: 4px;
+    padding: 7px 9px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--font-ui);
+    cursor: pointer;
+  }
+  .mini-btn:hover { border-color: var(--accent); color: var(--text-0); }
+  .range-label { min-width: 88px; }
+  .preset-chip { border-radius: 6px; }
+  #toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    display: none;
+    background: var(--bg-1);
+    border: 1px solid var(--border-2);
+    color: var(--text-1);
+    padding: 10px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    z-index: 1000;
+    box-shadow: 0 6px 24px rgba(0,0,0,.26);
+  }
+  .tipo-progress-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(0,0,0,.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .tipo-progress-overlay.open { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Rastro <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+    <div class="small-status" id="sourceStatus">demo source</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Echo Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip active" onclick="applyPreset('sports')">Sports</span>
+      <span class="preset-chip" onclick="applyPreset('spiral')">Spiral</span>
+      <span class="preset-chip" onclick="applyPreset('vortex')">Vortex</span>
+      <span class="preset-chip" onclick="applyPreset('clean')">Clean</span>
+      <span class="preset-chip" onclick="applyPreset('streak')">Streak</span>
+      <span class="preset-chip" onclick="applyPreset('smear')">Smear</span>
+      <span class="preset-chip" onclick="applyPreset('screen')">Screen</span>
+      <span class="preset-chip" onclick="applyPreset('alpha')">Alpha</span>
+      <span class="preset-chip" onclick="applyPreset('sports')" style="border-color:var(--red);color:var(--red);">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Echo Effect</div>
+    <div class="range-row"><span class="range-label">Echo Time</span><input type="range" id="echoGap" min="1" max="12" value="2"><span class="range-value" id="echoGapVal">2f</span></div>
+    <div class="range-row"><span class="range-label">Echoes</span><input type="range" id="count" min="1" max="56" value="32"><span class="range-value" id="countVal">32</span></div>
+    <div class="range-row"><span class="range-label">Intensity</span><input type="range" id="intensity" min="0" max="100" value="94"><span class="range-value" id="intensityVal">94%</span></div>
+    <div class="range-row"><span class="range-label">Decay</span><input type="range" id="decay" min="0" max="100" value="90"><span class="range-value" id="decayVal">0.90</span></div>
+    <div class="field-row">
+      <select id="operator">
+        <option value="compositeFront" selected>Composite In Front</option>
+        <option value="compositeBack">Composite In Back</option>
+        <option value="add">Add</option>
+        <option value="screen">Screen</option>
+        <option value="maximum">Maximum</option>
+        <option value="minimum">Minimum</option>
+        <option value="blend">Blend</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Layer / Matte</div>
+    <div class="field-row">
+      <select id="matteMode">
+        <option value="full">Full Layer</option>
+        <option value="motion" selected>Motion Difference</option>
+        <option value="drawn">Drawn Mask</option>
+        <option value="chroma">Chroma Key</option>
+        <option value="lumaBright">Luma Bright</option>
+        <option value="lumaDark">Luma Dark</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <select id="bgMode">
+        <option value="source" selected>Background: Source</option>
+        <option value="transparent">Background: Transparent</option>
+        <option value="solid">Background: Solid</option>
+      </select>
+      <input type="color" id="bgColor" value="#f8f5f0" title="Solid background">
+    </div>
+    <div class="range-row"><span class="range-label">Threshold</span><input type="range" id="threshold" min="4" max="120" value="6"><span class="range-value" id="thresholdVal">6</span></div>
+    <div class="range-row"><span class="range-label">Softness</span><input type="range" id="softness" min="1" max="120" value="96"><span class="range-value" id="softnessVal">96</span></div>
+    <div class="range-row"><span class="range-label">Feather</span><input type="range" id="maskFeather" min="0" max="32" value="2"><span class="range-value" id="maskFeatherVal">2</span></div>
+    <div class="field-row">
+      <input type="color" id="keyColor" value="#f8f5f0" title="Key color">
+      <label class="checkbox-label" style="font-size:11px;flex:1;"><input type="checkbox" id="showMask" checked> Show mask</label>
+      <button class="mini-btn" onclick="clearMask()">Clear</button>
+    </div>
+    <div class="small-status" id="maskStatus">mask: motion difference</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Source Transform</div>
+    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="pullSource" checked> Drag canvas to pull source</label>
+    <div class="range-row"><span class="range-label">Scale</span><input type="range" id="sourceScale" min="10" max="400" value="100"><span class="range-value" id="sourceScaleVal">100%</span></div>
+    <div class="range-row"><span class="range-label">Move X</span><input type="range" id="sourceX" min="-420" max="420" value="0"><span class="range-value" id="sourceXVal">0</span></div>
+    <div class="range-row"><span class="range-label">Move Y</span><input type="range" id="sourceY" min="-320" max="320" value="0"><span class="range-value" id="sourceYVal">0</span></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="centerSource()">Center Source</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Still Motion</div>
+    <div class="field-row">
+      <select id="stillMotion">
+        <option value="off" selected>Off</option>
+        <option value="orbit">Orbit</option>
+        <option value="spin">Spin</option>
+        <option value="push">Push</option>
+        <option value="zoom">Zoom</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="motionSpeed" min="0" max="100" value="58"><span class="range-value" id="motionSpeedVal">58</span></div>
+    <div class="range-row"><span class="range-label">Distance</span><input type="range" id="motionDistance" min="0" max="260" value="96"><span class="range-value" id="motionDistanceVal">96</span></div>
+    <div class="range-row"><span class="range-label">Angle</span><input type="range" id="motionAngle" min="0" max="360" value="310"><span class="range-value" id="motionAngleVal">310</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Echo Transform</div>
+    <div class="range-row"><span class="range-label">Rotate</span><input type="range" id="echoRotate" min="-180" max="180" value="0" step="1"><span class="range-value" id="echoRotateVal">0°</span></div>
+    <div class="range-row"><span class="range-label">Scale Step</span><input type="range" id="echoScale" min="80" max="120" value="100" step="1"><span class="range-value" id="echoScaleVal">100%</span></div>
+    <div class="range-row"><span class="range-label">Shift X</span><input type="range" id="echoShiftX" min="-200" max="200" value="0" step="1"><span class="range-value" id="echoShiftXVal">0</span></div>
+    <div class="range-row"><span class="range-label">Shift Y</span><input type="range" id="echoShiftY" min="-200" max="200" value="0" step="1"><span class="range-value" id="echoShiftYVal">0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Look</div>
+    <div class="range-row"><span class="range-label">Trail Blur</span><input type="range" id="trailBlur" min="0" max="14" value="0"><span class="range-value" id="trailBlurVal">0</span></div>
+    <div class="range-row"><span class="range-label">Exposure</span><input type="range" id="exposure" min="40" max="180" value="128"><span class="range-value" id="exposureVal">128%</span></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" onclick="exportPNGAlpha()">PNG Alpha</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video · drag canvas to pull</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title">Exporting</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo">Preparing...</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// TIPO — RASTRO
+// Adobe-style Echo Effect: sampled frames from the same layer,
+// then composited with Echo Time, Number of Echoes, Intensity,
+// Decay and Echo Operator.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
+const frameCanvas = document.createElement('canvas');
+const frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
+const layerCanvas = document.createElement('canvas');
+const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
+const prevCanvas = document.createElement('canvas');
+const prevCtx = prevCanvas.getContext('2d', { willReadFrequently: true });
+const maskCanvas = document.createElement('canvas');
+const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+const maskSoftCanvas = document.createElement('canvas');
+const maskSoftCtx = maskSoftCanvas.getContext('2d', { willReadFrequently: true });
+
+let sourceImg = null;
+let sourceVideo = null;
+let webcamStream = null;
+let sourceType = null;
+let mediaUrl = null;
+let recorder = null;
+let history = [];
+let sampleClock = 0;
+let frameTick = 0;
+let lastEchoGap = 2;
+let lastW = 0;
+let lastH = 0;
+let prevReady = false;
+let maskPoints = [];
+let drawingMask = false;
+let draggingSource = false;
+let dragStart = { x: 0, y: 0, sx: 0, sy: 0 };
+let suppressGuides = false;
+let lastTime = performance.now();
+let motionPhase = 0;
+
+const controls = [
+  'echoGap','count','intensity','decay','operator','matteMode','bgMode','bgColor',
+  'threshold','softness','maskFeather','keyColor','showMask','pullSource',
+  'sourceScale','sourceX','sourceY','stillMotion',
+  'motionSpeed','motionDistance','motionAngle',
+  'echoRotate','echoScale','echoShiftX','echoShiftY',
+  'trailBlur','exposure'
+];
+
+function el(id) { return document.getElementById(id); }
+function val(id) { return Number(el(id).value); }
+function sel(id) { return el(id).value; }
+function chk(id) { return el(id).checked; }
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  };
+}
+function showToast(msg) { TipoUI.showToast(msg); }
+
+function updateLabels() {
+  el('echoGapVal').textContent = val('echoGap') + 'f';
+  el('countVal').textContent = val('count');
+  el('intensityVal').textContent = val('intensity') + '%';
+  el('decayVal').textContent = (val('decay') / 100).toFixed(2);
+  el('thresholdVal').textContent = val('threshold');
+  el('softnessVal').textContent = val('softness');
+  el('maskFeatherVal').textContent = val('maskFeather');
+  el('motionSpeedVal').textContent = val('motionSpeed');
+  el('motionDistanceVal').textContent = val('motionDistance');
+  el('motionAngleVal').textContent = val('motionAngle');
+  el('sourceScaleVal').textContent = val('sourceScale') + '%';
+  el('sourceXVal').textContent = val('sourceX');
+  el('sourceYVal').textContent = val('sourceY');
+  el('echoRotateVal').textContent = val('echoRotate') + '°';
+  el('echoScaleVal').textContent = val('echoScale') + '%';
+  el('echoShiftXVal').textContent = val('echoShiftX');
+  el('echoShiftYVal').textContent = val('echoShiftY');
+  el('trailBlurVal').textContent = val('trailBlur');
+  el('exposureVal').textContent = val('exposure') + '%';
+  syncBgPreview();
+  updateMaskStatus();
+}
+
+function syncBgPreview() {
+  document.getElementById('canvasWrap').classList.toggle('alpha-bg', sel('bgMode') === 'transparent');
+}
+
+function updateMaskStatus() {
+  const mode = sel('matteMode');
+  let msg = 'mask: full layer';
+  if (mode === 'motion') msg = 'mask: motion difference';
+  if (mode === 'drawn') msg = maskPoints.length >= 3 ? 'mask: drawn path (' + maskPoints.length + ' pts)' : 'mask: draw path on canvas';
+  if (mode === 'chroma') msg = 'mask: chroma key';
+  if (mode === 'lumaBright') msg = 'mask: luma bright';
+  if (mode === 'lumaDark') msg = 'mask: luma dark';
+  el('maskStatus').textContent = msg;
+}
+
+function resetTemporal() {
+  history.forEach(c => { c.width = 1; c.height = 1; });
+  history = [];
+  sampleClock = 0;
+  prevReady = false;
+}
+
+function setMediaUrl(url) {
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = url;
+}
+
+function releaseVideo() {
+  if (!sourceVideo) return;
+  sourceVideo.pause();
+  sourceVideo.srcObject = null;
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  sourceVideo = null;
+}
+
+function stopWebcam() {
+  if (!webcamStream) return;
+  webcamStream.getTracks().forEach(t => t.stop());
+  webcamStream = null;
+}
+
+function handleFile(file) {
+  document.getElementById('dropHint').style.display = 'none';
+  stopWebcam();
+  releaseVideo();
+  setMediaUrl(null);
+  resetTemporal();
+
+  if (file.type.startsWith('image/')) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      sourceImg = img;
+      sourceType = 'image';
+      el('sourceStatus').textContent = file.name + ' · image';
+      updateLabels();
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  } else if (file.type.startsWith('video/')) {
+    const url = URL.createObjectURL(file);
+    setMediaUrl(url);
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.loop = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.addEventListener('loadedmetadata', () => resetTemporal(), { once: true });
+    vid.play().catch(() => {});
+    sourceVideo = vid;
+    sourceImg = null;
+    sourceType = 'video';
+    el('sourceStatus').textContent = file.name + ' · video';
+    el('webcamBtn').textContent = 'Webcam';
+    el('webcamBtn').style.borderColor = '';
+  }
+}
+
+function toggleWebcam() {
+  if (webcamStream) {
+    stopWebcam();
+    releaseVideo();
+    sourceType = sourceImg ? 'image' : null;
+    el('webcamBtn').textContent = 'Webcam';
+    el('webcamBtn').style.borderColor = '';
+    el('sourceStatus').textContent = sourceImg ? 'image source' : 'demo source';
+    resetTemporal();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    .then(stream => {
+      stopWebcam();
+      releaseVideo();
+      setMediaUrl(null);
+      const vid = document.createElement('video');
+      vid.srcObject = stream;
+      vid.muted = true;
+      vid.playsInline = true;
+      vid.play().catch(() => {});
+      webcamStream = stream;
+      sourceVideo = vid;
+      sourceImg = null;
+      sourceType = 'webcam';
+      el('sourceStatus').textContent = 'webcam source';
+      el('dropHint').style.display = 'none';
+      el('webcamBtn').textContent = 'Stop Cam';
+      el('webcamBtn').style.borderColor = 'var(--red)';
+      resetTemporal();
+    })
+    .catch(err => {
+      console.error('Webcam error:', err);
+      el('webcamBtn').textContent = 'Cam denied';
+      setTimeout(() => { el('webcamBtn').textContent = 'Webcam'; }, 1800);
+    });
+}
+
+function sourceSize() {
+  if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo && sourceVideo.videoWidth) {
+    return { w: sourceVideo.videoWidth, h: sourceVideo.videoHeight };
+  }
+  if (sourceType === 'image' && sourceImg) return { w: sourceImg.naturalWidth, h: sourceImg.naturalHeight };
+  return { w: 1280, h: 720 };
+}
+
+function setCanvasSize() {
+  const wrap = document.getElementById('canvasWrap');
+  const wrapW = wrap.clientWidth;
+  const wrapH = wrap.clientHeight;
+  const s = sourceSize();
+  // Fill the viewport area while preserving source aspect ratio
+  const fit = Math.min(wrapW / s.w, wrapH / s.h);
+  const w = Math.max(2, Math.round(s.w * fit));
+  const h = Math.max(2, Math.round(s.h * fit));
+  if (mainCanvas.width === w && mainCanvas.height === h) return;
+  [mainCanvas, frameCanvas, layerCanvas, prevCanvas, maskCanvas, maskSoftCanvas].forEach(c => {
+    c.width = w;
+    c.height = h;
+  });
+  lastW = w;
+  lastH = h;
+  resetTemporal();
+}
+
+function drawContain(ctx, media, x, y, w, h) {
+  const sw = media.videoWidth || media.naturalWidth || media.width;
+  const sh = media.videoHeight || media.naturalHeight || media.height;
+  const fit = Math.min(w / sw, h / sh);
+  const dw = sw * fit;
+  const dh = sh * fit;
+  ctx.drawImage(media, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function drawCover(ctx, media, x, y, w, h) {
+  const sw = media.videoWidth || media.naturalWidth || media.width;
+  const sh = media.videoHeight || media.naturalHeight || media.height;
+  const fit = Math.max(w / sw, h / sh);
+  const dw = sw * fit;
+  const dh = sh * fit;
+  ctx.drawImage(media, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function drawDemo(ctx, w, h, t) {
+  // Bold typographic cells in brand colors — like the references
+  ctx.fillStyle = '#f8f5f0';
+  ctx.fillRect(0, 0, w, h);
+
+  const sourceScale = val('sourceScale') / 100;
+  const sx = val('sourceX');
+  const sy = val('sourceY');
+  const cellSize = Math.min(w, h) * 0.28 * sourceScale;
+  const gap = cellSize * 0.08;
+  const letters = ['T', 'I', 'P', 'Ó'];
+  const colors = ['#2A8A7A', '#D4A040', '#1A1818', '#99E0D2'];
+
+  // Animate: gentle float
+  const ox = w / 2 + sx + Math.sin(t * 0.9) * w * 0.06;
+  const oy = h / 2 + sy + Math.cos(t * 1.1) * h * 0.04;
+
+  ctx.save();
+  ctx.translate(ox, oy);
+  // 2×2 grid of letter cells
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 2; col++) {
+      const idx = row * 2 + col;
+      const cx = (col - 0.5) * (cellSize + gap);
+      const cy = (row - 0.5) * (cellSize + gap);
+
+      // Cell background
+      ctx.fillStyle = colors[idx];
+      ctx.fillRect(cx - cellSize / 2, cy - cellSize / 2, cellSize, cellSize);
+
+      // Letter
+      ctx.fillStyle = idx === 2 ? '#f8f5f0' : '#1A1818';
+      ctx.font = '900 ' + Math.round(cellSize * 0.72) + 'px IBM Plex Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letters[idx], cx, cy + cellSize * 0.03);
+    }
+  }
+  ctx.restore();
+}
+
+function isStillSource() {
+  return sourceType !== 'video' && sourceType !== 'webcam';
+}
+
+function drawCurrentFrame(now) {
+  const w = frameCanvas.width;
+  const h = frameCanvas.height;
+  const t = now / 1000;
+  frameCtx.clearRect(0, 0, w, h);
+
+  const media = sourceType === 'image' ? sourceImg : (sourceType === 'video' || sourceType === 'webcam') ? sourceVideo : null;
+  const applyMotion = isStillSource() && sel('stillMotion') !== 'off';
+  const mode = sel('stillMotion');
+  const distance = val('motionDistance');
+  const angle = val('motionAngle') * Math.PI / 180;
+
+  if (!media) {
+    drawDemo(frameCtx, w, h, t);
+    return;
+  }
+
+  frameCtx.save();
+  if (applyMotion) {
+    const ph = motionPhase;
+    let dx = 0, dy = 0, rot = 0, sc = 1;
+    if (mode === 'orbit') {
+      dx = Math.cos(ph) * distance;
+      dy = Math.sin(ph) * distance;
+    } else if (mode === 'spin') {
+      rot = ph;
+      sc = 0.94 + Math.sin(ph * 0.8) * 0.03;
+    } else if (mode === 'push') {
+      const s = Math.sin(ph);
+      dx = Math.cos(angle) * distance * s;
+      dy = Math.sin(angle) * distance * s;
+    } else if (mode === 'zoom') {
+      sc = 1 + ((Math.sin(ph) + 1) / 2) * (distance / 420);
+    }
+    frameCtx.translate(w / 2 + dx + val('sourceX'), h / 2 + dy + val('sourceY'));
+    frameCtx.rotate(rot);
+    const sourceScale = val('sourceScale') / 100;
+    frameCtx.scale(sc * sourceScale, sc * sourceScale);
+    frameCtx.translate(-w / 2, -h / 2);
+  } else {
+    const sourceScale = val('sourceScale') / 100;
+    frameCtx.translate(w / 2 + val('sourceX'), h / 2 + val('sourceY'));
+    frameCtx.scale(sourceScale, sourceScale);
+    frameCtx.translate(-w / 2, -h / 2);
+  }
+  drawCover(frameCtx, media, 0, 0, w, h);
+  frameCtx.restore();
+}
+
+function drawMaskShape(ctx, w, h) {
+  if (maskPoints.length < 3) return false;
+  ctx.beginPath();
+  ctx.moveTo(maskPoints[0].x * w, maskPoints[0].y * h);
+  for (let i = 1; i < maskPoints.length; i++) ctx.lineTo(maskPoints[i].x * w, maskPoints[i].y * h);
+  ctx.closePath();
+  return true;
+}
+
+function buildDrawnMask(w, h) {
+  maskCtx.clearRect(0, 0, w, h);
+  maskSoftCtx.clearRect(0, 0, w, h);
+  if (!drawMaskShape(maskCtx, w, h)) return false;
+  maskCtx.fillStyle = '#fff';
+  maskCtx.fill();
+  const feather = val('maskFeather');
+  if (feather > 0) {
+    maskSoftCtx.save();
+    maskSoftCtx.filter = 'blur(' + feather + 'px)';
+    maskSoftCtx.drawImage(maskCanvas, 0, 0);
+    maskSoftCtx.restore();
+  } else {
+    maskSoftCtx.drawImage(maskCanvas, 0, 0);
+  }
+  return true;
+}
+
+function applyMotionMatte(w, h) {
+  if (!prevReady) {
+    layerCtx.save();
+    layerCtx.globalAlpha = 1;
+    layerCtx.globalCompositeOperation = 'copy';
+    layerCtx.clearRect(0, 0, w, h);
+    layerCtx.restore();
+    prevCtx.clearRect(0, 0, w, h);
+    prevCtx.drawImage(frameCanvas, 0, 0);
+    prevReady = true;
+    return;
+  }
+  const current = frameCtx.getImageData(0, 0, w, h);
+  const prev = prevCtx.getImageData(0, 0, w, h);
+  const cd = current.data;
+  const pd = prev.data;
+  const threshold = val('threshold');
+  const soft = Math.max(1, val('softness'));
+  for (let i = 0; i < cd.length; i += 4) {
+    const diff = Math.max(
+      Math.abs(cd[i] - pd[i]),
+      Math.abs(cd[i + 1] - pd[i + 1]),
+      Math.abs(cd[i + 2] - pd[i + 2])
+    );
+    const a = clamp((diff - threshold) / soft, 0, 1);
+    cd[i + 3] = Math.round(cd[i + 3] * a);
+  }
+  layerCtx.putImageData(current, 0, 0);
+  prevCtx.putImageData(current, 0, 0);
+}
+
+function applyColorMatte(mode, w, h) {
+  const img = layerCtx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const key = hexToRgb(el('keyColor').value);
+  const threshold = val('threshold');
+  const soft = Math.max(1, val('softness'));
+  for (let i = 0; i < d.length; i += 4) {
+    let m = 1;
+    if (mode === 'chroma') {
+      const diff = Math.hypot(d[i] - key.r, d[i + 1] - key.g, d[i + 2] - key.b);
+      m = clamp((diff - threshold) / (soft * 2), 0, 1);
+    } else {
+      const luma = d[i] * 0.2126 + d[i + 1] * 0.7152 + d[i + 2] * 0.0722;
+      if (mode === 'lumaBright') m = clamp((luma - threshold) / soft, 0, 1);
+      if (mode === 'lumaDark') m = clamp(((255 - luma) - threshold) / soft, 0, 1);
+    }
+    d[i + 3] = Math.round(d[i + 3] * m);
+  }
+  layerCtx.putImageData(img, 0, 0);
+}
+
+function buildLayer() {
+  const w = frameCanvas.width;
+  const h = frameCanvas.height;
+  const mode = sel('matteMode');
+  layerCtx.globalAlpha = 1;
+  layerCtx.globalCompositeOperation = 'source-over';
+  layerCtx.filter = 'none';
+  layerCtx.clearRect(0, 0, w, h);
+  layerCtx.drawImage(frameCanvas, 0, 0);
+
+  if (mode === 'full') {
+    prevCtx.clearRect(0, 0, w, h);
+    prevCtx.drawImage(frameCanvas, 0, 0);
+    prevReady = true;
+    return;
+  }
+  if (mode === 'drawn') {
+    if (buildDrawnMask(w, h)) {
+      layerCtx.save();
+      layerCtx.globalAlpha = 1;
+      layerCtx.globalCompositeOperation = 'destination-in';
+      layerCtx.drawImage(maskSoftCanvas, 0, 0);
+      layerCtx.restore();
+    }
+    prevCtx.clearRect(0, 0, w, h);
+    prevCtx.drawImage(frameCanvas, 0, 0);
+    prevReady = true;
+    return;
+  }
+  if (mode === 'motion') {
+    applyMotionMatte(w, h);
+    return;
+  }
+  applyColorMatte(mode, w, h);
+  prevCtx.clearRect(0, 0, w, h);
+  prevCtx.drawImage(frameCanvas, 0, 0);
+  prevReady = true;
+}
+
+function cloneLayer() {
+  const c = document.createElement('canvas');
+  c.width = layerCanvas.width;
+  c.height = layerCanvas.height;
+  c.getContext('2d').drawImage(layerCanvas, 0, 0);
+  return c;
+}
+
+function sampleLayer() {
+  const gap = val('echoGap');
+  if (gap !== lastEchoGap) {
+    lastEchoGap = gap;
+    resetTemporal();
+  }
+  sampleClock++;
+  if (sampleClock % gap !== 0 && history.length) return;
+  history.unshift(cloneLayer());
+  const max = val('count') + 1;
+  while (history.length > max) {
+    const old = history.pop();
+    old.width = 1;
+    old.height = 1;
+  }
+}
+
+function blendMode(op) {
+  if (op === 'add') return 'lighter';
+  if (op === 'screen') return 'screen';
+  if (op === 'maximum') return 'lighten';
+  if (op === 'minimum') return 'darken';
+  return 'source-over';
+}
+
+function echoList() {
+  return history.slice(1, val('count') + 1);
+}
+
+function drawEchoes(reverseOrder = false) {
+  const list = echoList();
+  const op = sel('operator');
+  const start = val('intensity') / 100;
+  const decay = val('decay') / 100;
+  const blur = val('trailBlur');
+  const exposure = val('exposure') / 100;
+  const echoRot = val('echoRotate') * Math.PI / 180;
+  const echoSc = val('echoScale') / 100;
+  const echoSX = val('echoShiftX');
+  const echoSY = val('echoShiftY');
+  const hasTransform = echoRot !== 0 || echoSc !== 1 || echoSX !== 0 || echoSY !== 0;
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const ordered = reverseOrder ? [...list].reverse() : list;
+
+  for (let j = ordered.length - 1; j >= 0; j--) {
+    const actualIndex = reverseOrder ? j : ordered.length - 1 - j;
+    const age = actualIndex;
+    const alphaBase = start * Math.pow(decay, age);
+    let alpha = alphaBase;
+    if (op === 'blend') alpha = alphaBase / Math.max(1.4, ordered.length * 0.32);
+    alpha = clamp(alpha * exposure, 0, 1);
+    if (alpha <= 0.003) continue;
+
+    mainCtx.save();
+    mainCtx.globalAlpha = alpha;
+    mainCtx.globalCompositeOperation = blendMode(op);
+    if (blur > 0) mainCtx.filter = 'blur(' + (blur * ((age + 1) / Math.max(1, ordered.length))).toFixed(2) + 'px)';
+
+    if (hasTransform) {
+      // Cumulative transform per echo: each copy is further rotated/scaled/shifted
+      const n = age + 1;
+      const totalRot = echoRot * n;
+      const totalScale = Math.pow(echoSc, n);
+      const totalSX = echoSX * n;
+      const totalSY = echoSY * n;
+      mainCtx.translate(cx + totalSX, cy + totalSY);
+      mainCtx.rotate(totalRot);
+      mainCtx.scale(totalScale, totalScale);
+      mainCtx.translate(-cx, -cy);
+    }
+
+    mainCtx.drawImage(ordered[j], 0, 0);
+    mainCtx.restore();
+  }
+}
+
+function drawCurrentLayer() {
+  mainCtx.save();
+  mainCtx.globalAlpha = 1;
+  mainCtx.globalCompositeOperation = 'source-over';
+  mainCtx.drawImage(layerCanvas, 0, 0);
+  mainCtx.restore();
+}
+
+function paintBackground() {
+  const bgMode = sel('bgMode');
+  mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+  if (bgMode === 'solid') {
+    mainCtx.fillStyle = el('bgColor').value;
+    mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+  } else if (bgMode === 'source') {
+    mainCtx.fillStyle = el('bgColor').value;
+    mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.drawImage(frameCanvas, 0, 0);
+  }
+}
+
+function drawGuides() {
+  if ((recorder && recorder.isRecording) || suppressGuides || !chk('showMask') || sel('matteMode') !== 'drawn' || maskPoints.length < 2) return;
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  mainCtx.save();
+  mainCtx.lineWidth = Math.max(2, Math.min(w, h) * 0.004);
+  mainCtx.strokeStyle = '#99e0d2';
+  mainCtx.fillStyle = 'rgba(153,224,210,.16)';
+  mainCtx.setLineDash([9, 7]);
+  mainCtx.beginPath();
+  mainCtx.moveTo(maskPoints[0].x * w, maskPoints[0].y * h);
+  for (let i = 1; i < maskPoints.length; i++) mainCtx.lineTo(maskPoints[i].x * w, maskPoints[i].y * h);
+  if (!drawingMask && maskPoints.length > 2) mainCtx.closePath();
+  mainCtx.fill();
+  mainCtx.stroke();
+  mainCtx.setLineDash([]);
+  mainCtx.fillStyle = '#0c0c0a';
+  mainCtx.strokeStyle = '#99e0d2';
+  for (const p of maskPoints) {
+    mainCtx.beginPath();
+    mainCtx.arc(p.x * w, p.y * h, 4, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.stroke();
+  }
+  mainCtx.restore();
+}
+
+function render(now = performance.now()) {
+  setCanvasSize();
+  const dt = Math.min(0.07, (now - lastTime) / 1000 || 0.016);
+  lastTime = now;
+  frameTick++;
+  motionPhase += dt * (0.25 + val('motionSpeed') / 28);
+
+  drawCurrentFrame(now);
+  buildLayer();
+  sampleLayer();
+  paintBackground();
+
+  const op = sel('operator');
+  const bgMode = sel('bgMode');
+  const matte = sel('matteMode');
+  const drawCurrent = bgMode !== 'source' || matte !== 'full';
+
+  if (op === 'compositeBack' && drawCurrent) drawCurrentLayer();
+  drawEchoes(op === 'compositeBack');
+  if (op !== 'compositeBack' && drawCurrent) drawCurrentLayer();
+  drawGuides();
+
+  return mainCanvas;
+}
+
+function animate(now) {
+  render(now);
+  requestAnimationFrame(animate);
+}
+
+function setMaskFromPoints(points) {
+  maskPoints = points.map(p => ({ x: clamp(Number(p.x), 0, 1), y: clamp(Number(p.y), 0, 1) }));
+  resetTemporal();
+  updateMaskStatus();
+}
+
+function clearMask() {
+  maskPoints = [];
+  resetTemporal();
+  updateMaskStatus();
+}
+
+function canvasPoint(ev) {
+  const r = mainCanvas.getBoundingClientRect();
+  return {
+    x: clamp((ev.clientX - r.left) / r.width, 0, 1),
+    y: clamp((ev.clientY - r.top) / r.height, 0, 1),
+  };
+}
+
+function setRangeLive(id, value) {
+  const node = el(id);
+  const min = Number(node.min || 0);
+  const max = Number(node.max || 100);
+  node.value = Math.round(clamp(value, min, max));
+  node.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function centerSource() {
+  setRangeLive('sourceX', 0);
+  setRangeLive('sourceY', 0);
+}
+
+mainCanvas.addEventListener('pointerdown', ev => {
+  if (sel('matteMode') === 'drawn') {
+    mainCanvas.setPointerCapture(ev.pointerId);
+    drawingMask = true;
+    maskPoints = [canvasPoint(ev)];
+    updateMaskStatus();
+    return;
+  }
+  if (!chk('pullSource')) return;
+  mainCanvas.setPointerCapture(ev.pointerId);
+  draggingSource = true;
+  dragStart = {
+    x: ev.clientX,
+    y: ev.clientY,
+    sx: val('sourceX'),
+    sy: val('sourceY'),
+  };
+  ev.preventDefault();
+});
+mainCanvas.addEventListener('pointermove', ev => {
+  if (draggingSource) {
+    const r = mainCanvas.getBoundingClientRect();
+    const dx = (ev.clientX - dragStart.x) * (mainCanvas.width / r.width);
+    const dy = (ev.clientY - dragStart.y) * (mainCanvas.height / r.height);
+    setRangeLive('sourceX', dragStart.sx + dx);
+    setRangeLive('sourceY', dragStart.sy + dy);
+    ev.preventDefault();
+    return;
+  }
+  if (!drawingMask) return;
+  const p = canvasPoint(ev);
+  const last = maskPoints[maskPoints.length - 1];
+  if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 0.006) {
+    maskPoints.push(p);
+    updateMaskStatus();
+  }
+});
+function finishMask(ev) {
+  if (draggingSource) {
+    draggingSource = false;
+    try { mainCanvas.releasePointerCapture(ev.pointerId); } catch (_) {}
+    return;
+  }
+  if (!drawingMask) return;
+  drawingMask = false;
+  try { mainCanvas.releasePointerCapture(ev.pointerId); } catch (_) {}
+  if (maskPoints.length < 3) maskPoints = [];
+  resetTemporal();
+  updateMaskStatus();
+}
+mainCanvas.addEventListener('pointerup', finishMask);
+mainCanvas.addEventListener('pointercancel', finishMask);
+
+function setControl(id, v) {
+  const node = el(id);
+  if (!node) return;
+  if (node.type === 'checkbox') node.checked = !!v;
+  else node.value = v;
+  if (node.type === 'color' && typeof TipoUI !== 'undefined') TipoUI._syncHex(node);
+  if (node.type === 'range' && typeof TipoUI !== 'undefined') {
+    const label = el(id + 'Val');
+    if (label) label.textContent = TipoUI.formatValue(id, v);
+  }
+}
+
+function applyPreset(name) {
+  const set = pairs => {
+    Object.entries(pairs).forEach(([id, value]) => setControl(id, value));
+    if (typeof TipoBehavior !== 'undefined') TipoBehavior.resync();
+    updateLabels();
+    resetTemporal();
+  };
+
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.textContent.trim().toLowerCase() === name);
+  });
+
+  if (name === 'spiral') set({
+    // Espiral dramática — orbit gera movimento, rotate/scale criam a espiral visual
+    echoGap: 1, count: 40, intensity: 100, decay: 97, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 6, softness: 96, maskFeather: 2,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit', motionSpeed: 46, motionDistance: 64,
+    motionAngle: 0, echoRotate: -8, echoScale: 98, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 0, exposure: 120
+  });
+  else if (name === 'vortex') set({
+    // Vórtex — spin + espiral, composite front sobre source
+    echoGap: 1, count: 48, intensity: 100, decay: 97, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 6, softness: 96, maskFeather: 2,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'spin', motionSpeed: 52, motionDistance: 60,
+    motionAngle: 310, echoRotate: -6, echoScale: 97, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 0, exposure: 125
+  });
+  else if (name === 'clean') set({
+    // Clean — orbit sem transform, echo puro
+    echoGap: 2, count: 16, intensity: 90, decay: 85, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 34, softness: 30, maskFeather: 2,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit', motionSpeed: 48, motionDistance: 82,
+    motionAngle: 310, echoRotate: 0, echoScale: 100, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 0, exposure: 110
+  });
+  else if (name === 'streak') set({
+    // Streak — orbit + shift X sutil gera rastro horizontal
+    echoGap: 1, count: 30, intensity: 95, decay: 94, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 24, softness: 46, maskFeather: 4,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit', motionSpeed: 56, motionDistance: 80,
+    motionAngle: 0, echoRotate: 0, echoScale: 100, echoShiftX: 3, echoShiftY: 0,
+    trailBlur: 1, exposure: 120
+  });
+  else if (name === 'smear') set({
+    // Smear — spin + blur pesado, efeito de borrão
+    echoGap: 1, count: 40, intensity: 85, decay: 96, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 18, softness: 72, maskFeather: 8,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'spin', motionSpeed: 64, motionDistance: 60,
+    motionAngle: 310, echoRotate: 3, echoScale: 99, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 6, exposure: 130
+  });
+  else if (name === 'screen') set({
+    // Screen blend — brilho acumulado
+    echoGap: 1, count: 36, intensity: 80, decay: 94, operator: 'screen',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 28, softness: 32, maskFeather: 3,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit', motionSpeed: 58, motionDistance: 100,
+    motionAngle: 310, echoRotate: -3, echoScale: 99, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 1, exposure: 125
+  });
+  else if (name === 'alpha') set({
+    // Alpha — pra composição com fundo transparente
+    echoGap: 1, count: 28, intensity: 90, decay: 90, operator: 'compositeFront',
+    matteMode: maskPoints.length >= 3 ? 'drawn' : 'full', bgMode: 'transparent',
+    bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 26, softness: 42, maskFeather: 5,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit',
+    motionSpeed: 58, motionDistance: 96, motionAngle: 310,
+    echoRotate: -4, echoScale: 98, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 1, exposure: 110
+  });
+  else set({
+    // DEFAULT / SPORTS — orbit forte + espiral, matteMode full pra máxima visibilidade
+    echoGap: 1, count: 40, intensity: 100, decay: 96, operator: 'compositeFront',
+    matteMode: 'full', bgMode: 'source', bgColor: '#f8f5f0', keyColor: '#f8f5f0',
+    threshold: 6, softness: 96, maskFeather: 2,
+    sourceScale: 100, sourceX: 0, sourceY: 0, stillMotion: 'orbit', motionSpeed: 72, motionDistance: 120,
+    motionAngle: 310, echoRotate: -7, echoScale: 98, echoShiftX: 0, echoShiftY: 0,
+    trailBlur: 0, exposure: 125
+  });
+}
+
+function exportPNG() {
+  suppressGuides = true;
+  render();
+  suppressGuides = false;
+  mainCanvas.toBlob(blob => {
+    if (!blob) { showToast('PNG export failed'); return; }
+    TipoUI._downloadBlob(blob, 'tipo-rastro.png');
+    showToast('PNG saved');
+  }, 'image/png');
+}
+
+function exportPNGAlpha() {
+  const oldBg = sel('bgMode');
+  const oldMask = chk('showMask');
+  const restore = () => {
+    el('bgMode').value = oldBg;
+    el('showMask').checked = oldMask;
+    syncBgPreview();
+  };
+  el('bgMode').value = 'transparent';
+  el('showMask').checked = false;
+  syncBgPreview();
+  suppressGuides = true;
+  render();
+  suppressGuides = false;
+  mainCanvas.toBlob(blob => {
+    restore();
+    if (!blob) { showToast('Alpha PNG failed'); return; }
+    TipoUI._downloadBlob(blob, 'tipo-rastro-alpha.png');
+    showToast('Alpha PNG saved');
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  suppressGuides = true;
+  await TipoUI.toggleRec();
+  suppressGuides = false;
+}
+
+function boot() {
+  controls.forEach(id => {
+    const node = el(id);
+    if (!node) return;
+    const ev = node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'color' ? 'change' : 'input';
+    node.addEventListener(ev, () => {
+      updateLabels();
+      if (['echoGap','count','matteMode','threshold','softness','maskFeather'].includes(id)) resetTemporal();
+    });
+  });
+
+  el('fileInput').addEventListener('change', ev => {
+    const file = ev.target.files && ev.target.files[0];
+    if (file) handleFile(file);
+    ev.target.value = '';
+  });
+
+  document.addEventListener('dragover', ev => ev.preventDefault());
+  document.addEventListener('drop', ev => {
+    ev.preventDefault();
+    const file = ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  TipoUI.init({
+    mode: 'rastro',
+    canvas: mainCanvas,
+    formatters: {
+      echoGap: raw => raw + 'f',
+      intensity: raw => raw + '%',
+      decay: raw => (Number(raw) / 100).toFixed(2),
+      sourceScale: raw => raw + '%',
+      exposure: raw => raw + '%',
+      echoRotate: raw => raw + '°',
+      echoScale: raw => raw + '%',
+    },
+  });
+  recorder = TipoUI.recorder;
+  updateLabels();
+  resetTemporal();
+
+  // Resize canvas when viewport changes
+  const wrap = document.getElementById('canvasWrap');
+  new ResizeObserver(() => {
+    lastW = 0; lastH = 0; // force recalc
+    setCanvasSize();
+  }).observe(wrap);
+
+  requestAnimationFrame(animate);
+}
+
+window.mainCanvas = mainCanvas;
+window.mainCtx = mainCtx;
+window.render = render;
+window.applyPreset = applyPreset;
+window.setMaskFromPoints = setMaskFromPoints;
+window.clearMask = clearMask;
+window.centerSource = centerSource;
+window.exportPNG = exportPNG;
+window.exportPNGAlpha = exportPNGAlpha;
+window.toggleRec = toggleRec;
+window.suppressGuides = suppressGuides;
+
+boot();
+</script>
+</body>
+</html>

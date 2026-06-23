@@ -306,6 +306,8 @@ const TipoUI = {
   _backTargets: {
     // Visual tools
     dithering: 'visual', reticula: 'visual', glitch: 'visual',
+    datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
+    depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
