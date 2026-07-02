@@ -63,7 +63,7 @@
       <span class="preset-chip" onclick="applyPreset('cmyk')">CMYK</span>
       <span class="preset-chip" onclick="applyPreset('newsprint')">Newsprint</span>
       <span class="preset-chip" onclick="applyPreset('comic')">Comic</span>
-      <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+      <span class="preset-chip" onclick="applyPreset('tipo')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
 
@@ -138,10 +138,11 @@ const RISO_INKS = [
 const SLOT_GAMMA = [1.7, 1.0, 0.65];
 const DEFAULT_ANGLES = [15, 75, 45];
 
+// Entry default: brand-adjacent real Riso inks (Teal + Sunflower); Classic preset keeps blue/red
 const layers = [
-  { enabled: true,  ink: '#0078bf', angle: 15, coverage: 55 },
-  { enabled: true,  ink: '#f15060', angle: 75, coverage: 50 },
-  { enabled: false, ink: '#ffb511', angle: 45, coverage: 50 },
+  { enabled: true,  ink: '#00838a', angle: 15, coverage: 55 },
+  { enabled: true,  ink: '#ffb511', angle: 75, coverage: 50 },
+  { enabled: false, ink: '#82d8d5', angle: 45, coverage: 50 },
 ];
 
 // CMYK process mode (riso 4-color printing)
@@ -677,6 +678,8 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
+  // Entry/reset default — brand-adjacent real Riso inks (matches the `layers` boot state)
+  tipo:      { inks: ['#00838a', '#ffb511', null],        angles: [15, 75, 45], cov: [55, 50, 50], cell: 9,  gain: 20, misreg: 6,  grain: 25, op: 92, paper: '#f5f0e4' },
   classic:   { inks: ['#0078bf', '#f15060', null],        angles: [15, 75, 45], cov: [55, 50, 50], cell: 9,  gain: 20, misreg: 6,  grain: 25, op: 92, paper: '#f5f0e4' },
   zine:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [45, 15, 75], cov: [50, 60, 50], cell: 10, gain: 25, misreg: 10, grain: 40, op: 94, paper: '#f2efe6' },
   poster:    { inks: ['#3d5588', '#ffb511', '#f15060'],   angles: [15, 75, 45], cov: [55, 60, 45], cell: 12, gain: 30, misreg: 5,  grain: 20, op: 90, paper: '#f5f0e4' },

@@ -189,6 +189,17 @@ Teste com Playwright dirigindo mouse de verdade (não keyboard/evaluate) revelou
 - **Fix (TipoTimeline):** (1) **hint dinâmica por estado** — sem keys: "Move any slider to record a keyframe"; 1 key: "◆ recorded! Now drag the playhead to another time and move the slider again — 2+ keyframes make an animation" (classe .warn, âmbar bold); 2+ keys: dicas de play/REC. (2) **Flash ao gravar key** — losango recém-criado anima scale 2.4→1 com glow + régua pisca âmbar (retrigger via `void el.offsetWidth`). (3) **Toasts de orientação** — play/REC sem keys: "move a slider with the timeline open"; play com 1 key só: "Add a 2nd keyframe at another time to animate" (toca mesmo assim, playhead é feedback).
 - test-timeline.mjs estendido pra 26 checks (hints por estado + toast de single-key) — ALL PASS. Cache-bust `?v=20260702-kf1`.
 
+### Paleta brand nos demos das visual tools (pedido do Daniel, referência: demo do Rastro)
+Daniel: "queria implementar todas as cores da paleta da tipó nos defaults das ferramentas" — o Rastro (células TIPÓ teal/gold/preto/mint no cream) é o exemplar. A regra da paleta de entrada (2026-06-12) cobriu os inputs dos kinetic types, mas os DEMOS procedurais das visual tools ficaram de fora.
+- **Auditoria via screenshot das 12 visual tools.** Já brand (intocadas): reticula, gradientmap, depth, dithering (abre vazio), audiotype (mono preto/cream), overlay (textura funcional cinza).
+- **Corrigidas (5):**
+  - **datamosh**: blobs rosa `#ff48b0`→mint `#99E0D2`, bg navy→cream gradient (`#F8F5F0`→`#E8E3D8`), MOSH cream→preto.
+  - **pixelsort**: pôr-do-sol synthwave→brand (céu cream→mint→teal→preto, sol gold, montanhas preto, SORT preto).
+  - **glitch**: demo bg 20→cream, TIPO branco→TIPÓ preto, + 3 barras brand (teal/gold/mint) pro channel shift ter material colorido; `background(0)` do draw→cream (letterbox).
+  - **ascii**: gradiente laranja/navy→mint→teal→ink, TIPÓ cream, hint gold. **BUG REAL achado**: fontSize `value="0"` (auto) com `min="4"` — browser clampava pra 4 e o auto NUNCA funcionava (demo invisível desde sempre). Fix: `min="0"`.
+  - **riso**: entrada Blue+Bright Red→**Teal `#00838a` + Sunflower `#ffb511`** (tintas Riso REAIS mais próximas do brand; ink 3 desligada = Mint). Preset novo `tipo` (= novos defaults) e chip Reset aponta pra ele; **Classic (blue/red) preservado** como preset criativo.
+- Presets criativos de todas intocados (regra de sempre). Suites re-rodadas: test-datamosh/pixelsort/glitch-adv/riso exit 0; sweep glitch+ascii limpo.
+
 ### 12.2 GIF Loop Export construído (TipoGIF em shared/ui.js)
 - Botão "GIF" injetado ao lado do Record (gate recBtn/recordBtn — 35 ferramentas, classe copiada do botão vizinho).
 - **Lib: gifenc 1.0.3** (não gif.js do plano — sem worker, muito mais rápida). O dist CDN não é UMD → carregada via `import()` dinâmico do **ESM** no primeiro clique (padrão do depth.html com transformers.js). Zero peso até usar.

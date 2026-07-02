@@ -156,15 +156,19 @@ function setVal(id, v) { TipoUI.setVal(id, v); }
 
 function createDefaultImage() {
   const g = createGraphics(640, 480);
-  g.background(20);
+  g.background('#F8F5F0');
   g.noStroke();
-  g.fill(255);
+  // brand color bars give the channel effects colored material to tear
+  g.fill('#2A8A7A'); g.rect(140, 260, 120, 34);
+  g.fill('#D4A040'); g.rect(260, 260, 120, 34);
+  g.fill('#99E0D2'); g.rect(380, 260, 120, 34);
+  g.fill('#1A1818');
   g.textSize(80);
   g.textAlign(CENTER, CENTER);
-  g.text('TIPO', 320, 200);
+  g.text('TIPÓ', 320, 200);
   g.textSize(16);
-  g.fill(100);
-  g.text('drop image or video here', 320, 320);
+  g.fill('#8a857c');
+  g.text('drop image or video here', 320, 340);
   sourceImg = g;
   sourceType = 'image';
 }
@@ -288,7 +292,7 @@ function draw() {
   // Animation time factor
   const t = spd > 0 ? frameCount * spd * 0.05 : 0;
 
-  background(0);
+  background('#F8F5F0');
 
   // Fit image to canvas
   const fw = frame.width || frame.elt?.videoWidth || 640;

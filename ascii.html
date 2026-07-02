@@ -52,7 +52,7 @@
   <div class="section">
     <div class="section-title">Resolution</div>
     <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="10" max="200" value="80"><span class="range-value" id="columnsVal">80</span></div>
-    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="4" max="40" value="0"><span class="range-value" id="fontSizeVal">auto</span></div>
+    <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="0" max="40" value="0"><span class="range-value" id="fontSizeVal">auto</span></div>
   </div>
 
   <div class="section">
@@ -169,19 +169,22 @@ function setVal(id, v) { TipoUI.setVal(id, v); }
 
 function createDefaultImage() {
   const g = createGraphics(640, 480);
-  // Gradient background
+  // Brand gradient background: mint → teal → ink
   for (let y = 0; y < 480; y++) {
     const t = y / 480;
-    g.stroke(lerpColor(color('#ff6600'), color('#000033'), t));
+    const c = t < 0.5
+      ? lerpColor(color('#99E0D2'), color('#2A8A7A'), t * 2)
+      : lerpColor(color('#2A8A7A'), color('#1A1818'), (t - 0.5) * 2);
+    g.stroke(c);
     g.line(0, y, 640, y);
   }
   g.noStroke();
-  g.fill(255);
+  g.fill('#F8F5F0');
   g.textSize(70);
   g.textAlign(CENTER, CENTER);
-  g.text('TIPO', 320, 200);
+  g.text('TIPÓ', 320, 200);
   g.textSize(16);
-  g.fill(150);
+  g.fill('#D4A040');
   g.text('drop image or video here', 320, 310);
   sourceImg = g;
   sourceType = 'image';
