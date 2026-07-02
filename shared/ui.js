@@ -1504,6 +1504,121 @@ const TipoTimeline = {
   },
 };
 
+/* ============================================================
+   TIPÓ — GIF Loop Export (12.2)
+   "GIF" button next to Record on every tool. Captures ~3s of the
+   live canvas at 20fps (or exactly one timeline pass when the
+   timeline is open with keyframes — perfect loops), quantizes and
+   encodes with gifenc (lazy ESM import, zero page weight until
+   the first click), then downloads.
+   ============================================================ */
+
+const TipoGIF = {
+  FPS: 20,
+  SECONDS: 3,
+  MAXW: 640,
+  _lib: null,
+  _busy: false,
+
+  init() {
+    const rec = document.getElementById('recBtn') || document.getElementById('recordBtn');
+    if (!rec || document.getElementById('tipoGifBtn')) return;
+    const b = document.createElement('button');
+    b.id = 'tipoGifBtn';
+    b.type = 'button';
+    b.className = rec.className || 'btn btn-secondary';
+    b.textContent = 'GIF';
+    b.title = 'Export a 3s GIF loop — with timeline keyframes it captures exactly one pass';
+    b.addEventListener('click', () => this.capture());
+    rec.insertAdjacentElement('afterend', b);
+  },
+
+  async _load() {
+    if (!this._lib) {
+      this._lib = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js');
+    }
+    return this._lib;
+  },
+
+  _canvas() {
+    return (typeof TipoUI !== 'undefined' && TipoUI.recorder && TipoUI.recorder.canvas)
+      || document.querySelector('#canvasContainer canvas')
+      || document.querySelector('#canvasWrap canvas')
+      || document.querySelector('canvas');
+  },
+
+  _name() {
+    const mode = (typeof TipoUI !== 'undefined' && TipoUI.modeName) ||
+      location.pathname.split('/').pop().replace('.html', '') || 'export';
+    return 'tipo-' + mode + '.gif';
+  },
+
+  async capture() {
+    if (this._busy) return;
+    const src = this._canvas();
+    const btn = document.getElementById('tipoGifBtn');
+    const setTxt = (t) => { if (btn) btn.textContent = t; };
+    if (!src) return;
+    this._busy = true;
+    if (btn) btn.disabled = true;
+    try {
+      setTxt('…');
+      const { GIFEncoder, quantize, applyPalette } = await this._load();
+
+      // With an animatable timeline open, capture exactly one pass — perfect loop
+      const useTL = typeof TipoTimeline !== 'undefined' && TipoTimeline.open && TipoTimeline._canAnimate();
+      const seconds = useTL ? TipoTimeline.duration : this.SECONDS;
+      const fps = this.FPS;
+      const total = Math.max(2, Math.round(seconds * fps));
+      const scale = Math.min(1, this.MAXW / src.width);
+      const w = Math.max(2, Math.round(src.width * scale)), h = Math.max(2, Math.round(src.height * scale));
+      const cap = document.createElement('canvas');
+      cap.width = w; cap.height = h;
+      const cctx = cap.getContext('2d', { willReadFrequently: true });
+
+      if (useTL) { TipoTimeline.pause(); TipoTimeline.seek(0); TipoTimeline.play(); }
+      const frames = [];
+      await new Promise((res) => {
+        let n = 0, last = 0;
+        const step = (now) => {
+          if (now - last < 1000 / fps - 2) { requestAnimationFrame(step); return; }
+          last = now;
+          cctx.drawImage(src, 0, 0, w, h);
+          frames.push(cctx.getImageData(0, 0, w, h).data);
+          n++;
+          setTxt('REC ' + Math.round(n / total * 100) + '%');
+          if (n >= total) res();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+      if (useTL) TipoTimeline.pause();
+
+      const gif = GIFEncoder();
+      const delay = Math.round(1000 / fps);
+      for (let i = 0; i < frames.length; i++) {
+        setTxt('GIF ' + Math.round((i + 1) / frames.length * 100) + '%');
+        const palette = quantize(frames[i], 256);
+        const index = applyPalette(frames[i], palette);
+        gif.writeFrame(index, w, h, { palette, delay });
+        if (i % 4 === 3) await new Promise(r => setTimeout(r)); // keep the UI alive
+      }
+      gif.finish();
+      const blob = new Blob([gif.bytes()], { type: 'image/gif' });
+      TipoUI._downloadBlob(blob, this._name());
+      if (TipoUI.showToast) TipoUI.showToast('GIF saved (' + (blob.size / 1048576).toFixed(1) + ' MB, ' + total + ' frames)');
+    } catch (err) {
+      console.error(err);
+      if (typeof TipoUI !== 'undefined' && TipoUI.showToast) TipoUI.showToast('GIF export failed');
+    } finally {
+      this._busy = false;
+      if (btn) btn.disabled = false;
+      setTxt('GIF');
+    }
+  },
+};
+
+
 // Auto-init: inject "~" buttons once the DOM is ready, and re-scan when
 // tools create sliders dynamically (e.g. riso CMYK section, dithering panel)
 if (typeof document !== 'undefined') {
@@ -1511,6 +1626,7 @@ if (typeof document !== 'undefined') {
     TipoBehavior.scan();
     TipoTimeline.init();
     TipoFont.init();
+    TipoGIF.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;

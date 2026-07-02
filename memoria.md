@@ -189,6 +189,16 @@ Teste com Playwright dirigindo mouse de verdade (não keyboard/evaluate) revelou
 - **Fix (TipoTimeline):** (1) **hint dinâmica por estado** — sem keys: "Move any slider to record a keyframe"; 1 key: "◆ recorded! Now drag the playhead to another time and move the slider again — 2+ keyframes make an animation" (classe .warn, âmbar bold); 2+ keys: dicas de play/REC. (2) **Flash ao gravar key** — losango recém-criado anima scale 2.4→1 com glow + régua pisca âmbar (retrigger via `void el.offsetWidth`). (3) **Toasts de orientação** — play/REC sem keys: "move a slider with the timeline open"; play com 1 key só: "Add a 2nd keyframe at another time to animate" (toca mesmo assim, playhead é feedback).
 - test-timeline.mjs estendido pra 26 checks (hints por estado + toast de single-key) — ALL PASS. Cache-bust `?v=20260702-kf1`.
 
+### 12.2 GIF Loop Export construído (TipoGIF em shared/ui.js)
+- Botão "GIF" injetado ao lado do Record (gate recBtn/recordBtn — 35 ferramentas, classe copiada do botão vizinho).
+- **Lib: gifenc 1.0.3** (não gif.js do plano — sem worker, muito mais rápida). O dist CDN não é UMD → carregada via `import()` dinâmico do **ESM** no primeiro clique (padrão do depth.html com transformers.js). Zero peso até usar.
+- **Captura**: 3s @ 20fps do canvas ao vivo (rAF com gate de intervalo), downscale ≤640px, `getImageData` por frame; encode com `quantize(256)` + `applyPalette` por frame, `writeFrame` com delay 50ms; yield a cada 4 frames pra UI respirar; progresso no texto do botão (REC %/GIF %); toast com MB+frames no fim.
+- **Loop perfeito via timeline**: se `TipoTimeline.open && _canAnimate()`, captura exatamente UMA passada (seek 0 → play → duration). Timeline 2s → GIF 2.00s/40 frames cravados.
+- Canvas fallback chain: recorder.canvas → #canvasContainer → #canvasWrap → qualquer canvas. Filename: modeName do TipoUI ou pathname (standalone).
+- WEBGL funciona por causa do preserveDrawingBuffer que já existia pro savePNG.
+- **test-gif.mjs 11/11 PASS** primeira rodada: header GIF89a, 3.0s/60 frames exatos, decode ffmpeg clean, 1.4MB no coil, timeline-pass 2s/40, frames 0 vs 35 diferem (animação de fato capturada), riso (render-on-demand standalone) exporta, zero pageerrors.
+- Cache-bust `?v=20260702-gif1`.
+
 ---
 
 ## 2026-07-01

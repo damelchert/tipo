@@ -373,7 +373,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Botão "Export GIF" ao lado de PNG/MP4
 - Loop perfeito: calcular ciclo baseado em speed/frameCount
 - **Impacto:** Alto — formato mais compartilhável em redes sociais
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-02) — `TipoGIF` em shared/ui.js, botão "GIF" auto-injetado ao lado do Record nas 35 ferramentas. Lib: **gifenc** (mais rápida que gif.js, sem worker) via `import()` dinâmico do ESM no 1º clique — zero peso de página. Captura 3s @ 20fps do canvas ao vivo, ≤640px, quantize 256 cores por frame, progresso no botão (REC %/GIF %). **Loop perfeito via timeline**: com a timeline aberta e 2+ keyframes, captura exatamente UMA passada (timeline 2s → GIF 2.00s/40 frames, validado). test-gif.mjs 11/11 PASS (GIF89a, duração/frames exatos, animação capturada, riso standalone, ffmpeg decode clean).
 
 #### 12.3 — Share via URL
 - Serializar estado dos sliders + cores + preset no URL hash
