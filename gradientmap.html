@@ -362,16 +362,27 @@ function getDemo() {
   demoCanvas = document.createElement('canvas');
   demoCanvas.width = 900; demoCanvas.height = 620;
   const g = demoCanvas.getContext('2d');
-  const bg = g.createLinearGradient(0, 0, 900, 620);
-  bg.addColorStop(0, '#0a0a0a'); bg.addColorStop(1, '#e8e8e8');
-  g.fillStyle = bg; g.fillRect(0, 0, 900, 620);
-  // luminance spheres
-  for (const [x, y, r] of [[210, 200, 130], [630, 380, 170], [720, 140, 75], [200, 470, 85]]) {
-    const sp = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.08, x, y, r);
-    sp.addColorStop(0, '#ffffff'); sp.addColorStop(0.6, '#777777'); sp.addColorStop(1, 'rgba(0,0,0,0.85)');
-    g.fillStyle = sp;
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  // Interference wave field — a rich luminance landscape for the ramp to paint.
+  // With Cycle on, the gradient flows through the contours continuously.
+  const img = g.createImageData(900, 620);
+  const d = img.data;
+  for (let y = 0; y < 620; y++) {
+    for (let x = 0; x < 900; x++) {
+      const r1 = Math.hypot(x - 660, y - 430);
+      const r2 = Math.hypot(x - 200, y - 150);
+      const r3 = Math.hypot(x - 120, y - 560);
+      let v = 0.5
+        + 0.21 * Math.sin(x * 0.010 + y * 0.0055)
+        + 0.19 * Math.sin(r1 * 0.020)
+        + 0.15 * Math.sin(r2 * 0.030)
+        + 0.10 * Math.sin(r3 * 0.026 + 1.7);
+      v = Math.max(0, Math.min(1, v));
+      const p = (y * 900 + x) * 4;
+      d[p] = d[p + 1] = d[p + 2] = Math.round(v * 255);
+      d[p + 3] = 255;
+    }
   }
+  g.putImageData(img, 0, 0);
   g.fillStyle = '#fff';
   g.font = '900 130px "IBM Plex Mono", monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -514,7 +525,7 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
-  athos:    { stops: [['#1A1818', 0], ['#2A8A7A', 0.45], ['#D4A040', 0.78], ['#F8F5F0', 1]], contrast: 0,  brightness: 0, posterize: 0, mix: 100, cycle: 0 },
+  athos:    { stops: [['#1A1818', 0], ['#2A8A7A', 0.45], ['#D4A040', 0.78], ['#F8F5F0', 1]], contrast: 0,  brightness: 0, posterize: 0, mix: 100, cycle: 14 },
   duotone:  { stops: [['#101060', 0], ['#ff5a36', 1]], contrast: 20, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   sunset:   { stops: [['#1c0030', 0], ['#7a1060', 0.35], ['#ff4060', 0.62], ['#ffb030', 0.85], ['#fff6d8', 1]], contrast: 12, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   infrared: { stops: [['#03052e', 0], ['#3b0f6e', 0.3], ['#c4205a', 0.58], ['#ff7a18', 0.8], ['#ffffff', 1]], contrast: 25, brightness: 0, posterize: 0, mix: 100, cycle: 0 },

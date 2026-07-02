@@ -54,7 +54,7 @@
 
   <div class="section">
     <div class="section-title">Channel Shift</div>
-    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="channelShift" min="0" max="100" value="20"><span class="range-value" id="channelShiftVal">20</span></div>
+    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="channelShift" min="0" max="100" value="6"><span class="range-value" id="channelShiftVal">6</span></div>
     <label style="font-size:11px;">Direction</label>
     <select id="shiftDir">
       <option value="horizontal">Horizontal</option>
@@ -66,7 +66,7 @@
   <div class="section">
     <div class="section-title">Slicing</div>
     <div class="range-row"><span class="range-label">Slice Count</span><input type="range" id="sliceCount" min="0" max="50" value="10"><span class="range-value" id="sliceCountVal">10</span></div>
-    <div class="range-row"><span class="range-label">Slice Intensity</span><input type="range" id="sliceIntensity" min="0" max="100" value="30"><span class="range-value" id="sliceIntensityVal">30</span></div>
+    <div class="range-row"><span class="range-label">Slice Intensity</span><input type="range" id="sliceIntensity" min="0" max="100" value="14"><span class="range-value" id="sliceIntensityVal">14</span></div>
   </div>
 
   <div class="section">
@@ -163,12 +163,11 @@ function createDefaultImage() {
   g.fill('#D4A040'); g.rect(260, 260, 120, 34);
   g.fill('#99E0D2'); g.rect(380, 260, 120, 34);
   g.fill('#1A1818');
-  g.textSize(80);
+  g.textStyle(BOLD);
+  g.textSize(120);
   g.textAlign(CENTER, CENTER);
-  g.text('TIPÓ', 320, 200);
-  g.textSize(16);
-  g.fill('#8a857c');
-  g.text('drop image or video here', 320, 340);
+  g.text('TIPÓ', 320, 190);
+  g.textStyle(NORMAL);
   sourceImg = g;
   sourceType = 'image';
 }
@@ -529,10 +528,10 @@ async function toggleRec() { await TipoUI.toggleRec(); }
 // --- Presets ---
 
 function resetAll() {
-  setVal('channelShift', 20);
+  setVal('channelShift', 6);
   document.getElementById('shiftDir').value = 'both';
   setVal('sliceCount', 10);
-  setVal('sliceIntensity', 30);
+  setVal('sliceIntensity', 14);
   setVal('blockSize', 16);
   setVal('blockShift', 0);
   setVal('blockScramble', 0);

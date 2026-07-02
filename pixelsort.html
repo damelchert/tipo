@@ -84,7 +84,7 @@
 
   <div class="section">
     <div class="section-title">Motion<span class="help-icon" data-help="Drift: anima a janela de threshold ao longo do tempo — as faixas sorteadas respiram e varrem a imagem. É o que dá vida a uma imagem parada na gravação de MP4. Vídeo e webcam já são re-sorteados a cada frame mesmo com Drift 0.">?</span></div>
-    <div class="range-row"><span class="range-label">Drift</span><input type="range" id="drift" min="0" max="100" value="0"><span class="range-value" id="driftVal">0</span></div>
+    <div class="range-row"><span class="range-label">Drift</span><input type="range" id="drift" min="0" max="100" value="10"><span class="range-value" id="driftVal">10</span></div>
   </div>
 
   <div class="section section-divider">
@@ -219,21 +219,40 @@ function getDemo() {
   demoCanvas = document.createElement('canvas');
   demoCanvas.width = 800; demoCanvas.height = 600;
   const g = demoCanvas.getContext('2d');
-  const sky = g.createLinearGradient(0, 0, 0, 600);
-  sky.addColorStop(0, '#F8F5F0'); sky.addColorStop(0.55, '#99E0D2'); sky.addColorStop(0.78, '#2A8A7A'); sky.addColorStop(1, '#1A1818');
-  g.fillStyle = sky; g.fillRect(0, 0, 800, 600);
-  g.fillStyle = '#D4A040';
-  g.beginPath(); g.arc(560, 270, 110, 0, Math.PI * 2); g.fill();
+  // Brand "sorted drips" — the demo itself looks like the tool's output
+  const hash = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+  const inks = ['#2A8A7A', '#D4A040', '#99E0D2', '#1B5A4E', '#E8C97E', '#1A1818'];
+  g.fillStyle = '#F8F5F0'; g.fillRect(0, 0, 800, 600);
+  // streaks dripping from the top
+  for (let i = 0; i < 100; i++) {
+    const x = i * 8;
+    const c = inks[Math.floor(hash(i * 3 + 1) * inks.length)];
+    const hgt = 70 + hash(i) * 400;
+    const grad = g.createLinearGradient(0, 0, 0, hgt);
+    grad.addColorStop(0, c);
+    grad.addColorStop(1, 'rgba(248,245,240,0)');
+    g.fillStyle = grad;
+    g.fillRect(x, 0, 7, hgt);
+  }
+  // ink floor with streaks rising into the light
   g.fillStyle = '#1A1818';
-  g.beginPath();
-  g.moveTo(0, 600); g.lineTo(0, 430); g.lineTo(170, 330); g.lineTo(330, 470); g.lineTo(470, 380); g.lineTo(640, 500); g.lineTo(800, 420); g.lineTo(800, 600);
-  g.closePath(); g.fill();
-  g.fillStyle = '#2A8A7A';
-  g.fillRect(60, 90, 150, 90);
-  g.fillStyle = '#1A1818';
-  g.font = '900 120px "IBM Plex Mono", monospace';
+  g.fillRect(0, 524, 800, 76);
+  for (let i = 0; i < 100; i++) {
+    if (hash(i * 7 + 2) > 0.55) continue;
+    const x = i * 8;
+    const hgt = 30 + hash(i + 50) * 190;
+    const grad = g.createLinearGradient(0, 524 - hgt, 0, 524);
+    grad.addColorStop(0, 'rgba(26,24,24,0)');
+    grad.addColorStop(1, '#1A1818');
+    g.fillStyle = grad;
+    g.fillRect(x, 524 - hgt, 7, hgt);
+  }
+  g.font = '900 150px "IBM Plex Mono", monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText('SORT', 400, 150);
+  g.fillStyle = '#D4A040';
+  g.fillText('TIPÓ', 407, 327);
+  g.fillStyle = '#1A1818';
+  g.fillText('TIPÓ', 400, 320);
   return demoCanvas;
 }
 
@@ -488,7 +507,7 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
-  classic:  { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 25, thrHigh: 75, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
+  classic:  { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 25, thrHigh: 75, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 10 },
   veils:    { sortBy: 'brightness', angle: 90,  reverse: true,  thrLow: 0,  thrHigh: 62, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
   shatter:  { sortBy: 'brightness', angle: 45,  reverse: false, thrLow: 18, thrHigh: 85, invertMask: false, maxSpan: 24, randomness: 55, mix: 100, drift: 0 },
   spectrum: { sortBy: 'hue',        angle: 0,   reverse: false, thrLow: 10, thrHigh: 92, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },

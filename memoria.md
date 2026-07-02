@@ -200,6 +200,12 @@ Daniel: "queria implementar todas as cores da paleta da tipó nos defaults das f
   - **riso**: entrada Blue+Bright Red→**Teal `#00838a` + Sunflower `#ffb511`** (tintas Riso REAIS mais próximas do brand; ink 3 desligada = Mint). Preset novo `tipo` (= novos defaults) e chip Reset aponta pra ele; **Classic (blue/red) preservado** como preset criativo.
 - Presets criativos de todas intocados (regra de sempre). Suites re-rodadas: test-datamosh/pixelsort/glitch-adv/riso exit 0; sweep glitch+ascii limpo.
 
+**Rodada 2 (feedback do Daniel nas 3 que ficaram fracas):**
+- **pixelsort** ("tosco, faz arte relacionada à ferramenta"): demo novo "sorted drips" — 100 streaks verticais em gradiente brand caindo do topo + piso de tinta com streaks subindo + TIPÓ 150px preto com echo gold. O demo PARECE output de pixel sort. Drift default 0→10 (classic preset também) — entrada viva, não parada.
+- **glitch** ("fora da paleta"): Channel Shift default 20→6 (20px engolia o glyph inteiro → texto virava roxo; 6px = core preto com fringes finas), Slice Intensity 30→14, TIPÓ 120px BOLD, hint interno do demo removido (era ele que renderizava rosa).
+- **gradientmap** ("legal mas sem graça e parado"): demo esferas→campo de ondas de interferência (4 senos radiais/diagonais somados por pixel, 900×620 uma vez) + preset athos com **cycle 14** — a rampa Athos flui pelos contornos continuamente na entrada (boot aplica athos).
+- test-pixelsort/glitch-adv/gradientmap re-rodados: exit 0.
+
 ### 12.2 GIF Loop Export construído (TipoGIF em shared/ui.js)
 - Botão "GIF" injetado ao lado do Record (gate recBtn/recordBtn — 35 ferramentas, classe copiada do botão vizinho).
 - **Lib: gifenc 1.0.3** (não gif.js do plano — sem worker, muito mais rápida). O dist CDN não é UMD → carregada via `import()` dinâmico do **ESM** no primeiro clique (padrão do depth.html com transformers.js). Zero peso até usar.
