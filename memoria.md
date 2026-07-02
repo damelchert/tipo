@@ -6,7 +6,7 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 34 ferramentas (12 visual tools + 22 kinetic type modes)
+- **Total:** 35 ferramentas (12 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
@@ -48,6 +48,7 @@
   badge.html                   — kinetic type: badge (FUNCIONAL)
   clutter.html                 — kinetic type: clutter (FUNCIONAL)
   construct.html               — kinetic type: construct (FUNCIONAL)
+  duplicator.html              — kinetic type: duplicator, cloner estilo Cavalry (FUNCIONAL)
   
   # KINETIC TYPE — Fase 5: Animação
   snap.html                    — kinetic type: snap (FUNCIONAL)
@@ -152,6 +153,40 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - Single-color tools: type #1A1818 no bg #F8F5F0
 - resetAll sempre restaura esses valores (manter HTML inputs e resetAll em sincronia)
 - Aplicado em 2026-06-12: cascade, flag, stripes, ribbon, string (os demais já seguiam)
+
+---
+
+## 2026-07-01
+
+### Rastro — Perf fix da gravação + bug do motion matte (pós-V5)
+`/verificar` (sweep completo pós-duplicator) pegou o rastro a 20.8fps na gravação com 31 stutters e MP4 de 32 frames — regressão do V5 (canvas fullscreen). Confirmado pré-existente rodando o sweep contra o HEAD num worktree isolado (números idênticos).
+
+**Diagnóstico (profiling por fase):** `drawEchoes` = 33ms/frame (40 composites full-canvas por frame, echoGap 1); todo o resto <0.2ms.
+
+**Fixes de perf (rastro.html):**
+1. **Echo accumulator half-res**: pros operadores source-over (compositeFront/Back/Blend — associativos, resultado EXATO), os echoes compõem num canvas 0.5x e sobem pro main num único drawImage — 40 composites a ¼ do custo + 1 upscale. Add/Screen/Max/Min mantêm o caminho direto (blend com o fundo por echo não é associativo). 33ms → 12ms.
+2. **Canvas pool**: `cloneLayer` reusa canvases reciclados (composite `copy`, sem clearRect) em vez de alocar um por frame (~60MB/s de garbage a 30fps); `recycleCanvas` guarda até 8.
+3. **`willReadFrequently` removido do mainCtx** (e mask ctxs) — nunca sofrem getImageData; o flag forçava o canvas principal pra CPU em browser real. frame/prev/layer mantêm (matte lê pixels).
+4. **Loop capado a ~30fps** (gate de 31ms no rAF): igual datamosh/pixelsort, dá espaço pro timer do encoder. Velocidade de animação usa dt — inalterada.
+- **Sweep depois:** 30.0/30.0 fps, 90 frames, avgΔ 33.5ms, 0 stutters, 0 dupes (era 20.8fps/32 frames/31 stutters).
+
+**Bug real achado no caminho — motion matte opaco (test-rastro FALHAVA no HEAD):**
+- `applyMotionMatte` guardava o frame MATTADO como "previous" via `putImageData(current)` — pixels com alpha 0 têm RGB zerado pela premultiplicação do canvas. No frame seguinte: cream (248) vs preto-transparente (0) = diff 248 em tudo → matte trava 100% opaco (PNG alpha com motion matte saía sem transparência nenhuma).
+- Fix: prev recebe o frame CRU (`clearRect` + `drawImage(frameCanvas)`).
+- test-rastro.mjs: 13/13 PASS (motion matte: 3486 pixels transparentes; antes 0).
+- **Lição:** nunca armazenar pixels pós-matte pra comparação temporal — putImageData com alpha baixo destrói o RGB (premultiply).
+
+### 9.3 Duplicator construído (duplicator.html — Cavalry Mode continua)
+- **Ferramenta nova #35** (23º kinetic type mode, categoria Composition). p5.js 2D + TipoUI padrão (estrutura clonada do coil.html).
+- **Elementos (8):** Text cycle chars (copy i mostra `txt[i % len]` — colunas/diagonais tipográficas), Text whole word, Circle, Ring (stroke), Square, Triangle, Star, Plus.
+- **Distribuições (5):** Grid (cols×rows, footprint 72% escalado por Spread), Circle (N em raio, tangente pra align), Spiral (arquimediana, r=R·t, Turns 1-12), Line (horizontal, 80% width), **Drawn Path** — usuário desenha direto no canvas (mousePressed/Dragged com guard mouseInCanvas; pontos normalizados pelo min(w,h) e re-amostrados por arc-length a cada frame via `samplePath`; path default = senoide pra nunca abrir vazio; stroke ao vivo enquanto desenha).
+- **Per-Copy Offset (o coração):** Rotate Step (graus × índice), Scale Start→End (lerp por t), Fade End (opacity lerp), Color Mode: Gradient A→B (`lerpColor`)/Alternate/Single.
+- **Animação:** Pulse (scale wave), Twist (rotação wave), Drift (deslocamento na normal da tangente), Speed — todos com fase `TipoStagger.phase()` por cópia (grid usa col/row reais; demais usam (i,0,n,1)). Seção Stagger padrão (Mode/Amount/Curve). Angle global gira a distribuição toda — com behavior "~" vira spin automático.
+- **UI dinâmica:** `updateDistUI()` mostra/esconde Copies/Columns/Rows/Turns/path hint conforme distribuição.
+- **Default brand:** grid 7×5, char cycle 76px, gradient teal `#2A8A7A`→gold `#D4A040` no cream, pulse 25 + stagger center 100 (pulso radial na entrada). PEGADINHA corrigida: `<select>` default vem da 1ª option — precisou `selected` no `center` pra HTML == resetAll (teste "reset render == default render" pegou).
+- **9 presets:** Ring, Galaxy (espiral de dots mint no dark), Tunnel (word zoom echo), Wave (line + drift stagger), Confetti (stars random stagger), Orbit, Snake (path), Vortex (rings espiral 200 cópias), Pride.
+- **Integrações:** card no index (composition, preview 3×3 dots `prev-dup`), `_backTargets.duplicator` em ui.js (cache-bust geral `?v=20260701-dup` nas 35 páginas), contagens atualizadas (index "23 modes", README).
+- **test-duplicator.mjs 22/22 PASS:** frame determinístico (noLoop+frameCount fixo), 5 distribuições distintas, offsets/elementos/color modes mudam render, stagger (5 modos ≠ off, amount 0 == off, curve muda), path desenhado via page.mouse muda render, 5 presets distintos, resetAll restaura brand, visibilidade da UI, 16 behavior buttons, PNG + PNG α + MP4 (param mudado no meio, ffmpeg decode clean), zero pageerrors.
 
 ---
 

@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-34 ferramentas ativas: 12 visual tools + 22 kinetic type modes.
+35 ferramentas ativas: 12 visual tools + 23 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
@@ -321,6 +321,7 @@ Ferramenta nova pedida pelo Daniel a partir de referências de rastro circular, 
 - **Still image:** Orbit/Spin/Push/Zoom cria variação temporal para imagem parada, porque Echo só aparece quando o layer muda no tempo.
 - **Observação técnica:** MP4/H.264 não preserva alpha portável. A ferramenta entrega PNG alpha agora; futuro possível: sequência PNG alpha, WebM VP9 alpha ou mask tracking/optical flow.
 - **Status:** ✅ Rebuild implementado (2026-06-23) — `rastro.html`, card no index, `_backTargets` atualizado, `test-rastro.mjs` PASS (source composite, Count/Decay, scale, drag/pull history, operadores, drawn mask alpha, motion matte, Still Motion, behaviors, PNG alpha, MP4), incluído no `test-rec-sweep.mjs` com preset `sports`.
+- **Perf fix (2026-07-01):** regressão do V5 fullscreen (20.8fps/31 stutters na gravação) corrigida — echo accumulator half-res (exato pra source-over), canvas pool no history, willReadFrequently removido do mainCtx, loop 30fps. Sweep: 30fps cravados, 0 stutters. Bônus: bug do motion matte opaco (premultiply no prev) corrigido — 13/13 no test-rastro.
 
 ### FASE 9 — CAVALRY MODE (animação fluida e intuitiva, aprovado pelo Daniel 2026-06-12)
 
@@ -348,7 +349,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Offset por índice: rotação, escala, cor (gradiente entre 2 cores), opacity
 - Combina com Behaviors (9.1) + Stagger (9.2) → animação em cascata estilo Cavalry
 - Export MP4/PNG padrão
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-01) — duplicator.html (p5 2D, TipoUI, categoria Composition). 8 elementos (char cycle/word/circle/ring/square/triangle/star/plus), 5 distribuições (grid/circle/spiral/line/drawn path com resample por arc-length), Per-Copy Offset (rotate step, scale start→end, fade end), Color Mode (gradient A→B/alternate/single), animação wave (pulse/twist/drift/speed) com fase por TipoStagger (UI padrão Mode/Amount/Curve), Align to path, Angle global (animável via behavior = spin). 9 presets (ring/galaxy/tunnel/wave/confetti/orbit/snake/vortex/pride). Default brand: grid 7×5 teal→gold, stagger center. test-duplicator.mjs 22/22 PASS (inclui path desenhado via mouse drag, PNG α, MP4 ffmpeg clean).
 
 #### 9.4 — Mini-Timeline com keyframes + easing curves
 - GSAP já está no projeto — usar gsap.timeline() como engine

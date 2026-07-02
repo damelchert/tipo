@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260612-stg"></script>
+<script src="shared/ui.js?v=20260701-dup"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap {
@@ -268,7 +268,7 @@
 // Decay and Echo Operator.
 // ============================================================
 const mainCanvas = document.getElementById('mainCanvas');
-const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
+const mainCtx = mainCanvas.getContext('2d');
 const frameCanvas = document.createElement('canvas');
 const frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
 const layerCanvas = document.createElement('canvas');
@@ -276,9 +276,13 @@ const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
 const prevCanvas = document.createElement('canvas');
 const prevCtx = prevCanvas.getContext('2d', { willReadFrequently: true });
 const maskCanvas = document.createElement('canvas');
-const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+const maskCtx = maskCanvas.getContext('2d');
 const maskSoftCanvas = document.createElement('canvas');
-const maskSoftCtx = maskSoftCanvas.getContext('2d', { willReadFrequently: true });
+const maskSoftCtx = maskSoftCanvas.getContext('2d');
+// Half-res accumulator: echoes composite here first, then upscale to main in
+// one draw — 4x cheaper than 40+ full-canvas composites (exact for source-over ops)
+const echoAcc = document.createElement('canvas');
+const echoAccCtx = echoAcc.getContext('2d');
 
 let sourceImg = null;
 let sourceVideo = null;
@@ -287,6 +291,7 @@ let sourceType = null;
 let mediaUrl = null;
 let recorder = null;
 let history = [];
+let canvasPool = []; // recycled history frames — avoids one full-canvas allocation per frame
 let sampleClock = 0;
 let frameTick = 0;
 let lastEchoGap = 2;
@@ -364,10 +369,16 @@ function updateMaskStatus() {
 }
 
 function resetTemporal() {
-  history.forEach(c => { c.width = 1; c.height = 1; });
+  history.forEach(c => recycleCanvas(c));
   history = [];
   sampleClock = 0;
   prevReady = false;
+}
+
+function recycleCanvas(c) {
+  if (canvasPool.length < 8) { canvasPool.push(c); return; }
+  c.width = 1;
+  c.height = 1;
 }
 
 function setMediaUrl(url) {
@@ -660,7 +671,11 @@ function applyMotionMatte(w, h) {
     cd[i + 3] = Math.round(cd[i + 3] * a);
   }
   layerCtx.putImageData(current, 0, 0);
-  prevCtx.putImageData(current, 0, 0);
+  // Store the RAW frame as "previous" — putImageData of the matted pixels would
+  // zero their RGB via premultiplied alpha, making every static pixel diff as
+  // "moving" on the next frame (matte locks fully opaque)
+  prevCtx.clearRect(0, 0, w, h);
+  prevCtx.drawImage(frameCanvas, 0, 0);
 }
 
 function applyColorMatte(mode, w, h) {
@@ -724,10 +739,13 @@ function buildLayer() {
 }
 
 function cloneLayer() {
-  const c = document.createElement('canvas');
-  c.width = layerCanvas.width;
-  c.height = layerCanvas.height;
-  c.getContext('2d').drawImage(layerCanvas, 0, 0);
+  const c = canvasPool.pop() || document.createElement('canvas');
+  if (c.width !== layerCanvas.width) c.width = layerCanvas.width;
+  if (c.height !== layerCanvas.height) c.height = layerCanvas.height;
+  const cctx = c.getContext('2d');
+  cctx.globalCompositeOperation = 'copy'; // replaces old content incl. alpha — no clearRect needed
+  cctx.drawImage(layerCanvas, 0, 0);
+  cctx.globalCompositeOperation = 'source-over';
   return c;
 }
 
@@ -741,11 +759,7 @@ function sampleLayer() {
   if (sampleClock % gap !== 0 && history.length) return;
   history.unshift(cloneLayer());
   const max = val('count') + 1;
-  while (history.length > max) {
-    const old = history.pop();
-    old.width = 1;
-    old.height = 1;
-  }
+  while (history.length > max) recycleCanvas(history.pop());
 }
 
 function blendMode(op) {
@@ -774,9 +788,27 @@ function drawEchoes(reverseOrder = false) {
   const hasTransform = echoRot !== 0 || echoSc !== 1 || echoSX !== 0 || echoSY !== 0;
   const w = mainCanvas.width;
   const h = mainCanvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
   const ordered = reverseOrder ? [...list].reverse() : list;
+  if (!ordered.length) return;
+
+  // Source-over stacking is associative: composite the whole echo stack into a
+  // half-res accumulator, then upscale to main in ONE draw (perf: 40 full-res
+  // composites → 40 quarter-cost composites + 1). Non-over blend ops (add,
+  // screen, max, min) interact with the background per echo — keep direct path.
+  const useAcc = blendMode(op) === 'source-over';
+  const accScale = 0.5;
+  let ctx = mainCtx;
+  let sc = 1;
+  if (useAcc) {
+    const aw = Math.max(2, Math.round(w * accScale));
+    const ah = Math.max(2, Math.round(h * accScale));
+    if (echoAcc.width !== aw || echoAcc.height !== ah) { echoAcc.width = aw; echoAcc.height = ah; }
+    else echoAccCtx.clearRect(0, 0, aw, ah);
+    ctx = echoAccCtx;
+    sc = aw / w;
+  }
+  const cx = w / 2 * sc;
+  const cy = h / 2 * sc;
 
   for (let j = ordered.length - 1; j >= 0; j--) {
     const actualIndex = reverseOrder ? j : ordered.length - 1 - j;
@@ -787,10 +819,10 @@ function drawEchoes(reverseOrder = false) {
     alpha = clamp(alpha * exposure, 0, 1);
     if (alpha <= 0.003) continue;
 
-    mainCtx.save();
-    mainCtx.globalAlpha = alpha;
-    mainCtx.globalCompositeOperation = blendMode(op);
-    if (blur > 0) mainCtx.filter = 'blur(' + (blur * ((age + 1) / Math.max(1, ordered.length))).toFixed(2) + 'px)';
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = useAcc ? 'source-over' : blendMode(op);
+    if (blur > 0) ctx.filter = 'blur(' + (blur * sc * ((age + 1) / Math.max(1, ordered.length))).toFixed(2) + 'px)';
 
     if (hasTransform) {
       // Cumulative transform per echo: each copy is further rotated/scaled/shifted
@@ -799,13 +831,22 @@ function drawEchoes(reverseOrder = false) {
       const totalScale = Math.pow(echoSc, n);
       const totalSX = echoSX * n;
       const totalSY = echoSY * n;
-      mainCtx.translate(cx + totalSX, cy + totalSY);
-      mainCtx.rotate(totalRot);
-      mainCtx.scale(totalScale, totalScale);
-      mainCtx.translate(-cx, -cy);
+      ctx.translate(cx + totalSX * sc, cy + totalSY * sc);
+      ctx.rotate(totalRot);
+      ctx.scale(totalScale, totalScale);
+      ctx.translate(-cx, -cy);
     }
 
-    mainCtx.drawImage(ordered[j], 0, 0);
+    ctx.drawImage(ordered[j], 0, 0, w * sc, h * sc);
+    ctx.restore();
+  }
+
+  if (useAcc) {
+    mainCtx.save();
+    mainCtx.globalAlpha = 1;
+    mainCtx.globalCompositeOperation = 'source-over';
+    mainCtx.imageSmoothingEnabled = true;
+    mainCtx.drawImage(echoAcc, 0, 0, w, h);
     mainCtx.restore();
   }
 }
@@ -883,9 +924,14 @@ function render(now = performance.now()) {
   return mainCanvas;
 }
 
+let lastRenderAt = 0;
 function animate(now) {
-  render(now);
   requestAnimationFrame(animate);
+  // ~30fps cap (matches the MP4 target): echo sampling stays consistent and
+  // the encoder timer gets main-thread time during recording
+  if (now - lastRenderAt < 31) return;
+  lastRenderAt = now;
+  render(now);
 }
 
 function setMaskFromPoints(points) {
