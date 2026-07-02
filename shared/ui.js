@@ -965,11 +965,388 @@ const TipoBehavior = {
   },
 };
 
+/* ============================================================
+   TIPÓ — Mini-Timeline (Cavalry Mode 9.4)
+   Keyframe any slider over time: open the timeline bar, move the
+   playhead, drag a slider — a keyframe is recorded at that time
+   (AE-style auto-key). Per-segment easing (TipoEase), scrub,
+   play/pause/loop, configurable duration, and "REC" exports an
+   MP4 of exactly one pass through the timeline.
+   Playback dispatches synthetic 'input' events, so every tool
+   reacts as if the user were dragging (same contract as
+   TipoBehavior). Keyframed playback pauses behaviors.
+   ============================================================ */
+
+const TipoTimeline = {
+  open: false,
+  playing: false,
+  loop: true,
+  duration: 4,
+  time: 0,
+  tracks: new Map(), // sliderId -> { keys: [{t, v, ease, dir}] } (keys sorted by t)
+  selected: null,    // { id, i }
+  _raf: null,
+  _last: 0,
+  _bar: null,
+  _btn: null,
+  _recording: false,
+  _scrubbing: false,
+  _css: false,
+
+  init() {
+    // Only on tool pages (all of them have an export/record button)
+    if (!document.getElementById('recBtn') && !document.getElementById('recordBtn')) return;
+    if (this._btn) return;
+    this._injectCSS();
+    const b = document.createElement('button');
+    b.className = 'tipo-tl-toggle';
+    b.title = 'Timeline — keyframe any slider';
+    b.textContent = '⏱';
+    b.addEventListener('click', () => this.toggleOpen());
+    document.body.appendChild(b);
+    this._btn = b;
+
+    // AE-style auto-key: a REAL slider drag while the bar is open records
+    // a keyframe at the playhead (synthetic events from behaviors/playback
+    // are not trusted, so they never feed back into keys)
+    document.addEventListener('input', (e) => {
+      if (!this.open || !e.isTrusted) return;
+      const el = e.target;
+      if (!el.matches || !el.matches('.range-row input[type="range"]')) return;
+      if (el.dataset.notl !== undefined || el.closest('#tipoTL')) return;
+      if (!el.id) return;
+      this.upsertKey(el.id, this.time, Number(el.value));
+    });
+  },
+
+  _injectCSS() {
+    if (this._css) return;
+    this._css = true;
+    const s = document.createElement('style');
+    s.textContent = `
+.tipo-tl-toggle { position:fixed; bottom:14px; right:14px; z-index:9000; width:36px; height:36px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616); color:var(--text-3,#bbb); font-size:16px; cursor:pointer; }
+.tipo-tl-toggle:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+#tipoTL { position:fixed; bottom:14px; right:14px; z-index:9001; width:min(760px, calc(100vw - 28px)); background:var(--bg-1,#161616); border:1px solid var(--border-2,#3a3a3a); border-radius:8px; padding:10px 12px; box-shadow:0 8px 30px rgba(0,0,0,.4); font-family:var(--font-ui,'IBM Plex Mono',monospace); display:none; }
+#tipoTL.open { display:block; }
+.tl-head { display:flex; align-items:center; gap:8px; }
+.tl-head button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-3,#bbb); font-size:11px; padding:3px 8px; border-radius:4px; cursor:pointer; font-family:inherit; }
+.tl-head button:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+.tl-head button.on { background:var(--accent,#2A8A7A); border-color:var(--accent,#2A8A7A); color:var(--bg-0,#0a0a0a); }
+#tlRec.armed { border-color:var(--red,#CC4840); color:var(--red,#CC4840); }
+#tlDur { width:44px; background:var(--bg-2,#1e1e1e); color:var(--text-1,#e0e0e0); border:1px solid var(--border-2,#3a3a3a); border-radius:4px; font-size:11px; padding:3px 4px; font-family:inherit; }
+#tlRuler { flex:1; height:24px; position:relative; background:var(--bg-2,#1e1e1e); border:1px solid var(--border-2,#3a3a3a); border-radius:4px; cursor:crosshair; overflow:hidden; }
+#tlPlayhead { position:absolute; top:0; bottom:0; width:2px; background:var(--accent,#2A8A7A); pointer-events:none; }
+#tlTime { font-size:10px; color:var(--text-4,#999); min-width:64px; text-align:right; }
+#tlTracks { margin-top:8px; max-height:132px; overflow-y:auto; }
+.tl-track { display:flex; align-items:center; gap:8px; height:22px; }
+.tl-track-label { width:110px; font-size:9px; letter-spacing:.5px; text-transform:uppercase; color:var(--text-4,#999); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:none; }
+.tl-lane { flex:1; height:14px; position:relative; background:var(--bg-2,#1e1e1e); border-radius:3px; }
+.tl-key { position:absolute; top:50%; width:9px; height:9px; background:var(--accent-warm,#D4A040); transform:translate(-50%,-50%) rotate(45deg); cursor:ew-resize; border:1px solid var(--bg-0,#0a0a0a); }
+.tl-key.sel { background:var(--accent,#2A8A7A); outline:2px solid var(--accent,#2A8A7A); }
+.tl-foot { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.tl-foot select { background:var(--bg-2,#1e1e1e); color:var(--text-1,#e0e0e0); border:1px solid var(--border-2,#3a3a3a); border-radius:4px; font-size:10px; padding:2px 4px; font-family:inherit; }
+.tl-foot button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-4,#999); font-size:10px; padding:2px 8px; border-radius:4px; cursor:pointer; font-family:inherit; }
+.tl-foot button:hover { border-color:var(--red,#CC4840); color:var(--red,#CC4840); }
+.tl-hint { font-size:9px; color:var(--text-5,#777); margin-top:6px; letter-spacing:.4px; }
+`;
+    document.head.appendChild(s);
+  },
+
+  toggleOpen() {
+    this._buildBar();
+    this.open = !this.open;
+    this._bar.classList.toggle('open', this.open);
+    this._btn.style.display = this.open ? 'none' : '';
+    if (!this.open) this.pause();
+  },
+
+  _buildBar() {
+    if (this._bar) return;
+    const bar = document.createElement('div');
+    bar.id = 'tipoTL';
+    bar.innerHTML =
+      '<div class="tl-head">' +
+      '<button id="tlPlay" title="Play/pause">▶</button>' +
+      '<button id="tlLoop" class="on" title="Loop">⟲</button>' +
+      '<input id="tlDur" type="number" min="1" max="60" step="0.5" value="4" data-notl title="Duration (s)">' +
+      '<div id="tlRuler"><div id="tlPlayhead"></div></div>' +
+      '<span id="tlTime">0.00 / 4.0s</span>' +
+      '<button id="tlRec" title="Record one pass as MP4">● REC</button>' +
+      '<button id="tlClose" title="Close">×</button>' +
+      '</div>' +
+      '<div id="tlTracks"></div>' +
+      '<div class="tl-foot" id="tlInspector" style="display:none;">' +
+      '<span style="font-size:9px;color:var(--text-4,#999);text-transform:uppercase;">Ease</span>' +
+      '<select id="tlEase" data-nobhv><option value="linear">Linear</option>' +
+      TipoEase._names.map(n => `<option value="${n}">${n[0].toUpperCase() + n.slice(1)}</option>`).join('') +
+      '</select>' +
+      '<select id="tlDir" data-nobhv><option value="inOut">In-Out</option><option value="in">In</option><option value="out">Out</option></select>' +
+      '<button id="tlDelKey">Delete key</button>' +
+      '<button id="tlClear">Clear all</button>' +
+      '</div>' +
+      '<div class="tl-hint">Move any slider to add a keyframe at the playhead · drag ◆ to retime · dblclick ◆ to delete</div>';
+    document.body.appendChild(bar);
+    this._bar = bar;
+
+    bar.querySelector('#tlPlay').addEventListener('click', () => this.playing ? this.pause() : this.play());
+    bar.querySelector('#tlLoop').addEventListener('click', (e) => {
+      this.loop = !this.loop;
+      e.target.classList.toggle('on', this.loop);
+    });
+    bar.querySelector('#tlDur').addEventListener('change', (e) => {
+      this.duration = Math.max(1, Math.min(60, Number(e.target.value) || 4));
+      e.target.value = this.duration;
+      if (this.time > this.duration) this.seek(this.duration);
+      this._redraw();
+    });
+    bar.querySelector('#tlClose').addEventListener('click', () => this.toggleOpen());
+    bar.querySelector('#tlRec').addEventListener('click', () => this.recPass());
+    bar.querySelector('#tlClear').addEventListener('click', () => {
+      this.tracks.clear();
+      this.selected = null;
+      this._redraw();
+    });
+    bar.querySelector('#tlDelKey').addEventListener('click', () => this._deleteSelected());
+    bar.querySelector('#tlEase').addEventListener('change', (e) => {
+      const k = this._selKey();
+      if (k) k.ease = e.target.value;
+    });
+    bar.querySelector('#tlDir').addEventListener('change', (e) => {
+      const k = this._selKey();
+      if (k) k.dir = e.target.value;
+    });
+
+    // Scrub on the ruler
+    const ruler = bar.querySelector('#tlRuler');
+    const scrubTo = (ev) => {
+      const r = ruler.getBoundingClientRect();
+      this.seek(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)) * this.duration);
+    };
+    ruler.addEventListener('pointerdown', (ev) => {
+      this.pause();
+      this._scrubbing = true;
+      ruler.setPointerCapture(ev.pointerId);
+      scrubTo(ev);
+    });
+    ruler.addEventListener('pointermove', (ev) => { if (this._scrubbing) scrubTo(ev); });
+    ruler.addEventListener('pointerup', () => { this._scrubbing = false; });
+    this._redraw();
+  },
+
+  // ---- keys ----
+
+  upsertKey(id, t, v) {
+    let tr = this.tracks.get(id);
+    if (!tr) { tr = { keys: [] }; this.tracks.set(id, tr); }
+    const EPS = 0.02;
+    const hit = tr.keys.find(k => Math.abs(k.t - t) < EPS);
+    if (hit) hit.v = v;
+    else {
+      tr.keys.push({ t, v, ease: 'linear', dir: 'inOut' });
+      tr.keys.sort((a, b) => a.t - b.t);
+    }
+    this._redraw();
+  },
+
+  _selKey() {
+    if (!this.selected) return null;
+    const tr = this.tracks.get(this.selected.id);
+    return tr ? tr.keys[this.selected.i] : null;
+  },
+
+  _deleteSelected() {
+    if (!this.selected) return;
+    const tr = this.tracks.get(this.selected.id);
+    if (tr) {
+      tr.keys.splice(this.selected.i, 1);
+      if (!tr.keys.length) this.tracks.delete(this.selected.id);
+    }
+    this.selected = null;
+    this._redraw();
+  },
+
+  _labelFor(id) {
+    const el = document.getElementById(id);
+    const row = el && el.closest('.range-row');
+    const lb = row && row.querySelector('.range-label');
+    return lb ? lb.textContent : id;
+  },
+
+  _redraw() {
+    if (!this._bar) return;
+    const wrap = this._bar.querySelector('#tlTracks');
+    wrap.innerHTML = '';
+    this.tracks.forEach((tr, id) => {
+      const row = document.createElement('div');
+      row.className = 'tl-track';
+      const label = document.createElement('div');
+      label.className = 'tl-track-label';
+      label.textContent = this._labelFor(id);
+      const lane = document.createElement('div');
+      lane.className = 'tl-lane';
+      tr.keys.forEach((k, i) => {
+        const d = document.createElement('div');
+        d.className = 'tl-key' + (this.selected && this.selected.id === id && this.selected.i === i ? ' sel' : '');
+        d.style.left = (Math.min(1, k.t / this.duration) * 100) + '%';
+        d.addEventListener('pointerdown', (ev) => {
+          ev.stopPropagation();
+          this.selected = { id, i };
+          this._syncInspector();
+          d.classList.add('sel');
+          d.setPointerCapture(ev.pointerId);
+          const move = (mv) => {
+            const r = lane.getBoundingClientRect();
+            k.t = Math.max(0, Math.min(1, (mv.clientX - r.left) / r.width)) * this.duration;
+            d.style.left = (k.t / this.duration * 100) + '%';
+          };
+          const up = () => {
+            d.removeEventListener('pointermove', move);
+            d.removeEventListener('pointerup', up);
+            tr.keys.sort((a, b) => a.t - b.t);
+            this.selected = { id, i: tr.keys.indexOf(k) };
+            this._redraw();
+          };
+          d.addEventListener('pointermove', move);
+          d.addEventListener('pointerup', up);
+        });
+        d.addEventListener('dblclick', () => {
+          this.selected = { id, i };
+          this._deleteSelected();
+        });
+        lane.appendChild(d);
+      });
+      row.appendChild(label);
+      row.appendChild(lane);
+      wrap.appendChild(row);
+    });
+    this._syncInspector();
+    this._syncPlayhead();
+  },
+
+  _syncInspector() {
+    if (!this._bar) return;
+    const insp = this._bar.querySelector('#tlInspector');
+    const k = this._selKey();
+    insp.style.display = this.tracks.size ? 'flex' : 'none';
+    this._bar.querySelector('#tlEase').value = k ? k.ease : 'linear';
+    this._bar.querySelector('#tlDir').value = k ? k.dir : 'inOut';
+    this._bar.querySelector('#tlDelKey').style.display = k ? '' : 'none';
+  },
+
+  _syncPlayhead() {
+    if (!this._bar) return;
+    this._bar.querySelector('#tlPlayhead').style.left = (Math.min(1, this.time / this.duration) * 100) + '%';
+    this._bar.querySelector('#tlTime').textContent = this.time.toFixed(2) + ' / ' + this.duration.toFixed(1) + 's';
+  },
+
+  // ---- playback ----
+
+  _valueAt(tr, t) {
+    const keys = tr.keys;
+    if (!keys.length) return null;
+    if (t <= keys[0].t) return keys[0].v;
+    if (t >= keys[keys.length - 1].t) return keys[keys.length - 1].v;
+    let i = 0;
+    while (i < keys.length - 1 && keys[i + 1].t < t) i++;
+    const a = keys[i], b = keys[i + 1];
+    const span = b.t - a.t || 1;
+    let u = (t - a.t) / span;
+    if (a.ease !== 'linear') u = TipoEase.byName(a.ease, a.dir || 'inOut')(u);
+    return a.v + (b.v - a.v) * u;
+  },
+
+  _apply(t) {
+    this.tracks.forEach((tr, id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let v = this._valueAt(tr, t);
+      if (v === null) return;
+      const min = Number(el.min || 0), max = Number(el.max || 100);
+      const step = Number(el.step) || 1;
+      v = Math.max(min, Math.min(max, v));
+      v = Math.round(v / step) * step;
+      if (step < 1) v = Number(v.toFixed(4));
+      if (Number(el.value) === v) return;
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  },
+
+  seek(t) {
+    this.time = Math.max(0, Math.min(this.duration, t));
+    this._apply(this.time);
+    this._syncPlayhead();
+  },
+
+  play() {
+    if (this.playing || !this.tracks.size) return;
+    this.playing = true;
+    this._last = 0;
+    if (typeof TipoBehavior !== 'undefined') TipoBehavior.paused = true;
+    if (this._bar) this._bar.querySelector('#tlPlay').textContent = '⏸';
+    const tick = (now) => {
+      if (!this.playing) return;
+      this._raf = requestAnimationFrame(tick);
+      if (this._last && now - this._last < 31) return; // ~30fps, matches MP4 target
+      const dt = this._last ? (now - this._last) / 1000 : 0;
+      this._last = now;
+      this.time += dt;
+      if (this.time >= this.duration) {
+        if (this._recording) { this.time = this.duration; this._finishRec(); return; }
+        if (this.loop) this.time = this.time % this.duration;
+        else { this.seek(this.duration); this.pause(); return; }
+      }
+      this._apply(this.time);
+      this._syncPlayhead();
+    };
+    this._raf = requestAnimationFrame(tick);
+  },
+
+  pause() {
+    this.playing = false;
+    if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
+    if (this._bar) this._bar.querySelector('#tlPlay').textContent = '▶';
+    if (typeof TipoBehavior !== 'undefined') {
+      TipoBehavior.resync();
+      TipoBehavior.paused = false;
+    }
+  },
+
+  // ---- MP4 of exactly one timeline pass ----
+
+  _recToggle() {
+    if (typeof window.toggleRec === 'function') return window.toggleRec();
+    const b = document.getElementById('recBtn') || document.getElementById('recordBtn');
+    if (b) b.click();
+  },
+
+  async recPass() {
+    if (this._recording || !this.tracks.size) return;
+    this.pause();
+    this.seek(0);
+    this._recording = true;
+    if (this._bar) this._bar.querySelector('#tlRec').classList.add('armed');
+    await this._recToggle(); // start recording
+    this.play();
+  },
+
+  async _finishRec() {
+    this._apply(this.duration);
+    this._syncPlayhead();
+    this.pause();
+    this._recording = false;
+    if (this._bar) this._bar.querySelector('#tlRec').classList.remove('armed');
+    await this._recToggle(); // stop + download
+    this.seek(0);
+  },
+};
+
 // Auto-init: inject "~" buttons once the DOM is ready, and re-scan when
 // tools create sliders dynamically (e.g. riso CMYK section, dithering panel)
 if (typeof document !== 'undefined') {
   const boot = () => {
     TipoBehavior.scan();
+    TipoTimeline.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;

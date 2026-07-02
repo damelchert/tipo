@@ -156,6 +156,21 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-02
+
+### 9.4 Mini-Timeline construído (TipoTimeline em shared/ui.js) — FASE 9 (CAVALRY MODE) COMPLETA
+- **Decisão:** sem GSAP (o plano sugeria, mas GSAP só existe no index) — interpolação própria + TipoEase, e o mesmo contrato do TipoBehavior: playback seta `el.value` + dispara `input` sintético, toda ferramenta reage como drag real. Zero mudança nas 35 tools — só cache-bust (`?v=20260702-tl`).
+- **Botão ⏱ flutuante** (bottom-right) em todas as 35 ferramentas; gate de init: página tem `#recBtn`/`#recordBtn` (index fica de fora).
+- **Auto-key AE-style:** com a barra aberta, mexer qualquer slider grava/atualiza keyframe no playhead. Filtro `e.isTrusted` — inputs sintéticos (behaviors, playback, preset morph) nunca viram key. Upsert com epsilon 0.02s.
+- **UI:** transport (▶/⏸, loop, duração 1-60s, ruler com playhead + scrub por pointer), tracks por slider (label da range-row), losangos gold arrastáveis (retime com re-sort), dblclick deleta, key selecionada em teal + inspector (Ease: Linear + 10 TipoEase × In/Out/In-Out — easing OUTGOING guardado no key da esquerda), Clear all. CSS auto-injetado com fallbacks de var (dark/light).
+- **Playback:** rAF ~30fps (bate com o MP4), interpolação com clamp nos extremos, snap ao step do slider (igual behavior), loop wrap ou stop. Pausa `TipoBehavior.paused` durante play/scrub, `resync()` ao pausar.
+- **REC (export do trecho exato):** seek(0) → toggleRec (usa `window.toggleRec` da página; fallback: click no recBtn/recordBtn — cobre dithering/overlay) → play sem loop → ao chegar na duração, para e finaliza. Validado: timeline de 2s → MP4 de 2.01s (real-time capture, não offline render — p5 anima por frameCount/tempo real, stepping offline é inviável global).
+- **test-timeline.mjs 22/22 PASS:** unit da interpolação (clamp/midpoint/easing), auto-key via teclado (ArrowRight = trusted), 2 keys em tempos distintos, scrub interpola com snap, synthetic não re-keya, play anima + loop wrap, behaviors pausam/resumem, inspector muda ease e o valor, REC MP4 duração certa + decode limpo, clear all, standalone (gradientmap), zero pageerrors. Pegadinhas de teste: valor aplicado snapa ao step (esperado!); ffprobe não existe na máquina — parsear `Duration:` do stderr do ffmpeg.
+- **Smoke 35/35 páginas:** zero pageerror, botão ⏱ presente em todas.
+- test-behaviors re-rodado OK (exit 0).
+
+---
+
 ## 2026-07-01
 
 ### Rastro — Perf fix da gravação + bug do motion matte (pós-V5)

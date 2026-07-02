@@ -356,7 +356,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Gravar keyframes de qualquer slider em pontos no tempo; curva de easing visual entre keyframes (TipoEase picker)
 - Scrub, play/pause, loop, duração configurável; export MP4 do trecho exato (frame-accurate)
 - O mais ambicioso da fase — fazer por último, quando 9.1-9.3 validarem a UX
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-02) — `TipoTimeline` em shared/ui.js (sem GSAP: interpolação própria + TipoEase, mesmo contrato de eventos do TipoBehavior). Botão ⏱ flutuante em TODAS as 35 ferramentas (gate: página tem recBtn/recordBtn). Auto-key AE-style: com a barra aberta, mexer qualquer slider grava keyframe no playhead (só eventos trusted — playback/behaviors não re-keyam). Tracks por slider com losangos arrastáveis (retime), dblclick deleta, inspector de easing por segmento (Linear + 10 curvas TipoEase × in/out/inOut). Transport: play/pause/loop/scrub/duração 1-60s. REC = grava exatamente 1 passada do timeline em MP4 (validado: timeline 2s → MP4 2.01s). Playback pausa TipoBehavior e resync no fim. test-timeline.mjs 22/22 PASS + smoke 35/35 páginas. FASE 9 COMPLETA.
 
 ### FASE 12 — Features Transversais (todas as ferramentas)
 
