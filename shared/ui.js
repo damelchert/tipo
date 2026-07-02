@@ -1024,9 +1024,9 @@ const TipoTimeline = {
     this._css = true;
     const s = document.createElement('style');
     s.textContent = `
-.tipo-tl-toggle { position:fixed; bottom:14px; right:14px; z-index:9000; width:36px; height:36px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616); color:var(--text-3,#bbb); font-size:16px; cursor:pointer; }
+.tipo-tl-toggle { position:fixed; bottom:64px; right:14px; z-index:9000; width:40px; height:40px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616); color:var(--text-3,#bbb); font-size:17px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.25); }
 .tipo-tl-toggle:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
-#tipoTL { position:fixed; bottom:14px; right:14px; z-index:9001; width:min(760px, calc(100vw - 28px)); background:var(--bg-1,#161616); border:1px solid var(--border-2,#3a3a3a); border-radius:8px; padding:10px 12px; box-shadow:0 8px 30px rgba(0,0,0,.4); font-family:var(--font-ui,'IBM Plex Mono',monospace); display:none; }
+#tipoTL { position:fixed; bottom:64px; right:14px; z-index:9001; width:min(760px, calc(100vw - 28px)); background:var(--bg-1,#161616); border:1px solid var(--border-2,#3a3a3a); border-radius:8px; padding:10px 12px; box-shadow:0 8px 30px rgba(0,0,0,.4); font-family:var(--font-ui,'IBM Plex Mono',monospace); display:none; }
 #tipoTL.open { display:block; }
 .tl-head { display:flex; align-items:center; gap:8px; }
 .tl-head button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-3,#bbb); font-size:11px; padding:3px 8px; border-radius:4px; cursor:pointer; font-family:inherit; }

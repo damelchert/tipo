@@ -169,6 +169,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **Smoke 35/35 páginas:** zero pageerror, botão ⏱ presente em todas.
 - test-behaviors re-rodado OK (exit 0).
 
+### Timeline — 2 bugs de UX achados com drive de mouse REAL (feedback do Daniel: "não senti que tá funcionando bem")
+Teste com Playwright dirigindo mouse de verdade (não keyboard/evaluate) revelou o que os testes sintéticos não pegavam:
+1. **Duplicator em modo path**: os handlers `mousePressed`/`mouseDragged` do p5 são GLOBAIS da janela — scrubar a régua ou arrastar um losango da timeline (que flutua sobre o canvas) DESENHAVA um path no canvas. Fix: guard `onCanvasEl(e)` (só reage se `e.target` é o CANVAS). Regra pra futuras tools p5 com interação de mouse: sempre checar `e.target.tagName === 'CANVAS'` nos handlers globais — UI flutuante (timeline, popover de behavior) fica sobre o canvas.
+2. **Toast cobria o botão ⏱**: toasts ficam bottom-right (18px) e o botão estava em bottom 14px — TODA exportação escondia o botão por 2.5s. Fix: botão e barra movidos pra `bottom: 64px` (+ botão 40px com sombra).
+- Validação: drive de mouse real no coil (abrir barra, drag de slider cria key, scrub, retime de losango, play anima), duplicator (scrub/diamond NÃO desenham path; desenho legítimo no canvas continua), toast clear em rastro/riso/coil. test-timeline + test-duplicator ALL PASS. Cache-bust `?v=20260702-tl2`.
+- **Lição de teste:** testes via `evaluate`/keyboard não pegam conflitos de event-target — pra UI flutuante, dirigir mouse REAL por cima das regiões de conflito.
+
 ---
 
 ## 2026-07-01
