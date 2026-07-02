@@ -184,6 +184,11 @@ Teste com Playwright dirigindo mouse de verdade (não keyboard/evaluate) revelou
 - Cache-bust `?v=20260702-font1`.
 - **Nota pra Fase 12 restante:** 12.2 GIF export, 12.3 share URL, 12.4 fullscreen.
 
+### Timeline — fluxo guiado (Daniel: "não tô achando que os keyframes funcionam")
+- **Diagnóstico via /verificar (mouse real):** a mecânica funcionava (fluxo completo OK em cylinder/dithering/datamosh/duplicator/coil), mas o CENÁRIO NOVATO reproduziu o problema: abrir ⏱ → mexer slider (key em t=0) → play → **nada anima** (1 keyframe = valor constante) e nada explicava. Bug de UX, não de código.
+- **Fix (TipoTimeline):** (1) **hint dinâmica por estado** — sem keys: "Move any slider to record a keyframe"; 1 key: "◆ recorded! Now drag the playhead to another time and move the slider again — 2+ keyframes make an animation" (classe .warn, âmbar bold); 2+ keys: dicas de play/REC. (2) **Flash ao gravar key** — losango recém-criado anima scale 2.4→1 com glow + régua pisca âmbar (retrigger via `void el.offsetWidth`). (3) **Toasts de orientação** — play/REC sem keys: "move a slider with the timeline open"; play com 1 key só: "Add a 2nd keyframe at another time to animate" (toca mesmo assim, playhead é feedback).
+- test-timeline.mjs estendido pra 26 checks (hints por estado + toast de single-key) — ALL PASS. Cache-bust `?v=20260702-kf1`.
+
 ---
 
 ## 2026-07-01

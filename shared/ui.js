@@ -1158,7 +1158,12 @@ const TipoTimeline = {
 .tl-foot select { background:var(--bg-2,#1e1e1e); color:var(--text-1,#e0e0e0); border:1px solid var(--border-2,#3a3a3a); border-radius:4px; font-size:10px; padding:2px 4px; font-family:inherit; }
 .tl-foot button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-4,#999); font-size:10px; padding:2px 8px; border-radius:4px; cursor:pointer; font-family:inherit; }
 .tl-foot button:hover { border-color:var(--red,#CC4840); color:var(--red,#CC4840); }
-.tl-hint { font-size:9px; color:var(--text-5,#777); margin-top:6px; letter-spacing:.4px; }
+.tl-hint { font-size:10px; color:var(--text-5,#777); margin-top:7px; letter-spacing:.4px; }
+.tl-hint.warn { color:var(--accent-warm,#D4A040); font-weight:700; }
+.tl-key.flash { animation: tl-key-flash .7s ease-out; }
+@keyframes tl-key-flash { 0% { transform:translate(-50%,-50%) rotate(45deg) scale(2.4); box-shadow:0 0 12px var(--accent-warm,#D4A040); } 100% { transform:translate(-50%,-50%) rotate(45deg) scale(1); } }
+#tlRuler.flash { animation: tl-ruler-flash .5s ease-out; }
+@keyframes tl-ruler-flash { 0% { border-color:var(--accent-warm,#D4A040); box-shadow:0 0 8px var(--accent-warm,#D4A040); } 100% { border-color:var(--border-2,#3a3a3a); } }
 `;
     document.head.appendChild(s);
   },
@@ -1195,7 +1200,7 @@ const TipoTimeline = {
       '<button id="tlDelKey">Delete key</button>' +
       '<button id="tlClear">Clear all</button>' +
       '</div>' +
-      '<div class="tl-hint">Move any slider to add a keyframe at the playhead · drag ◆ to retime · dblclick ◆ to delete</div>';
+      '<div class="tl-hint" id="tlHint"></div>';
     document.body.appendChild(bar);
     this._bar = bar;
 
@@ -1244,6 +1249,10 @@ const TipoTimeline = {
     this._redraw();
   },
 
+  _toast(msg) {
+    if (typeof TipoUI !== 'undefined' && TipoUI.showToast) TipoUI.showToast(msg);
+  },
+
   // ---- keys ----
 
   upsertKey(id, t, v) {
@@ -1251,12 +1260,14 @@ const TipoTimeline = {
     if (!tr) { tr = { keys: [] }; this.tracks.set(id, tr); }
     const EPS = 0.02;
     const hit = tr.keys.find(k => Math.abs(k.t - t) < EPS);
+    let isNew = false;
     if (hit) hit.v = v;
     else {
+      isNew = true;
       tr.keys.push({ t, v, ease: 'linear', dir: 'inOut' });
       tr.keys.sort((a, b) => a.t - b.t);
     }
-    this._redraw();
+    this._redraw(isNew ? { id, t } : null);
   },
 
   _selKey() {
@@ -1283,7 +1294,7 @@ const TipoTimeline = {
     return lb ? lb.textContent : id;
   },
 
-  _redraw() {
+  _redraw(flashKey = null) {
     if (!this._bar) return;
     const wrap = this._bar.querySelector('#tlTracks');
     wrap.innerHTML = '';
@@ -1298,6 +1309,7 @@ const TipoTimeline = {
       tr.keys.forEach((k, i) => {
         const d = document.createElement('div');
         d.className = 'tl-key' + (this.selected && this.selected.id === id && this.selected.i === i ? ' sel' : '');
+        if (flashKey && flashKey.id === id && Math.abs(k.t - flashKey.t) < 0.02) d.classList.add('flash');
         d.style.left = (Math.min(1, k.t / this.duration) * 100) + '%';
         d.addEventListener('pointerdown', (ev) => {
           ev.stopPropagation();
@@ -1330,8 +1342,37 @@ const TipoTimeline = {
       row.appendChild(lane);
       wrap.appendChild(row);
     });
+    if (flashKey) {
+      const ruler = this._bar.querySelector('#tlRuler');
+      ruler.classList.remove('flash');
+      void ruler.offsetWidth; // restart the animation
+      ruler.classList.add('flash');
+    }
     this._syncInspector();
     this._syncPlayhead();
+    this._syncHint();
+  },
+
+  /** True when at least one track has enough keys to animate */
+  _canAnimate() {
+    for (const tr of this.tracks.values()) if (tr.keys.length >= 2) return true;
+    return false;
+  },
+
+  /** Guided hint: tells the user the exact next step */
+  _syncHint() {
+    if (!this._bar) return;
+    const h = this._bar.querySelector('#tlHint');
+    if (!this.tracks.size) {
+      h.textContent = 'Move any slider to record a keyframe at the playhead';
+      h.classList.remove('warn');
+    } else if (!this._canAnimate()) {
+      h.textContent = '◆ recorded! Now drag the playhead to another time and move the slider again — 2+ keyframes make an animation';
+      h.classList.add('warn');
+    } else {
+      h.textContent = '▶ play · ● REC exports one pass as MP4 · drag ◆ to retime · dblclick ◆ to delete';
+      h.classList.remove('warn');
+    }
   },
 
   _syncInspector() {
@@ -1390,7 +1431,14 @@ const TipoTimeline = {
   },
 
   play() {
-    if (this.playing || !this.tracks.size) return;
+    if (this.playing) return;
+    if (!this.tracks.size) {
+      this._toast('No keyframes yet — move a slider with the timeline open');
+      return;
+    }
+    if (!this._canAnimate()) {
+      this._toast('Add a 2nd keyframe at another time to animate');
+    }
     this.playing = true;
     this._last = 0;
     if (typeof TipoBehavior !== 'undefined') TipoBehavior.paused = true;
@@ -1432,7 +1480,11 @@ const TipoTimeline = {
   },
 
   async recPass() {
-    if (this._recording || !this.tracks.size) return;
+    if (this._recording) return;
+    if (!this.tracks.size) {
+      this._toast('No keyframes yet — move a slider with the timeline open');
+      return;
+    }
     this.pause();
     this.seek(0);
     this._recording = true;

@@ -66,7 +66,7 @@ check('unit linear midpoint', unit.mid);
 check('unit easing changes value', unit.eased && unit.easedDiffers);
 
 // ============================================================
-// UI: toggle button + bar
+// UI: toggle button + bar + guided hint states
 // ============================================================
 const hasBtn = await page.evaluate(() => !!document.querySelector('.tipo-tl-toggle'));
 check('timeline toggle injected', hasBtn);
@@ -74,6 +74,9 @@ check('timeline toggle injected', hasBtn);
 await page.evaluate(() => TipoTimeline.toggleOpen());
 const barOpen = await page.evaluate(() => document.getElementById('tipoTL').classList.contains('open') && TipoTimeline.open);
 check('bar opens', barOpen);
+
+const hint0 = await page.evaluate(() => document.getElementById('tlHint').textContent);
+check('hint (no keys) asks for a slider move', /move any slider/i.test(hint0), `"${hint0}"`);
 
 // ============================================================
 // Auto-key: trusted slider input records a keyframe at the playhead
@@ -86,6 +89,21 @@ const key1 = await page.evaluate(() => {
   return tr ? { n: tr.keys.length, t: tr.keys[0].t, v: tr.keys[0].v } : null;
 });
 check('auto-key on trusted input', key1 && key1.n === 1 && key1.t === 0, JSON.stringify(key1));
+
+const guided = await page.evaluate(() => ({
+  hint: document.getElementById('tlHint').textContent,
+  warn: document.getElementById('tlHint').classList.contains('warn'),
+}));
+check('hint (1 key) guides to 2nd keyframe', /playhead/i.test(guided.hint) && guided.warn, `"${guided.hint}"`);
+
+// play with a single key → toast explains instead of silently doing nothing
+const singleToast = await page.evaluate(() => {
+  TipoTimeline.play();
+  const msg = document.getElementById('toast').textContent;
+  TipoTimeline.pause();
+  return msg;
+});
+check('single-key play shows guidance toast', /2nd keyframe/i.test(singleToast), `"${singleToast}"`);
 
 await page.evaluate(() => TipoTimeline.seek(3));
 for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowLeft');
