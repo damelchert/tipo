@@ -316,6 +316,7 @@ const TipoUI = {
     layers: '2d', danger: '2d', string: '2d',
     // Kinetic — Composition
     badge: 'composition', clutter: 'composition', construct: 'composition',
+    duplicator: 'composition',
     // Kinetic — Animation
     snap: 'animation', flash: 'animation', pow: 'animation', crash: 'animation',
     crashclock: 'animation', vessel: 'animation', shine: 'animation', boost: 'animation'

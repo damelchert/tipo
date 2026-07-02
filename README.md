@@ -7,14 +7,14 @@ Suite of generative visual tools for motion type, kinetic typography, and dither
 ### Dithering
 Transform images and videos into visual art using custom SVGs in place of pixels. 7-level shadow-to-highlight mapping with 60+ built-in shapes.
 
-### Kinetic Type (22 modes)
+### Kinetic Type (23 modes)
 Real-time animated/kinetic typography. Type text and watch it transform:
 
 | Category | Modes |
 |----------|-------|
 | **3D** | Cylinder, Field, Stripes, Coil, Flag, Cascade, Ribbon, Morisawa |
 | **2D** | Layers, Danger, String |
-| **Composition** | Badge, Clutter, Construct |
+| **Composition** | Badge, Clutter, Construct, Duplicator |
 | **Animation** | Snap, Flash, Pow, Crash, Crash Clock, Vessel, Shine, Boost |
 
 Each mode has sliders, color pickers, and presets.

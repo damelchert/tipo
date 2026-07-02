@@ -306,6 +306,7 @@ body { overflow: hidden; }
 @keyframes prev-badge { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes prev-clutter { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3px,-3px) scale(1.2); } }
 @keyframes prev-construct { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.7); opacity: 0.5; } }
+@keyframes prev-dup { 0%,100% { transform: scale(0.5); opacity: 0.4; } 50% { transform: scale(1.15); opacity: 1; } }
 @keyframes prev-snap { 0% { transform: translateY(20px) scaleX(0.3); opacity: 0; } 30% { transform: translateY(0) scaleX(1); opacity: 1; } 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-15px); opacity: 0; } }
 @keyframes prev-flash { 0% { transform: scale(0.5); opacity: 0; } 20% { transform: scale(1.2); opacity: 1; } 40% { transform: scale(1) rotate(0deg); } 60% { transform: scale(1) rotate(180deg); } 80% { transform: scale(1.3); } 100% { transform: scale(0.5); opacity: 0; } }
 @keyframes prev-pow { 0%,40% { transform: scale(1); } 50% { transform: scale(2); opacity: 1; } 70% { transform: scale(3); opacity: 0; letter-spacing: 10px; } 100% { transform: scale(0); opacity: 0; } }
@@ -354,7 +355,7 @@ body { overflow: hidden; }
             </video>
           </div>
           <div class="tipo-split-label split-text" data-text="Kinetic Type">Kinetic Type</div>
-          <div class="tipo-split-sub split-sub">22 modes &bull; 3D &bull; Animation</div>
+          <div class="tipo-split-sub split-sub">23 modes &bull; 3D &bull; Animation</div>
         </div>
       </div>
     </div>
@@ -542,6 +543,8 @@ const MODES = {
       preview: '<div style="position:relative;width:40px;height:40px"><span style="position:absolute;font-size:10px;font-weight:700;animation:prev-clutter 2s ease infinite;top:5px;left:5px">T</span><span style="position:absolute;font-size:8px;animation:prev-clutter 2s ease infinite .3s;top:20px;left:25px">I</span><span style="position:absolute;font-size:12px;animation:prev-clutter 2s ease infinite .6s;top:10px;left:30px">P</span></div>' },
     { id: 'construct', name: 'Construct', desc: 'Modular text grids. Cloud, scribble, zigzag, gradient, box, matrix.', meta: '7 presets · 6 sub-modes',
       preview: '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:3px"><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .2s"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .4s"></div><div style="width:14px;height:14px;border:1px solid var(--text-4);animation:prev-construct 2s ease infinite .6s"></div></div>' },
+    { id: 'duplicator', name: 'Duplicator', desc: 'Cavalry-style cloner. Grid, circle, spiral, line & drawn path — per-copy rotate, scale, color, fade.', meta: '9 presets · stagger + behaviors',
+      preview: '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">' + [0,1,2,3,4,5,6,7,8].map(i => '<div style="width:9px;height:9px;border-radius:50%;background:var(--text-4);animation:prev-dup 1.8s ease infinite ' + (i * 0.15).toFixed(2) + 's"></div>').join('') + '</div>' },
   ],
   'animation': [
     { id: 'snap', name: 'Snap', desc: 'Elastic snap with staggered letter choreography.', meta: '5 presets · 4 controls',

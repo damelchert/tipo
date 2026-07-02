@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Duplicator</title>
+<link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260701-dup"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasContainer { flex: 1; position: relative; overflow: hidden; }
+  #canvasContainer canvas { display: block; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+  .path-hint { font-size: 10px; color: var(--accent); padding: 4px 0; display: none; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Duplicator <span style="display:flex;gap:8px;"><a href="index.html#composition" class="back-link">KINETIC TYPE</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('ring')">Ring</span>
+      <span class="preset-chip" onclick="applyPreset('galaxy')">Galaxy</span>
+      <span class="preset-chip" onclick="applyPreset('tunnel')">Tunnel</span>
+      <span class="preset-chip" onclick="applyPreset('wave')">Wave</span>
+      <span class="preset-chip" onclick="applyPreset('confetti')">Confetti</span>
+      <span class="preset-chip" onclick="applyPreset('orbit')">Orbit</span>
+      <span class="preset-chip" onclick="applyPreset('snake')">Snake</span>
+      <span class="preset-chip" onclick="applyPreset('vortex')">Vortex</span>
+      <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Element</div>
+    <div class="range-row"><span class="range-label">Type</span><select id="elType" style="flex:1;">
+      <option value="char">Text (cycle chars)</option>
+      <option value="word">Text (whole word)</option>
+      <option value="circle">Circle</option>
+      <option value="ring">Ring</option>
+      <option value="square">Square</option>
+      <option value="triangle">Triangle</option>
+      <option value="star">Star</option>
+      <option value="plus">Plus</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Size</span><input type="range" id="elSize" min="4" max="200" value="76"><span class="range-value" id="elSizeVal">76</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Distribution</div>
+    <div class="range-row"><span class="range-label">Mode</span><select id="distMode" style="flex:1;" onchange="updateDistUI()">
+      <option value="grid">Grid</option>
+      <option value="circle">Circle</option>
+      <option value="spiral">Spiral</option>
+      <option value="line">Line</option>
+      <option value="path">Drawn Path</option>
+    </select></div>
+    <div class="path-hint" id="pathHint">&#9998; Draw directly on the canvas</div>
+    <div class="range-row" id="rowCopies" style="display:none;"><span class="range-label">Copies</span><input type="range" id="copies" min="2" max="300" value="60"><span class="range-value" id="copiesVal">60</span></div>
+    <div class="range-row" id="rowCols"><span class="range-label">Columns</span><input type="range" id="gCols" min="1" max="24" value="7"><span class="range-value" id="gColsVal">7</span></div>
+    <div class="range-row" id="rowRows"><span class="range-label">Rows</span><input type="range" id="gRows" min="1" max="24" value="5"><span class="range-value" id="gRowsVal">5</span></div>
+    <div class="range-row" id="rowTurns" style="display:none;"><span class="range-label">Turns</span><input type="range" id="turns" min="1" max="12" value="5"><span class="range-value" id="turnsVal">5</span></div>
+    <div class="range-row"><span class="range-label">Spread</span><input type="range" id="spread" min="10" max="200" value="100"><span class="range-value" id="spreadVal">100</span></div>
+    <div class="range-row"><span class="range-label">Angle</span><input type="range" id="angle" min="0" max="360" value="0"><span class="range-value" id="angleVal">0</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="alignPath" checked> Align to path</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Per-Copy Offset</div>
+    <div class="range-row"><span class="range-label">Rotate Step</span><input type="range" id="rotStep" min="-45" max="45" value="0"><span class="range-value" id="rotStepVal">0</span></div>
+    <div class="range-row"><span class="range-label">Scale Start</span><input type="range" id="scaleStart" min="10" max="300" value="100"><span class="range-value" id="scaleStartVal">100</span></div>
+    <div class="range-row"><span class="range-label">Scale End</span><input type="range" id="scaleEnd" min="10" max="300" value="100"><span class="range-value" id="scaleEndVal">100</span></div>
+    <div class="range-row"><span class="range-label">Fade End</span><input type="range" id="opEnd" min="0" max="100" value="100"><span class="range-value" id="opEndVal">100</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Animation</div>
+    <div class="range-row"><span class="range-label">Pulse</span><input type="range" id="pulse" min="0" max="100" value="25"><span class="range-value" id="pulseVal">25</span></div>
+    <div class="range-row"><span class="range-label">Twist</span><input type="range" id="twist" min="0" max="90" value="0"><span class="range-value" id="twistVal">0</span></div>
+    <div class="range-row"><span class="range-label">Drift</span><input type="range" id="drift" min="0" max="100" value="0"><span class="range-value" id="driftVal">0</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="speed" min="0" max="10" value="2"><span class="range-value" id="speedVal">2</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Stagger</div>
+    <div class="range-row"><span class="range-label">Mode</span><select id="stgMode" style="flex:1;">
+      <option value="off">Off</option>
+      <option value="index">Index</option>
+      <option value="row">Row</option>
+      <option value="col">Column</option>
+      <option value="center" selected>Center</option>
+      <option value="random">Random</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="stgAmt" min="0" max="200" value="100"><span class="range-value" id="stgAmtVal">100</span></div>
+    <div class="range-row"><span class="range-label">Curve</span><select id="stgCurve" style="flex:1;">
+      <option value="linear">Linear</option>
+      <option value="inOut">Ease In-Out</option>
+      <option value="in">Ease In</option>
+      <option value="out">Ease Out</option>
+    </select></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="range-row"><span class="range-label">Mode</span><select id="colorMode" style="flex:1;">
+      <option value="gradient">Gradient A &#8594; B</option>
+      <option value="alternate">Alternate A / B</option>
+      <option value="single">Single A</option>
+    </select></div>
+    <div class="color-row"><input type="color" id="c1" value="#2A8A7A"><label>A</label>
+      <input type="color" id="c2" value="#D4A040"><label>B</label></div>
+    <div class="color-section-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#F8F5F0">
+      <button class="swap-btn" onclick="swapColors()" title="Swap color A with background">&#8646;</button>
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasContainer"></div>
+<div class="tipo-progress-overlay" id="exportProgress">
+  <div class="progress-box">
+    <div class="progress-title" id="progressTitle">Finalizing...</div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-info" id="progressInfo"></div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+let font, recorder;
+let prideMode = false;
+const prideColors = ['#e70000','#ff8c00','#ffef00','#00811f','#0044ff','#760089'];
+
+// Drawn path: normalized points {x,y} relative to canvas center, scaled by min(w,h)
+let customPath = null;
+let drawingPath = false;
+let rawPath = [];
+
+function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
+
+function setup() {
+  const c = createCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight);
+  c.parent('canvasContainer');
+  textFont(font);
+  textAlign(CENTER, CENTER);
+  pixelDensity(1);
+
+  TipoUI.init({ mode: 'duplicator' });
+  recorder = TipoUI.recorder;
+  updateDistUI();
+}
+
+function windowResized() { resizeCanvas(document.getElementById('canvasContainer').offsetWidth, document.getElementById('canvasContainer').offsetHeight); }
+
+function val(id) { return TipoUI.val(id); }
+function chk(id) { return TipoUI.chk(id); }
+function setVal(id, v) { TipoUI.setVal(id, v); }
+function sel(id) { return document.getElementById(id).value; }
+function setSel(id, v) { document.getElementById(id).value = v; if (id === 'distMode') updateDistUI(); }
+
+function updateDistUI() {
+  const m = sel('distMode');
+  document.getElementById('rowCopies').style.display = m === 'grid' ? 'none' : 'flex';
+  document.getElementById('rowCols').style.display = m === 'grid' ? 'flex' : 'none';
+  document.getElementById('rowRows').style.display = m === 'grid' ? 'flex' : 'none';
+  document.getElementById('rowTurns').style.display = m === 'spiral' ? 'flex' : 'none';
+  document.getElementById('pathHint').style.display = m === 'path' ? 'block' : 'none';
+}
+
+// ============================================================
+// PATH DRAWING (distribution = Drawn Path)
+// ============================================================
+function mouseInCanvas() { return mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= height; }
+
+function mousePressed() {
+  if (sel('distMode') !== 'path' || !mouseInCanvas()) return;
+  drawingPath = true;
+  rawPath = [{ x: mouseX, y: mouseY }];
+}
+function mouseDragged() {
+  if (!drawingPath) return;
+  const last = rawPath[rawPath.length - 1];
+  if (dist(mouseX, mouseY, last.x, last.y) > 4) rawPath.push({ x: mouseX, y: mouseY });
+}
+function mouseReleased() {
+  if (!drawingPath) return;
+  drawingPath = false;
+  if (rawPath.length > 3) {
+    const s = Math.min(width, height);
+    customPath = rawPath.map(p => ({ x: (p.x - width / 2) / s, y: (p.y - height / 2) / s }));
+  }
+  rawPath = [];
+}
+
+function defaultPath() {
+  // Gentle sine wave so Path mode never opens empty
+  const pts = [];
+  for (let i = 0; i <= 60; i++) {
+    const t = i / 60;
+    pts.push({ x: (t - 0.5) * 0.9, y: Math.sin(t * Math.PI * 3) * 0.16 });
+  }
+  return pts;
+}
+
+/** Resample a normalized polyline into n evenly-spaced points (pixel coords, center origin) */
+function samplePath(pts, n, scale) {
+  const s = Math.min(width, height) * scale;
+  const px = pts.map(p => ({ x: p.x * s, y: p.y * s }));
+  const cum = [0];
+  for (let i = 1; i < px.length; i++) cum.push(cum[i - 1] + Math.hypot(px[i].x - px[i - 1].x, px[i].y - px[i - 1].y));
+  const total = cum[cum.length - 1] || 1;
+  const out = [];
+  let seg = 1;
+  for (let k = 0; k < n; k++) {
+    const target = (n > 1 ? k / (n - 1) : 0.5) * total;
+    while (seg < px.length - 1 && cum[seg] < target) seg++;
+    const a = px[seg - 1], b = px[seg];
+    const span = cum[seg] - cum[seg - 1] || 1;
+    const f = (target - cum[seg - 1]) / span;
+    out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, tan: Math.atan2(b.y - a.y, b.x - a.x) });
+  }
+  return out;
+}
+
+// ============================================================
+// DISTRIBUTIONS — return [{x, y, tan, col, row, cols, rows}]
+// ============================================================
+function computeCopies() {
+  const m = sel('distMode');
+  const spreadF = val('spread') / 100;
+  const out = [];
+
+  if (m === 'grid') {
+    const cols = val('gCols'), rows = val('gRows');
+    const gw = width * 0.72 * spreadF, gh = height * 0.72 * spreadF;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        out.push({
+          x: cols > 1 ? (c / (cols - 1) - 0.5) * gw : 0,
+          y: rows > 1 ? (r / (rows - 1) - 0.5) * gh : 0,
+          tan: 0, col: c, row: r, cols, rows
+        });
+      }
+    }
+    return out;
+  }
+
+  const n = val('copies');
+  const R = Math.min(width, height) * 0.36 * spreadF;
+
+  if (m === 'circle') {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TWO_PI - HALF_PI;
+      out.push({ x: Math.cos(a) * R, y: Math.sin(a) * R, tan: a + HALF_PI, col: i, row: 0, cols: n, rows: 1 });
+    }
+  } else if (m === 'spiral') {
+    const turns = val('turns');
+    for (let i = 0; i < n; i++) {
+      const t = n > 1 ? i / (n - 1) : 0;
+      const a = t * turns * TWO_PI - HALF_PI;
+      const r = R * t;
+      out.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, tan: a + HALF_PI, col: i, row: 0, cols: n, rows: 1 });
+    }
+  } else if (m === 'line') {
+    const L = width * 0.8 * spreadF;
+    for (let i = 0; i < n; i++) {
+      const t = n > 1 ? i / (n - 1) : 0.5;
+      out.push({ x: (t - 0.5) * L, y: 0, tan: 0, col: i, row: 0, cols: n, rows: 1 });
+    }
+  } else { // path
+    const pts = customPath || defaultPath();
+    samplePath(pts, n, spreadF).forEach((p, i) => {
+      out.push({ x: p.x, y: p.y, tan: p.tan, col: i, row: 0, cols: n, rows: 1 });
+    });
+  }
+  return out;
+}
+
+// ============================================================
+// ELEMENT RENDERING
+// ============================================================
+function drawElement(type, ch, size) {
+  switch (type) {
+    case 'circle': ellipse(0, 0, size, size); break;
+    case 'square': rectMode(CENTER); rect(0, 0, size * 0.85, size * 0.85); break;
+    case 'triangle': {
+      const h = size * 0.866;
+      triangle(-size / 2, h / 3, size / 2, h / 3, 0, -h * 2 / 3);
+      break;
+    }
+    case 'star': {
+      beginShape();
+      for (let a = 0; a < 10; a++) {
+        const rr = a % 2 ? size * 0.24 : size * 0.52;
+        const an = -HALF_PI + a * PI / 5;
+        vertex(Math.cos(an) * rr, Math.sin(an) * rr);
+      }
+      endShape(CLOSE);
+      break;
+    }
+    case 'plus':
+      rectMode(CENTER);
+      rect(0, 0, size, size * 0.32);
+      rect(0, 0, size * 0.32, size);
+      break;
+    default: // char / word
+      textSize(size);
+      text(ch, 0, 0);
+  }
+}
+
+function draw() {
+  background(document.getElementById('bgColor').value);
+
+  const txt = document.getElementById('textInput').value || 'TIPÓ';
+  const elType = sel('elType');
+  const elSize = val('elSize');
+  const align = chk('alignPath');
+  const rotStep = radians(val('rotStep'));
+  const sStart = val('scaleStart') / 100, sEnd = val('scaleEnd') / 100;
+  const opEnd = val('opEnd');
+  const pulse = val('pulse') / 100, twist = radians(val('twist')), drift = val('drift');
+  const spd = val('speed');
+  const stgMode = sel('stgMode'), stgAmt = val('stgAmt'), stgCurve = sel('stgCurve');
+  const colorMode = sel('colorMode');
+  const cA = color(document.getElementById('c1').value);
+  const cB = color(document.getElementById('c2').value);
+
+  const copies = computeCopies();
+  const n = copies.length;
+  const time = frameCount * 0.025 * spd;
+
+  push();
+  translate(width / 2, height / 2);
+  rotate(radians(val('angle')));
+
+  for (let i = 0; i < n; i++) {
+    const p = copies[i];
+    const t = n > 1 ? i / (n - 1) : 0;
+    const ph = TipoStagger.phase(stgMode, p.col, p.row, p.cols, p.rows, stgAmt, stgCurve);
+    const wv = Math.sin(time + ph);
+
+    const sc = lerp(sStart, sEnd, t) * (1 + wv * pulse * 0.5);
+    const rot = rotStep * i + (align ? p.tan : 0) + wv * twist;
+    const norm = p.tan + HALF_PI;
+    const ox = Math.cos(norm) * wv * drift;
+    const oy = Math.sin(norm) * wv * drift;
+
+    let c;
+    if (prideMode) c = color(prideColors[i % 6]);
+    else if (colorMode === 'alternate') c = i % 2 ? cB : cA;
+    else if (colorMode === 'single') c = cA;
+    else c = lerpColor(cA, cB, t);
+    const alpha = lerp(255, opEnd * 2.55, t);
+    c.setAlpha(alpha);
+
+    push();
+    translate(p.x + ox, p.y + oy);
+    rotate(rot);
+    if (elType === 'ring') {
+      noFill();
+      stroke(c);
+      strokeWeight(Math.max(1, elSize * sc * 0.14));
+      ellipse(0, 0, elSize * sc * 0.85, elSize * sc * 0.85);
+    } else {
+      noStroke();
+      fill(c);
+      const ch = elType === 'word' ? txt : txt.charAt(i % txt.length);
+      drawElement(elType, ch, elSize * sc);
+    }
+    pop();
+  }
+  pop();
+
+  // Live stroke while the user draws a path
+  if (drawingPath && rawPath.length > 1) {
+    noFill();
+    stroke(document.getElementById('c1').value);
+    strokeWeight(2);
+    beginShape();
+    rawPath.forEach(pt => vertex(pt.x, pt.y));
+    endShape();
+  }
+
+  TipoUI.captureFrame();
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+function swapColors() { TipoUI.swapColors('c1', 'bgColor'); }
+
+function resetAll() {
+  prideMode = false;
+  customPath = null;
+  setSel('elType', 'char'); setVal('elSize', 76);
+  setSel('distMode', 'grid');
+  setVal('copies', 60); setVal('gCols', 7); setVal('gRows', 5);
+  setVal('turns', 5); setVal('spread', 100); setVal('angle', 0);
+  setVal('alignPath', true);
+  setVal('rotStep', 0); setVal('scaleStart', 100); setVal('scaleEnd', 100); setVal('opEnd', 100);
+  setVal('pulse', 25); setVal('twist', 0); setVal('drift', 0); setVal('speed', 2);
+  setSel('stgMode', 'center'); setVal('stgAmt', 100); setSel('stgCurve', 'linear');
+  setSel('colorMode', 'gradient');
+  document.getElementById('c1').value = '#2A8A7A';
+  document.getElementById('c2').value = '#D4A040';
+  document.getElementById('bgColor').value = '#F8F5F0';
+}
+
+const PRESETS = {
+  ring: () => { resetAll();
+    setSel('distMode', 'circle'); setVal('copies', 28); setVal('elSize', 44);
+    setVal('pulse', 40); setVal('twist', 15);
+    setSel('stgMode', 'index'); setVal('stgAmt', 100);
+  },
+  galaxy: () => { resetAll();
+    setSel('distMode', 'spiral'); setSel('elType', 'circle');
+    setVal('copies', 160); setVal('turns', 6); setVal('elSize', 14);
+    setVal('scaleStart', 220); setVal('scaleEnd', 30); setVal('opEnd', 20);
+    setVal('pulse', 30); setVal('drift', 20); setVal('speed', 3);
+    setSel('stgMode', 'index'); setVal('stgAmt', 160);
+    document.getElementById('c1').value = '#99E0D2';
+    document.getElementById('c2').value = '#1B5A4E';
+    document.getElementById('bgColor').value = '#1A1818';
+  },
+  tunnel: () => { resetAll();
+    setSel('distMode', 'spiral'); setSel('elType', 'word');
+    setVal('copies', 40); setVal('turns', 2); setVal('elSize', 36);
+    setVal('scaleStart', 20); setVal('scaleEnd', 300); setVal('opEnd', 15);
+    setVal('rotStep', 6); setVal('pulse', 15);
+    setSel('stgMode', 'index'); setVal('stgAmt', 120);
+  },
+  wave: () => { resetAll();
+    setSel('distMode', 'line'); setVal('copies', 36); setVal('elSize', 40);
+    setVal('alignPath', false);
+    setVal('pulse', 0); setVal('drift', 60); setVal('speed', 3);
+    setSel('stgMode', 'index'); setVal('stgAmt', 140);
+  },
+  confetti: () => { resetAll();
+    setSel('elType', 'star'); setVal('elSize', 22);
+    setVal('gCols', 10); setVal('gRows', 6);
+    setVal('twist', 60); setVal('drift', 40); setVal('speed', 3);
+    setSel('stgMode', 'random'); setVal('stgAmt', 180);
+    setSel('colorMode', 'alternate');
+    document.getElementById('c1').value = '#D4A040';
+    document.getElementById('c2').value = '#2A8A7A';
+  },
+  orbit: () => { resetAll();
+    setSel('distMode', 'circle'); setSel('elType', 'word');
+    setVal('copies', 10); setVal('elSize', 30);
+    setVal('pulse', 20); setVal('drift', 30);
+    setSel('stgMode', 'index'); setVal('stgAmt', 100);
+  },
+  snake: () => { resetAll();
+    setSel('distMode', 'path'); setVal('copies', 70); setVal('elSize', 34);
+    setVal('pulse', 30); setVal('speed', 3);
+    setSel('stgMode', 'index'); setVal('stgAmt', 120);
+  },
+  vortex: () => { resetAll();
+    setSel('distMode', 'spiral'); setSel('elType', 'ring');
+    setVal('copies', 200); setVal('turns', 10); setVal('elSize', 26);
+    setVal('scaleEnd', 10); setVal('rotStep', 10); setVal('pulse', 20);
+    setSel('stgMode', 'center'); setVal('stgAmt', 180);
+    document.getElementById('c1').value = '#1B5A4E';
+    document.getElementById('c2').value = '#D4A040';
+  },
+  pride: () => { prideMode = true; },
+};
+
+function applyPreset(name) { TipoUI.applyPreset(name, PRESETS); }
+
+function savePNG() { TipoUI.savePNG(); }
+async function toggleRec() { await TipoUI.toggleRec(); }
+function showToast(msg) { TipoUI.showToast(msg); }
+</script>
+</body>
+</html>
