@@ -1619,6 +1619,142 @@ const TipoGIF = {
 };
 
 
+/* ============================================================
+   TIPÓ — Share via URL (12.3)
+   "Link" button next to the export buttons: copies a URL with the
+   whole control state serialized in the hash (#s=id:value;...).
+   Opening such a link re-applies every value and dispatches
+   input/change so the tool renders exactly what was shared.
+   ============================================================ */
+
+const TipoShare = {
+  init() {
+    const anchor = document.getElementById('tipoGifBtn')
+      || document.getElementById('recBtn') || document.getElementById('recordBtn');
+    if (!anchor || document.getElementById('tipoShareBtn')) return;
+    const b = document.createElement('button');
+    b.id = 'tipoShareBtn';
+    b.type = 'button';
+    b.className = anchor.className || 'btn btn-secondary';
+    b.textContent = 'Link';
+    b.title = 'Copy a link that carries all current settings';
+    b.addEventListener('click', () => this.copy());
+    anchor.insertAdjacentElement('afterend', b);
+
+    // Apply state from the URL (again later for panels built by JS, e.g. dithering)
+    this.apply();
+    setTimeout(() => this.apply(), 900);
+  },
+
+  _controls() {
+    return [...document.querySelectorAll(
+      'input[type="range"],input[type="color"],input[type="checkbox"],input[type="text"],select'
+    )].filter(el =>
+      el.id &&
+      !el.closest('#tipoTL') && !el.closest('#tipoBhvPop') && !el.closest('#tipoFontRow') &&
+      !el.classList.contains('tipo-hex-input') &&
+      el.dataset.noshare === undefined
+    );
+  },
+
+  url() {
+    const s = this._controls().map(el => {
+      const v = el.type === 'checkbox' ? (el.checked ? 1 : 0)
+        : el.type === 'color' ? el.value.slice(1)
+        : el.value;
+      return el.id + ':' + encodeURIComponent(v);
+    }).join(';');
+    return location.origin + location.pathname + '#s=' + s;
+  },
+
+  copy() {
+    const u = this.url();
+    const done = () => { if (TipoUI.showToast) TipoUI.showToast('Link copied — settings included'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(u).then(done, () => window.prompt('Copy this link:', u));
+    } else {
+      window.prompt('Copy this link:', u);
+    }
+  },
+
+  apply() {
+    const m = location.hash.match(/#s=(.+)/);
+    if (!m) return;
+    m[1].split(';').forEach(pair => {
+      const i = pair.indexOf(':');
+      if (i < 1) return;
+      const el = document.getElementById(pair.slice(0, i));
+      if (!el || el.closest('#tipoTL') || el.closest('#tipoBhvPop')) return;
+      let v = decodeURIComponent(pair.slice(i + 1));
+      if (el.type === 'checkbox') {
+        el.checked = v === '1';
+      } else {
+        if (el.type === 'color' && v[0] !== '#') v = '#' + v;
+        el.value = v;
+        if (typeof TipoUI !== 'undefined' && el.type === 'color') TipoUI._syncHex(el);
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  },
+};
+
+
+/* ============================================================
+   TIPÓ — Fullscreen Mode (12.4)
+   ⛶ button (or the F key) hides the panel and every floating
+   control so the canvas takes the full viewport. F or ESC exits.
+   A window resize event is dispatched so p5/canvas tools refit.
+   ============================================================ */
+
+const TipoFull = {
+  on: false,
+  _css: false,
+
+  init() {
+    if (!document.getElementById('recBtn') && !document.getElementById('recordBtn')) return;
+    if (document.querySelector('.tipo-full-btn')) return;
+    this._injectCSS();
+    const b = document.createElement('button');
+    b.className = 'tipo-full-btn';
+    b.title = 'Fullscreen canvas (F) — F or ESC exits';
+    b.textContent = '⛶';
+    b.addEventListener('click', () => this.toggle());
+    document.body.appendChild(b);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target && e.target.matches && e.target.matches('input,textarea,select')) return;
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); this.toggle(); }
+      else if (e.key === 'Escape' && this.on) this.toggle();
+    });
+  },
+
+  _injectCSS() {
+    if (this._css) return;
+    this._css = true;
+    const s = document.createElement('style');
+    s.textContent = `
+.tipo-full-btn { position:fixed; top:14px; right:60px; z-index:8999; width:36px; height:36px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616); color:var(--text-3,#bbb); font-size:15px; cursor:pointer; }
+.tipo-full-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+body.tipo-full .tipo-panel, body.tipo-full #controlPanel, body.tipo-full .tipo-panel-toggle,
+body.tipo-full .tipo-back-btn, body.tipo-full .tipo-theme-toggle, body.tipo-full .tipo-tl-toggle,
+body.tipo-full #tipoTL, body.tipo-full .tipo-full-btn { display:none !important; }
+`;
+    document.head.appendChild(s);
+  },
+
+  toggle() {
+    this.on = !this.on;
+    document.body.classList.toggle('tipo-full', this.on);
+    // panels collapse → canvases must refit to the new free space
+    window.dispatchEvent(new Event('resize'));
+    if (this.on && typeof TipoUI !== 'undefined' && TipoUI.showToast) {
+      TipoUI.showToast('Fullscreen — press F or ESC to exit');
+    }
+  },
+};
+
+
 // Auto-init: inject "~" buttons once the DOM is ready, and re-scan when
 // tools create sliders dynamically (e.g. riso CMYK section, dithering panel)
 if (typeof document !== 'undefined') {
@@ -1627,6 +1763,8 @@ if (typeof document !== 'undefined') {
     TipoTimeline.init();
     TipoFont.init();
     TipoGIF.init();
+    TipoShare.init();
+    TipoFull.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;

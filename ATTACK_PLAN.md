@@ -380,12 +380,12 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Ex: `cylinder.html#r=250&s=8&c=ff0000`
 - Botão "Copy Link" que copia URL com state
 - **Impacto:** Alto — compartilhar criações sem export
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-02) — `TipoShare` em shared/ui.js. Botão "Link" ao lado do GIF nas 35 ferramentas: serializa TODOS os controles com id (range/color/checkbox/select/text) em `#s=id:valor;...` e copia pro clipboard (fallback prompt). Ao abrir o link, aplica os valores e dispara input/change — labels e render seguem. Segundo passe de apply após 900ms cobre painéis construídos por JS (dithering validado). Exclui controles internos (timeline/behavior popover/font row/hex inputs); opt-out `data-noshare`. test-share-full.mjs PASS (round-trip com texto acentuado, cor, checkbox, label formatada).
 
 #### 12.4 — Fullscreen Mode
 - Botão F para fullscreen (esconde panel, canvas 100vw×100vh)
 - ESC pra sair
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-02) — `TipoFull` em shared/ui.js. Botão ⛶ (top-right, ao lado do theme toggle) ou tecla F: esconde painel + todo o chrome flutuante (back/theme/timeline/⛶) e dispara `resize` pros canvases refitarem (p5 windowResized/ResizeObserver). F ou ESC sai; toast explica na entrada; digitar "f" em inputs não dispara. Cobre painel `.tipo-panel` E `#controlPanel` (dithering). test-share-full.mjs PASS (canvas 860→1280→960). **FASE 12 COMPLETA.**
 
 ### FASE 10 — Refinamento Visual (match com Space Type Generator)
 

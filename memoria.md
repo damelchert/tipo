@@ -206,6 +206,17 @@ Daniel: "queria implementar todas as cores da paleta da tipó nos defaults das f
 - **gradientmap** ("legal mas sem graça e parado"): demo esferas→campo de ondas de interferência (4 senos radiais/diagonais somados por pixel, 900×620 uma vez) + preset athos com **cycle 14** — a rampa Athos flui pelos contornos continuamente na entrada (boot aplica athos).
 - test-pixelsort/glitch-adv/gradientmap re-rodados: exit 0.
 
+**Rodada 3 — pixelsort demo ANIMADO (Daniel: "precisa ter movimento, estático é tosco"):**
+- getDemo() virou cena viva redesenhada por frame: 4 células TIPÓ brand (estilo rastro) flutuando com bob senoidal + micro-rotação, 4 dots gold/teal/mint derivando, bg cream→verde-claro. O sorter esmaga as células em movimento — a entrada é a ferramenta trabalhando.
+- `isDynamic()` agora inclui `sourceType === null` (demo é fonte dinâmica — anima mesmo com drift 0).
+- Motion verificado (316 px mudando por amostragem), test-pixelsort exit 0.
+
+### 12.3 Share via URL + 12.4 Fullscreen — FASE 12 COMPLETA
+- **TipoShare**: botão "Link" (após o GIF) serializa todos os controles com id em `#s=id:valor;...` → clipboard. `apply()` no boot + retry 900ms (painéis JS-built tipo dithering). Dispara input+change (labels/render seguem, behaviors não re-centram — synthetic). Round-trip validado com acento/cor/checkbox. Opt-out `data-noshare`.
+- **TipoFull**: ⛶ ou tecla F esconde painel + chrome e dispara `window resize` (p5 refita — 860→1280 validado); F/ESC sai; guard pra inputs. Seletores cobrem `.tipo-panel` e `#controlPanel`.
+- test-share-full.mjs 11/11 PASS; test-behaviors regressão exit 0. Cache-bust `?v=20260702-s12`.
+- **Fase 12 fechada:** font upload ✅ GIF ✅ share URL ✅ fullscreen ✅.
+
 ### 12.2 GIF Loop Export construído (TipoGIF em shared/ui.js)
 - Botão "GIF" injetado ao lado do Record (gate recBtn/recordBtn — 35 ferramentas, classe copiada do botão vizinho).
 - **Lib: gifenc 1.0.3** (não gif.js do plano — sem worker, muito mais rápida). O dist CDN não é UMD → carregada via `import()` dinâmico do **ESM** no primeiro clique (padrão do depth.html com transformers.js). Zero peso até usar.
