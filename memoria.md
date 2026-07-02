@@ -176,6 +176,14 @@ Teste com Playwright dirigindo mouse de verdade (não keyboard/evaluate) revelou
 - Validação: drive de mouse real no coil (abrir barra, drag de slider cria key, scrub, retime de losango, play anima), duplicator (scrub/diamond NÃO desenham path; desenho legítimo no canvas continua), toast clear em rastro/riso/coil. test-timeline + test-duplicator ALL PASS. Cache-bust `?v=20260702-tl2`.
 - **Lição de teste:** testes via `evaluate`/keyboard não pegam conflitos de event-target — pra UI flutuante, dirigir mouse REAL por cima das regiões de conflito.
 
+### 12.1 Custom Font Upload construído (TipoFont em shared/ui.js) — Fase 12 começou
+- **TipoFont**: controle "Aa Font" injetado automaticamente sob o `#textInput` de toda ferramenta que o tem (24 páginas). File picker .ttf/.otf (extensão validada — .woff2 rejeitado, p5 loadFont não parseia WOFF), label da fonte carregada em accent, ↺ reset pro IBM Plex Mono. Session-only (sem persistência).
+- **Mecânica do swap**: `loadFont(objectURL)` do p5 (parseia TTF pra funcionar até em WEBGL) → sucesso: `textFont(novaFonte)` GLOBAL — como quase todos os tools chamam `textFont(font)` só no setup, o swap pega sem editar nada — + `CustomEvent('tipofont')`.
+- **4 tools com cache de glyph precisaram de hook de 1 linha** (a variável `font` é `let` de escopo de página — ui.js não alcança): **danger** (`lastText=''` força buildTextures), **ribbon** (`glyphTextureCache` .remove() em cada graphics + clear), **badge** (`lastTxt/lastRingTxt=''`), **audiotype** (`buildTextBuffer()`). Falha do load → toast, mantém fonte atual.
+- **test-font.mjs 11/11 PASS** primeira rodada — usa Comic Sans MS.ttf do sistema (maximamente distinta): coil 2D muda hash, reset restaura hash EXATO, cylinder WEBGL muda, ribbon cache 4→0 + render muda, audiotype textBuffer rebuilt, danger textures rebuilt, arquivo .txt rejeitado sem mudar render, zero pageerrors. Smoke 35/35 (font row presente nas 24 páginas com textInput).
+- Cache-bust `?v=20260702-font1`.
+- **Nota pra Fase 12 restante:** 12.2 GIF export, 12.3 share URL, 12.4 fullscreen.
+
 ---
 
 ## 2026-07-01

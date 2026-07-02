@@ -966,6 +966,117 @@ const TipoBehavior = {
 };
 
 /* ============================================================
+   TIPÓ — Custom Font Upload (12.1)
+   Injects an "Upload font" control under the Text input on every
+   p5 tool. Loads .ttf/.otf via p5 loadFont (works in 2D and
+   WEBGL), swaps the current font globally with textFont(), and
+   dispatches a 'tipofont' event so tools with glyph caches
+   (danger, ribbon, badge, audiotype) can rebuild.
+   Session-only — reset restores IBM Plex Mono.
+   ============================================================ */
+
+const TipoFont = {
+  DEFAULT: 'assets/fonts/IBMPlexMono-Regular.ttf',
+  DEFAULT_NAME: 'IBM Plex Mono',
+  custom: false,
+  _url: null,
+  _label: null,
+  _css: false,
+
+  init() {
+    const textInput = document.getElementById('textInput');
+    if (!textInput || document.getElementById('tipoFontRow')) return;
+    this._injectCSS();
+
+    const row = document.createElement('div');
+    row.id = 'tipoFontRow';
+    row.innerHTML =
+      '<button type="button" id="tipoFontBtn" title="Use your own font (.ttf / .otf)">Aa Font</button>' +
+      '<span id="tipoFontName">' + this.DEFAULT_NAME + '</span>' +
+      '<button type="button" id="tipoFontReset" title="Back to IBM Plex Mono" style="display:none;">&#8634;</button>' +
+      '<input type="file" id="tipoFontFile" accept=".ttf,.otf" style="display:none;">';
+    textInput.insertAdjacentElement('afterend', row);
+
+    const file = row.querySelector('#tipoFontFile');
+    row.querySelector('#tipoFontBtn').addEventListener('click', () => file.click());
+    file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (f) this._loadFile(f);
+      file.value = '';
+    });
+    row.querySelector('#tipoFontReset').addEventListener('click', () => this.reset());
+  },
+
+  _injectCSS() {
+    if (this._css) return;
+    this._css = true;
+    const s = document.createElement('style');
+    s.textContent = `
+#tipoFontRow { display:flex; align-items:center; gap:7px; margin-top:7px; }
+#tipoFontRow button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-4,#999); font-size:10px; padding:3px 8px; border-radius:4px; cursor:pointer; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
+#tipoFontRow button:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+#tipoFontName { font-size:9px; color:var(--text-5,#777); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+#tipoFontRow.custom #tipoFontName { color:var(--accent,#2A8A7A); }
+`;
+    document.head.appendChild(s);
+  },
+
+  _loadFile(f) {
+    const name = f.name.replace(/\.(ttf|otf)$/i, '');
+    if (!/\.(ttf|otf)$/i.test(f.name)) {
+      this._toast('Only .ttf / .otf fonts work here');
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    this._apply(url, name, () => URL.revokeObjectURL(url));
+  },
+
+  reset() {
+    this._apply(this.DEFAULT, null);
+  },
+
+  _apply(url, label, onFail) {
+    if (typeof window.loadFont !== 'function') {
+      this._toast('Custom fonts need a p5 tool');
+      if (onFail) onFail();
+      return;
+    }
+    window.loadFont(url,
+      (font) => {
+        if (this._url) URL.revokeObjectURL(this._url);
+        this._url = label ? url : null;
+        this.custom = !!label;
+        this._label = label;
+        // Global swap: tools that set the font once in setup follow immediately
+        if (typeof window.textFont === 'function') {
+          try { window.textFont(font); } catch (e) {}
+        }
+        // Tools with glyph caches/buffers listen and rebuild
+        window.dispatchEvent(new CustomEvent('tipofont', { detail: font }));
+        this._syncRow();
+        this._toast(label ? 'Font: ' + label : 'Font reset to ' + this.DEFAULT_NAME);
+      },
+      () => {
+        this._toast('Font failed to load — keeping current');
+        if (onFail) onFail();
+      });
+  },
+
+  _syncRow() {
+    const row = document.getElementById('tipoFontRow');
+    if (!row) return;
+    row.classList.toggle('custom', this.custom);
+    row.querySelector('#tipoFontName').textContent = this.custom ? this._label : this.DEFAULT_NAME;
+    row.querySelector('#tipoFontReset').style.display = this.custom ? '' : 'none';
+  },
+
+  _toast(msg) {
+    if (typeof TipoUI !== 'undefined' && TipoUI.showToast) TipoUI.showToast(msg);
+  },
+};
+
+
+/* ============================================================
    TIPÓ — Mini-Timeline (Cavalry Mode 9.4)
    Keyframe any slider over time: open the timeline bar, move the
    playhead, drag a slider — a keyframe is recorded at that time
@@ -1347,6 +1458,7 @@ if (typeof document !== 'undefined') {
   const boot = () => {
     TipoBehavior.scan();
     TipoTimeline.init();
+    TipoFont.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;

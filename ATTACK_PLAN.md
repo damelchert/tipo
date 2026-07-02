@@ -365,7 +365,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - loadFont() do p5.js aceita TTF/OTF
 - Fallback pra IBM Plex Mono se falhar
 - **Impacto:** Alto — criadores querem suas fontes
-- **Status:** [ ] A implementar
+- **Status:** ✅ Implementado (2026-07-02) — `TipoFont` em shared/ui.js, auto-injetado em toda página com `#textInput` (24 tools). Botão "Aa Font" + file picker (.ttf/.otf; .woff2 rejeitado — p5 não parseia), label da fonte atual, botão ↺ de reset pro IBM Plex Mono. Swap global via `loadFont()` + `textFont()` (2D E WEBGL); evento `tipofont` pros 4 tools com cache de glyphs (danger/ribbon/badge/audiotype — hooks de 1 linha invalidam cache/buffer). Session-only. test-font.mjs 11/11 PASS (Comic Sans do sistema: 2D, WEBGL, 3 caches, reset round-trip exato, arquivo inválido rejeitado) + smoke 35/35.
 
 #### 12.2 — GIF Loop Export
 - Gravar N frames → encodar como GIF animado
