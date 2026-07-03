@@ -156,6 +156,20 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-03
+
+### Overlay v2 — upgrade completo (pedido do Daniel de 2026-06-12: "tá meio meme/tosca")
+Diagnóstico do "meme": composite só em source-over (SEM blend modes), grain estático, abria em ruído cinza sobre PRETO (sem demo), patterns matemáticos sem alma.
+- **Blend modes reais** (select na seção Texture): soft-light (default), overlay, multiply, screen, hard-light, lighten, darken, color-dodge, color-burn, difference, normal. Aplicados no composite live E no PNG export.
+- **Animate (live grain)** — checkbox default ON: seed deriva a ~30fps → grain de filme VIVO como projeção real. Só pra patterns de pixel com tile ≤1024 (vetoriais pulariam de posição). `shouldLoop()`/`syncLoop()` unificam o controle do rAF (video/webcam/rec/animate).
+- **Demo poster brand** (getDemo 1200×800): cream + bloco teal + círculo gold + barra mint + TIPÓ 190px ink — a textura abre COM material pra mostrar. dropHint escondido (hint vive na arte). Letterbox preto→cream.
+- **6 patterns novos** (18 total): **Light Leak** (blobs radiais gold/rust/mint + wash diagonal, vetorial, screen), **Vignette** (radial branco→escuro, multiply), **Bokeh Dust** (partículas glow com tint gold/mint, wrapped pra seamless), **Riso Grain** (speckle de tinta clumpy), **Long Grain 35mm** (noise anisotrópico esticado em Y), **VHS Tracking** (bands de ruído + dropout lines). Film grain melhorado: soma de 3 randoms ≈ gaussiano.
+- **Arquitetura**: `VECTOR_PATTERNS` (leak/vignette/bokeh) desenham com canvas ops (não pixel loop); `STRETCH_PATTERNS` (leak/vignette) esticam sobre o retângulo da mídia em vez de tile. Textura agora CLIPA no rect da mídia (letterbox limpo).
+- **9 presets novos** (nomes de filme): Kodak 400, Super 8, VHS, Zine, Newsprint, Golden Leak, Dust Glow, Fade, Paper. Leak/Bokeh desligam monochrome (cor vem do pattern). setP ganhou blend+animate.
+- **Tile preview corrigido**: mostrava o COMPOSITE tilado (bug antigo) — agora mostra a textura (overlayBuffer).
+- **test-overlay.mjs 12/12 PASS** (suite dedicada nova): demo não-preto na entrada, grain vivo (frames diferem) e congela com animate off, 3 blends distintos, 6 patterns novos distintos, vignette escurece canto DENTRO do rect da mídia, 9 presets distintos, PNG composite 1.7MB + tile PNG + MP4 ffmpeg clean. Pegadinha de teste: page.evaluate com template string NÃO executa função — usar (fn, arg).
+- Card do index atualizado (18 patterns, 11 blend modes, animated grain).
+
 ## 2026-07-02
 
 ### 9.4 Mini-Timeline construído (TipoTimeline em shared/ui.js) — FASE 9 (CAVALRY MODE) COMPLETA
