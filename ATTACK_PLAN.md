@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-35 ferramentas ativas: 12 visual tools + 23 kinetic type modes.
+36 ferramentas ativas: 13 visual tools + 23 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
@@ -404,7 +404,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Geração de padrões geométricos repetitivos (tessellation)
 - Controles: shape, repetition, rotation, scale, color palette
 - Export como PNG tileable + SVG
-- **Status:** [ ] Conceito
+- **Status:** ✅ Implementado (2026-07-03) — pattern.html (standalone Canvas 2D, ferramenta #36). 8 motifs (Quarter Arcs Truchet, Diagonal, Triangle, Semicircle, Circle, Diamond, Cross, Letter do texto) × 5 regras de simetria (Repeat/Alternate/Mirror/Rotate90/Random com seed — random com período 6 pra manter tiles seamless). Motion com fase por TipoStagger (Spin/Pulse/Speed/Stagger). Cores brand default, 4 modos de distribuição. Exports: PNG, **Tile PNG seamless** (anel extra de células com wrap — caps de stroke atravessam a borda sem seam, validado por pixel diff na junção), **SVG vetorial** (mesmo tile em paths), MP4/GIF via shared. 8 presets (Truchet/Waves/Scales/Geo/Checker/Type/Terrazzo/Pipes). TipoFont ganhou caminho FontFace pra canvas 2D (fonte custom funciona no shape Letter). test-pattern.mjs 16/16 PASS.
 
 #### 11.2 — Color Palette Generator
 - Upload imagem → extrai paleta dominante (5-10 cores)

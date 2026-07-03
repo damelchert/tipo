@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Pattern Generator. Animated geometric tessellations with seamless tile + SVG export.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Pattern</title>
+<link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260703-pat1"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
+  #mainCanvas { display: block; width: 100%; height: 100%; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .range-row select { width: auto; }
+  .hint-line { font-size: 9px; color: var(--text-5); margin-top: 6px; letter-spacing: .4px; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Pattern <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Used by the Letter shape...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('truchet')">Truchet</span>
+      <span class="preset-chip" onclick="applyPreset('waves')">Waves</span>
+      <span class="preset-chip" onclick="applyPreset('scales')">Scales</span>
+      <span class="preset-chip" onclick="applyPreset('geo')">Geo</span>
+      <span class="preset-chip" onclick="applyPreset('checker')">Checker</span>
+      <span class="preset-chip" onclick="applyPreset('type')">Type</span>
+      <span class="preset-chip" onclick="applyPreset('terrazzo')">Terrazzo</span>
+      <span class="preset-chip" onclick="applyPreset('pipes')">Pipes</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Pattern</div>
+    <div class="range-row"><span class="range-label">Shape</span><select id="shape" style="flex:1;">
+      <option value="arc" selected>Quarter Arcs (Truchet)</option>
+      <option value="stripe">Diagonal (Truchet lines)</option>
+      <option value="triangle">Triangle</option>
+      <option value="semi">Semicircle</option>
+      <option value="circle">Circle</option>
+      <option value="diamond">Diamond</option>
+      <option value="cross">Cross</option>
+      <option value="letter">Letter (from Text)</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Symmetry</span><select id="symmetry" style="flex:1;">
+      <option value="random" selected>Random (seeded)</option>
+      <option value="repeat">Repeat</option>
+      <option value="alternate">Alternate</option>
+      <option value="mirror">Mirror</option>
+      <option value="rot90">Rotate 90°</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="cols" min="3" max="40" value="12"><span class="range-value" id="colsVal">12</span></div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" onclick="reroll()">Re-roll Seed</button>
+    </div>
+    <div class="hint-line">dblclick no canvas = re-roll</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motif</div>
+    <div class="range-row"><span class="range-label">Scale</span><input type="range" id="motifScale" min="40" max="140" value="100"><span class="range-value" id="motifScaleVal">100</span></div>
+    <div class="range-row"><span class="range-label">Rotation</span><input type="range" id="rotation" min="0" max="360" value="0"><span class="range-value" id="rotationVal">0</span></div>
+    <div class="range-row"><span class="range-label">Weight</span><input type="range" id="weight" min="2" max="60" value="24"><span class="range-value" id="weightVal">24</span></div>
+    <div class="range-row"><span class="range-label">Gap</span><input type="range" id="gap" min="0" max="40" value="0"><span class="range-value" id="gapVal">0</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="outline"> Outline (stroke filled shapes)</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motion</div>
+    <div class="range-row"><span class="range-label">Spin</span><input type="range" id="spin" min="-100" max="100" value="0"><span class="range-value" id="spinVal">0</span></div>
+    <div class="range-row"><span class="range-label">Pulse</span><input type="range" id="pulse" min="0" max="100" value="0"><span class="range-value" id="pulseVal">0</span></div>
+    <div class="range-row"><span class="range-label">Speed</span><input type="range" id="speed" min="0" max="10" value="2"><span class="range-value" id="speedVal">2</span></div>
+    <div class="range-row"><span class="range-label">Stagger</span><select id="stgMode" style="flex:1;">
+      <option value="off">Off</option>
+      <option value="index">Index</option>
+      <option value="row">Row</option>
+      <option value="col">Column</option>
+      <option value="center" selected>Center</option>
+      <option value="random">Random</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="stgAmt" min="0" max="200" value="100"><span class="range-value" id="stgAmtVal">100</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="range-row"><span class="range-label">Mode</span><select id="colorMode" style="flex:1;">
+      <option value="cycle" selected>Cycle</option>
+      <option value="checker">Checker</option>
+      <option value="random">Random (seeded)</option>
+      <option value="single">Single</option>
+    </select></div>
+    <div class="color-row"><input type="color" id="c1" value="#2A8A7A"><label>1</label>
+      <input type="color" id="c2" value="#D4A040"><label>2</label>
+      <input type="color" id="c3" value="#1A1818"><label>3</label>
+      <input type="color" id="c4" value="#99E0D2"><label>4</label></div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="4" value="4"><span class="range-value" id="numColorsVal">4</span></div>
+    <div class="color-section-row">
+      <span class="range-label">Background</span>
+      <input type="color" id="bgColor" value="#F8F5F0">
+    </div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="range-row"><span class="range-label">Tile Res</span><select id="tileRes" style="flex:1;">
+      <option value="512">512 px</option>
+      <option value="1024" selected>1024 px</option>
+      <option value="2048">2048 px</option>
+    </select></div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn" onclick="exportTile()">Tile PNG</button>
+      <button class="btn" onclick="exportSVG()">SVG</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+    <div class="hint-line">Tile/SVG = 1 período seamless, sem animação</div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <canvas id="mainCanvas"></canvas>
+</div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — PATTERN GENERATOR (11.1)
+// Animated geometric tessellations. 8 motifs × 5 symmetry rules,
+// stagger-phased motion, seamless Tile PNG + vector SVG export.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+let recorder = null;
+let seed = 4242;
+let needsRender = true;
+let timeT = 0;
+
+const el = id => document.getElementById(id);
+const val = id => Number(el(id).value);
+const chk = id => el(id).checked;
+const sel = id => el(id).value;
+
+function hash(c, r, s) {
+  const n = Math.sin(c * 127.1 + r * 311.7 + s * 74.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+// Random symmetry repeats every RAND_PERIOD cells so tiles stay seamless
+const RAND_PERIOD = 6;
+
+/** Rotation variant (0-3) + mirror flips for a cell under the current symmetry */
+function variantAt(sym, c, r, s) {
+  if (sym === 'repeat') return { rot: 0, fx: 1, fy: 1 };
+  if (sym === 'alternate') return { rot: ((c + r) % 2) * 2, fx: 1, fy: 1 };
+  if (sym === 'mirror') return { rot: 0, fx: c % 2 ? -1 : 1, fy: r % 2 ? -1 : 1 };
+  if (sym === 'rot90') return { rot: (c + r) % 4, fx: 1, fy: 1 };
+  // random: wrap coords so the pattern is periodic (seamless tiles)
+  return { rot: Math.floor(hash(c % RAND_PERIOD, r % RAND_PERIOD, s) * 4), fx: 1, fy: 1 };
+}
+
+/** Period of the pattern in cells (for seamless tile export) */
+function periodOf(sym) {
+  return { repeat: 1, alternate: 2, mirror: 2, rot90: 4, random: RAND_PERIOD }[sym];
+}
+
+function colorAt(mode, c, r, s, n, colors) {
+  if (mode === 'single' || n === 1) return colors[0];
+  if (mode === 'checker') return colors[(c + r) % Math.min(2, n)];
+  if (mode === 'random') return colors[Math.floor(hash((c % RAND_PERIOD) + 40, (r % RAND_PERIOD) + 40, s) * n)];
+  return colors[(c + r * 3) % n]; // cycle
+}
+
+// ---- Motifs: canvas draw + parallel SVG emitter (centered at 0,0, cell size s) ----
+function drawMotif(ctx, shape, s, w, fg, ch, outline, fontFam) {
+  ctx.strokeStyle = fg;
+  ctx.fillStyle = fg;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  const h = s / 2;
+  switch (shape) {
+    case 'arc':
+      ctx.beginPath(); ctx.arc(-h, -h, h, 0, Math.PI / 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(h, h, h, Math.PI, Math.PI * 1.5); ctx.stroke();
+      break;
+    case 'stripe':
+      ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, h); ctx.stroke();
+      break;
+    case 'triangle':
+      ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, -h); ctx.lineTo(-h, h); ctx.closePath();
+      outline ? ctx.stroke() : ctx.fill();
+      break;
+    case 'semi':
+      ctx.beginPath(); ctx.arc(0, h, h, Math.PI, Math.PI * 2); ctx.closePath();
+      outline ? ctx.stroke() : ctx.fill();
+      break;
+    case 'circle':
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2);
+      outline ? ctx.stroke() : ctx.fill();
+      break;
+    case 'diamond':
+      ctx.beginPath(); ctx.moveTo(0, -h); ctx.lineTo(h, 0); ctx.lineTo(0, h); ctx.lineTo(-h, 0); ctx.closePath();
+      outline ? ctx.stroke() : ctx.fill();
+      break;
+    case 'cross':
+      ctx.beginPath();
+      ctx.moveTo(0, -h); ctx.lineTo(0, h);
+      ctx.moveTo(-h, 0); ctx.lineTo(h, 0);
+      ctx.stroke();
+      break;
+    case 'letter':
+      ctx.font = '700 ' + (s * 0.82) + 'px ' + fontFam;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch, 0, s * 0.04);
+      break;
+  }
+}
+
+function svgMotif(shape, s, w, fg, ch, outline, fontFam) {
+  const h = s / 2;
+  const sw = `stroke="${fg}" stroke-width="${w}" fill="none" stroke-linecap="round"`;
+  const fl = outline ? `fill="none" stroke="${fg}" stroke-width="${w}"` : `fill="${fg}"`;
+  switch (shape) {
+    case 'arc':
+      return `<path d="M0 ${-h} A ${h} ${h} 0 0 1 ${-h} 0" transform="translate(0 0)" ${sw}/>` +
+             `<path d="M0 ${h} A ${h} ${h} 0 0 1 ${h} 0" ${sw}/>`;
+    case 'stripe':
+      return `<line x1="${-h}" y1="${-h}" x2="${h}" y2="${h}" ${sw}/>`;
+    case 'triangle':
+      return `<path d="M${-h} ${-h} L${h} ${-h} L${-h} ${h} Z" ${fl}/>`;
+    case 'semi':
+      return `<path d="M${-h} ${h} A ${h} ${h} 0 0 1 ${h} ${h} Z" ${fl}/>`;
+    case 'circle':
+      return `<circle cx="0" cy="0" r="${s * 0.35}" ${fl}/>`;
+    case 'diamond':
+      return `<path d="M0 ${-h} L${h} 0 L0 ${h} L${-h} 0 Z" ${fl}/>`;
+    case 'cross':
+      return `<line x1="0" y1="${-h}" x2="0" y2="${h}" ${sw}/><line x1="${-h}" y1="0" x2="${h}" y2="0" ${sw}/>`;
+    case 'letter':
+      return `<text x="0" y="${s * 0.04}" font-family=${JSON.stringify(fontFam)} font-weight="700" font-size="${s * 0.82}" fill="${fg}" text-anchor="middle" dominant-baseline="central">${ch.replace(/[<>&]/g, '')}</text>`;
+  }
+  return '';
+}
+
+function fontFamily() {
+  return (typeof TipoFont !== 'undefined' && TipoFont.family) ? TipoFont.family() : '"IBM Plex Mono", monospace';
+}
+
+function currentColors() {
+  const n = val('numColors');
+  return [el('c1').value, el('c2').value, el('c3').value, el('c4').value].slice(0, n);
+}
+
+/** Draw one cell (shared by live render, tile and — logically — SVG) */
+function paintCell(ctx, c, r, x, y, cell, opts) {
+  const v = variantAt(opts.sym, c, r, seed);
+  const fg = colorAt(opts.colorMode, c, r, seed, opts.colors.length, opts.colors);
+  const ch = opts.txt.charAt((c + r * 7) % opts.txt.length);
+  let extraRot = 0, extraScale = 1;
+  if (opts.animate) {
+    const ph = TipoStagger.phase(opts.stgMode, c, r, opts.cols, opts.rows, opts.stgAmt, 'linear');
+    const wv = Math.sin(opts.time + ph);
+    extraRot = opts.spin ? (opts.time * opts.spin * 0.15 + ph * Math.sign(opts.spin)) : 0;
+    extraScale = 1 + wv * opts.pulse * 0.35;
+  }
+  ctx.save();
+  ctx.translate(x + cell / 2, y + cell / 2);
+  ctx.scale(v.fx, v.fy);
+  ctx.rotate(v.rot * Math.PI / 2 + opts.rotation + extraRot);
+  ctx.scale(opts.motifScale * extraScale, opts.motifScale * extraScale);
+  drawMotif(ctx, opts.shape, cell - opts.gapPx, opts.weightPx, fg, ch, opts.outline, opts.fontFam);
+  ctx.restore();
+}
+
+function renderOpts(cell, cols, rows, animate) {
+  return {
+    sym: sel('symmetry'),
+    shape: sel('shape'),
+    colorMode: sel('colorMode'),
+    colors: currentColors(),
+    txt: (el('textInput').value || 'TIPÓ').replace(/\s+/g, '') || 'TIPÓ',
+    rotation: val('rotation') * Math.PI / 180,
+    motifScale: val('motifScale') / 100,
+    weightPx: Math.max(1, cell * val('weight') / 200),
+    gapPx: cell * val('gap') / 100,
+    outline: chk('outline'),
+    fontFam: fontFamily(),
+    animate,
+    time: timeT,
+    spin: val('spin') / 100,
+    pulse: val('pulse') / 100,
+    stgMode: sel('stgMode'),
+    stgAmt: val('stgAmt'),
+    cols, rows,
+  };
+}
+
+function render() {
+  const wrap = document.getElementById('canvasWrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if (mainCanvas.width !== w || mainCanvas.height !== h) {
+    mainCanvas.width = w;
+    mainCanvas.height = h;
+  }
+  mainCtx.fillStyle = el('bgColor').value;
+  mainCtx.fillRect(0, 0, w, h);
+
+  const cols = val('cols');
+  const cell = w / cols;
+  const rows = Math.ceil(h / cell);
+  const opts = renderOpts(cell, cols, rows, true);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      paintCell(mainCtx, c, r, c * cell, r * cell, cell, opts);
+    }
+  }
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ---- Loop: continuous only when animated/recording ----
+function isDynamic() {
+  return val('spin') !== 0 || val('pulse') > 0 || (recorder && recorder.isRecording);
+}
+let last = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - last < 33) return;
+  last = now;
+  if (isDynamic()) {
+    timeT += 0.033 * (0.4 + val('speed') * 0.5);
+    render();
+    needsRender = false;
+  } else if (needsRender) {
+    render();
+    needsRender = false;
+  }
+}
+
+// ---- Exports ----
+function exportPNG() {
+  mainCanvas.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('PNG failed'); return; }
+    TipoUI._downloadBlob(blob, 'tipo-pattern.png');
+    TipoUI.showToast('PNG saved');
+  }, 'image/png');
+}
+
+/** One seamless period of the pattern, motion frozen.
+ *  Paints one extra WRAPPED ring of cells around the tile so strokes that
+ *  overflow a cell (arc caps, letters) continue across the tile edges. */
+function buildTile(res) {
+  const n = periodOf(sel('symmetry'));
+  const cell = res / n;
+  const c = document.createElement('canvas');
+  c.width = res; c.height = res;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = el('bgColor').value;
+  ctx.fillRect(0, 0, res, res);
+  const opts = renderOpts(cell, n, n, false);
+  const wrap = (i) => ((i % n) + n) % n;
+  for (let r = -1; r <= n; r++) {
+    for (let col = -1; col <= n; col++) {
+      paintCell(ctx, wrap(col), wrap(r), col * cell, r * cell, cell, opts);
+    }
+  }
+  return c;
+}
+
+function exportTile() {
+  buildTile(Number(sel('tileRes'))).toBlob(blob => {
+    if (!blob) { TipoUI.showToast('Tile failed'); return; }
+    TipoUI._downloadBlob(blob, `tipo-pattern-${sel('shape')}-tile.png`);
+    TipoUI.showToast('Seamless tile saved');
+  }, 'image/png');
+}
+
+function exportSVG() {
+  const res = Number(sel('tileRes'));
+  const n = periodOf(sel('symmetry'));
+  const cell = res / n;
+  const opts = renderOpts(cell, n, n, false);
+  const wrap = (i) => ((i % n) + n) % n;
+  let body = `<rect width="${res}" height="${res}" fill="${el('bgColor').value}"/>`;
+  for (let r = -1; r <= n; r++) {
+    for (let c = -1; c <= n; c++) {
+      const wc = wrap(c), wr = wrap(r);
+      const v = variantAt(opts.sym, wc, wr, seed);
+      const fg = colorAt(opts.colorMode, wc, wr, seed, opts.colors.length, opts.colors);
+      const ch = opts.txt.charAt((wc + wr * 7) % opts.txt.length);
+      const cx = c * cell + cell / 2, cy = r * cell + cell / 2;
+      const deg = v.rot * 90 + val('rotation');
+      body += `<g transform="translate(${cx} ${cy}) scale(${v.fx * opts.motifScale} ${v.fy * opts.motifScale}) rotate(${deg})">` +
+        svgMotif(opts.shape, cell - opts.gapPx, opts.weightPx, fg, ch, opts.outline, opts.fontFam) + '</g>';
+    }
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${res}" height="${res}" viewBox="0 0 ${res} ${res}">${body}</svg>`;
+  TipoUI._downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `tipo-pattern-${sel('shape')}.svg`);
+  TipoUI.showToast('SVG saved (vector tile)');
+}
+
+async function toggleRec() {
+  if (!recorder) {
+    recorder = new TipoRecorder(mainCanvas);
+    recorder.setTimerElement(document.getElementById('recTimer'));
+  }
+  const btn = el('recBtn');
+  if (!recorder.isRecording) {
+    await recorder.start(8000000);
+    btn.textContent = 'Stop Recording';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    const prog = document.getElementById('exportProgress');
+    if (prog) prog.classList.add('open');
+    btn.disabled = true;
+    try {
+      const result = await recorder.stop();
+      TipoRecorder.download(result.blob, result.filename);
+      TipoUI.showToast(`MP4 exported (${result.sizeMB} MB)`);
+    } catch (e) {
+      console.error(e);
+      TipoUI.showToast('Export failed');
+    } finally {
+      if (prog) prog.classList.remove('open');
+      btn.disabled = false;
+      btn.textContent = 'Record MP4';
+      btn.style.borderColor = '';
+    }
+  }
+}
+
+function reroll() {
+  seed = Math.floor(Math.random() * 99991);
+  needsRender = true;
+}
+
+// ---- Presets ----
+function setV(id, v) {
+  const node = el(id);
+  if (node.type === 'checkbox') node.checked = v;
+  else node.value = v;
+  const lbl = el(id + 'Val');
+  if (lbl) lbl.textContent = v;
+}
+
+function resetAll() {
+  setV('shape', 'arc'); setV('symmetry', 'random'); setV('cols', 12);
+  setV('motifScale', 100); setV('rotation', 0); setV('weight', 24); setV('gap', 0); setV('outline', false);
+  setV('spin', 0); setV('pulse', 0); setV('speed', 2); setV('stgMode', 'center'); setV('stgAmt', 100);
+  setV('colorMode', 'cycle'); setV('numColors', 4);
+  el('c1').value = '#2A8A7A'; el('c2').value = '#D4A040';
+  el('c3').value = '#1A1818'; el('c4').value = '#99E0D2';
+  el('bgColor').value = '#F8F5F0';
+  seed = 4242;
+  needsRender = true;
+}
+
+const PRESETS = {
+  truchet: () => { setV('shape', 'arc'); setV('symmetry', 'random'); setV('cols', 12); setV('weight', 24); },
+  waves: () => { setV('shape', 'arc'); setV('symmetry', 'mirror'); setV('cols', 10); setV('weight', 30); setV('colorMode', 'checker'); setV('numColors', 2); },
+  scales: () => { setV('shape', 'semi'); setV('symmetry', 'repeat'); setV('cols', 14); setV('colorMode', 'cycle'); setV('motifScale', 118); },
+  geo: () => { setV('shape', 'triangle'); setV('symmetry', 'rot90'); setV('cols', 10); setV('colorMode', 'cycle'); },
+  checker: () => { setV('shape', 'diamond'); setV('symmetry', 'alternate'); setV('cols', 12); setV('colorMode', 'checker'); setV('numColors', 2); setV('motifScale', 110); },
+  type: () => { setV('shape', 'letter'); setV('symmetry', 'rot90'); setV('cols', 9); setV('colorMode', 'cycle'); setV('pulse', 25); },
+  terrazzo: () => { setV('shape', 'circle'); setV('symmetry', 'random'); setV('cols', 16); setV('colorMode', 'random'); setV('motifScale', 74); setV('pulse', 18); setV('stgMode', 'random'); },
+  pipes: () => { setV('shape', 'stripe'); setV('symmetry', 'random'); setV('cols', 16); setV('weight', 34); setV('colorMode', 'checker'); setV('numColors', 2); },
+};
+
+function applyPreset(name) {
+  resetAll();
+  if (PRESETS[name]) PRESETS[name]();
+  needsRender = true;
+  document.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
+  if (window.event && window.event.target && window.event.target.classList) window.event.target.classList.add('active');
+}
+
+// ---- Boot ----
+document.querySelectorAll('input, select').forEach(node => {
+  node.addEventListener('input', () => {
+    const lbl = el(node.id + 'Val');
+    if (lbl && node.type === 'range') lbl.textContent = node.value;
+    needsRender = true;
+  });
+});
+mainCanvas.addEventListener('dblclick', reroll);
+window.addEventListener('resize', () => { needsRender = true; });
+window.addEventListener('tipofont', () => { needsRender = true; });
+
+// Theme + back button (standalone — mirrors overlay.html)
+(function initChrome() {
+  const saved = localStorage.getItem('tipo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.createElement('button');
+  btn.className = 'tipo-theme-toggle';
+  btn.textContent = saved === 'dark' ? '☼' : '☾';
+  btn.addEventListener('click', () => {
+    const next = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tipo-theme', next);
+    btn.textContent = next === 'dark' ? '☼' : '☾';
+  });
+  document.body.appendChild(btn);
+  const back = document.createElement('a');
+  back.className = 'tipo-back-btn';
+  back.href = 'index.html#visual';
+  back.textContent = '←';
+  document.body.appendChild(back);
+})();
+
+window.render = render;
+window.applyPreset = applyPreset;
+window.resetAll = resetAll;
+window.toggleRec = toggleRec;
+window.exportPNG = exportPNG;
+window.exportTile = exportTile;
+window.exportSVG = exportSVG;
+window.buildTile = buildTile;
+window.variantAt = variantAt;
+window.periodOf = periodOf;
+window.reroll = reroll;
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

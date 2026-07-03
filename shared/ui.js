@@ -309,6 +309,7 @@ const TipoUI = {
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
+    pattern: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
     flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
@@ -1021,10 +1022,34 @@ const TipoFont = {
     document.head.appendChild(s);
   },
 
+  /** Font family string for canvas-2D tools (ctx.font) */
+  family() {
+    return this.custom && this._ff ? '"TipoCustomFont", monospace' : '"IBM Plex Mono", monospace';
+  },
+
+  _ff: null, // FontFace instance on non-p5 (canvas 2D) pages
+
   _loadFile(f) {
     const name = f.name.replace(/\.(ttf|otf)$/i, '');
     if (!/\.(ttf|otf)$/i.test(f.name)) {
       this._toast('Only .ttf / .otf fonts work here');
+      return;
+    }
+    // Canvas-2D pages (no p5 loadFont): register via the FontFace API
+    if (typeof window.loadFont !== 'function') {
+      f.arrayBuffer().then(buf => {
+        const ff = new FontFace('TipoCustomFont', buf);
+        return ff.load().then(() => {
+          if (this._ff) document.fonts.delete(this._ff);
+          document.fonts.add(ff);
+          this._ff = ff;
+          this.custom = true;
+          this._label = name;
+          window.dispatchEvent(new CustomEvent('tipofont', { detail: null }));
+          this._syncRow();
+          this._toast('Font: ' + name);
+        });
+      }).catch(() => this._toast('Font failed to load — keeping current'));
       return;
     }
     const url = URL.createObjectURL(f);
@@ -1032,6 +1057,15 @@ const TipoFont = {
   },
 
   reset() {
+    if (typeof window.loadFont !== 'function') {
+      if (this._ff) { document.fonts.delete(this._ff); this._ff = null; }
+      this.custom = false;
+      this._label = null;
+      window.dispatchEvent(new CustomEvent('tipofont', { detail: null }));
+      this._syncRow();
+      this._toast('Font reset to ' + this.DEFAULT_NAME);
+      return;
+    }
     this._apply(this.DEFAULT, null);
   },
 
@@ -1759,6 +1793,13 @@ const TipoHelp = {
     reticula: {
       'Grid': 'Resolution = células na largura; Min/Max Size = faixa de tamanho dos pontos conforme o brilho; Angle gira a malha; Contrast reforça claro/escuro; Gap afasta os pontos.',
       'Shape': 'A forma de cada célula (círculo, quadrado, linha, texto...). Invert troca claro/escuro; Filled alterna cheio/contorno.',
+    },
+    pattern: {
+      'Pattern': 'Shape = o motivo de cada célula (Quarter Arcs = Truchet clássico). Symmetry = a regra que gira/espelha as células: Random sorteia com seed, Mirror fecha loops, Rotate 90° cria sequências. Columns = densidade da malha.',
+      'Motif': 'Scale = tamanho do motivo dentro da célula (>100 = motivos se tocam). Rotation gira todos igualmente. Weight = espessura dos traços (arcos/linhas/cruz). Gap encolhe a área útil da célula. Outline desenha as formas cheias só em contorno.',
+      'Motion': 'Spin gira os motivos continuamente; Pulse faz a escala respirar. A onda percorre as células na ordem do Stagger (Center = do meio pra fora); Amount = defasagem. Speed é o relógio geral.',
+      'Colors': 'Como as cores se distribuem: Cycle alterna as N cores pela malha, Checker = xadrez com 2, Random sorteia com seed, Single usa só a 1ª.',
+      'Export': 'PNG = o canvas como está. Tile PNG = 1 período seamless do padrão (repete perfeito). SVG = o mesmo tile em vetor (abre no Illustrator/Figma). Tile e SVG congelam a animação.',
     },
     audiotype: {
       'Grid': 'Columns × Rows da grade de barras; Gap = espaço entre elas; Min/Max Size = faixa de tamanho conforme a luminosidade do texto/imagem.',

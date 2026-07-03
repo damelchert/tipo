@@ -6,7 +6,7 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 35 ferramentas (12 visual tools + 23 kinetic type modes)
+- **Total:** 36 ferramentas (13 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
@@ -26,6 +26,7 @@
   ascii.html                   — 4 charsets, 3 color modes, video+webcam+MP4 (FUNCIONAL)
   overlay.html                 — gerador de texturas seamless, 12 patterns, image+video+webcam (FUNCIONAL)
   audiotype.html               — audio-reactive typography, text/image + audio/mic, 2-8 color levels (FUNCIONAL)
+  pattern.html                 — animated tessellations, 8 motifs × 5 simetrias, tile seamless + SVG (FUNCIONAL)
   
   # KINETIC TYPE — Fase 1: Core (22)
   cylinder.html                — kinetic type: cylinder (FUNCIONAL)
@@ -157,6 +158,19 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 ---
 
 ## 2026-07-03
+
+### 11.1 Pattern Generator construído (pattern.html — ferramenta #36, 13ª visual tool)
+- **Engine de tessellation**: grid de células, cada uma com um motif transformado por uma regra de simetria. 8 motifs: Quarter Arcs (Truchet clássico — o default, lindo), Diagonal (Truchet lines), Triangle, Semicircle, Circle, Diamond, Cross, **Letter** (cicla os caracteres do textInput — pattern tipográfico).
+- **5 simetrias** via `variantAt()`: repeat, alternate (180° em xadrez), mirror (flip X/Y por paridade — fecha loops), rot90 ((c+r)%4), random com seed. **Random usa módulo 6 (RAND_PERIOD)** — vira periódico e o tile continua seamless. `periodOf()` = 1/2/2/4/6.
+- **Lição de geometria**: o motif de arcos é ponto-simétrico (180° = ele mesmo) → repeat==alternate e mirror==rot90 PARA ARCOS, por design. Teste de distinção de simetrias usa triangle.
+- **Tile seamless de verdade**: caps redondos dos strokes vazam da célula → na borda do tile faltava o vizinho. `buildTile` desenha um **anel extra de células com wrap** (col/row -1..n, índices wrapped) — validado por pixel-diff na junção de 2 tiles lado a lado (0 quebras, diff máx = antialias). SVG idem (64 grupos no truchet: 8×8 com anel).
+- **Motion**: Spin (rotação contínua) + Pulse (respiração de escala) com fase por célula via TipoStagger (Center default); loop contínuo só quando spin/pulse/rec (padrão on-demand). Tile/SVG congelam a animação.
+- **Cores**: brand default (teal/gold/preto/mint no cream), modos Cycle/Checker/Random/Single, numColors 1-4.
+- **Exports**: PNG, Tile PNG (512/1024/2048), **SVG vetorial** (paths/arcs A-commands, abre no Illustrator/Figma), MP4; GIF/Link/⏱/⛶/behaviors/help/font tudo grátis do shared (16 checks confirmam).
+- **TipoFont upgrade**: caminho **FontFace** pra páginas canvas-2D (sem p5): registra 'TipoCustomFont' via arrayBuffer, `TipoFont.family()` retorna a família ativa — pattern usa no shape Letter e re-renderiza no evento 'tipofont'. Reset remove via document.fonts.delete.
+- **8 presets**: Truchet, Waves (mirror fecha círculos), Scales, Geo, Checker, Type (letras rot90 + pulse), Terrazzo (dots random), Pipes.
+- **test-pattern.mjs 16/16 PASS**: períodos matematicamente corretos nas 5 simetrias, 6 shapes/5 simetrias/8 presets distintos, determinístico + reroll muda, spin anima, seamless por pixel-diff, SVG parseia com 64 grupos, PNG/Tile/MP4 ffmpeg clean, todos os sistemas shared presentes, zero pageerrors.
+- Card "Pt" no index (antes do Overlay). Cache-bust `?v=20260703-pat1` (36 páginas agora).
 
 ### TipoHelp — tooltips "?" em TODAS as ferramentas (pedido do Daniel, padrão do dithering)
 - **TipoHelp em shared/ui.js**: registro central `TEXTS` com explicações PT-BR sucintas por ferramenta, keyed por pathname → título de seção. Auto-init no boot: injeta `?` (.tipo-help-icon) nos `.section-title` com entrada no registro; hover mostra, click pina (mobile), click fora/scroll esconde; tooltip fixed com clamp no viewport.
