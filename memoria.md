@@ -158,6 +158,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-03
 
+### TipoHelp — tooltips "?" em TODAS as ferramentas (pedido do Daniel, padrão do dithering)
+- **TipoHelp em shared/ui.js**: registro central `TEXTS` com explicações PT-BR sucintas por ferramenta, keyed por pathname → título de seção. Auto-init no boot: injeta `?` (.tipo-help-icon) nos `.section-title` com entrada no registro; hover mostra, click pina (mobile), click fora/scroll esconde; tooltip fixed com clamp no viewport.
+- **Gate**: páginas com sistema próprio (`#helpTooltip` — dithering/riso/datamosh/pixelsort/depth/gradientmap/glitch) são puladas — zero double-inject.
+- **Cobertura**: 28 ferramentas novas com help (22 kinetic + duplicator + rastro + overlay + ascii + reticula + audiotype), ~80 seções documentadas. Textos escritos com base nos SLIDERS REAIS de cada seção (grep dos range-labels) — precisão, não genérico. Seções óbvias (Text/Presets/Colors/Export) ficam sem ícone.
+- **test-tipohelp.mjs ALL PASS** primeira rodada: 28/28 tools com TODOS os ícones do registro, hover mostra texto certo (mouse real), clamp no viewport, mouseleave esconde, click pina/despina, gate confirmado (dithering/riso/datamosh sem .tipo-help-icon), zero pageerrors.
+- Cache-bust `?v=20260703-help1`. Pra editar/adicionar textos: só mexer no `TipoHelp.TEXTS` do ui.js.
+
 ### Overlay v2 — upgrade completo (pedido do Daniel de 2026-06-12: "tá meio meme/tosca")
 Diagnóstico do "meme": composite só em source-over (SEM blend modes), grain estático, abria em ruído cinza sobre PRETO (sem demo), patterns matemáticos sem alma.
 - **Blend modes reais** (select na seção Texture): soft-light (default), overlay, multiply, screen, hard-light, lighten, darken, color-dodge, color-burn, difference, normal. Aplicados no composite live E no PNG export.

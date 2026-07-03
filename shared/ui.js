@@ -1620,6 +1620,222 @@ const TipoGIF = {
 
 
 /* ============================================================
+   TIPÓ — Help Tooltips (padrão do dithering, agora em todas)
+   Central registry of succinct PT-BR explanations per tool.
+   A "?" icon is injected next to each section title that has an
+   entry; hover shows the tooltip, click pins it (mobile).
+   Pages with their own inline system (#helpTooltip) are skipped.
+   ============================================================ */
+
+const TipoHelp = {
+  TEXTS: {
+    coil: {
+      'Type': 'X/Y-Scale esticam o texto na horizontal/vertical (Y também dita a altura da fita). Weight engrossa o traço.',
+      'Ribbon': 'Count = quantos segmentos de fita na espiral (cada um repete o texto). Size engorda a fita além do texto — negativo afina. Hide deixa só as letras; Flat caps = pontas retas.',
+      'Spiral': 'Radius abre a espiral a partir do centro. Spacing afasta os caracteres ao longo da curva. Start pula o miolo (começa mais afastado). Spin gira tudo continuamente.',
+      'Wave': 'Onda radial que deforma a espiral: Size = amplitude, Count = nº de picos ao redor, Speed anima, Slope endurece a crista (baixo = senoide suave, alto = pico agudo).',
+    },
+    cylinder: {
+      'Cylinder': 'Radius = raio do tubo 3D; Count = quantas linhas de texto envolvem o cilindro; Rotate gira o tubo; Offset defasa cada linha da anterior (efeito hélice).',
+      'Wave': 'Ondulação da superfície: Count = nº de ondas, Speed anima, Latitude/Longitude = direção da onda no tubo, Ripple = amplitude.',
+      'Type': 'Escala das letras na superfície (X = largura, Y = altura) e Weight = peso do traço.',
+      'Tweak Rotation': 'Rotação por LINHA de texto — cada anel gira sobre o próprio eixo. Diferente da Camera, que gira a cena inteira.',
+      'Camera': 'Órbita da câmera em X/Y/Z + Zoom. Não muda a geometria, só o ponto de vista.',
+    },
+    field: {
+      'Grid': 'Malha de caracteres: Columns × Rows = densidade; Tracking = espaço horizontal, Line Space = vertical.',
+      'Wave': 'Motor da ondulação: Speed anima; X/Y Freq = frequência espacial (quantas ondas cabem no grid em cada eixo).',
+      'Amplitude': 'Quanto cada eixo se move: Z = profundidade (letra vem pra frente), X/Y = deslocamento lateral/vertical. Z Smooth suaviza, X Stretch estica as letras com a onda, Str Wave ondula o esticamento.',
+      'Stagger': 'Defasagem da onda por célula: Order = ordem (índice/linha/coluna/centro/aleatório), Amount = intensidade (200 = 2 ciclos), Curve = easing da distribuição.',
+      'Camera': 'Órbita da câmera em X/Y/Z + Zoom. Não muda a geometria, só o ponto de vista.',
+      'Mouse': 'Com Mouse React ligado, as letras fogem do cursor; Strength = força da repulsão.',
+    },
+    stripes: {
+      'Type': 'Escala (X/Y) e peso das letras; Tracking = espaço entre caracteres na fita.',
+      'Ribbon': 'Fitas horizontais de texto: Count = quantas, X/Y Space = espaçamento entre elas, Size = altura de cada fita, Offset defasa as linhas.',
+      'Stagger': 'Defasagem da onda: Order = por fita (Ribbon) ou por caractere, Amount = intensidade (200 = 2 ciclos), Curve = easing.',
+      'Wave': 'Onda que percorre as fitas: Size = amplitude, Speed anima, Wavelength = comprimento da onda, Slope endurece a crista.',
+    },
+    cascade: {
+      'Type': 'X-Scale/Weight = largura e peso das letras; Tracking/Line Space = espaçamentos.',
+      'Grid': 'Pirâmide de linhas: Rows = nº de degraus, Length = caracteres por linha.',
+      'Wave': 'Speed = velocidade da onda que percorre a pirâmide (0 = desliga a onda); Slope = dureza da crista.',
+      'Stagger': 'Defasagem da onda por célula: Mode = ordem, Amount = intensidade (200 = 2 ciclos), Curve = easing. Só age com Wave Speed > 0.',
+    },
+    flag: {
+      'Type': 'X/Y-Scale esticam as letras; Weight = peso do traço; Rows = linhas da bandeira; Padding = espaço entre elas; Ribbon Depth = profundidade 3D da fita.',
+      'Wave': 'Tremular da bandeira: X/Y/Z Size = amplitude em cada eixo, Offset defasa colunas, Speed anima, Row Offset defasa cada linha, Slope endurece a crista.',
+      'Camera': 'Órbita da câmera em X/Y/Z + Zoom. Não muda a geometria, só o ponto de vista.',
+    },
+    ribbon: {
+      'Type': 'Height = altura das letras na fita; Tracking = espaço entre caracteres; Weight = peso do traço.',
+      'Ribbon': 'A fita 3D: Seg Count/Space = resolução e extensão do caminho, Depth = profundidade da dobra, Stretch estica a curva, Count = quantas fitas, Z/X Space afastam as cópias.',
+      'Animation': 'Speed = velocidade do texto correndo pela fita; Scale = zoom geral.',
+      'Camera': 'Órbita da câmera em X/Y/Z. Não muda a geometria, só o ponto de vista.',
+    },
+    morisawa: {
+      'Type': 'Rows = linhas da pirâmide; Weight/Tracking/Line Space = peso e espaçamentos; Matte esconde as faces de trás.',
+      'Animation': 'Scroll Speed = velocidade da rolagem que expande a pirâmide (negativo inverte o fluxo).',
+    },
+    layers: {
+      'Layers': 'Cópias do texto empilhadas com simetria 4-fold: Count = nº de camadas, Speed = scroll em profundidade (0 congela), Inner H/V deslocam o miolo, Rotate gira o conjunto. Block preenche o fundo das letras.',
+    },
+    danger: {
+      'Distortion': 'Malha distorcida por Perlin noise: Speed anima, Radius = alcance da distorção, Complexity = detalhe do ruído.',
+      'Grid': 'Columns × Rows repetem o texto na malha; Font Size/Leading = tamanho e entrelinha.',
+      'Background': 'Imagem ou vídeo atrás da tipografia distorcida; Clear Media remove.',
+      'Mouse': 'Com Mouse React, o centro da distorção segue o cursor; Strength = intensidade.',
+    },
+    string: {
+      'String': 'Fitas de texto ao longo de curvas: Strip Height/Count = espessura e nº de fitas, Points = nós da curva, Curve = tensão, Randomize sorteia outro caminho. O select troca o padrão (wave, river, orbit, spiral...).',
+    },
+    badge: {
+      'Strip (Center)': 'Faixa central de texto: Height = altura, Position desloca na vertical.',
+      'Ring': 'Anel de texto circular: Radius, Height das letras e Arc = quanto do círculo o texto ocupa.',
+      'Tunnel': 'Anéis concêntricos em profundidade: Count = nº de anéis, Inner = raio inicial, Radius = espalhamento.',
+      'Spread': 'Letras soltas ao redor da composição: Font Size e Scale da dispersão.',
+      'Master': 'Speed global — gira todas as camadas juntas.',
+    },
+    clutter: {
+      'Layout': 'Count = nº de cópias do texto, Radius/Spread = tamanho e dispersão do enxame, Speed anima.',
+      'Mode': 'Distribuição das cópias: ring, cloud, cosmic, sphere, scatter ou vortex — cada um organiza e anima o enxame de um jeito.',
+    },
+    construct: {
+      'Layout': 'Grade modular: Columns × Rows de módulos, Strip Height = altura das faixas, Padding entre células, Speed anima.',
+      'Mode': 'Como o texto preenche os módulos: cloud, scribble, zigzag, gradient, box ou matrix.',
+    },
+    snap: {
+      'Animation': 'Letras entram em sequência: Speed = ritmo, Stagger = atraso entre letras, Amplitude = distância do movimento, Easing = curva (0–9: sine → elastic), Organic = jitter natural.',
+    },
+    flash: {
+      'Animation': 'Cicla 8 efeitos de entrada: Scene Length = duração de cada cena, Repeat = repetições antes de trocar de efeito, Easing = curva, Organic = jitter.',
+    },
+    pow: {
+      'Animation': 'O texto explode em partículas e se remonta: Blast Strength = força, Detail = nº de partículas, Particle Size = tamanho, Easing = curva da remontagem. Com Mouse React, a explosão segue o cursor.',
+    },
+    crash: {
+      'Animation': 'Física de queda: Gravity puxa as letras, Bounce = elasticidade do quique, Friction freia no chão.',
+    },
+    crashclock: {
+      'Particles': 'Círculos com colisão dentro do relógio: Count = quantos, Min/Max Size = faixa de tamanho, Packing = densidade do empacotamento.',
+      'Clock': 'Scale = tamanho do relógio, Hand Push = força com que os ponteiros empurram as partículas, Hand Width/Border = espessuras.',
+      'Physics': 'Gravity + Angle = força e direção da gravidade, Friction amortece, Speed acelera a simulação, Bodies = tipo de corpo simulado.',
+    },
+    vessel: {
+      'Animation': 'O container morfa entre formas: Duration = tempo de cada morph, Pause = espera entre formas, Easing = curva (0–9: sine → elastic).',
+    },
+    shine: {
+      'Animation': 'Raios radiais atrás do texto: Spoke Count/Length = nº e comprimento dos raios, Rotation Speed gira, Scatter espalha as pontas.',
+    },
+    boost: {
+      'Animation': 'Revelação letra a letra: Speed = ritmo, Direction = ângulo de entrada, Overshoot passa do ponto e volta, Easing = curva, Organic = jitter.',
+    },
+    duplicator: {
+      'Element': 'O que é clonado: texto em cycle (cada cópia mostra a letra seguinte), a palavra inteira, ou formas. Size = tamanho base.',
+      'Distribution': 'Arranjo das cópias: Grid, Circle, Spiral, Line ou Drawn Path (desenhe direto no canvas). Spread = tamanho do arranjo, Angle gira tudo (anime com ~ e vira um spin), Align alinha cada cópia à direção do caminho.',
+      'Per-Copy Offset': 'Mudança progressiva por cópia: Rotate Step soma graus a cada índice, Scale Start→End interpola o tamanho da primeira à última, Fade End esvanece as finais.',
+      'Animation': 'Onda que percorre as cópias: Pulse = escala, Twist = rotação, Drift = deslocamento perpendicular, Speed = velocidade. A fase de cada cópia vem do Stagger.',
+      'Stagger': 'Ordem em que a onda atinge as cópias: Index/Row/Col/Center/Random. Amount = defasagem total (200 = 2 ciclos), Curve = easing da distribuição.',
+    },
+    rastro: {
+      'Echo Effect': 'Echo temporal (lógica do Adobe): Echo Time = intervalo entre ecos em frames, Echoes = nº de cópias, Intensity/Decay = opacidade inicial e queda por eco. O operador define como os ecos se somam (Composite, Add, Screen...).',
+      'Layer / Matte': 'O que vira eco: Full Layer = tudo; Motion Difference isola só o que se move; Drawn Mask = desenhe a área no canvas; Chroma/Luma recortam por cor/brilho. Threshold/Softness calibram o recorte; Background = fundo (Source/Transparente/Sólido).',
+      'Source Transform': 'Move e escala a fonte no canvas. Arraste o canvas pra puxar a imagem — o puxão gera rastro e sai na gravação.',
+      'Still Motion': 'Pra imagem parada: Orbit/Spin/Push/Zoom criam movimento artificial (o echo só existe quando o layer muda no tempo). Speed/Distance/Angle controlam o gesto.',
+      'Echo Transform': 'Cada eco acumula transformação: Rotate gira progressivamente (espiral), Scale Step encolhe/cresce por eco (98% = espiral suave; valores baixos somem rápido), Shift desloca. É o coração do efeito vórtice.',
+      'Look': 'Trail Blur borra os ecos mais antigos; Exposure clareia ou atenua o rastro inteiro.',
+    },
+    overlay: {
+      'Pattern': 'A textura procedural: grains de filme (vivos com Animate), Light Leak/Vignette (esticados sobre a mídia), Bokeh, Riso, VHS, papel, tramas... Tudo seamless.',
+      'Texture': 'Blend = como a textura mistura com a imagem (Soft Light = sutil, Multiply escurece, Screen clareia). Density/Scale/Roughness/Contrast moldam o padrão; Animate faz o grain viver; dblclick no canvas re-sorteia a semente.',
+      'Output': 'Tamanho do tile (maior = menos repetição visível). Base colore a textura com Monochrome desligado. Transparent = Tile PNG sai com alpha (meio-cinza vira transparente).',
+    },
+    ascii: {
+      'Resolution': 'Columns = caracteres por linha (mais = mais detalhe, menor cada glyph). Font Size 0 = auto: preenche o canvas.',
+      'Character Set': 'A rampa de caracteres do escuro ao claro. Custom aceita seus próprios caracteres, em ordem de densidade.',
+      'Appearance': 'Original Colors pinta cada caractere com a cor da imagem; Monochrome usa uma cor só; Matrix = verde clássico. Background sólido ou transparente.',
+      'Fine Tuning': 'Line Height = entrelinha da grade; Contrast empurra os tons pros extremos antes do mapeamento.',
+    },
+    reticula: {
+      'Grid': 'Resolution = células na largura; Min/Max Size = faixa de tamanho dos pontos conforme o brilho; Angle gira a malha; Contrast reforça claro/escuro; Gap afasta os pontos.',
+      'Shape': 'A forma de cada célula (círculo, quadrado, linha, texto...). Invert troca claro/escuro; Filled alterna cheio/contorno.',
+    },
+    audiotype: {
+      'Grid': 'Columns × Rows da grade de barras; Gap = espaço entre elas; Min/Max Size = faixa de tamanho conforme a luminosidade do texto/imagem.',
+      'Mode': 'Barras horizontais, verticais ou pixel grid; o segundo select escolhe o eixo que reage ao áudio (altura, largura ou ambos).',
+      'Audio Reactivity': 'Intensity = sensibilidade ao áudio; Frequency = faixa usada (graves/agudos/full); Smoothing suaviza a reação (baixo = nervoso, alto = fluido).',
+      'Color Levels': 'Faixas de luminosidade → cor: de 2 a 8 níveis, cada um com sua cor, das sombras às luzes.',
+    },
+  },
+
+  _tip: null,
+  _pinned: false,
+
+  init() {
+    if (document.getElementById('helpTooltip')) return; // page has its own system
+    const tool = location.pathname.split('/').pop().replace('.html', '');
+    const map = this.TEXTS[tool];
+    if (!map) return;
+    let injected = 0;
+    document.querySelectorAll('.section-title').forEach(el => {
+      const key = el.textContent.trim();
+      if (!map[key] || el.querySelector('.tipo-help-icon')) return;
+      const s = document.createElement('span');
+      s.className = 'tipo-help-icon';
+      s.dataset.help = map[key];
+      s.textContent = '?';
+      el.appendChild(s);
+      injected++;
+    });
+    if (injected) this._bind();
+  },
+
+  _bind() {
+    const style = document.createElement('style');
+    style.textContent = `
+.tipo-help-icon { display:inline-flex; align-items:center; justify-content:center; width:13px; height:13px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); color:var(--text-5,#777); font-size:9px; font-weight:400; cursor:help; margin-left:6px; flex:none; user-select:none; text-transform:none; letter-spacing:0; vertical-align:middle; }
+.tipo-help-icon:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+#tipoHelpTip { position:fixed; z-index:9999; max-width:260px; background:var(--bg-2,#1e1e1e); border:1px solid var(--border-2,#3a3a3a); color:var(--text-2,#ccc); font-size:11px; line-height:1.55; padding:9px 11px; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .15s; letter-spacing:0; text-transform:none; box-shadow:0 4px 16px rgba(0,0,0,.35); }
+`;
+    document.head.appendChild(style);
+    const tip = document.createElement('div');
+    tip.id = 'tipoHelpTip';
+    document.body.appendChild(tip);
+    this._tip = tip;
+
+    const show = (icon) => {
+      tip.textContent = icon.dataset.help;
+      tip.style.opacity = '1';
+      const r = icon.getBoundingClientRect();
+      tip.style.left = '0px'; tip.style.top = '0px'; // reset before measuring
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let x = r.right + 10, y = r.top - 4;
+      if (x + tw > window.innerWidth - 8) x = Math.max(8, r.left - tw - 10);
+      if (y + th > window.innerHeight - 8) y = Math.max(8, window.innerHeight - th - 8);
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    };
+    const hide = () => { tip.style.opacity = '0'; this._pinned = false; };
+
+    document.querySelectorAll('.tipo-help-icon').forEach(icon => {
+      icon.addEventListener('mouseenter', () => { if (!this._pinned) show(icon); });
+      icon.addEventListener('mouseleave', () => { if (!this._pinned) hide(); });
+      icon.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this._pinned) { hide(); return; }
+        show(icon);
+        this._pinned = true;
+      });
+    });
+    document.addEventListener('click', hide);
+    const panel = document.querySelector('.tipo-panel');
+    if (panel) panel.addEventListener('scroll', hide);
+  },
+};
+
+
+/* ============================================================
    TIPÓ — Share via URL (12.3)
    "Link" button next to the export buttons: copies a URL with the
    whole control state serialized in the hash (#s=id:value;...).
@@ -1765,6 +1981,7 @@ if (typeof document !== 'undefined') {
     TipoGIF.init();
     TipoShare.init();
     TipoFull.init();
+    TipoHelp.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;
