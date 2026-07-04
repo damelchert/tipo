@@ -174,7 +174,7 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
-**Fila pra próxima sessão:** 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações (hoje são letras estáticas), dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
+**Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), **11.4 Gradient Shaper** (reel @antoncreations — qualquer forma vira gradiente, controle de midtones/cores/grid; validar com Daniel o que encantou antes de especificar), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
 
 ### 11.2 Palette construído (palette.html — ferramenta #37, 14ª visual tool)
 - **Extração median cut determinística**: sample ≤360px/12k pixels, corte **3×N profundo + merge de clusters ΔRGB<38** (euclidiano). Sem o merge, o fundo dominante (cream) era fatiado em 2 swatches idênticos e o ink do wordmark sumia dentro do box do teal escuro — corte raso em N direto NÃO funciona com fundo chapado dominante.

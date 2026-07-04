@@ -419,6 +419,46 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Inspirado no Brand Forge mas simplificado (sem IA)
 - **Status:** [ ] Conceito
 
+#### 11.4 — Gradient Shaper (referência: reel @antoncreations, pedido do Daniel 2026-07-03)
+- Referência: https://www.instagram.com/reels/DZ45So6sjym/ — ferramenta de arte com gradientes do Anton (@antoncreations), single HTML file (mesmo espírito da Tipó)
+- Conceito do reel: "I can make whatever shape I want and use it as a gradient. I have full control over midtones, colours, details, grid space, and sizes"
+- **Qualquer forma vira gradiente**: a imagem/vídeo/webcam é a fonte, e formas custom (desenhadas ou escolhidas) são preenchidas com gradientes derivados das cores/luminância da fonte
+- Controles: shape (formas prontas + desenhada), midtones (curva/pivot dos tons médios), cores (remap tipo gradient map mas por forma), detail (resolução do campo), grid space e sizes (grade de células de gradiente)
+- Fontes: imagem, vídeo e webcam (pipeline igual às visual tools existentes)
+- Sinergia interna: reusar LUT/stops do gradientmap.html + grid infra do reticula/pattern; possivelmente extrair um campo de gradientes suaves por célula (visual "gradient blur grid" das demos da Dinamo)
+- Exports: PNG, MP4/GIF; explorar SVG se as formas forem vetoriais
+- **Status:** [ ] Conceito — assistir o reel com calma antes de especificar (só temos caption + thumbnail; validar com Daniel o que exatamente encantou no efeito)
+
+---
+
+### FASE 13 — MOBILE (pedido do Daniel 2026-07-03: "não tá funcionando bem no celular")
+
+Diagnóstico do Daniel: a experiência mobile atual é ruim. A direção NÃO é adaptar as 37 ferramentas — é **curadoria**: as melhores ferramentas (especialmente as visuals) e as principais kinetics, com parâmetros simplificados e UX pensada pra celular de ponta a ponta.
+
+#### 13.1 — Auditoria mobile + curadoria
+- Testar as 37 no viewport mobile real (touch, painel, canvas, performance) e mapear o que quebra
+- Escolher o line-up mobile: visuals fortes (dithering, riso, glitch, pixelsort, gradientmap, palette, pattern, overlay...) + kinetics principais (coil, cascade, flag...) — decidir COM o Daniel
+- Ferramentas fora do line-up: banner "melhor no desktop" em vez de experiência quebrada
+- **Status:** [ ] Conceito
+
+#### 13.2 — UX mobile: painel e controles
+- Painel vira bottom sheet (arrasta pra abrir/fechar), canvas em cima — não sidebar espremida
+- **Parâmetros simplificados**: por ferramenta, expor só os 4-6 sliders que importam + presets em destaque (presets primeiro, sliders depois — no celular preset É o fluxo principal)
+- Touch: sliders maiores (44px+ de alvo), sem hover-dependência (tooltips ? viram tap, lens/brush do mouse ganham equivalente touch), dblclick vira double-tap
+- Upload: câmera direto (capture attribute), galeria, paste
+- **Status:** [ ] Conceito
+
+#### 13.3 — Formatos e redes sociais
+- Presets de formato de export: **9:16 (Stories/Reels/TikTok), 1:1, 4:5 (feed), 16:9** — o canvas enquadra no formato escolhido
+- Export MP4/GIF já otimizado pros limites das redes (duração/tamanho)
+- **Web Share API**: botão compartilhar nativo (share sheet do iOS/Android) com o arquivo direto pra IG/WhatsApp/etc — no mobile isso substitui o download
+- **Status:** [ ] Conceito
+
+#### 13.4 — Landing mobile
+- Header/index adaptados (HeaderFX tem mouse-lens e hover — precisa de fallback touch), cards em lista, line-up mobile em destaque
+- PWA leve? (add to home screen, ícone, fullscreen standalone) — avaliar custo/benefício
+- **Status:** [ ] Conceito
+
 ---
 
 ## Análise Competitiva
