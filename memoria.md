@@ -159,6 +159,14 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-03
 
+### 7.5.2 Header v2 + split panels (item mais antigo do plano — fechado)
+- **Header 56px→96px**: marquee TIPÓ 88px→150px (cortado pelo header, mais gráfico), stroke 2px, opacity 0.13; palavras preenchidas agora alternam **teal/gold/mint** (classes fill-*, 1 a cada 2 palavras) em vez de âmbar raro.
+- **Linha viva**: 2px→4px, gradiente mint→gold→teal fluindo em loop linear contínuo (era ping-pong tímido a 0.6 de opacity); cometa 180px/4px mantido.
+- **Stats no header**: "36 tools • 0 install • 100% browser" em âmbar no breadcrumb (updateBreadcrumb reconstruído com o span).
+- **Split panels sem vazio**: número GIGANTE por painel (13/23, 200px stroke dourado, acende no hover), subs trocados por capacidades reais (image•video•webcam•mp4/gif/svg | 3D•composition•animation•timeline), e **ticker marquee** no rodapé com TODOS os nomes das ferramentas correndo (36s, acelera pra 12s no hover, mask fade nas pontas). Preview bg opacity 0.12→0.2.
+- Light theme com variantes próprias (stroke #B08830, ticker #8a6a20). Smoke: home+4 níveis internos zero pageerror; screenshots dark/light conferidos.
+- PEGADINHA de teste: páginas do MESMO contexto Playwright compartilham localStorage — pra comparar temas, contextos separados.
+
 ### 11.1 Pattern Generator construído (pattern.html — ferramenta #36, 13ª visual tool)
 - **Engine de tessellation**: grid de células, cada uma com um motif transformado por uma regra de simetria. 8 motifs: Quarter Arcs (Truchet clássico — o default, lindo), Diagonal (Truchet lines), Triangle, Semicircle, Circle, Diamond, Cross, **Letter** (cicla os caracteres do textInput — pattern tipográfico).
 - **5 simetrias** via `variantAt()`: repeat, alternate (180° em xadrez), mirror (flip X/Y por paridade — fecha loops), rot90 ((c+r)%4), random com seed. **Random usa módulo 6 (RAND_PERIOD)** — vira periódico e o tile continua seamless. `periodOf()` = 1/2/2/4/6.

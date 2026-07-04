@@ -86,10 +86,11 @@ Prioridade máxima — arrumar experiência antes de features novas.
 - [x] Manter toggle dark/light funcionando
 - [ ] Testar TODAS as 28 ferramentas em light mode (smoke test visual pendente)
 
-#### 7.5.2 — Header disruptivo (PENDENTE — criativo, precisa feedback visual do Daniel)
-- [ ] Melhorar GSAP animations do header (mais impacto, menos espaço vazio)
-- [ ] Ghost text mais expressivo
-- [ ] Animação da linha gradient mais impactante
+#### 7.5.2 — Header disruptivo ✅ (v2 em 2026-07-03 — aguardando validação visual do Daniel no deploy)
+- [x] Header 96px com marquee TIPÓ 150px multicolor (teal/gold/mint) + stats "36 tools • 0 install • 100% browser"
+- [x] Ghost text expressivo (stroke 2px, fills alternados, opacity up)
+- [x] Linha gradient 4px fluindo em loop contínuo + cometa
+- [x] Bônus: split panels com número gigante (13/23), ticker de nomes das ferramentas, previews mais visíveis
 
 #### 7.5.3 — Paleta brand nos presets default
 - [x] TODAS as ferramentas devem abrir com cores da paleta Athos (light mode):
