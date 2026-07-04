@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
 <script src="shared/ui.js?v=20260703-pal1"></script>
+<script src="shared/flagfont.js?v=20260704-ff1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -192,289 +193,39 @@ function getTxtColor(j) {
   return c[(j + 1) % n];
 }
 
-// Draw a character using line segments between interpolated corner points.
-// This makes the text deform with the quad surface, like the original.
+// ============================================================
+// GLYPH RENDERER — FlagFont (shared/flagfont.js) + full bilinear
+// Every stroke is subdivided and each point mapped through the
+// deformed quad, so glyphs bend WITH the surface instead of
+// cutting straight across a folding cell.
+// ============================================================
+const GLYPH_SUBDIV = 7; // subdivision segments per full-cell stroke length
+
 function drawChar(ch, TL, TR, BR, BL, sw) {
-  // Pre-compute interpolation points
-  const Lhalf = p5.Vector.lerp(TL, BL, 0.5);
-  const Rhalf = p5.Vector.lerp(TR, BR, 0.5);
-  const Thalf = p5.Vector.lerp(TL, TR, 0.5);
-  const Bhalf = p5.Vector.lerp(BL, BR, 0.5);
-  const Lthird = p5.Vector.lerp(TL, BL, 1/3);
-  const L2third = p5.Vector.lerp(TL, BL, 2/3);
-  const Rthird = p5.Vector.lerp(TR, BR, 1/3);
-  const R2third = p5.Vector.lerp(TR, BR, 2/3);
-  const Tthird = p5.Vector.lerp(TL, TR, 1/3);
-  const T2third = p5.Vector.lerp(TL, TR, 2/3);
-  const Bthird = p5.Vector.lerp(BL, BR, 1/3);
-  const B2third = p5.Vector.lerp(BL, BR, 2/3);
-  const Lquad = p5.Vector.lerp(TL, BL, 0.25);
-  const L3quad = p5.Vector.lerp(TL, BL, 0.75);
-  const Rquad = p5.Vector.lerp(TR, BR, 0.25);
-  const R3quad = p5.Vector.lerp(TR, BR, 0.75);
-  const Tquad = p5.Vector.lerp(TL, TR, 0.25);
-  const T3quad = p5.Vector.lerp(TL, TR, 0.75);
-  const Bquad = p5.Vector.lerp(BL, BR, 0.25);
-  const B3quad = p5.Vector.lerp(BL, BR, 0.75);
-
-  // Interior points via bilinear interpolation
-  function bilinear(u, v) {
-    const top = p5.Vector.lerp(TL, TR, u);
-    const bot = p5.Vector.lerp(BL, BR, u);
-    return p5.Vector.lerp(top, bot, v);
-  }
-
+  const polys = FlagFont.get(ch);
+  if (!polys) return; // space
   strokeWeight(sw);
-
-  const c = ch.toUpperCase();
-
-  // Line helper
-  function L(a, b) {
-    line(a.x, a.y, a.z, b.x, b.y, b.z);
+  // bilinear patch: uv -> 3D point on the deformed quad (no allocations)
+  let px, py, pz;
+  function bilin(u, v) {
+    const tx = TL.x + (TR.x - TL.x) * u, ty = TL.y + (TR.y - TL.y) * u, tz = TL.z + (TR.z - TL.z) * u;
+    const bx = BL.x + (BR.x - BL.x) * u, by = BL.y + (BR.y - BL.y) * u, bz = BL.z + (BR.z - BL.z) * u;
+    px = tx + (bx - tx) * v; py = ty + (by - ty) * v; pz = tz + (bz - tz) * v;
   }
-
-  switch(c) {
-    case 'A':
-      L(BL, Thalf);
-      L(Thalf, BR);
-      L(Lhalf, Rhalf);
-      break;
-    case 'B':
-      L(TL, BL);
-      L(TL, Thalf);
-      L(Thalf, Rhalf);
-      L(Rhalf, Lhalf);
-      L(Lhalf, Bhalf);
-      L(Bhalf, BL);
-      break;
-    case 'C':
-      L(TR, TL);
-      L(TL, BL);
-      L(BL, BR);
-      break;
-    case 'D':
-      L(TL, BL);
-      L(TL, T2third);
-      L(T2third, R2third);
-      L(R2third, BL);
-      break;
-    case 'E':
-      L(TR, TL);
-      L(TL, BL);
-      L(BL, BR);
-      L(Lhalf, Rhalf);
-      break;
-    case 'F':
-      L(TR, TL);
-      L(TL, BL);
-      L(Lhalf, Rhalf);
-      break;
-    case 'G':
-      L(TR, TL);
-      L(TL, BL);
-      L(BL, BR);
-      L(BR, Rhalf);
-      L(Rhalf, bilinear(0.5, 0.5));
-      break;
-    case 'H':
-      L(TL, BL);
-      L(TR, BR);
-      L(Lhalf, Rhalf);
-      break;
-    case 'I':
-      L(TL, TR);
-      L(BL, BR);
-      L(Thalf, Bhalf);
-      break;
-    case 'J':
-      L(TL, TR);
-      L(Thalf, Bhalf);
-      L(Bhalf, BL);
-      break;
-    case 'K':
-      L(TL, BL);
-      L(TR, Lhalf);
-      L(Lhalf, BR);
-      break;
-    case 'L':
-      L(TL, BL);
-      L(BL, BR);
-      break;
-    case 'M':
-      L(BL, TL);
-      L(TL, bilinear(0.5, 0.5));
-      L(bilinear(0.5, 0.5), TR);
-      L(TR, BR);
-      break;
-    case 'N':
-      L(BL, TL);
-      L(TL, BR);
-      L(BR, TR);
-      break;
-    case 'O':
-      L(TL, TR);
-      L(TR, BR);
-      L(BR, BL);
-      L(BL, TL);
-      break;
-    case 'P':
-      L(BL, TL);
-      L(TL, TR);
-      L(TR, Rhalf);
-      L(Rhalf, Lhalf);
-      break;
-    case 'Q':
-      L(TL, TR);
-      L(TR, BR);
-      L(BR, BL);
-      L(BL, TL);
-      L(bilinear(0.5, 0.5), BR);
-      break;
-    case 'R':
-      L(BL, TL);
-      L(TL, TR);
-      L(TR, Rhalf);
-      L(Rhalf, Lhalf);
-      L(Lhalf, BR);
-      break;
-    case 'S':
-      L(TR, TL);
-      L(TL, Lhalf);
-      L(Lhalf, Rhalf);
-      L(Rhalf, BR);
-      L(BR, BL);
-      break;
-    case 'T':
-      L(TL, TR);
-      L(Thalf, Bhalf);
-      break;
-    case 'U':
-      L(TL, BL);
-      L(BL, BR);
-      L(BR, TR);
-      break;
-    case 'V':
-      L(TL, Bhalf);
-      L(Bhalf, TR);
-      break;
-    case 'W':
-      L(TL, BL);
-      L(BL, bilinear(0.5, 0.5));
-      L(bilinear(0.5, 0.5), BR);
-      L(BR, TR);
-      break;
-    case 'X':
-      L(TL, BR);
-      L(TR, BL);
-      break;
-    case 'Y':
-      L(TL, bilinear(0.5, 0.5));
-      L(TR, bilinear(0.5, 0.5));
-      L(bilinear(0.5, 0.5), Bhalf);
-      break;
-    case 'Z':
-      L(TL, TR);
-      L(TR, BL);
-      L(BL, BR);
-      break;
-    // Numbers
-    case '0': case 'O':
-      L(TL, TR); L(TR, BR); L(BR, BL); L(BL, TL);
-      break;
-    case '1':
-      L(Tthird, Thalf); L(Thalf, Bhalf);
-      break;
-    case '2':
-      L(TL, TR); L(TR, Rhalf); L(Rhalf, Lhalf); L(Lhalf, BL); L(BL, BR);
-      break;
-    case '3':
-      L(TL, TR); L(TR, BR); L(BR, BL); L(Lhalf, Rhalf);
-      break;
-    case '4':
-      L(TL, Lhalf); L(Lhalf, Rhalf); L(TR, BR);
-      break;
-    case '5':
-      L(TR, TL); L(TL, Lhalf); L(Lhalf, Rhalf); L(Rhalf, BR); L(BR, BL);
-      break;
-    case '6':
-      L(TR, TL); L(TL, BL); L(BL, BR); L(BR, Rhalf); L(Rhalf, Lhalf);
-      break;
-    case '7':
-      L(TL, TR); L(TR, BL);
-      break;
-    case '8':
-      L(TL, TR); L(TR, BR); L(BR, BL); L(BL, TL); L(Lhalf, Rhalf);
-      break;
-    case '9':
-      L(Rhalf, Lhalf); L(Lhalf, TL); L(TL, TR); L(TR, BR); L(BR, BL);
-      break;
-    // Punctuation
-    case '-':
-      L(Lhalf, Rhalf);
-      break;
-    case '/':
-      L(BL, TR);
-      break;
-    case '\\':
-      L(TL, BR);
-      break;
-    case '.':
-      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
-      break;
-    case ',':
-      L(bilinear(0.5, 0.7), bilinear(0.4, 0.95));
-      break;
-    case '!':
-      L(Thalf, bilinear(0.5, 0.65));
-      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
-      break;
-    case '?':
-      L(TL, TR); L(TR, Rhalf); L(Rhalf, bilinear(0.5, 0.5));
-      L(bilinear(0.4, 0.85), bilinear(0.6, 0.85));
-      break;
-    case '*':
-      L(Thalf, Bhalf); L(Lhalf, Rhalf);
-      L(bilinear(0.2, 0.2), bilinear(0.8, 0.8));
-      L(bilinear(0.8, 0.2), bilinear(0.2, 0.8));
-      break;
-    case ':':
-      L(bilinear(0.4, 0.3), bilinear(0.6, 0.3));
-      L(bilinear(0.4, 0.7), bilinear(0.6, 0.7));
-      break;
-    case '\'': case '\u2019':
-      L(bilinear(0.5, 0.1), bilinear(0.5, 0.35));
-      break;
-    case '"': case '\u201C': case '\u201D':
-      L(bilinear(0.35, 0.1), bilinear(0.35, 0.35));
-      L(bilinear(0.65, 0.1), bilinear(0.65, 0.35));
-      break;
-    case '(':
-      L(Tthird, Lhalf); L(Lhalf, Bthird);
-      break;
-    case ')':
-      L(T2third, Rhalf); L(Rhalf, B2third);
-      break;
-    case '+':
-      L(Thalf, Bhalf); L(Lhalf, Rhalf);
-      break;
-    case '=':
-      L(Lthird, Rthird); L(L2third, R2third);
-      break;
-    case '&':
-      L(TR, Lthird); L(Lthird, Rthird); L(Rthird, BL); L(BL, BR);
-      break;
-    case '#':
-      L(bilinear(0.35, 0), bilinear(0.35, 1));
-      L(bilinear(0.65, 0), bilinear(0.65, 1));
-      L(bilinear(0, 0.35), bilinear(1, 0.35));
-      L(bilinear(0, 0.65), bilinear(1, 0.65));
-      break;
-    case ' ':
-      break; // space — nothing to draw
-    default:
-      // Unknown character: draw a dot
-      L(bilinear(0.4, 0.4), bilinear(0.6, 0.6));
-      break;
+  for (const poly of polys) {
+    beginShape();
+    for (let s = 0; s < poly.length - 1; s++) {
+      const u0 = poly[s][0], v0 = poly[s][1];
+      const u1 = poly[s + 1][0], v1 = poly[s + 1][1];
+      const n = Math.max(1, Math.ceil(Math.hypot(u1 - u0, v1 - v0) * GLYPH_SUBDIV));
+      if (s === 0) { bilin(u0, v0); vertex(px, py, pz); }
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        bilin(u0 + (u1 - u0) * t, v0 + (v1 - v0) * t);
+        vertex(px, py, pz);
+      }
+    }
+    endShape();
   }
 }
 
@@ -544,13 +295,11 @@ function draw() {
       // Center the cell at origin (same as original: translate(-typeX/2, -typeY/2))
       translate(-tX / 2, -tY / 2);
 
-      // 1. DRAW TEXT (stroke, on padded corners, at Z=0)
-      noFill();
-      stroke(txtC);
-      drawChar(ch, TL, TR, BR, BL, tW);
-
-      // 2. DRAW RIBBON (fill, on unpadded corners, at Z=-typePush)
+      // 1. RIBBON first (fill, unpadded corners, Z=-typePush). Text comes
+      // after so it wins the depth test when Ribbon Depth = 0 — drawing it
+      // first let the ribbon paint OVER the text at equal depth (colaWave bug).
       if (!txtOnly) {
+        push();
         translate(0, 0, -typePush);
         fill(ribC);
         noStroke();
@@ -562,7 +311,7 @@ function draw() {
         vertex(TLbox.x, TLbox.y, TLbox.z);
         endShape();
 
-        // 3. BACK FACE (at Z=-typePush-1)
+        // BACK FACE (at Z=-typePush-1)
         translate(0, 0, -1);
         fill(txtC);
         beginShape();
@@ -572,7 +321,13 @@ function draw() {
         vertex(BLbox.x, BLbox.y, BLbox.z);
         vertex(TLbox.x, TLbox.y, TLbox.z);
         endShape();
+        pop();
       }
+
+      // 2. TEXT on top (stroke, padded corners, Z=0)
+      noFill();
+      stroke(txtC);
+      drawChar(ch, TL, TR, BR, BL, tW);
       pop();
     }
   }

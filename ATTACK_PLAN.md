@@ -391,7 +391,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 ### FASE 10 — Refinamento Visual (match com Space Type Generator)
 
 #### Prioridade Alta
-- [ ] **FLAG** — Font engine vetorial completo (keyboardEngine_corners com bilinear interpolation)
+- [x] **FLAG** — ✅ Font engine vetorial completo (2026-07-03): **shared/flagfont.js** — fonte esqueleto própria, cada glyph = polilinhas/arcos/splines Catmull-Rom em espaço (u,v) da célula. Renderer com **bilinear interpolation real**: cada traço é subdividido (GLYPH_SUBDIV 7) e cada ponto mapeado pela quad deformada — os traços CURVAM com a bandeira (antes eram retas entre cantos). 72+ glyphs: A-Z com curvas de verdade (bowls B/C/D/G/O/P/Q/R/S), 0-9, pontuação, **acentos PT-BR completos** (Á À Â Ã É Ê Í Ó Ô Õ Ú Ç Ñ... — marcas acima/abaixo da célula via extrapolação bilinear). Bugs mortos: **Ó renderizava como pontinho** (o demo default TIPÓ mostrava "TIP·"!) e **colaWave com texto invisível** (ribbon depth 0 pintava por cima do texto na mesma profundidade — ordem de desenho invertida, fita primeiro, texto depois; pré-existente, confirmado no HEAD via worktree). Perf: 30fps cravado no pior caso (origami 18 rows × 11 chars). test-flagfont.mjs 7/7 + test-recording-kinetic PASS.
 - [ ] **CASCADE** — Match visual fino com original (row height, spacing, color cycling)
 - [ ] **MORISAWA** — Ajuste fino de flux/wrap/tracking
 
