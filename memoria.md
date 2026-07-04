@@ -169,11 +169,23 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **TipoHelp**: tooltips "?" nas 28 ferramentas restantes (registro central no ui.js, ~85 seções).
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
-- **Total agora: 36 ferramentas** (13 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260703-pat1`.
+- **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
+- **Total agora: 37 ferramentas** (14 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260703-pal1`.
 
-**PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
+**PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
-**Fila pra próxima sessão:** 11.2 Color Palette Generator, 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações (hoje são letras estáticas), dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
+**Fila pra próxima sessão:** 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações (hoje são letras estáticas), dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
+
+### 11.2 Palette construído (palette.html — ferramenta #37, 14ª visual tool)
+- **Extração median cut determinística**: sample ≤360px/12k pixels, corte **3×N profundo + merge de clusters ΔRGB<38** (euclidiano). Sem o merge, o fundo dominante (cream) era fatiado em 2 swatches idênticos e o ink do wordmark sumia dentro do box do teal escuro — corte raso em N direto NÃO funciona com fundo chapado dominante.
+- **Base das harmonias = cor mais cromática** (`s * (1-|2l-1|)`), não a mais populosa — base cream gerava harmonias lavadas quase brancas (visto no screenshot, corrigido). Clique num swatch = vira base + copia hex; clique na imagem = conta-gotas.
+- **6 harmonias HSL**: complementary 180°, analogous ±30°, triadic 120°, split 150°/210°, tetradic 90°, mono (5 luminosidades). Select "All" mostra comp+analog+triadic no card.
+- **ASE binário implementado na mão**: header `ASEF` + versão 1.0 + uint32 count; cada bloco = tipo 0x0001, length, nome UTF-16BE null-terminated, `'RGB '`, 3× float32 BE, tipo normal (2). Validado byte a byte em Node no teste (14 blocos = 6 extraídas + 8 de harmonia). CSS `:root` vars + JSON (rgb/hsl/população) + PNG do card.
+- **Card render**: caption, imagem fonte, swatches grandes com hex+% (texto contrast-aware), fileiras de harmonia; hairline alpha .2 quando o swatch ≈ cor do fundo (cream sumia no cream). Fundo Cream/Ink.
+- **Upload**: botão, drag&drop no canvas, ⌘V paste. srcSample (≤360, extração) separado do srcDisplay (≤1600, card) — senão imagem grande fica pixelada no card.
+- **ui.js: `[data-share-anchor]`** — TipoShare/TipoFull ancoravam só em recBtn/tipoGifBtn; ferramenta estática (sem gravação) ficava sem Link/⛶. Qualquer botão com o atributo agora serve de âncora e destrava os dois. TipoGIF continua exigindo recBtn (correto: tool estática não grava).
+- **Demo brand**: coil teal/dark-teal + banda gold/gold-light + quarter mint + TIPÓ e barra ink sobre cream → extração default cai exatamente na Athos (#f8f5f0/#2a8677/#9dded0/#1c5449/#d8a74b/#1a1818).
+- test-palette.mjs **23/23 PASS** (determinismo, ângulos das harmonias, ASE binário parseado em Node, reset=default, sistemas shared). Regressão: test-share-full, test-tipohelp, test-pattern ALL PASS pós-mudança no ui.js.
 
 ### 7.5.2 Header v3 — "A IMPRESSORA VIVA" (reprovação do v2 pelo Daniel: "tosco, texto em slide"; squads design+dev invocados)
 Conceito (design-squad): ícone é UM mecanismo, não 5 filtros ciclando. **O header é uma impressora**: o wordmark TIPÓ é re-impresso pra sempre pelas próprias ferramentas, passada por passada.

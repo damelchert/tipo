@@ -344,7 +344,7 @@ body { overflow: hidden; }
       <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
     </div>
     <div class="tipo-breadcrumb" id="breadcrumb">
-      <span class="header-stats">36 tools &bull; 0 install &bull; 100% browser</span>
+      <span class="header-stats">37 tools &bull; 0 install &bull; 100% browser</span>
       <span class="current">Home</span>
     </div>
     <div class="tipo-header-line"></div>
@@ -363,7 +363,7 @@ body { overflow: hidden; }
           </div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
-          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Overlays · AudioType&nbsp;·&nbsp;</div></div>
+          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Overlays · AudioType&nbsp;·&nbsp;</div></div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -451,6 +451,14 @@ body { overflow: hidden; }
             <div class="tipo-mode-card-title">Pattern</div>
             <div class="tipo-mode-card-desc">Animated geometric tessellations — Truchet arcs, scales, type grids. 8 motifs &times; 5 symmetry rules with staggered motion.</div>
             <div class="tipo-mode-card-meta">8 presets &bull; seamless tile PNG &bull; vector SVG &bull; MP4/GIF</div>
+          </div>
+        </a>
+        <a href="palette.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview" style="font-size:16px;">Pl</div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Palette</div>
+            <div class="tipo-mode-card-desc">Extract dominant colors from any image (median cut) and generate harmonies — complementary, analogous, triadic &amp; more.</div>
+            <div class="tipo-mode-card-meta">image &bull; eyedropper &bull; 6 harmonies &bull; export ASE/CSS/JSON/PNG</div>
           </div>
         </a>
         <a href="overlay.html" class="tipo-mode-card">
@@ -606,7 +614,7 @@ function showLevel(id) {
 
 function updateBreadcrumb(path) {
   const bc = document.getElementById('breadcrumb');
-  let html = '<span class="header-stats">36 tools &bull; 0 install &bull; 100% browser</span>' +
+  let html = '<span class="header-stats">37 tools &bull; 0 install &bull; 100% browser</span>' +
     '<span onclick="goHome()">Home</span>';
   path.forEach((item, i) => {
     html += '<span class="sep">/</span>';

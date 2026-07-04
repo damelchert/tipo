@@ -309,7 +309,7 @@ const TipoUI = {
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
-    pattern: 'visual',
+    pattern: 'visual', palette: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
     flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
@@ -1801,6 +1801,13 @@ const TipoHelp = {
       'Colors': 'Como as cores se distribuem: Cycle alterna as N cores pela malha, Checker = xadrez com 2, Random sorteia com seed, Single usa só a 1ª.',
       'Export': 'PNG = o canvas como está. Tile PNG = 1 período seamless do padrão (repete perfeito). SVG = o mesmo tile em vetor (abre no Illustrator/Figma). Tile e SVG congelam a animação.',
     },
+    palette: {
+      'Source': 'Carregue uma imagem (botão, arraste ou ⌘V) e a paleta é extraída na hora. Demo/Reset volta pra composição da marca. Clicar na imagem dentro do canvas = conta-gotas (a cor vira a base das harmonias).',
+      'Extract': 'Colors = quantas cores dominantes extrair (median cut: divide o espaço RGB pela mediana do canal mais largo até formar N grupos). Sort: Population = mais presente primeiro, Luminance = clara → escura, Hue = ordem da roda de cor (cinzas por último).',
+      'Harmony': 'Paletas derivadas da base (clique num swatch grande pra trocar): Complementary = oposta (180°), Analogous = vizinhas ±30°, Triadic = 3 cores a 120°, Split = 150°/210°, Tetradic = 4 a 90°, Mono = mesma matiz em 5 luminosidades.',
+      'Card': 'Aparência do cartão: Hex Labels mostra códigos e % de presença, Show Image inclui a imagem fonte, Background alterna cream/ink.',
+      'Export': 'PNG = o cartão como está. ASE = swatches nativos do Adobe (Illustrator/Photoshop/InDesign). CSS = variáveis :root prontas pra colar. JSON = paleta + harmonias com rgb/hsl/população. Tudo inclui as harmonias visíveis.',
+    },
     audiotype: {
       'Grid': 'Columns × Rows da grade de barras; Gap = espaço entre elas; Min/Max Size = faixa de tamanho conforme a luminosidade do texto/imagem.',
       'Mode': 'Barras horizontais, verticais ou pixel grid; o segundo select escolhe o eixo que reage ao áudio (altura, largura ou ambos).',
@@ -1887,7 +1894,8 @@ const TipoHelp = {
 const TipoShare = {
   init() {
     const anchor = document.getElementById('tipoGifBtn')
-      || document.getElementById('recBtn') || document.getElementById('recordBtn');
+      || document.getElementById('recBtn') || document.getElementById('recordBtn')
+      || document.querySelector('[data-share-anchor]');
     if (!anchor || document.getElementById('tipoShareBtn')) return;
     const b = document.createElement('button');
     b.id = 'tipoShareBtn';
@@ -1969,7 +1977,8 @@ const TipoFull = {
   _css: false,
 
   init() {
-    if (!document.getElementById('recBtn') && !document.getElementById('recordBtn')) return;
+    if (!document.getElementById('recBtn') && !document.getElementById('recordBtn')
+      && !document.querySelector('[data-share-anchor]')) return;
     if (document.querySelector('.tipo-full-btn')) return;
     this._injectCSS();
     const b = document.createElement('button');

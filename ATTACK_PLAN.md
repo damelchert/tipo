@@ -411,7 +411,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Upload imagem → extrai paleta dominante (5-10 cores)
 - Gera paletas complementares, análogas, triádicas
 - Export como ASE (Adobe), CSS variables, JSON
-- **Status:** [ ] Conceito
+- **Status:** ✅ Implementado (2026-07-03) — palette.html (standalone Canvas 2D, ferramenta #37). Extração por **median cut determinístico** (corte 3×N profundo + merge de clusters ΔRGB<38 — evita fundo dominante duplicado e resgata cores pequenas como o ink do wordmark). Colors 3–10, Sort por Population/Luminance/Hue. **6 harmonias HSL** (Complementary/Analogous/Triadic/Split/Tetradic/Mono) a partir de uma base — default = cor mais cromática (não a mais populosa, senão as harmonias viram lavagem quase branca). Interações: clique no swatch = base + copia hex, clique na imagem = conta-gotas, upload por botão/drag&drop/⌘V. Exports: **ASE binário** (ASEF v1, blocos RGB float32 BE — abre no Illustrator/Photoshop), CSS :root vars, JSON estruturado (rgb/hsl/população), PNG do card. Demo brand (coil teal + banda gold + quarter mint + TIPÓ ink sobre cream → extração cai na paleta Athos). ui.js: TipoShare/TipoFull aceitam âncora `[data-share-anchor]` pra ferramentas sem botão de gravação. test-palette.mjs 23/23 PASS (inclui validação binária do ASE em Node e ângulos das harmonias).
 
 #### 11.3 — Mockup Compositor
 - Upload arte 2D + seleciona mockup (poster, camiseta, tela, cartão)
