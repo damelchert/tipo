@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Gradient Shaper. Any shape becomes a gradient: distance-field bands from text, drawn shapes and grids. Image/video/webcam warp.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Gradient Shaper</title>
+<link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260704-shp1"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
+  #mainCanvas { display: block; width: 100%; height: 100%; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .range-row select { width: auto; }
+  .hint-line { font-size: 9px; color: var(--text-5); margin-top: 6px; letter-spacing: .4px; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Shaper <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <input type="text" id="textInput" value="TIPÓ" placeholder="Used by the Text shape...">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('tipo')">Tipó</span>
+      <span class="preset-chip" onclick="applyPreset('aura')">Aura</span>
+      <span class="preset-chip" onclick="applyPreset('sunburst')">Sunburst</span>
+      <span class="preset-chip" onclick="applyPreset('organic')">Organic</span>
+      <span class="preset-chip" onclick="applyPreset('poster')">Poster</span>
+      <span class="preset-chip" onclick="applyPreset('halftone')">Halftone</span>
+      <span class="preset-chip" onclick="applyPreset('neon')">Neon</span>
+      <span class="preset-chip" onclick="applyPreset('risobands')">Riso Bands</span>
+      <span class="preset-chip" onclick="applyPreset('deep')">Deep Sea</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+      <button class="btn btn-secondary" onclick="clearSource()">None</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
+    <div class="hint-line">imagem/vídeo modula o campo: warp das bandas + tamanho no grid</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Shape</div>
+    <div class="range-row"><span class="range-label">Mode</span><select id="mode" style="flex:1;">
+      <option value="field" selected>Shape Field (uma forma)</option>
+      <option value="grid">Grid (campo de células)</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Shape</span><select id="shape" style="flex:1;">
+      <option value="letter" selected>Text (from Text box)</option>
+      <option value="circle">Circle</option>
+      <option value="ring">Ring</option>
+      <option value="blob">Blob (seeded)</option>
+      <option value="star">Star</option>
+      <option value="triangle">Triangle</option>
+      <option value="diamond">Diamond</option>
+      <option value="draw">Draw (desenhe no canvas)</option>
+    </select></div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" onclick="reroll()">Re-roll Blob</button>
+      <button class="btn btn-secondary" onclick="clearDrawn()">Clear Drawing</button>
+    </div>
+    <div class="hint-line">Draw: arraste no canvas pra desenhar a forma emissora</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Gradient</div>
+    <div class="color-row"><input type="color" id="c1" value="#F8F5F0"><label>1</label>
+      <input type="color" id="c2" value="#99E0D2"><label>2</label>
+      <input type="color" id="c3" value="#2A8A7A"><label>3</label>
+      <input type="color" id="c4" value="#1A1818"><label>4</label></div>
+    <div class="range-row"><span class="range-label">Stops</span><input type="range" id="numStops" min="2" max="4" value="4"><span class="range-value" id="numStopsVal">4</span></div>
+    <div class="range-row"><span class="range-label">Spacing</span><input type="range" id="spacing" min="8" max="150" value="42"><span class="range-value" id="spacingVal">42</span></div>
+    <div class="range-row"><span class="range-label">Midtones</span><input type="range" id="midtones" min="-100" max="100" value="0"><span class="range-value" id="midtonesVal">0</span></div>
+    <div class="range-row"><span class="range-label">Bands</span><input type="range" id="bands" min="0" max="16" value="0"><span class="range-value" id="bandsVal">0</span></div>
+    <div class="range-row"><span class="range-label">Dither</span><input type="range" id="dither" min="0" max="100" value="12"><span class="range-value" id="ditherVal">12</span></div>
+    <div class="range-row"><span class="range-label">Warp</span><input type="range" id="warp" min="0" max="200" value="60"><span class="range-value" id="warpVal">60</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="repeat" checked> Repeat (bandas infinitas)</label>
+    <label class="checkbox-label"><input type="checkbox" id="mirror" checked> Mirror (loop sem emenda)</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Grid</div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="cols" min="4" max="48" value="14"><span class="range-value" id="colsVal">14</span></div>
+    <div class="range-row"><span class="range-label">Size Min</span><input type="range" id="sizeMin" min="10" max="160" value="35"><span class="range-value" id="sizeMinVal">35</span></div>
+    <div class="range-row"><span class="range-label">Size Max</span><input type="range" id="sizeMax" min="10" max="160" value="120"><span class="range-value" id="sizeMaxVal">120</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="invert"> Invert (escuro = maior)</label>
+    <div class="range-row"><span class="range-label">Stagger</span><select id="stgMode" style="flex:1;">
+      <option value="off">Off</option>
+      <option value="index">Index</option>
+      <option value="row">Row</option>
+      <option value="col">Column</option>
+      <option value="center" selected>Center</option>
+      <option value="random">Random</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Amount</span><input type="range" id="stgAmt" min="0" max="200" value="60"><span class="range-value" id="stgAmtVal">60</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Motion</div>
+    <div class="range-row"><span class="range-label">Flow</span><input type="range" id="flow" min="-100" max="100" value="18"><span class="range-value" id="flowVal">18</span></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <canvas id="mainCanvas"></canvas>
+</div>
+<div class="tipo-progress-overlay" id="exportProgress"><div class="progress-box"><div class="progress-title" id="progressTitle">Finalizing...</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div><div class="progress-info" id="progressInfo"></div></div></div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — GRADIENT SHAPER (11.4)
+// Any shape becomes a gradient: a signed distance field of the
+// shape (text, primitives, blob or a hand-drawn path) drives a
+// color ramp — bands emanate from the contour and flow. A source
+// image/video/webcam warps the bands (field) or drives per-cell
+// size (grid). Ref: @antoncreations gradient tool.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+let recorder = null;
+let needsRender = true;
+let flowT = 0;
+let seed = 4242;
+
+const el = id => document.getElementById(id);
+const val = id => Number(el(id).value);
+const chk = id => el(id).checked;
+const sel = id => el(id).value;
+
+// ---- Signed distance field engine ------------------------------------------
+const SDF_RES = 384;
+let sdf = null;            // Float32Array SDF_RES², normalized units (1 = SDF_RES px)
+let sdfShapeKey = '';      // cache key: rebuild only when shape inputs change
+
+/** Exact euclidean distance transform (Felzenszwalb & Huttenlocher) — O(n).
+ *  Returns distance in pixels to the nearest mask==1 cell. */
+function edt1d(f, n, d, v, z) {
+  let k = 0;
+  v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for (let q = 1; q < n; q++) {
+    let s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    while (s <= z[k]) {
+      k--;
+      s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    }
+    k++;
+    v[k] = q; z[k] = s; z[k + 1] = Infinity;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while (z[k + 1] < q) k++;
+    d[q] = (q - v[k]) * (q - v[k]) + f[v[k]];
+  }
+}
+
+function edt(mask, w, h) {
+  const INF = 1e12;
+  const g = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) g[i] = mask[i] ? 0 : INF;
+  const m = Math.max(w, h);
+  const f = new Float32Array(m), d = new Float32Array(m);
+  const v = new Int32Array(m), z = new Float32Array(m + 1);
+  for (let x = 0; x < w; x++) {          // columns: squared vertical distance
+    for (let y = 0; y < h; y++) f[y] = g[y * w + x];
+    edt1d(f, h, d, v, z);
+    for (let y = 0; y < h; y++) g[y * w + x] = d[y];
+  }
+  for (let y = 0; y < h; y++) {          // rows: full euclidean
+    for (let x = 0; x < w; x++) f[x] = g[y * w + x];
+    edt1d(f, w, d, v, z);
+    for (let x = 0; x < w; x++) g[y * w + x] = Math.sqrt(d[x]);
+  }
+  return g;
+}
+
+// ---- Shape masks (drawn into a square SDF_RES canvas) ----------------------
+let drawnPath = [];   // [[u,v]...] normalized 0..1, hand-drawn
+let drawingNow = false;
+
+function hashN(n) {
+  const s = Math.sin(n * 127.1 + seed * 74.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+function paintMask(ctx, shape) {
+  const R = SDF_RES, c = R / 2;
+  ctx.clearRect(0, 0, R, R);
+  ctx.fillStyle = '#fff';
+  switch (shape) {
+    case 'circle':
+      ctx.beginPath(); ctx.arc(c, c, R * 0.3, 0, Math.PI * 2); ctx.fill();
+      break;
+    case 'ring':
+      ctx.beginPath(); ctx.arc(c, c, R * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.arc(c, c, R * 0.17, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      break;
+    case 'star': {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = i * Math.PI / 5 - Math.PI / 2;
+        const r = i % 2 ? R * 0.15 : R * 0.34;
+        ctx[i ? 'lineTo' : 'moveTo'](c + Math.cos(a) * r, c + Math.sin(a) * r);
+      }
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'triangle':
+      ctx.beginPath();
+      ctx.moveTo(c, c - R * 0.32); ctx.lineTo(c + R * 0.32, c + R * 0.26); ctx.lineTo(c - R * 0.32, c + R * 0.26);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 'diamond':
+      ctx.beginPath();
+      ctx.moveTo(c, c - R * 0.34); ctx.lineTo(c + R * 0.26, c); ctx.lineTo(c, c + R * 0.34); ctx.lineTo(c - R * 0.26, c);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 'blob': {
+      const pts = [];
+      const n = 9;
+      for (let i = 0; i < n; i++) {
+        const a = i / n * Math.PI * 2;
+        const r = R * (0.18 + hashN(i) * 0.17);
+        pts.push([c + Math.cos(a) * r, c + Math.sin(a) * r]);
+      }
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) {
+        const p0 = pts[(i - 1 + n) % n], p1 = pts[i % n], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+        for (let s = 0; s < 6; s++) {
+          const t = s / 6, t2 = t * t, t3 = t2 * t;
+          const f = (a2, b, cc, dd) => 0.5 * (2 * b + (-a2 + cc) * t + (2 * a2 - 5 * b + 4 * cc - dd) * t2 + (-a2 + 3 * b - 3 * cc + dd) * t3);
+          const x = f(p0[0], p1[0], p2[0], p3[0]), y = f(p0[1], p1[1], p2[1], p3[1]);
+          (i === 0 && s === 0) ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'letter': {
+      const txt = (el('textInput').value || 'TIPÓ').trim() || 'TIPÓ';
+      const fam = (typeof TipoFont !== 'undefined' && TipoFont.family) ? TipoFont.family() : '"IBM Plex Mono", monospace';
+      let size = R * 0.6;
+      ctx.font = `900 ${size}px ${fam}`;
+      const w = ctx.measureText(txt).width;
+      size *= Math.min(1, R * 0.86 / w);
+      ctx.font = `900 ${size}px ${fam}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(txt, c, c + size * 0.04);
+      break;
+    }
+    case 'draw': {
+      if (drawnPath.length < 3) { // nothing drawn yet — gentle fallback
+        ctx.beginPath(); ctx.arc(c, c, R * 0.3, 0, Math.PI * 2); ctx.fill();
+        break;
+      }
+      ctx.beginPath();
+      drawnPath.forEach(([u, v], i) => ctx[i ? 'lineTo' : 'moveTo'](u * R, v * R));
+      ctx.closePath();
+      ctx.fill();
+      // a thin stroke keeps very skinny scribbles alive after the fill
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = R * 0.02;
+      ctx.lineJoin = ctx.lineCap = 'round';
+      ctx.stroke();
+      break;
+    }
+  }
+}
+
+const maskCanvas = document.createElement('canvas');
+maskCanvas.width = maskCanvas.height = SDF_RES;
+const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+
+function buildSDF() {
+  const shape = sel('shape');
+  const key = shape + '|' + el('textInput').value + '|' + seed + '|' + drawnPath.length +
+    '|' + ((typeof TipoFont !== 'undefined' && TipoFont.family) ? TipoFont.family() : '');
+  if (key === sdfShapeKey && sdf) return;
+  sdfShapeKey = key;
+  paintMask(maskCtx, shape);
+  const img = maskCtx.getImageData(0, 0, SDF_RES, SDF_RES).data;
+  const inside = new Uint8Array(SDF_RES * SDF_RES);
+  const outside = new Uint8Array(SDF_RES * SDF_RES);
+  for (let i = 0; i < inside.length; i++) {
+    const on = img[i * 4 + 3] > 127;
+    inside[i] = on ? 1 : 0;
+    outside[i] = on ? 0 : 1;
+  }
+  const dOut = edt(inside, SDF_RES, SDF_RES);   // distance TO the shape
+  const dIn = edt(outside, SDF_RES, SDF_RES);   // distance to the outside (depth inside)
+  sdf = new Float32Array(SDF_RES * SDF_RES);
+  for (let i = 0; i < sdf.length; i++) sdf[i] = (dOut[i] - dIn[i]) / SDF_RES;
+  needsRender = true;
+}
+
+/** Bilinear SDF sample at normalized (u,v). Outside the SDF square the field
+ *  is extended analytically (edge value + euclidean overshoot) so bands keep
+ *  radiating instead of turning into edge stripes on wide canvases. */
+function sdfAt(u, v) {
+  const cu = Math.max(0, Math.min(1, u));
+  const cv = Math.max(0, Math.min(1, v));
+  const x = Math.min(SDF_RES - 1.001, cu * SDF_RES);
+  const y = Math.min(SDF_RES - 1.001, cv * SDF_RES);
+  const x0 = x | 0, y0 = y | 0;
+  const fx = x - x0, fy = y - y0;
+  const i = y0 * SDF_RES + x0;
+  const a = sdf[i], b = sdf[i + 1], cc = sdf[i + SDF_RES], d = sdf[i + SDF_RES + 1];
+  let out = a + (b - a) * fx + (cc - a) * fy + (a - b - cc + d) * fx * fy;
+  if (u !== cu || v !== cv) out += Math.hypot(u - cu, v - cv);
+  return out;
+}
+
+// ---- Color ramp LUT ---------------------------------------------------------
+let lut = new Uint8Array(256 * 3);
+let lutKey = '';
+
+function hex2rgbA(hex) {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+function buildLUT() {
+  const n = val('numStops');
+  const stops = [el('c1').value, el('c2').value, el('c3').value, el('c4').value].slice(0, n).map(hex2rgbA);
+  const key = stops.flat().join(',');
+  if (key === lutKey) return;
+  lutKey = key;
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255 * (stops.length - 1);
+    const s0 = Math.min(stops.length - 2, t | 0);
+    const f = t - s0;
+    for (let ch = 0; ch < 3; ch++) {
+      lut[i * 3 + ch] = stops[s0][ch] + (stops[s0 + 1][ch] - stops[s0][ch]) * f;
+    }
+  }
+}
+
+// ---- Source (image / video / webcam) modulation -----------------------------
+let sourceEl = null;      // HTMLImageElement | HTMLVideoElement
+let sourceType = null;    // 'image' | 'video' | 'webcam' | null
+const lumCanvas = document.createElement('canvas');
+const lumCtx = lumCanvas.getContext('2d', { willReadFrequently: true });
+let lumData = null;       // Float32Array lw*lh, 0..1
+let lw = 0, lh = 0;
+
+function sampleSource(W, H) {
+  if (!sourceEl) { lumData = null; return; }
+  lw = 96;
+  lh = Math.max(2, Math.round(96 * H / W));
+  if (lumCanvas.width !== lw || lumCanvas.height !== lh) {
+    lumCanvas.width = lw; lumCanvas.height = lh;
+  }
+  const sw = sourceEl.videoWidth || sourceEl.naturalWidth || 1;
+  const sh = sourceEl.videoHeight || sourceEl.naturalHeight || 1;
+  const s = Math.max(lw / sw, lh / sh); // cover
+  lumCtx.drawImage(sourceEl, (lw - sw * s) / 2, (lh - sh * s) / 2, sw * s, sh * s);
+  const d = lumCtx.getImageData(0, 0, lw, lh).data;
+  if (!lumData || lumData.length !== lw * lh) lumData = new Float32Array(lw * lh);
+  for (let i = 0; i < lw * lh; i++) {
+    lumData[i] = (0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]) / 255;
+  }
+}
+
+function lumAt(u, v) {
+  if (!lumData) return 0.5;
+  const x = Math.max(0, Math.min(lw - 1, (u * lw) | 0));
+  const y = Math.max(0, Math.min(lh - 1, (v * lh) | 0));
+  return lumData[y * lw + x];
+}
+
+function loadFile(file) {
+  if (!file) return;
+  stopWebcam();
+  const url = URL.createObjectURL(file);
+  if (file.type.startsWith('video/')) {
+    const v = document.createElement('video');
+    v.src = url; v.loop = true; v.muted = true; v.playsInline = true;
+    v.addEventListener('loadeddata', () => { sourceEl = v; sourceType = 'video'; v.play(); needsRender = true; });
+  } else if (file.type.startsWith('image/')) {
+    const img = new Image();
+    img.onload = () => { sourceEl = img; sourceType = 'image'; needsRender = true; };
+    img.src = url;
+  }
+}
+
+let webcamStream = null;
+async function toggleWebcam() {
+  if (sourceType === 'webcam') { clearSource(); return; }
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const v = document.createElement('video');
+    v.srcObject = webcamStream; v.muted = true; v.playsInline = true;
+    v.addEventListener('loadeddata', () => { sourceEl = v; sourceType = 'webcam'; v.play(); needsRender = true; });
+    el('webcamBtn').textContent = 'Stop Cam';
+  } catch (e) { TipoUI.showToast('Webcam blocked'); }
+}
+function stopWebcam() {
+  if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+  el('webcamBtn').textContent = 'Webcam';
+}
+function clearSource() {
+  stopWebcam();
+  if (sourceEl && sourceEl.pause) sourceEl.pause();
+  sourceEl = null; sourceType = null; lumData = null;
+  needsRender = true;
+}
+
+// ---- Render ------------------------------------------------------------------
+const RSCALE = 0.5; // per-pixel work at half resolution, upscaled (gradients love it)
+const fieldCanvas = document.createElement('canvas');
+const fieldCtx = fieldCanvas.getContext('2d');
+let fieldImg = null;
+
+function render() {
+  const wrap = document.getElementById('canvasWrap');
+  const cw = wrap.clientWidth, chh = wrap.clientHeight;
+  if (!cw || !chh) return;
+  if (mainCanvas.width !== cw || mainCanvas.height !== chh) {
+    mainCanvas.width = cw; mainCanvas.height = chh;
+  }
+  buildSDF();
+  buildLUT();
+
+  const W = Math.max(2, Math.round(cw * RSCALE));
+  const H = Math.max(2, Math.round(chh * RSCALE));
+  if (fieldCanvas.width !== W || fieldCanvas.height !== H) {
+    fieldCanvas.width = W; fieldCanvas.height = H;
+    fieldImg = fieldCtx.createImageData(W, H);
+  }
+  sampleSource(W, H);
+
+  const px = fieldImg.data;
+  const mode = sel('mode');
+  const freq = 100 / val('spacing');
+  const mid = val('midtones') / 100;                       // -1..1
+  const gamma = Math.pow(2, -mid * 1.6);                   // <1 lightens mids, >1 darkens
+  const bands = val('bands');
+  const dith = val('dither') / 100 * 0.5;
+  const warp = val('warp') / 100;
+  const repeat = chk('repeat');
+  const mirror = chk('mirror');
+  const aspect = W / H;
+
+  if (mode === 'field') {
+    let i = 0;
+    for (let y = 0; y < H; y++) {
+      const v = y / H;
+      // keep the SDF square: fit by height, center horizontally
+      const vShape = v;
+      for (let x = 0; x < W; x++, i += 4) {
+        const u = x / W;
+        const uShape = (u - 0.5) * aspect + 0.5;
+        let d = sdfAt(uShape, vShape) * freq * 6 + flowT;
+        if (lumData) d += (lumAt(u, v) - 0.5) * warp * 2;
+        let t;
+        if (repeat) {
+          t = d - Math.floor(d);
+          if (mirror) t = 1 - Math.abs(2 * t - 1);
+        } else {
+          t = Math.max(0, Math.min(1, d * 0.5 + 0.5));
+        }
+        t = Math.pow(t, gamma);
+        if (bands) t = (Math.floor(t * bands) + 0.5) / bands;
+        if (dith) {
+          const n = ((x * 7919 + y * 104729) % 289) / 289 - 0.5;
+          t = Math.max(0, Math.min(1, t + n * dith * 0.25));
+        }
+        const li = (t * 255) | 0;
+        px[i] = lut[li * 3];
+        px[i + 1] = lut[li * 3 + 1];
+        px[i + 2] = lut[li * 3 + 2];
+        px[i + 3] = 255;
+      }
+    }
+  } else {
+    // GRID: each cell renders the shape's SDF scaled by source luminance
+    const cols = val('cols');
+    const cell = W / cols;
+    const rows = Math.ceil(H / cell);
+    const sMin = val('sizeMin') / 100, sMax = val('sizeMax') / 100;
+    const inv = chk('invert');
+    const stgMode = sel('stgMode');
+    const stgAmt = val('stgAmt');
+    // per-cell luminance + stagger phase
+    const cellLum = new Float32Array(cols * rows);
+    const cellPh = new Float32Array(cols * rows);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        cellLum[r * cols + c] = lumAt((c + 0.5) / cols, (r + 0.5) / rows);
+        cellPh[r * cols + c] = stgMode === 'off' ? 0 :
+          TipoStagger.phase(stgMode, c, r, cols, rows, stgAmt, 'linear');
+      }
+    }
+    let i = 0;
+    for (let y = 0; y < H; y++) {
+      const r = Math.min(rows - 1, (y / cell) | 0);
+      const ly = (y - r * cell) / cell - 0.5;
+      for (let x = 0; x < W; x++, i += 4) {
+        const c = Math.min(cols - 1, (x / cell) | 0);
+        const ci = r * cols + c;
+        const lum = cellLum[ci];
+        const sizeF = Math.max(0.06, sMin + (sMax - sMin) * (inv ? 1 - lum : lum));
+        const lx = (x - c * cell) / cell - 0.5;
+        let d = sdfAt(lx / sizeF + 0.5, ly / sizeF + 0.5) * freq * 3 + flowT + cellPh[ci];
+        let t;
+        if (repeat) {
+          t = d - Math.floor(d);
+          if (mirror) t = 1 - Math.abs(2 * t - 1);
+        } else {
+          t = Math.max(0, Math.min(1, d + 0.5));
+        }
+        t = Math.pow(t, gamma);
+        if (bands) t = (Math.floor(t * bands) + 0.5) / bands;
+        if (dith) {
+          const n = ((x * 7919 + y * 104729) % 289) / 289 - 0.5;
+          t = Math.max(0, Math.min(1, t + n * dith * 0.25));
+        }
+        const li = (t * 255) | 0;
+        px[i] = lut[li * 3];
+        px[i + 1] = lut[li * 3 + 1];
+        px[i + 2] = lut[li * 3 + 2];
+        px[i + 3] = 255;
+      }
+    }
+  }
+
+  fieldCtx.putImageData(fieldImg, 0, 0);
+  mainCtx.imageSmoothingEnabled = true;
+  mainCtx.imageSmoothingQuality = 'high';
+  mainCtx.drawImage(fieldCanvas, 0, 0, cw, chh);
+
+  // drawing preview
+  if (drawingNow && drawnPath.length > 1) {
+    mainCtx.strokeStyle = 'rgba(153,224,210,0.9)';
+    mainCtx.lineWidth = 2;
+    mainCtx.beginPath();
+    drawnPath.forEach(([u, v], idx) => {
+      const [X, Y] = drawToCanvas(u, v);
+      idx ? mainCtx.lineTo(X, Y) : mainCtx.moveTo(X, Y);
+    });
+    mainCtx.stroke();
+  }
+
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ---- Loop --------------------------------------------------------------------
+function isDynamic() {
+  return val('flow') !== 0 || sourceType === 'video' || sourceType === 'webcam' ||
+    (recorder && recorder.isRecording);
+}
+let last = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - last < 33) return;
+  last = now;
+  if (isDynamic()) {
+    flowT += val('flow') / 100 * 0.033;
+    render();
+    needsRender = false;
+  } else if (needsRender) {
+    render();
+    needsRender = false;
+  }
+}
+
+// ---- Draw-your-own-shape interaction ------------------------------------------
+// canvas (u,v in shape space): shape space is square, fit by height, centered
+function canvasToDraw(X, Y) {
+  const r = mainCanvas.getBoundingClientRect();
+  const cw = r.width, chh = r.height;
+  const side = chh; // square fit by height
+  const u = (X - r.left - (cw - side) / 2) / side;
+  const v = (Y - r.top) / side;
+  return [u, v];
+}
+function drawToCanvas(u, v) {
+  const cw = mainCanvas.width, chh = mainCanvas.height;
+  const side = chh;
+  return [u * side + (cw - side) / 2, v * side];
+}
+
+mainCanvas.addEventListener('pointerdown', e => {
+  if (sel('shape') !== 'draw') return;
+  drawingNow = true;
+  drawnPath = [canvasToDraw(e.clientX, e.clientY)];
+  mainCanvas.setPointerCapture(e.pointerId);
+});
+mainCanvas.addEventListener('pointermove', e => {
+  if (!drawingNow) return;
+  const p = canvasToDraw(e.clientX, e.clientY);
+  const lastP = drawnPath[drawnPath.length - 1];
+  if (Math.hypot(p[0] - lastP[0], p[1] - lastP[1]) > 0.008) {
+    drawnPath.push(p);
+    needsRender = true;
+  }
+});
+mainCanvas.addEventListener('pointerup', () => {
+  if (!drawingNow) return;
+  drawingNow = false;
+  sdfShapeKey = ''; // force SDF rebuild with the finished path
+  needsRender = true;
+});
+
+function clearDrawn() {
+  drawnPath = [];
+  sdfShapeKey = '';
+  needsRender = true;
+}
+
+function reroll() {
+  seed = Math.floor(Math.random() * 99991);
+  sdfShapeKey = '';
+  needsRender = true;
+}
+
+// ---- Exports -------------------------------------------------------------------
+function exportPNG() {
+  mainCanvas.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('PNG failed'); return; }
+    TipoUI._downloadBlob(blob, 'tipo-shaper.png');
+    TipoUI.showToast('PNG saved');
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  recorder = await TipoUI.toggleVisualRec(mainCanvas);
+}
+
+// ---- Presets ---------------------------------------------------------------------
+function setV(id, v) {
+  const node = el(id);
+  if (node.type === 'checkbox') node.checked = v;
+  else node.value = v;
+  const lbl = el(id + 'Val');
+  if (lbl) lbl.textContent = v;
+}
+function setColors(a, b, c, d) {
+  el('c1').value = a; el('c2').value = b; el('c3').value = c; el('c4').value = d;
+  lutKey = '';
+}
+
+function resetAll() {
+  setV('mode', 'field'); setV('shape', 'letter');
+  setColors('#F8F5F0', '#99E0D2', '#2A8A7A', '#1A1818');
+  setV('numStops', 4); setV('spacing', 42); setV('midtones', 0);
+  setV('bands', 0); setV('dither', 12); setV('warp', 60);
+  setV('repeat', true); setV('mirror', true);
+  setV('cols', 14); setV('sizeMin', 35); setV('sizeMax', 120); setV('invert', false);
+  setV('stgMode', 'center'); setV('stgAmt', 60);
+  setV('flow', 18);
+  seed = 4242;
+  flowT = 0;
+  sdfShapeKey = '';
+  lutKey = '';
+  needsRender = true;
+}
+
+const PRESETS = {
+  tipo: () => {},   // the entry default IS the hero
+  aura: () => { setV('shape', 'circle'); setV('spacing', 70); setV('flow', 10); setV('dither', 20); },
+  sunburst: () => {
+    setV('shape', 'star'); setV('spacing', 34); setV('bands', 6); setV('flow', 26); setV('dither', 0);
+    setColors('#E8C97E', '#D4A040', '#B08830', '#1A1818');
+  },
+  organic: () => {
+    setV('shape', 'blob'); setV('spacing', 55); setV('midtones', 25); setV('flow', 14);
+    setColors('#99E0D2', '#2A8A7A', '#1B5A4E', '#1A1818');
+  },
+  poster: () => {
+    setV('mode', 'grid'); setV('shape', 'circle'); setV('cols', 18);
+    setV('spacing', 90); setV('repeat', false); setV('flow', 0);
+    setV('sizeMin', 30); setV('sizeMax', 130);
+  },
+  halftone: () => {
+    setV('mode', 'grid'); setV('shape', 'circle'); setV('cols', 34);
+    setV('spacing', 120); setV('repeat', false); setV('flow', 0);
+    setV('sizeMin', 12); setV('sizeMax', 110); setV('numStops', 2);
+    setColors('#1A1818', '#F8F5F0', '#2A8A7A', '#99E0D2');
+  },
+  neon: () => {
+    setV('shape', 'ring'); setV('spacing', 26); setV('flow', 34); setV('dither', 28); setV('midtones', -30);
+    setColors('#1A1818', '#1B5A4E', '#2A8A7A', '#99E0D2');
+  },
+  risobands: () => {
+    setV('shape', 'letter'); setV('spacing', 30); setV('bands', 4); setV('dither', 45); setV('flow', 12);
+    setV('numStops', 3);
+    setColors('#F8F5F0', '#D4A040', '#2A8A7A', '#1A1818');
+  },
+  deep: () => {
+    setV('shape', 'blob'); setV('spacing', 80); setV('midtones', -40); setV('flow', 6); setV('mirror', true);
+    setColors('#1A1818', '#1B5A4E', '#2A8A7A', '#99E0D2');
+  },
+};
+
+function applyPreset(name) {
+  resetAll();
+  if (PRESETS[name]) PRESETS[name]();
+  sdfShapeKey = '';
+  lutKey = '';
+  needsRender = true;
+  document.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
+  if (window.event && window.event.target && window.event.target.classList) window.event.target.classList.add('active');
+}
+
+// ---- Boot ------------------------------------------------------------------------
+document.querySelectorAll('input, select').forEach(node => {
+  node.addEventListener('input', () => {
+    const lbl = el(node.id + 'Val');
+    if (lbl && node.type === 'range') lbl.textContent = node.value;
+    if (['shape', 'textInput'].includes(node.id)) sdfShapeKey = '';
+    if (['c1', 'c2', 'c3', 'c4', 'numStops'].includes(node.id)) lutKey = '';
+    needsRender = true;
+  });
+});
+el('fileInput').addEventListener('change', e => loadFile(e.target.files[0]));
+window.addEventListener('resize', () => { needsRender = true; });
+window.addEventListener('tipofont', () => { sdfShapeKey = ''; needsRender = true; });
+
+// Theme toggle + back button (shared)
+TipoUI.initChrome('visual');
+
+window.render = render;
+window.resetAll = resetAll;
+window.applyPreset = applyPreset;
+window.toggleRec = toggleRec;
+window.exportPNG = exportPNG;
+window.toggleWebcam = toggleWebcam;
+window.clearSource = clearSource;
+window.clearDrawn = clearDrawn;
+window.reroll = reroll;
+window.buildSDF = buildSDF;
+// NOTE: top-level function declarations already live on window — assigning a
+// wrapper to window.sdfAt would shadow the function it calls (infinite loop).
+window.sdfProbe = (u, v) => { buildSDF(); return sdfAt(u, v); };
+window.edt = edt;
+window.setDrawnPath = p => { drawnPath = p; sdfShapeKey = ''; needsRender = true; };
+window.getFlowT = () => flowT;
+
+resetAll();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

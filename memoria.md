@@ -170,11 +170,20 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
 - **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
-- **Total agora: 37 ferramentas** (14 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260703-pal1`.
+- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260704-shp1`.
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
-**Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), **11.4 Gradient Shaper** (reel @antoncreations — qualquer forma vira gradiente, controle de midtones/cores/grid; validar com Daniel o que encantou antes de especificar), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+**Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+
+### 11.4 Gradient Shaper construído (shaper.html — ferramenta #38, 15ª visual tool)
+Daniel confirmou que quer TUDO do reel (@antoncreations): formas, desenho livre e grid — e pediu diferenciais.
+- **Motor SDF**: a forma vira campo de distância assinado e as bandas de cor emanam do contorno. **EDT exato de Felzenszwalb** (O(n), 2 passes 1D) — o chamfer (3,4) inicial deixava viés octogonal visível (losangos no centro do ring); EDT dá círculos perfeitos. SDF 384², bilinear no sample.
+- **Campo estendido fora do quadrado**: sample fora de [0,1] = valor da borda + distância euclidiana do overshoot — sem isso, canvas largo tinha listras horizontais nas laterais (clamp).
+- **Diferenciais entregues**: Text-as-shape (a PALAVRA emite o gradiente — default TIPÓ é o hero); Draw (pointer desenha o polígono emissor, com stroke fino pra rabiscos magros sobreviverem ao fill); Midtones(gamma)/Bands(posterização)/Dither(grain anti-banding); **Warp** (fonte dobra as bandas no field; no grid a luminância controla o tamanho da forma por célula); Flow animado; Stagger no grid; Mirror = rampa ping-pong sem emenda.
+- **Render**: per-pixel JS em half-res (RSCALE 0.5) + drawImage upscale com smoothing — gradientes adoram upscale; 30fps cap. LUT 256 da rampa (2-4 stops).
+- **PEGADINHA JS clássica**: `window.sdfAt = (u,v) => {...sdfAt(u,v)}` — function declaration top-level JÁ É window.sdfAt; o wrapper sombreou a si mesmo → stack overflow infinito. Export com outro nome (sdfProbe).
+- Usa TipoUI.toggleVisualRec + initChrome do refactor (primeiro consumidor novo). 9 presets brand. test-shaper.mjs 15/15 (SDF vs analítico maxErr 0.003, shapes/presets distintos, draw API, MP4 decode limpo).
 
 ### Refactor shared/ — dívida técnica paga (390 linhas deletadas, 125 adicionadas)
 - **TipoUI.toggleVisualRec(canvas, {onStart, onStop, bitrate})** no ui.js: fluxo completo de Record MP4 pras visual tools standalone (recorder lazy, estado do #recBtn, #exportProgress se existir, toast, try/catch). Os 7 toggleRec duplicados (datamosh/depth/gradientmap/pixelsort/pattern/overlay/riso) viraram one-liners; overlay e riso passam hooks (startLoop no start; stopLoop condicional no stop). **Retorna o recorder** — as páginas fazem `recorder = await TipoUI.toggleVisualRec(...)` pra manter o global usado pelos `recorder.captureFrame()` nos render loops. Upgrade grátis: os 4 simples ganharam try/catch + toast.

@@ -427,7 +427,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Fontes: imagem, vídeo e webcam (pipeline igual às visual tools existentes)
 - Sinergia interna: reusar LUT/stops do gradientmap.html + grid infra do reticula/pattern; possivelmente extrair um campo de gradientes suaves por célula (visual "gradient blur grid" das demos da Dinamo)
 - Exports: PNG, MP4/GIF; explorar SVG se as formas forem vetoriais
-- **Status:** [ ] Conceito — assistir o reel com calma antes de especificar (só temos caption + thumbnail; validar com Daniel o que exatamente encantou no efeito)
+- **Status:** ✅ Implementado (2026-07-04) — shaper.html (ferramenta #38). Daniel confirmou: funcionalidade completa (formas + desenho livre + grid). Motor: **campo de distância assinado (EDT exato Felzenszwalb, O(n))** da forma — as bandas do gradiente emanam do CONTORNO de qualquer forma. 8 shapes: **Text (a palavra vira o gradiente — hero default TIPÓ)**, circle/ring/blob(seed)/star/triangle/diamond e **Draw (desenha a forma no canvas)**. Rampa: Spacing, **Midtones** (gamma), **Bands** (posterização riso), **Dither** (grain anti-banding), Repeat/Mirror (loop sem emenda). **Warp**: imagem/vídeo/webcam DOBRAM as bandas (field) ou controlam tamanho por célula (**Grid** com Stagger). Flow anima as bandas emanando. Campo estendido analiticamente fora do quadrado SDF (sem listras de borda). 9 presets brand. Render half-res + upscale suave, 30fps. test-shaper.mjs 15/15 PASS (inclui SDF vs analítico, erro < 0.012).
 
 ---
 

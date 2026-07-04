@@ -309,7 +309,7 @@ const TipoUI = {
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
-    pattern: 'visual', palette: 'visual',
+    pattern: 'visual', palette: 'visual', shaper: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
     flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
@@ -1855,6 +1855,13 @@ const TipoHelp = {
       'Motion': 'Spin gira os motivos continuamente; Pulse faz a escala respirar. A onda percorre as células na ordem do Stagger (Center = do meio pra fora); Amount = defasagem. Speed é o relógio geral.',
       'Colors': 'Como as cores se distribuem: Cycle alterna as N cores pela malha, Checker = xadrez com 2, Random sorteia com seed, Single usa só a 1ª.',
       'Export': 'PNG = o canvas como está. Tile PNG = 1 período seamless do padrão (repete perfeito). SVG = o mesmo tile em vetor (abre no Illustrator/Figma). Tile e SVG congelam a animação.',
+    },
+    shaper: {
+      'Source': 'Imagem, vídeo ou webcam modulam o campo: no Field a luminância DOBRA as bandas (Warp); no Grid ela controla o tamanho da forma em cada célula. None = só a forma pura.',
+      'Shape': 'A forma emissora do gradiente: as bandas emanam do CONTORNO dela (campo de distância). Text usa a palavra digitada; Blob é orgânico com seed (Re-roll); Draw = desenhe a forma direto no canvas arrastando.',
+      'Gradient': 'Spacing = largura das bandas. Midtones desloca o meio da rampa (clareia/escurece os tons médios). Bands posteriza em N degraus (0 = suave). Dither adiciona grain que mata banding. Warp = quanto a fonte dobra as bandas. Repeat = bandas infinitas; Mirror = loop sem emenda na rampa.',
+      'Grid': 'Campo de células: Columns = densidade; Size Min/Max = tamanho da forma conforme a luminosidade da fonte (Invert troca claro/escuro). Stagger defasa a fase do flow por célula — a onda percorre o grid.',
+      'Motion': 'Flow faz as bandas emanarem do contorno (negativo = contraem). É o que dá vida ao MP4/GIF.',
     },
     palette: {
       'Source': 'Carregue uma imagem (botão, arraste ou ⌘V) e a paleta é extraída na hora. Demo/Reset volta pra composição da marca. Clicar na imagem dentro do canvas = conta-gotas (a cor vira a base das harmonias).',
