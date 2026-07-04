@@ -331,6 +331,34 @@ body { overflow: hidden; }
 @keyframes prev-vessel { 0%,100% { border-radius: 4px; width: 40px; height: 25px; } 50% { border-radius: 15px; width: 35px; height: 35px; } }
 @keyframes prev-shine { 0%,100% { text-shadow: 0 0 4px currentColor; opacity: 0.7; } 50% { text-shadow: 0 0 15px currentColor, 0 0 30px currentColor; opacity: 1; } }
 @keyframes prev-boost { 0% { transform: translateX(-20px); opacity: 0; } 30% { transform: translateX(3px); opacity: 1; } 50% { transform: translateX(0); } 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(0); opacity: 0.3; } }
+
+/* ============================================================
+   MOBILE (13.4) — stacked split panels, decluttered header
+   ============================================================ */
+@media (max-width: 768px) {
+  .tipo-split { flex-direction: column; }
+  .tipo-split-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-1);
+  }
+  .tipo-split-panel:last-child { border-bottom: none; }
+  .tipo-split-label {
+    font-size: 21px;
+    letter-spacing: 3px;
+    white-space: nowrap;
+  }
+  .tipo-split-sub {
+    font-size: 8px;
+    letter-spacing: 2px;
+    padding: 0 16px;
+    text-align: center;
+  }
+  .split-ticker { bottom: 14px; }
+  .tipo-breadcrumb .header-stats { display: none; } /* crowds the logo on small screens */
+  #fxLabel { display: none; }
+  .tipo-mode-list { padding: 16px; }
+  .tipo-mode-card { padding: 14px 16px; gap: 14px; }
+}
 </style>
 </head>
 <body>

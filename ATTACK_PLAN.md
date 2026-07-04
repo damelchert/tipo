@@ -457,7 +457,7 @@ Diagnóstico do Daniel: a experiência mobile atual é ruim. A direção NÃO é
 #### 13.4 — Landing mobile
 - Header/index adaptados (HeaderFX tem mouse-lens e hover — precisa de fallback touch), cards em lista, line-up mobile em destaque
 - PWA leve? (add to home screen, ícone, fullscreen standalone) — avaliar custo/benefício
-- **Status:** [ ] Conceito
+- **Status:** ✅ Implementado (2026-07-04) — media query no index.html: split panels EMPILHADOS (antes 2 colunas de 195px quebravam "VISUAL T/OOLS" no meio da palavra), títulos 21px nowrap, subs com padding, header decluttered (stats e fxLabel escondidos no mobile — sobra logo + breadcrumb + HeaderFX que já roda em touch: tap no header dispara a passada). Lista de cards com padding 16px. **PWA: adiado deliberadamente** — custo (manifest + ícones + service worker + gestão de cache que conflita com o cache-bust manual) não paga o benefício agora; revisitar se o uso mobile crescer. Screenshots home + categoria conferidos no iPhone viewport.
 
 ---
 
