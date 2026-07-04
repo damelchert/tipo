@@ -159,6 +159,22 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-03
 
+### RESUMO DA SESSÃO 2026-07-01 → 03 (pra próxima sessão começar daqui)
+**Entregue nesta sessão (tudo commitado e pushed até `2be8ceb`):**
+- **Fase 9 COMPLETA**: 9.3 Duplicator (ferramenta #35) + 9.4 Mini-Timeline (keyframes em qualquer slider, REC frame-accurate) + fluxo guiado do timeline pós-feedback.
+- **Fase 12 COMPLETA**: 12.1 Font Upload (+FontFace pra canvas 2D), 12.2 GIF Export (gifenc, passada exata do timeline), 12.3 Share via URL, 12.4 Fullscreen.
+- **Rastro**: perf da gravação consertada (echo accumulator half-res, 21→30fps) + bug do motion matte opaco (premultiply no prev).
+- **Paleta brand nos demos**: datamosh/pixelsort/glitch/ascii/riso re-artados (3 rodadas de feedback); pixelsort virou cena ANIMADA (células TIPÓ flutuando); gradientmap com ondas de interferência + cycle default; bug do fontSize auto do ascii achado e morto.
+- **Overlay v2**: blend modes reais, grain vivo, demo poster brand, 6 patterns novos (18), presets de filme.
+- **TipoHelp**: tooltips "?" nas 28 ferramentas restantes (registro central no ui.js, ~85 seções).
+- **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
+- **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
+- **Total agora: 36 ferramentas** (13 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260703-pat1`.
+
+**PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
+
+**Fila pra próxima sessão:** 11.2 Color Palette Generator, 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações (hoje são letras estáticas), dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
+
 ### 7.5.2 Header v3 — "A IMPRESSORA VIVA" (reprovação do v2 pelo Daniel: "tosco, texto em slide"; squads design+dev invocados)
 Conceito (design-squad): ícone é UM mecanismo, não 5 filtros ciclando. **O header é uma impressora**: o wordmark TIPÓ é re-impresso pra sempre pelas próprias ferramentas, passada por passada.
 - **Canvas engine `HeaderFX`** substitui o marquee DOM: strips offscreen do TIPÓ (ink/teal/gold, 900 weight, cropado pelo header 96px) + 6 efeitos de impressão REAIS: dither (dots brand por luminância), **riso** (2 retículas overprint teal 15°/gold 75° com misreg), pixel sort (colunas 1px esticadas), glitch (echoes cromáticos + slices), wave (colunas senoidais + echo gold), scanlines (mask rolante + roll bar mint).
