@@ -159,7 +159,17 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-03
 
-### 7.5.2 Header v2 + split panels (item mais antigo do plano — fechado)
+### 7.5.2 Header v3 — "A IMPRESSORA VIVA" (reprovação do v2 pelo Daniel: "tosco, texto em slide"; squads design+dev invocados)
+Conceito (design-squad): ícone é UM mecanismo, não 5 filtros ciclando. **O header é uma impressora**: o wordmark TIPÓ é re-impresso pra sempre pelas próprias ferramentas, passada por passada.
+- **Canvas engine `HeaderFX`** substitui o marquee DOM: strips offscreen do TIPÓ (ink/teal/gold, 900 weight, cropado pelo header 96px) + 6 efeitos de impressão REAIS: dither (dots brand por luminância), **riso** (2 retículas overprint teal 15°/gold 75° com misreg), pixel sort (colunas 1px esticadas), glitch (echoes cromáticos + slices), wave (colunas senoidais + echo gold), scanlines (mask rolante + roll bar mint).
+- **A varredura é o momento-herói**: a cada ~3.4s de dwell, o print head cruza o header em 2.1s — atrás dele o efeito NOVO, à frente o antigo (clips em X), com zona de scramble + linha mint na aresta. **O cometa da linha gradient é a cabeça de impressão** (gsap.set x sincronizado; volta ao patrol no fim) — header e linha viram um mecanismo só.
+- **Label de máquina** bottom-left: "pass 07 · riso" (contador infinito); durante a varredura vira "printing · <efeito>".
+- **Interação**: hover = LENS circular que mostra o PRÓXIMO efeito sob o cursor (ring mint); click no header = imprime já; hover no logo = feed 4x (HeaderFX.speed).
+- Theme-aware (strips rebuild no toggle via MutationObserver + resize). Sample compartilhado dither/riso com cache por frame. Perf medida: riso 1.2ms worst, resto <0.2ms (budget 33ms).
+- Removidos: marquee DOM (ghostChars vira [] pros entrance animations), números 13/23 dos painéis (Daniel: "aleatório e desnecessário").
+- Screenshots dark+light de todas as fases conferidos (dwell dither, sweep riso-sobre-dither, lens, pós-pass).
+
+### 7.5.2 Header v2 + split panels (v2 — superseded pelo v3 acima)
 - **Header 56px→96px**: marquee TIPÓ 88px→150px (cortado pelo header, mais gráfico), stroke 2px, opacity 0.13; palavras preenchidas agora alternam **teal/gold/mint** (classes fill-*, 1 a cada 2 palavras) em vez de âmbar raro.
 - **Linha viva**: 2px→4px, gradiente mint→gold→teal fluindo em loop linear contínuo (era ping-pong tímido a 0.6 de opacity); cometa 180px/4px mantido.
 - **Stats no header**: "36 tools • 0 install • 100% browser" em âmbar no breadcrumb (updateBreadcrumb reconstruído com o span).

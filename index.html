@@ -73,32 +73,19 @@ body { overflow: hidden; }
   vertical-align: super; font-size: 0;
 }
 
-/* Ghost text — giant TIPÓ marquee cropped by the header */
-.header-ghost {
+/* Header FX — giant TIPÓ being processed live by the tools themselves */
+.header-fx {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-  display: flex; align-items: center;
-  pointer-events: none; overflow: hidden;
+  pointer-events: none;
 }
-.header-ghost-track {
-  display: flex; gap: 56px; white-space: nowrap;
-  will-change: transform; padding-left: 56px;
+.header-fx-label {
+  position: absolute; left: 32px; bottom: 9px; z-index: 3;
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--accent-warm, #D4A040); pointer-events: none;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  opacity: 0.9; transition: opacity 0.3s;
 }
-.header-ghost-word { display: flex; flex: none; }
-.header-ghost-char {
-  font-size: 150px; font-weight: 900; letter-spacing: 12px;
-  color: transparent; -webkit-text-stroke: 2px var(--text-0);
-  opacity: 0.13;
-  display: inline-block; will-change: transform;
-  line-height: 1;
-}
-.header-ghost-word.filled .header-ghost-char {
-  -webkit-text-stroke: 0; opacity: 0.3;
-}
-.header-ghost-word.fill-teal .header-ghost-char { color: var(--accent, #2A8A7A); }
-.header-ghost-word.fill-gold .header-ghost-char { color: var(--accent-warm, #D4A040); }
-.header-ghost-word.fill-mint .header-ghost-char { color: var(--accent-brand, #99E0D2); }
-:root[data-theme="light"] .header-ghost-char { opacity: 0.1; }
-:root[data-theme="light"] .header-ghost-word.filled .header-ghost-char { opacity: 0.35; }
+.header-fx-label::before { content: '● '; }
 
 /* Breadcrumb */
 .tipo-breadcrumb {
@@ -171,16 +158,6 @@ body { overflow: hidden; }
   opacity: 0.85;
 }
 :root[data-theme="light"] .tipo-split-sub { color: #333; text-shadow: none; }
-
-/* Giant tool count behind each split label */
-.tipo-split-count {
-  font-size: 200px; font-weight: 900; line-height: 1;
-  color: transparent; -webkit-text-stroke: 2px var(--accent-warm, #D4A040);
-  opacity: 0.35; z-index: 1; margin-bottom: -40px;
-  transition: opacity 0.3s, transform 0.3s;
-}
-.tipo-split-panel:hover .tipo-split-count { opacity: 0.65; transform: translateY(-6px); }
-:root[data-theme="light"] .tipo-split-count { -webkit-text-stroke: 2px #B08830; }
 
 /* Tool-name ticker along the bottom of each panel */
 .split-ticker {
@@ -361,9 +338,8 @@ body { overflow: hidden; }
 <div class="tipo-nav">
   <!-- HEADER -->
   <div class="tipo-header" id="tipoHeader">
-    <div class="header-ghost" id="headerGhost">
-      <div class="header-ghost-track" id="ghostTrack"></div>
-    </div>
+    <canvas class="header-fx" id="headerFx"></canvas>
+    <div class="header-fx-label" id="fxLabel">wave</div>
     <div class="tipo-header-logo" id="tipoLogo" onclick="goHome()">
       <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
     </div>
@@ -385,7 +361,6 @@ body { overflow: hidden; }
           <div class="tipo-preview-bg">
             <div class="dither-preview" id="ditherGrid"></div>
           </div>
-          <div class="tipo-split-count">13</div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
           <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Overlays · AudioType&nbsp;·&nbsp;</div></div>
@@ -396,7 +371,6 @@ body { overflow: hidden; }
               <source src="assets/kinetic-preview.mp4" type="video/mp4">
             </video>
           </div>
-          <div class="tipo-split-count">23</div>
           <div class="tipo-split-label split-text" data-text="Kinetic Type">Kinetic Type</div>
           <div class="tipo-split-sub split-sub">3D &bull; composition &bull; animation &bull; timeline</div>
           <div class="split-ticker"><div class="split-ticker-track">Cylinder · Field · Stripes · Coil · Flag · Cascade · Ribbon · Morisawa · Layers · Danger · String · Badge · Clutter · Construct · Duplicator · Snap · Flash · Pow · Crash · Crash Clock · Vessel · Shine · Boost&nbsp;·&nbsp;<!--dup-->Cylinder · Field · Stripes · Coil · Flag · Cascade · Ribbon · Morisawa · Layers · Danger · String · Badge · Clutter · Construct · Duplicator · Snap · Flash · Pow · Crash · Crash Clock · Vessel · Shine · Boost&nbsp;·&nbsp;</div></div>
@@ -779,24 +753,355 @@ const logo = document.getElementById('tipoLogo');
 const header = document.getElementById('tipoHeader');
 
 // ---- GHOST MARQUEE — giant TIPÓ scrolling behind the header ----
-const ghostTrack = document.getElementById('ghostTrack');
-(function buildGhostMarquee() {
-  // 2 identical halves of N words each → seamless -50% loop
-  const WORDS_PER_HALF = 6;
-  let html = '';
-  const fills = ['fill-teal', 'fill-gold', 'fill-mint'];
-  for (let h = 0; h < 2; h++) {
-    for (let w = 0; w < WORDS_PER_HALF; w++) {
-      const filled = (w % 2 === 1) ? ` filled ${fills[(w >> 1) % 3]}` : '';
-      html += `<span class="header-ghost-word${filled}">` +
-        'TIPÓ'.split('').map(c => `<span class="header-ghost-char">${c}</span>`).join('') +
-        '</span>';
+// ============================================================
+// HEADER FX — "a impressora viva": the TIPÓ wordmark is being
+// re-printed forever by the tools themselves. A print head
+// sweeps across the header; behind it the new pass (dither,
+// riso, pixel sort, glitch, wave, scanlines) replaces the old.
+// The gradient-line comet IS the print head. Hover = lens that
+// previews the next pass; click = print now.
+// ============================================================
+const ghostChars = []; // legacy hook kept for entrance animations
+const fxCanvas = document.getElementById('headerFx');
+const fxCtx = fxCanvas.getContext('2d');
+const fxLabel = document.getElementById('fxLabel');
+
+const HeaderFX = {
+  EFFECTS: ['dither', 'riso', 'pixel sort', 'glitch', 'wave', 'scanlines'],
+  DWELL: 3.4,       // seconds resting between passes
+  SWEEP_DUR: 2.1,   // seconds for the print head to cross
+  ALPHA: 0.32,      // ink presence behind the nav
+
+  state: 'dwell', dwellT: 0, sweepX: 0,
+  cur: 0, nxt: 1, pass: 1,
+  t: 0, scroll: 0, speed: 1,
+  W: 0, H: 0, period: 1,
+  strip: null, stripTeal: null, stripGold: null,
+  mouse: { x: -9999, y: 0, in: false },
+  _sample: null, _sampleFrame: -1, _frameId: 0,
+
+  colors() {
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      ink: (cs.getPropertyValue('--text-0') || '#e8e4e0').trim() || '#e8e4e0',
+      teal: '#2A8A7A', gold: '#D4A040', mint: '#99E0D2',
+    };
+  },
+
+  build() {
+    this.W = header.offsetWidth;
+    this.H = header.offsetHeight || 96;
+    fxCanvas.width = this.W;
+    fxCanvas.height = this.H;
+    const c = this.colors();
+    const font = `900 ${Math.round(this.H * 1.55)}px 'IBM Plex Mono', monospace`;
+    const meas = document.createElement('canvas').getContext('2d');
+    meas.font = font;
+    const wordW = meas.measureText('TIPÓ').width + this.H * 0.9;
+    this.period = wordW;
+    const reps = Math.ceil((this.W + wordW * 2) / wordW) + 1;
+    const make = (fill) => {
+      const s = document.createElement('canvas');
+      s.width = Math.ceil(wordW * reps);
+      s.height = this.H;
+      const g = s.getContext('2d');
+      g.font = font;
+      g.textBaseline = 'middle';
+      g.fillStyle = fill;
+      for (let i = 0; i < reps; i++) g.fillText('TIPÓ', i * wordW, this.H * 0.52);
+      return s;
+    };
+    this.strip = make(c.ink);
+    this.stripTeal = make(c.teal);
+    this.stripGold = make(c.gold);
+    this._sampleFrame = -1;
+  },
+
+  hash(a, b) {
+    const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+  },
+
+  /** luminance/alpha sample of the scrolled strip at cell resolution (shared by dither & riso) */
+  sample(cell) {
+    if (this._sampleFrame === this._frameId && this._sample && this._sample.cell === cell) return this._sample;
+    const cols = Math.ceil(this.W / cell), rows = Math.ceil(this.H / cell);
+    const tiny = this._tiny || (this._tiny = document.createElement('canvas'));
+    if (tiny.width !== cols || tiny.height !== rows) { tiny.width = cols; tiny.height = rows; }
+    const tg = tiny.getContext('2d', { willReadFrequently: true });
+    tg.clearRect(0, 0, cols, rows);
+    tg.drawImage(this.strip, this.scroll % this.strip.width, 0, this.W, this.H, 0, 0, cols, rows);
+    this._sample = { cell, cols, rows, data: tg.getImageData(0, 0, cols, rows).data };
+    this._sampleFrame = this._frameId;
+    return this._sample;
+  },
+
+  startSweep() {
+    if (this.state === 'sweep') return;
+    this.state = 'sweep';
+    this.sweepX = -30;
+    gsap.killTweensOf(lineComet);
+    fxLabel.textContent = 'printing · ' + this.EFFECTS[this.nxt];
+  },
+
+  finishSweep() {
+    this.state = 'dwell';
+    this.dwellT = 0;
+    this.cur = this.nxt;
+    this.nxt = (this.nxt + 1) % this.EFFECTS.length;
+    this.pass++;
+    fxLabel.textContent = 'pass ' + String(this.pass).padStart(2, '0') + ' · ' + this.EFFECTS[this.cur];
+    cometSprint(false); // print head returns to idle patrol
+  },
+
+  frame(dt) {
+    const { W, H } = this;
+    this._frameId++;
+    this.t += dt;
+    this.scroll = (this.scroll + dt * 34 * this.speed) % this.period;
+
+    if (this.state === 'dwell') {
+      this.dwellT += dt * this.speed;
+      if (this.dwellT >= this.DWELL) this.startSweep();
+    } else {
+      this.sweepX += dt * (W + 60) / this.SWEEP_DUR;
+      gsap.set(lineComet, { x: this.sweepX - 90 });
+      if (this.sweepX > W + 30) this.finishSweep();
     }
-  }
-  ghostTrack.innerHTML = html;
-})();
-const ghostChars = document.querySelectorAll('.header-ghost-char');
-const marqueeTween = gsap.to(ghostTrack, { xPercent: -50, duration: 38, ease: 'none', repeat: -1 });
+
+    const ctx = fxCtx;
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = this.ALPHA;
+
+    if (this.state === 'sweep') {
+      this.clipped(ctx, this.sweepX, W, () => this.draw(ctx, this.cur));   // old print ahead
+      this.clipped(ctx, 0, this.sweepX, () => this.draw(ctx, this.nxt));   // new pass behind
+      this.printHead(ctx);
+    } else {
+      this.draw(ctx, this.cur);
+      if (this.mouse.in) this.lens(ctx);
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  clipped(ctx, x0, x1, fn) {
+    if (x1 <= x0) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x0, 0, x1 - x0, this.H);
+    ctx.clip();
+    fn();
+    ctx.restore();
+  },
+
+  /** the sweeping print head: scramble zone + mint edge */
+  printHead(ctx) {
+    const { W, H } = this;
+    const x = this.sweepX;
+    const epoch = Math.floor(this.t * 20);
+    ctx.save();
+    ctx.globalAlpha = this.ALPHA;
+    for (let s = 0; s < 6; s++) {
+      const y = (s / 6) * H;
+      const h = H / 6;
+      const dx = (this.hash(s, epoch) - 0.5) * 34;
+      const sx = (this.scroll + x + dx) % this.strip.width;
+      ctx.drawImage(this.strip, Math.max(0, sx), y, 26, h, x - 13, y, 26, h);
+    }
+    ctx.restore();
+    const c = this.colors();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = c.mint;
+    ctx.fillRect(x - 1, 0, 2, H);
+    ctx.globalAlpha = 0.18;
+    ctx.fillRect(x - 10, 0, 20, H);
+    ctx.globalAlpha = this.ALPHA;
+  },
+
+  /** hover lens: previews the NEXT pass inside a circle around the cursor */
+  lens(ctx) {
+    const { x, y } = this.mouse;
+    const r = 64;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.clearRect(x - r, y - r, r * 2, r * 2);
+    this.draw(ctx, this.nxt);
+    ctx.restore();
+    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = this.colors().mint;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = this.ALPHA;
+  },
+
+  draw(ctx, idx) {
+    const name = this.EFFECTS[idx];
+    if (name === 'dither') this.fxDither(ctx);
+    else if (name === 'riso') this.fxRiso(ctx);
+    else if (name === 'pixel sort') this.fxSort(ctx);
+    else if (name === 'glitch') this.fxGlitch(ctx);
+    else if (name === 'wave') this.fxWave(ctx);
+    else this.fxScan(ctx);
+  },
+
+  fxDither(ctx) {
+    const cell = 7;
+    const { cols, rows, data } = this.sample(cell);
+    const c = this.colors();
+    const inks = [c.teal, c.gold, c.mint, c.ink];
+    for (let r = 0; r < rows; r++) {
+      for (let q = 0; q < cols; q++) {
+        const a = data[(r * cols + q) * 4 + 3] / 255;
+        if (a < 0.12) continue;
+        const rad = (cell / 2) * Math.min(1, a + 0.15);
+        ctx.fillStyle = inks[(q + r) % 4];
+        ctx.beginPath();
+        ctx.arc(q * cell + cell / 2, r * cell + cell / 2, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  },
+
+  /** two halftone screens overprinting at classic riso angles */
+  fxRiso(ctx) {
+    const cell = 6;
+    const { cols, rows, data } = this.sample(cell);
+    const c = this.colors();
+    const alphaAt = (px, py) => {
+      const q = Math.max(0, Math.min(cols - 1, Math.round(px / cell)));
+      const r = Math.max(0, Math.min(rows - 1, Math.round(py / cell)));
+      return data[(r * cols + q) * 4 + 3] / 255;
+    };
+    const screen = (angleDeg, color, misX, misY) => {
+      const a = angleDeg * Math.PI / 180;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const step = 7;
+      const diag = Math.hypot(this.W, this.H);
+      ctx.fillStyle = color;
+      for (let v = -diag; v < diag; v += step) {
+        for (let u = -diag; u < diag * 2; u += step) {
+          const px = u * ca - v * sa + misX;
+          const py = u * sa + v * ca + misY;
+          if (px < -step || px > this.W + step || py < -step || py > this.H + step) continue;
+          const al = alphaAt(px, py);
+          if (al < 0.14) continue;
+          ctx.beginPath();
+          ctx.arc(px, py, (step / 2) * Math.min(1, al + 0.1), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    };
+    ctx.save();
+    ctx.globalAlpha = this.ALPHA * 0.85;
+    screen(15, c.teal, 0, 0);
+    screen(75, c.gold, 1.5, 1);
+    ctx.restore();
+  },
+
+  fxSort(ctx) {
+    const { W, H } = this;
+    this.blit(ctx, this.strip);
+    const band = 3;
+    const epoch = Math.floor(this.t * 1.6);
+    for (let y = 0; y < H; y += band) {
+      if (this.hash(y, epoch) < 0.44) continue;
+      const start = this.hash(y, epoch + 9) * W;
+      const len = 30 + this.hash(y, epoch + 17) * 190;
+      const sx = (this.scroll + start) % this.strip.width;
+      ctx.drawImage(this.strip, sx, y, 2, band, start, y, len, band);
+    }
+  },
+
+  fxGlitch(ctx) {
+    const { W, H } = this;
+    const epoch = Math.floor(this.t * 5);
+    ctx.save();
+    ctx.globalAlpha = this.ALPHA * 0.45;
+    this.blit(ctx, this.stripTeal, -4, -3);
+    this.blit(ctx, this.stripGold, 4, 3);
+    ctx.restore();
+    let y = 0, i = 0;
+    while (y < H) {
+      const h = 6 + this.hash(i, epoch) * 22;
+      const dx = (this.hash(i, epoch + 3) - 0.5) * 44;
+      const sx = (this.scroll % this.strip.width) - dx;
+      ctx.drawImage(this.strip, Math.max(0, sx), y, W, h, 0, y, W, h);
+      y += h; i++;
+    }
+    ctx.fillStyle = this.colors().mint;
+    for (let s = 0; s < 7; s++) {
+      if (this.hash(s, epoch) < 0.55) continue;
+      ctx.fillRect(this.hash(s, epoch + 1) * W, this.hash(s, epoch + 2) * H, 3 + this.hash(s, epoch + 4) * 26, 2);
+    }
+  },
+
+  fxWave(ctx) {
+    const { W, H } = this;
+    const sw = 6;
+    for (let x = 0; x < W; x += sw) {
+      const dy = Math.sin(x * 0.016 + this.t * 2.4) * H * 0.11;
+      ctx.save();
+      ctx.globalAlpha = this.ALPHA * 0.4;
+      this.blitSlice(ctx, this.stripGold, x, sw, dy + 7);
+      ctx.restore();
+      this.blitSlice(ctx, this.strip, x, sw, dy);
+    }
+  },
+
+  fxScan(ctx) {
+    const { W, H } = this;
+    this.blit(ctx, this.strip);
+    const roll = (this.t * 26) % 4;
+    for (let y = -4; y < H; y += 4) ctx.clearRect(0, y + roll, W, 1.6);
+    const barY = ((this.t * 18) % (H + 40)) - 20;
+    const grad = ctx.createLinearGradient(0, barY, 0, barY + 22);
+    grad.addColorStop(0, 'rgba(153,224,210,0)');
+    grad.addColorStop(0.5, 'rgba(153,224,210,0.30)');
+    grad.addColorStop(1, 'rgba(153,224,210,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, barY, W, 22);
+  },
+
+  blit(ctx, strip, dx = 0, dy = 0) {
+    const sx = this.scroll % strip.width;
+    ctx.drawImage(strip, sx, 0, this.W, this.H, dx, dy, this.W, this.H);
+  },
+
+  blitSlice(ctx, strip, x, w, dy) {
+    const sx = (this.scroll + x) % strip.width;
+    ctx.drawImage(strip, sx, 0, w, this.H, x, dy, w, this.H);
+  },
+};
+
+HeaderFX.build();
+fxLabel.textContent = 'pass 01 · ' + HeaderFX.EFFECTS[0];
+window.addEventListener('resize', () => HeaderFX.build());
+new MutationObserver(() => HeaderFX.build())
+  .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+header.addEventListener('mousemove', (e) => {
+  const r = header.getBoundingClientRect();
+  HeaderFX.mouse.x = e.clientX - r.left;
+  HeaderFX.mouse.y = e.clientY - r.top;
+  HeaderFX.mouse.in = true;
+});
+header.addEventListener('mouseleave', () => { HeaderFX.mouse.in = false; });
+header.addEventListener('click', (e) => {
+  if (e.target.closest('.tipo-header-logo, .tipo-breadcrumb')) return;
+  HeaderFX.startSweep();
+});
+
+let fxLast = 0;
+(function fxLoop(now) {
+  requestAnimationFrame(fxLoop);
+  if (now - fxLast < 33) return;
+  const dt = fxLast ? Math.min(0.08, (now - fxLast) / 1000) : 0.033;
+  fxLast = now;
+  HeaderFX.frame(dt);
+})(0);
 
 // ---- COMET on the gradient line ----
 const lineComet = document.getElementById('lineComet');
@@ -925,8 +1230,8 @@ logo.addEventListener('mouseleave', () => {
 });
 
 // Hover on logo accelerates the ghost marquee
-logo.addEventListener('mouseenter', () => gsap.to(marqueeTween, { timeScale: 5, duration: 0.6, ease: 'power2.out' }));
-logo.addEventListener('mouseleave', () => gsap.to(marqueeTween, { timeScale: 1, duration: 1.4, ease: 'power2.out' }));
+logo.addEventListener('mouseenter', () => { HeaderFX.speed = 4; });
+logo.addEventListener('mouseleave', () => { HeaderFX.speed = 1; });
 
 // ---- TEXT SCRAMBLE ON HOVER ----
 logo.addEventListener('mouseenter', () => {
