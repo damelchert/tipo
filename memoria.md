@@ -176,6 +176,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 **Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), **11.4 Gradient Shaper** (reel @antoncreations — qualquer forma vira gradiente, controle de midtones/cores/grid; validar com Daniel o que encantou antes de especificar), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica (refactor shared/ ~400 linhas, smoke light mode).
 
+### Flag: presets recoloridos com a paleta Athos (pedido do Daniel 03/07)
+- **Evolução da regra**: antes "presets criativos mantêm paleta própria" — Daniel pediu os 13 presets do Flag na paleta da marca (Pride intocado, é semântico). Geometria/movimento de cada preset preservados; só cores trocadas.
+- Mapa: banner cream/teal s/ mint; twist cream/ink s/ teal; folds 5 cores s/ gold-light; flatSea 5 cores s/ ink; barber cream/teal/gold/ink s/ gold-light; silos gold/teal/ink s/ cream; mystery ink s/ cream; colaWave cream/teal/mint/gold s/ teal (bg==c2 blenda como o original); origami cream/gold/mint/teal s/ dark-teal #1B5A4E; crane cream/teal/gold s/ teal; bw = cream/ink s/ ink; newsprint cream/ink s/ gold-dark #B08830 (papel envelhecido); edge mint s/ ink.
+- Grid de screenshots dos 8 principais conferido — todos legíveis e distintos entre si.
+
 ### FASE 10 — Flag font engine vetorial (shared/flagfont.js) — o item "pesado" atacado
 Contexto: Daniel pediu pra priorizar os itens mais complexos antes de 07/07 (Fable 5 vira pago). Fase 10 FLAG era o mais difícil do backlog.
 - **O que existia**: glyphs desenhados como retas entre pontos interpolados dos 4 cantos (switch de 285 linhas) — sem curvas, e traços retos NÃO acompanhavam a dobra da superfície. E o pior: **'Ó' não existia no switch → o demo default "TIPÓ" renderizava "TIP·"** (pontinho fallback) desde sempre.
