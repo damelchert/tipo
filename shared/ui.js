@@ -2099,6 +2099,7 @@ const TipoFull = {
     b.textContent = '⛶';
     b.addEventListener('click', () => this.toggle());
     document.body.appendChild(b);
+    this._btn = b;
 
     document.addEventListener('keydown', (e) => {
       if (e.target && e.target.matches && e.target.matches('input,textarea,select')) return;
@@ -2116,7 +2117,10 @@ const TipoFull = {
 .tipo-full-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
 body.tipo-full .tipo-panel, body.tipo-full #controlPanel, body.tipo-full .tipo-panel-toggle,
 body.tipo-full .tipo-back-btn, body.tipo-full .tipo-theme-toggle, body.tipo-full .tipo-tl-toggle,
-body.tipo-full #tipoTL, body.tipo-full .tipo-full-btn { display:none !important; }
+body.tipo-full #tipoTL { display:none !important; }
+/* the ⛶ button STAYS visible as the way back — touch has no F/ESC */
+body.tipo-full .tipo-full-btn { opacity:.55; }
+body.tipo-full .tipo-full-btn:hover { opacity:1; }
 `;
     document.head.appendChild(s);
   },
@@ -2124,10 +2128,16 @@ body.tipo-full #tipoTL, body.tipo-full .tipo-full-btn { display:none !important;
   toggle() {
     this.on = !this.on;
     document.body.classList.toggle('tipo-full', this.on);
+    if (this._btn) {
+      this._btn.textContent = this.on ? '✕' : '⛶';
+      this._btn.title = this.on ? 'Exit fullscreen' : 'Fullscreen canvas (F) — F or ESC exits';
+    }
     // panels collapse → canvases must refit to the new free space
     window.dispatchEvent(new Event('resize'));
     if (this.on && typeof TipoUI !== 'undefined' && TipoUI.showToast) {
-      TipoUI.showToast('Fullscreen — press F or ESC to exit');
+      TipoUI.showToast(document.body.classList.contains('tipo-mobile')
+        ? 'Fullscreen — toque no ✕ pra voltar'
+        : 'Fullscreen — press F or ESC to exit');
     }
   },
 };
@@ -2257,15 +2267,53 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
     b.className = 'tipo-fmt-btn';
     b.title = 'Formato do canvas: Stories 9:16, feed 1:1 / 4:5, wide 16:9';
     b.textContent = 'FREE';
-    b.addEventListener('click', () => {
-      this.idx = (this.idx + 1) % this.RATIOS.length;
-      b.textContent = this.RATIOS[this.idx][0].toUpperCase();
-      b.classList.toggle('active', this.idx !== 0);
-      this.apply();
-    });
+    b.addEventListener('click', () => this.setIdx((this.idx + 1) % this.RATIOS.length));
     document.body.appendChild(b);
     this._btn = b;
     window.addEventListener('resize', () => this.apply());
+    // mobile: formats live as big chips inside the Export section (the pill
+    // is hidden by CSS) — Stories/feed framing one tap from the export buttons
+    if (document.body.classList.contains('tipo-mobile')) this._initMobileChips();
+  },
+
+  setIdx(i) {
+    this.idx = i;
+    if (this._btn) {
+      this._btn.textContent = this.RATIOS[i][0].toUpperCase();
+      this._btn.classList.toggle('active', i !== 0);
+    }
+    if (this._chips) {
+      this._chips.forEach((c, j) => c.classList.toggle('active', j === i));
+    }
+    this.apply();
+  },
+
+  _initMobileChips() {
+    const secs = [...document.querySelectorAll('.section')];
+    const exp = secs.find(s => {
+      const t = s.querySelector('.section-title');
+      return t && /export/i.test(t.textContent);
+    });
+    if (!exp) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'tipoFmtChips';
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-5,#777);margin:2px 0 6px;';
+    label.textContent = 'Formato · Stories / Feed';
+    const grid = document.createElement('div');
+    grid.className = 'preset-grid';
+    this._chips = this.RATIOS.map(([name], i) => {
+      const chip = document.createElement('span');
+      chip.className = 'preset-chip' + (i === this.idx ? ' active' : '');
+      chip.textContent = i === 0 ? 'Livre' : name;
+      chip.addEventListener('click', () => this.setIdx(i));
+      grid.appendChild(chip);
+      return chip;
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(grid);
+    const title = exp.querySelector('.section-title');
+    (title || exp.firstChild).insertAdjacentElement('afterend', wrap);
   },
 
   apply() {

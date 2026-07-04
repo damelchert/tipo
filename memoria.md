@@ -170,11 +170,19 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
 - **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
-- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-fmt1`.
+- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-mb2`.
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
 **Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+
+### Mobile rodada 2 — feedback do Daniel no iPhone real (screenshot tipo-steel.vercel.app)
+Pedidos: tirar keyframes no mobile, upload por botão (não drop), simplificar, formatos fáceis, nível WhatsApp/Insta. + fullscreen sem volta no touch.
+- **Declutter mobile** (style.css + cópia no dithering): ⏱ timeline, botões ~ (behaviors) e campos hex ESCONDIDOS no mobile — são ferramentas de desktop; sobra slider limpo e color picker grande. De quebra matou a COLISÃO visível no screenshot dele (pill de formato atrás do ⏱ no canto).
+- **Formato virou chips no sheet**: pill flutuante escondido no mobile; TipoFormat injeta "Formato · Stories / Feed" com chips Livre/9:16/1:1/4:5/16:9 DENTRO da seção Export (que fica aberta por default) — enquadrar pra Stories fica a um toque dos botões de export. `setIdx()` sincroniza pill+chips. PEGADINHA: `width:100vw !important` do mobile vencia o inline do formato → seletor virou `:not([data-tipo-fmt])`.
+- **Fullscreen com volta**: o ⛶ agora FICA visível no fullscreen (opacity .55) e vira ✕; toast mobile "toque no ✕ pra voltar". Antes só F/ESC — impossível sair no touch.
+- **Dropzone tocável** (dithering, único com empty-state): tap em qualquer lugar da zona abre o picker (onclick + cursor pointer) e o texto no mobile vira "Toque aqui pra escolher uma imagem ou vídeo" (spans dz-desktop/dz-mobile por media query). No iOS o picker já oferece Câmera/Fototeca nativamente.
+- test-mobile-ux.mjs (novo, 7 checks) ALL PASS + regressão test-mobile 38/38 (critério de preset ajustado pra ignorar os chips), format-share e shaper ALL PASS. Cache-bust `?v=20260704-mb2`.
 
 ### 13.4 Landing mobile — split panels empilhados
 - Media query no index.html: `.tipo-split` vira coluna (painéis full-width empilhados; antes 2 colunas de ~195px quebravam "VISUAL T / OOLS" no meio), título 21px/3px nowrap, subs centralizados com padding, `.header-stats` e `#fxLabel` escondidos (header mobile = logo + HOME + HeaderFX rodando; tap no header já dispara a passada de impressão — o v3 é touch-friendly de nascença). Cards de categoria com padding 16px.

@@ -651,7 +651,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   }
   .tipo-panel.sheet-open, #controlPanel.sheet-open { transform: translateY(0); }
   .tipo-panel.sheet-drag, #controlPanel.sheet-drag { transition: none; }
-  #canvasContainer, #canvasWrap { width: 100vw !important; }
+  #canvasContainer:not([data-tipo-fmt]), #canvasWrap:not([data-tipo-fmt]) { width: 100vw !important; }
   .tipo-panel h1 { padding-left: 0; }
 
   .tipo-sheet-grip {
@@ -708,4 +708,10 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   .tipo-mobile input[type="color"] { width: 36px; height: 32px; }
   .tipo-mobile .tipo-toast { bottom: 68px; }
   .tipo-mobile .tipo-back-btn { top: 12px; }
+
+  /* mobile declutter: keyframes/behaviors/hex are desktop-grade tools */
+  .tipo-mobile .tipo-tl-toggle, .tipo-mobile #tipoTL { display: none !important; }
+  .tipo-mobile .tipo-bhv-btn { display: none !important; }
+  .tipo-mobile .tipo-hex-input { display: none !important; }
+  .tipo-mobile .tipo-fmt-btn { display: none !important; } /* replaced by chips in the sheet */
 }

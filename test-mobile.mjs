@@ -37,7 +37,7 @@ for (const t of all) {
       .sort((a, b) => b.clientWidth - a.clientWidth)[0];
     const sections = panel ? [...panel.querySelectorAll('.section')] : [];
     const collapsed = sections.filter(s => s.classList.contains('sec-collapsed')).length;
-    const presetIdx = sections.findIndex(s => s.querySelector('.preset-grid'));
+    const presetIdx = sections.findIndex(s => [...s.querySelectorAll('.preset-grid')].some(g => !g.closest('#tipoFmtChips')));
     const gr = grip && grip.getBoundingClientRect();
     return {
       grip: !!grip,
