@@ -170,11 +170,17 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
 - **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
-- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-mob1`.
+- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-fmt1`.
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
 **Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+
+### 13.3 Formatos sociais + Web Share (TipoFormat + deliver)
+- **TipoFormat (ui.js)**: pill "FREE" flutuante (top-right desktop; bottom-right acima do sheet no mobile) cicla 9:16/1:1/4:5/16:9. **Truque universal**: em vez de mexer em cada ferramenta, letterboxa o CONTAINER (flex:none + width/height calculados + margin auto) e dispara resize — todas as 38 leem o container e re-fitam sozinhas. Preview E gravação saem no formato (MP4 1:1 conferido no ffmpeg: 780×780). Guard de recursão: só re-dispara resize quando o tamanho computado mudou. FREE limpa os inline styles.
+- **Web Share (13.3)**: `TipoUI._downloadBlob` virou funil — mobile + canShare → barra fixa [Compartilhar][Baixar] acima do sheet (botões 44px; navigator.share PRECISA de gesto do usuário — o clique na barra fornece). Desktop/fallback → `_forceDownload` (o código antigo). TipoRecorder.download monkey-patched no boot quando TipoMobile.active — MP4 do kinetic também passa pelo funil. Cobre TODO export: PNG, PNG α, MP4, GIF, ASE, SVG, CSS, JSON.
+- test-format-share.mjs 7/7: ciclo de formato em pattern (visual) e coil (p5), canvas segue o container, MP4 quadrado real, share stubado via addInitScript chama navigator.share com o File, Baixar ainda baixa. Regressão: test-mobile 38/38 + shaper + palette ALL PASS.
+- Cache-bust atual: `?v=20260704-fmt1`.
 
 ### FASE 13 fundação mobile (13.1 auditoria + 13.2 bottom sheet) — mobile deixou de ser quebrado
 - **Causa raiz achada na auditoria**: o CSS mobile antigo esperava `.tipo-panel-toggle` que NUNCA existiu no JS — painel translateX(-100%) sem botão pra abrir = 38 ferramentas incontroláveis no celular. Era isso o "mobile não funciona bem" do Daniel.

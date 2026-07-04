@@ -452,7 +452,7 @@ Diagnóstico do Daniel: a experiência mobile atual é ruim. A direção NÃO é
 - Presets de formato de export: **9:16 (Stories/Reels/TikTok), 1:1, 4:5 (feed), 16:9** — o canvas enquadra no formato escolhido
 - Export MP4/GIF já otimizado pros limites das redes (duração/tamanho)
 - **Web Share API**: botão compartilhar nativo (share sheet do iOS/Android) com o arquivo direto pra IG/WhatsApp/etc — no mobile isso substitui o download
-- **Status:** [ ] Conceito
+- **Status:** ✅ Implementado (2026-07-04) — **TipoFormat** (ui.js): pill flutuante cicla FREE → 9:16 → 1:1 → 4:5 → 16:9. Estratégia universal: letterbox no CONTAINER do canvas — todas as ferramentas leem o tamanho do container e re-fitam no resize, então preview, PNG, MP4 e GIF saem no aspect escolhido sem tocar em nenhuma ferramenta. E2E validado: MP4 gravado em 1:1 sai 780×780 (ffmpeg). **Web Share**: TipoUI._downloadBlob virou funil deliver — no mobile com canShare, TODO export (PNG/MP4/GIF/ASE/SVG/CSS/JSON) mostra barra [Compartilhar][Baixar]; Compartilhar abre o share sheet nativo (navigator.share com o File, dentro do gesto do toque), Baixar mantém o download. TipoRecorder.download roteado no boot quando mobile. test-format-share.mjs 7/7 PASS. Pendente: caps de duração por rede (GIF já capado em 3s).
 
 #### 13.4 — Landing mobile
 - Header/index adaptados (HeaderFX tem mouse-lens e hover — precisa de fallback touch), cards em lista, line-up mobile em destaque

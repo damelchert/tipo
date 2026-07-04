@@ -605,12 +605,62 @@ const TipoUI = {
       || document.querySelector('canvas');
   },
 
+  /** Every export funnels through here. On mobile, offers the native share
+   *  sheet (Web Share API) alongside download; on desktop, downloads direct. */
   _downloadBlob(blob, filename) {
+    let file = null;
+    try { file = new File([blob], filename, { type: blob.type || 'application/octet-stream' }); } catch (e) {}
+    if (document.body.classList.contains('tipo-mobile') && file &&
+        navigator.canShare && navigator.canShare({ files: [file] })) {
+      this._shareBar(file, blob, filename);
+    } else {
+      this._forceDownload(blob, filename);
+    }
+  },
+
+  _forceDownload(blob, filename) {
     const link = document.createElement('a');
     link.download = filename;
     link.href = URL.createObjectURL(blob);
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  },
+
+  /** Mobile action bar: share to Instagram/WhatsApp/etc or plain download.
+   *  navigator.share needs a user gesture — the bar buttons provide one. */
+  _shareBar(file, blob, filename) {
+    const old = document.getElementById('tipoShareBarEl');
+    if (old) old.remove();
+    const bar = document.createElement('div');
+    bar.id = 'tipoShareBarEl';
+    bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:68px;z-index:9000;' +
+      'display:flex;gap:8px;align-items:center;background:var(--bg-1,#161616);' +
+      'border:1px solid var(--border-2,#3a3a3a);border-radius:12px;padding:8px 10px;' +
+      'box-shadow:0 6px 24px rgba(0,0,0,.3);font-family:var(--font-ui,monospace);';
+    const mk = (label, accent) => {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.style.cssText = 'min-height:44px;padding:0 16px;border-radius:8px;font-size:12px;cursor:pointer;' +
+        (accent
+          ? 'background:var(--accent,#2A8A7A);color:#fff;border:none;font-weight:600;'
+          : 'background:transparent;color:var(--text-2,#ccc);border:1px solid var(--border-2,#3a3a3a);');
+      return b;
+    };
+    const share = mk('Compartilhar', true);
+    const down = mk('Baixar', false);
+    share.addEventListener('click', () => {
+      navigator.share({ files: [file], title: 'Tipó' })
+        .catch(() => this._forceDownload(blob, filename));
+      bar.remove();
+    });
+    down.addEventListener('click', () => {
+      this._forceDownload(blob, filename);
+      bar.remove();
+    });
+    bar.appendChild(share);
+    bar.appendChild(down);
+    document.body.appendChild(bar);
+    setTimeout(() => { if (bar.parentNode) bar.remove(); }, 20000);
   },
 
   /** Save canvas as PNG */
@@ -2172,6 +2222,88 @@ const TipoMobile = {
   },
 };
 
+/* ============================================================
+   TIPÓ — Canvas format presets (13.3)
+   Floating pill cycles FREE → 9:16 → 1:1 → 4:5 → 16:9. It
+   letterboxes the canvas CONTAINER — every tool reads container
+   size and refits on resize, so preview, PNG, MP4 and GIF all
+   come out in the chosen social aspect. Universal by design.
+   ============================================================ */
+
+const TipoFormat = {
+  RATIOS: [['free', 0], ['9:16', 9 / 16], ['1:1', 1], ['4:5', 4 / 5], ['16:9', 16 / 9]],
+  idx: 0,
+  _container: null,
+  _btn: null,
+
+  init() {
+    const c = document.getElementById('canvasContainer')
+      || document.getElementById('canvasWrap') || document.getElementById('canvasArea');
+    if (!c || this._btn) return;
+    this._container = c;
+    const style = document.createElement('style');
+    style.textContent = `
+.tipo-fmt-btn { position:fixed; top:18px; right:108px; z-index:8999; height:28px; padding:0 12px;
+  border-radius:14px; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616);
+  color:var(--text-4,#999); font-family:var(--font-ui,monospace); font-size:9px; letter-spacing:1.5px;
+  cursor:pointer; }
+.tipo-fmt-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+.tipo-fmt-btn.active { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); font-weight:700; }
+body.tipo-full .tipo-fmt-btn { display:none !important; }
+.tipo-mobile .tipo-fmt-btn { top:auto; bottom:68px; right:12px; }
+`;
+    document.head.appendChild(style);
+    const b = document.createElement('button');
+    b.className = 'tipo-fmt-btn';
+    b.title = 'Formato do canvas: Stories 9:16, feed 1:1 / 4:5, wide 16:9';
+    b.textContent = 'FREE';
+    b.addEventListener('click', () => {
+      this.idx = (this.idx + 1) % this.RATIOS.length;
+      b.textContent = this.RATIOS[this.idx][0].toUpperCase();
+      b.classList.toggle('active', this.idx !== 0);
+      this.apply();
+    });
+    document.body.appendChild(b);
+    this._btn = b;
+    window.addEventListener('resize', () => this.apply());
+  },
+
+  apply() {
+    const c = this._container;
+    if (!c) return;
+    const ar = this.RATIOS[this.idx][1];
+    if (!ar) {
+      if (c.dataset.tipoFmt) {
+        delete c.dataset.tipoFmt;
+        c.style.flex = ''; c.style.width = ''; c.style.height = '';
+        c.style.margin = ''; c.style.alignSelf = ''; c.style.outline = '';
+        window.dispatchEvent(new Event('resize'));
+      }
+      return;
+    }
+    let availW = window.innerWidth, availH = window.innerHeight;
+    const panel = document.querySelector('.tipo-panel') || document.getElementById('controlPanel');
+    if (panel && !document.body.classList.contains('tipo-mobile')
+      && !document.body.classList.contains('tipo-full')
+      && getComputedStyle(panel).position !== 'fixed') {
+      availW -= panel.getBoundingClientRect().width;
+    }
+    availW = Math.max(80, availW - 20);
+    availH = Math.max(80, availH - 20);
+    const w = Math.round(Math.min(availW, availH * ar));
+    const h = Math.round(w / ar);
+    const changed = c.style.width !== w + 'px' || c.style.height !== h + 'px';
+    c.dataset.tipoFmt = '1';
+    c.style.flex = 'none';
+    c.style.width = w + 'px';
+    c.style.height = h + 'px';
+    c.style.margin = 'auto';
+    c.style.alignSelf = 'center';
+    c.style.outline = '1px solid var(--border-2, #3a3a3a)';
+    if (changed) window.dispatchEvent(new Event('resize')); // tools refit; guarded: no-op when unchanged
+  },
+};
+
 if (typeof document !== 'undefined') {
   const boot = () => {
     TipoBehavior.scan();
@@ -2182,6 +2314,12 @@ if (typeof document !== 'undefined') {
     TipoFull.init();
     TipoHelp.init();
     TipoMobile.init();
+    TipoFormat.init();
+    // MP4s go through TipoRecorder.download — route them through the
+    // share-aware deliver path on mobile
+    if (TipoMobile.active && typeof TipoRecorder !== 'undefined') {
+      TipoRecorder.download = (blob, filename) => TipoUI._downloadBlob(blob, filename);
+    }
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;
