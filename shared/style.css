@@ -649,7 +649,16 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
-  .tipo-panel.sheet-open, #controlPanel.sheet-open { transform: translateY(0); }
+  .tipo-panel.sheet-open, #controlPanel.sheet-open {
+    transform: translateY(0);
+    height: 46vh !important;   /* half-sheet: canvas stays visible above */
+    max-height: 46vh !important;
+  }
+  body.tipo-sheet-open #canvasContainer:not([data-tipo-fmt]),
+  body.tipo-sheet-open #canvasWrap:not([data-tipo-fmt]),
+  body.tipo-sheet-open #canvasArea:not([data-tipo-fmt]) {
+    height: 54vh !important;
+  }
   .tipo-panel.sheet-drag, #controlPanel.sheet-drag { transition: none; }
   #canvasContainer:not([data-tipo-fmt]), #canvasWrap:not([data-tipo-fmt]) { width: 100vw !important; }
   .tipo-panel h1 { padding-left: 0; }

@@ -113,12 +113,12 @@ await mob.addInitScript(() => {
   const barBtns = await page.evaluate(() =>
     [...document.querySelectorAll('#tipoShareBarEl button')].map(b => b.textContent));
   await page.evaluate(() => {
-    [...document.querySelectorAll('#tipoShareBarEl button')].find(b => b.textContent === 'Compartilhar').click();
+    [...document.querySelectorAll('#tipoShareBarEl button')].find(b => b.textContent.startsWith('Salvar')).click();
   });
   await page.waitForTimeout(400);
   const shared = await page.evaluate(() => window.__shared);
-  check('mobile export shows share bar', barBtns.includes('Compartilhar') && barBtns.includes('Baixar'), JSON.stringify(barBtns));
-  check('Compartilhar calls navigator.share with the file', shared && shared.n === 1 && /\.png$/.test(shared.name), JSON.stringify(shared));
+  check('mobile export shows share bar', barBtns.some(t => t.startsWith('Salvar')) && barBtns.includes('Arquivo'), JSON.stringify(barBtns));
+  check('Salvar/Compartilhar calls navigator.share with the file', shared && shared.n === 1 && /\.png$/.test(shared.name), JSON.stringify(shared));
 
   // download fallback path
   await page.evaluate(() => exportPNG());
@@ -126,10 +126,10 @@ await mob.addInitScript(() => {
   const [dl2] = await Promise.all([
     page.waitForEvent('download', { timeout: 10000 }),
     page.evaluate(() => {
-      [...document.querySelectorAll('#tipoShareBarEl button')].find(b => b.textContent === 'Baixar').click();
+      [...document.querySelectorAll('#tipoShareBarEl button')].find(b => b.textContent === 'Arquivo').click();
     }),
   ]);
-  check('Baixar still downloads', !!dl2.suggestedFilename(), `(${dl2.suggestedFilename()})`);
+  check('Arquivo still downloads', !!dl2.suggestedFilename(), `(${dl2.suggestedFilename()})`);
   check('zero page errors (mobile)', errs === 0, `(${errs})`);
   await page.close();
 }

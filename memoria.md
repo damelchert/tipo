@@ -170,11 +170,18 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
 - **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
-- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-mb2`.
+- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260705-mb3`.
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
 **Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+
+### Mobile rodada 3 — upload da galeria, split view "mexer e ver", Fototeca
+Feedback do Daniel no aparelho: upload da galeria não funcionava; sheet colapsado obriga sobe-e-desce ("precisa mexer e visualizar ao mesmo tempo"); gravação deveria ir pra Fototeca, não virar arquivo.
+- **Upload: causa raiz achada em 2 camadas.** (1) REAL: o botão Upload mora na seção Source, que o TipoMobile colapsava por default → botão rect 0×0, invisível no celular. Source entrou no KEEP_OPEN. (2) ARTEFATO: no harness Playwright, `route('**/*')` interceptava blob: URLs e o fetch Node devolvia 404 — matava os object URLs SÓ NO TESTE. Harness agora dá `route.fallback()` pra não-http(s). Validado no **WebKit** (motor do Safari real): dithering dropzone + riso + shaper carregam a imagem de ponta a ponta (test-mobile-upload.mjs).
+- **Split view (a solução do "mexer e ver")**: sheet aberto agora é MEIA TELA (46vh fixo, conteúdo rola dentro) e o container do canvas é reduzido pros 54vh de cima (body.tipo-sheet-open + height !important :not([data-tipo-fmt]) + resize após a transição de 320ms). Slider embaixo, resultado em cima, simultâneos — como desktop. TipoFormat ciente: availH ×0.54 quando aberto e margin-top calculado pra ancorar o canvas formatado na faixa visível (senão o 1:1 centralizava no viewport inteiro e afundava sob o sheet).
+- **Fototeca**: impossível gravar direto na Photos via web; o caminho é o share sheet ("Salvar Vídeo/Imagem" → Fototeca). Barra renomeada: primário "Salvar / Compartilhar", secundário "Arquivo", hint "Salvar = Fototeca · ou manda direto pro WhatsApp/Insta".
+- **WebKit instalado no Playwright** (npx playwright install webkit) — testes mobile críticos agora podem rodar no motor do Safari. test-mobile-split.mjs + test-mobile-upload.mjs permanentes. Regressão: mobile 38/38, mobile-ux, format-share (labels atualizados) ALL PASS. Cache `?v=20260705-mb3`.
 
 ### Mobile rodada 2 — feedback do Daniel no iPhone real (screenshot tipo-steel.vercel.app)
 Pedidos: tirar keyframes no mobile, upload por botão (não drop), simplificar, formatos fáceis, nível WhatsApp/Insta. + fullscreen sem volta no touch.

@@ -646,8 +646,8 @@ const TipoUI = {
           : 'background:transparent;color:var(--text-2,#ccc);border:1px solid var(--border-2,#3a3a3a);');
       return b;
     };
-    const share = mk('Compartilhar', true);
-    const down = mk('Baixar', false);
+    const share = mk('Salvar / Compartilhar', true);
+    const down = mk('Arquivo', false);
     share.addEventListener('click', () => {
       navigator.share({ files: [file], title: 'Tipó' })
         .catch(() => this._forceDownload(blob, filename));
@@ -657,8 +657,18 @@ const TipoUI = {
       this._forceDownload(blob, filename);
       bar.remove();
     });
-    bar.appendChild(share);
-    bar.appendChild(down);
+    const col = document.createElement('div');
+    col.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-items:center;';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;';
+    row.appendChild(share);
+    row.appendChild(down);
+    const hint = document.createElement('span');
+    hint.style.cssText = 'font-size:9px;color:var(--text-5,#777);letter-spacing:.4px;';
+    hint.textContent = 'Salvar = Fototeca · ou manda direto pro WhatsApp/Insta';
+    col.appendChild(row);
+    col.appendChild(hint);
+    bar.appendChild(col);
     document.body.appendChild(bar);
     setTimeout(() => { if (bar.parentNode) bar.remove(); }, 20000);
   },
@@ -2187,16 +2197,23 @@ const TipoMobile = {
       const off = Math.max(0, Math.min(panelH - 54, baseOff + dy));
       panel.style.transform = `translateY(${off}px)`;
     });
+    const setOpen = open => {
+      panel.classList.toggle('sheet-open', open);
+      // split view: canvas resizes to the space above the sheet so the user
+      // tweaks AND watches at the same time (like desktop side-by-side)
+      document.body.classList.toggle('tipo-sheet-open', open);
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+    };
     const finish = e => {
       if (startY === null) return;
       panel.classList.remove('sheet-drag');
       panel.style.transform = '';
       if (!moved) {
-        panel.classList.toggle('sheet-open');
+        setOpen(!panel.classList.contains('sheet-open'));
       } else {
         const dy = e.clientY - startY;
         const open = baseOff === 0 ? dy < panelH * 0.3 : dy < -40;
-        panel.classList.toggle('sheet-open', open);
+        setOpen(open);
       }
       startY = null;
     };
@@ -2210,7 +2227,7 @@ const TipoMobile = {
     if (presetSec) (textSec || panel.querySelector('h1') || grip).insertAdjacentElement('afterend', presetSec);
 
     // collapsible sections — fold everything but the essentials
-    const KEEP_OPEN = ['text', 'presets', 'preset', 'export'];
+    const KEEP_OPEN = ['text', 'presets', 'preset', 'source', 'export'];
     panel.querySelectorAll('.section').forEach(sec => {
       const title = sec.querySelector('.section-title');
       if (!title) return;
@@ -2336,6 +2353,7 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
       && getComputedStyle(panel).position !== 'fixed') {
       availW -= panel.getBoundingClientRect().width;
     }
+    if (document.body.classList.contains('tipo-sheet-open')) availH = Math.round(availH * 0.54);
     availW = Math.max(80, availW - 20);
     availH = Math.max(80, availH - 20);
     const w = Math.round(Math.min(availW, availH * ar));
@@ -2345,7 +2363,13 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
     c.style.flex = 'none';
     c.style.width = w + 'px';
     c.style.height = h + 'px';
-    c.style.margin = 'auto';
+    if (document.body.classList.contains('tipo-sheet-open')) {
+      // anchor in the visible strip above the half-sheet, not the full viewport
+      const top = Math.max(0, (window.innerHeight * 0.54 - h) / 2);
+      c.style.margin = top + 'px auto auto';
+    } else {
+      c.style.margin = 'auto';
+    }
     c.style.alignSelf = 'center';
     c.style.outline = '1px solid var(--border-2, #3a3a3a)';
     if (changed) window.dispatchEvent(new Event('resize')); // tools refit; guarded: no-op when unchanged
