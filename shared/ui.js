@@ -323,16 +323,71 @@ const TipoUI = {
     crashclock: 'animation', vessel: 'animation', shine: 'animation', boost: 'animation'
   },
 
-  /** Create a fixed back button linking to the correct landing-page menu */
-  initBackButton() {
+  /** Create a fixed back button linking to the correct landing-page menu.
+   *  Mode comes from TipoUI.init (kinetic pages) or the pathname (visual pages);
+   *  an explicit hash overrides both. */
+  initBackButton(hash) {
     if (document.querySelector('.tipo-back-btn')) return;
-    const hash = this._backTargets[this.modeName];
+    const mode = this.modeName || location.pathname.split('/').pop().replace('.html', '');
+    const target = hash || this._backTargets[mode];
     const a = document.createElement('a');
     a.className = 'tipo-back-btn';
-    a.href = 'index.html' + (hash ? '#' + hash : '');
+    a.href = 'index.html' + (target ? '#' + target : '');
     a.title = 'Back to menu';
     a.textContent = '\u2190';
     document.body.appendChild(a);
+  },
+
+  /** One-call chrome for standalone visual tools (no p5/TipoUI.init):
+   *  theme toggle + back button. Replaces the per-page initTheme IIFEs. */
+  initChrome(hash) {
+    this.initTheme();
+    this.initBackButton(hash);
+  },
+
+  _visRec: null,
+
+  /** Shared Record MP4 flow for standalone visual tools. Handles the
+   *  recorder lifecycle, #recBtn state, #exportProgress overlay (if the
+   *  page has one) and toasts. Returns the recorder so pages can keep
+   *  their global `recorder` in sync for captureFrame() calls.
+   *  opts.onStart / opts.onStop: page hooks (e.g. force the render loop). */
+  async toggleVisualRec(canvas, opts = {}) {
+    if (!this._visRec) {
+      this._visRec = new TipoRecorder(canvas);
+      this._visRec.setTimerElement(document.getElementById('recTimer'));
+    }
+    const rec = this._visRec;
+    const btn = document.getElementById('recBtn');
+    if (!rec.isRecording) {
+      await rec.start(opts.bitrate || 8000000);
+      if (btn) {
+        btn.textContent = 'Stop Recording';
+        btn.style.borderColor = 'var(--red)';
+      }
+      if (opts.onStart) opts.onStart();
+    } else {
+      const prog = document.getElementById('exportProgress');
+      if (prog) prog.classList.add('open');
+      if (btn) btn.disabled = true;
+      try {
+        const result = await rec.stop();
+        TipoRecorder.download(result.blob, result.filename);
+        this.showToast(`MP4 exported (${result.sizeMB} MB)`);
+      } catch (e) {
+        console.error(e);
+        this.showToast('Export failed');
+      } finally {
+        if (prog) prog.classList.remove('open');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Record MP4';
+          btn.style.borderColor = '';
+        }
+        if (opts.onStop) opts.onStop();
+      }
+    }
+    return rec;
   },
 
   /** Initialize theme toggle button and restore saved preference */

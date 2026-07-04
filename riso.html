@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="shared/style.css?v=20260612-bhv">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260703-pal1"></script>
+<script src="shared/ui.js?v=20260704-ref1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -655,23 +655,10 @@ function exportLayers() {
 }
 
 async function toggleRec() {
-  if (!recorder) {
-    recorder = new TipoRecorder(mainCanvas);
-    recorder.setTimerElement(document.getElementById('recTimer'));
-  }
-  const btn = document.getElementById('recBtn');
-  if (!recorder.isRecording) {
-    await recorder.start(8000000);
-    btn.textContent = 'Stop Recording';
-    btn.style.borderColor = 'var(--red)';
-    if (!animFrame) startLoop(); // record even static sources
-  } else {
-    const result = await recorder.stop();
-    TipoRecorder.download(result.blob, result.filename);
-    btn.textContent = 'Record MP4';
-    btn.style.borderColor = '';
-    if (sourceType === 'image' || !sourceType) stopLoop();
-  }
+  recorder = await TipoUI.toggleVisualRec(mainCanvas, {
+    onStart: () => { if (!animFrame) startLoop(); }, // record even static sources
+    onStop: () => { if (sourceType === 'image' || !sourceType) stopLoop(); },
+  });
 }
 
 // ============================================================
@@ -791,52 +778,8 @@ wrap.addEventListener('dblclick', rerollSeed);
 // ============================================================
 // THEME + BACK + HEX (standalone, same as overlay.html)
 // ============================================================
-(function initTheme() {
-  const saved = localStorage.getItem('tipo-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
-  const btn = document.createElement('button');
-  btn.className = 'tipo-theme-toggle';
-  btn.title = 'Toggle light/dark theme';
-  btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
-  btn.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('tipo-theme', next);
-    btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
-  });
-  document.body.appendChild(btn);
-
-  const back = document.createElement('a');
-  back.className = 'tipo-back-btn';
-  back.href = 'index.html#visual';
-  back.title = 'Back to menu';
-  back.textContent = '\u2190';
-  document.body.appendChild(back);
-
-  document.querySelectorAll('input[type="color"]').forEach(el => {
-    const hex = document.createElement('input');
-    hex.type = 'text';
-    hex.className = 'tipo-hex-input';
-    hex.maxLength = 7;
-    hex.spellcheck = false;
-    hex.value = el.value;
-    el.insertAdjacentElement('afterend', hex);
-    el.addEventListener('input', () => { hex.value = el.value; });
-    const commit = () => {
-      let v = hex.value.trim();
-      if (v && v[0] !== '#') v = '#' + v;
-      if (/^#[0-9a-fA-F]{3}$/.test(v)) v = '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
-      if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-        el.value = v.toLowerCase();
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      hex.value = el.value;
-    };
-    hex.addEventListener('change', commit);
-    hex.addEventListener('keydown', (e) => { if (e.key === 'Enter') { commit(); hex.blur(); } });
-  });
-})();
+// Theme toggle + back button (shared)
+TipoUI.initChrome('visual');
 
 // Init
 buildLayerUI();
