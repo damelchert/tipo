@@ -439,14 +439,14 @@ Diagnóstico do Daniel: a experiência mobile atual é ruim. A direção NÃO é
 - Testar as 37 no viewport mobile real (touch, painel, canvas, performance) e mapear o que quebra
 - Escolher o line-up mobile: visuals fortes (dithering, riso, glitch, pixelsort, gradientmap, palette, pattern, overlay...) + kinetics principais (coil, cascade, flag...) — decidir COM o Daniel
 - Ferramentas fora do line-up: banner "melhor no desktop" em vez de experiência quebrada
-- **Status:** [ ] Conceito
+- **Status:** ✅ Auditoria feita (2026-07-04) — CAUSA RAIZ do "mobile não funciona": o CSS esperava um `.tipo-panel-toggle` que NUNCA foi criado em JS — o painel ficava fora da tela sem jeito de abrir; as 38 ferramentas eram incontroláveis no celular. Canvas dos p5 ficava 290px (resize antes do p5 bootar). Curadoria do line-up: PENDENTE decisão com Daniel (mas com o bottom sheet todas ficaram usáveis — a curadoria vira refinamento, não gate).
 
 #### 13.2 — UX mobile: painel e controles
 - Painel vira bottom sheet (arrasta pra abrir/fechar), canvas em cima — não sidebar espremida
 - **Parâmetros simplificados**: por ferramenta, expor só os 4-6 sliders que importam + presets em destaque (presets primeiro, sliders depois — no celular preset É o fluxo principal)
 - Touch: sliders maiores (44px+ de alvo), sem hover-dependência (tooltips ? viram tap, lens/brush do mouse ganham equivalente touch), dblclick vira double-tap
 - Upload: câmera direto (capture attribute), galeria, paste
-- **Status:** [ ] Conceito
+- **Status:** ✅ Fundação implementada (2026-07-04) — **TipoMobile** (ui.js) + sheet CSS (style.css @media 768px): painel vira **bottom sheet** com grip "Ajustes" (54px peek), tap abre/fecha, **drag segue o dedo** e snap no release (pointer capture). **Presets promovidos pro topo** (fluxo preset-first), **todas as seções colapsáveis** (fecham por default exceto Text/Presets/Export — simplificação universal sem curadoria por ferramenta). Touch: btn 44px, chips 10px padding, range 30px/thumb 22px, text input 16px (mata zoom do iOS), toasts acima do peek. dithering (não migrado pro shared css) ganhou cópia local do bloco. Refit do canvas: resize re-disparado em 600/1500ms + load (p5 boota depois do DOMContentLoaded). test-mobile.mjs: **38/38 PASS** (grip, tap open/close, colapso, canvas full-width, 0 pageerrors). Pendente: essenciais 4-6 por ferramenta (curadoria com Daniel), capture attribute no upload, double-tap.
 
 #### 13.3 — Formatos e redes sociais
 - Presets de formato de export: **9:16 (Stories/Reels/TikTok), 1:1, 4:5 (feed), 16:9** — o canvas enquadra no formato escolhido

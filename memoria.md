@@ -170,11 +170,20 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **11.1 Pattern Generator** (ferramenta #36): tessellation animada, 8 motifs × 5 simetrias, tile seamless (anel com wrap) + SVG vetorial.
 - **Header v3 "Impressora Viva"** (squads design+dev): canvas engine, TIPÓ re-impresso pelos 6 efeitos com varredura, cometa = print head, lens no hover, pass counter.
 - **11.2 Palette** (ferramenta #37): median cut + 6 harmonias HSL + export ASE/CSS/JSON (entrada abaixo).
-- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual do ui.js: `?v=20260704-shp1`.
+- **Total agora: 38 ferramentas** (15 visual + 23 kinetic). Cache-bust atual: ui.js + style.css `?v=20260704-mob1`.
 
 **PENDENTE de validação do Daniel no deploy:** Header v3 (varredura/velocidade/presença), Pattern, Palette (abrir o .ase num Illustrator/Photoshop real), Overlay v2, tooltips, Duplicator, Timeline, GIF/Link/⛶, fonte custom. SVG do pattern nunca aberto em Illustrator/Figma real.
 
 **Fila pra próxima sessão:** **FASE 13 Mobile** (pedido do Daniel 03/07: mobile não funciona bem — curadoria das melhores ferramentas, parâmetros simplificados, bottom sheet, formatos de rede social 9:16/1:1/4:5, Web Share API; specs no ATTACK_PLAN 13.1–13.4), 11.3 Mockup Compositor, Fase 10 (Flag font engine vetorial — pesado), cards das visual tools com mini-animações, dívida técnica restante (smoke light mode; refactor shared/ FEITO 04/07).
+
+### FASE 13 fundação mobile (13.1 auditoria + 13.2 bottom sheet) — mobile deixou de ser quebrado
+- **Causa raiz achada na auditoria**: o CSS mobile antigo esperava `.tipo-panel-toggle` que NUNCA existiu no JS — painel translateX(-100%) sem botão pra abrir = 38 ferramentas incontroláveis no celular. Era isso o "mobile não funciona bem" do Daniel.
+- **TipoMobile (ui.js, chamado no boot)**: em ≤768px injeta grip "Ajustes" no painel (peek 54px), tap abre/fecha, drag com pointer capture segue o dedo e snappa no release. Promove a seção Presets pro topo (preset-first no celular) e colapsa todas as seções exceto Text/Presets/Export (títulos viram toggles com chevron) — simplificação UNIVERSAL sem precisar curar 38 ferramentas uma a uma.
+- **Sheet CSS (style.css)**: painel fixed bottom, max-height 68vh !important (páginas com CSS próprio setavam height:100vh), border-radius 16px, sombra; touch targets (btn 44px, range 30px/thumb 22px, input text 16px = sem zoom iOS); toasts sobem pra 68px.
+- **dithering é ilha**: nunca linkou shared/style.css (débito da Fase 0) → cópia local do bloco sheet no <style> dele. Seu canvas 300×150 no smoke é o estado vazio (dropzone) — correto, não bug.
+- **p5 refit**: canvas nascia 290px porque o resize disparava antes do p5 bootar (p5 sobe DEPOIS do DOMContentLoaded) → refit re-disparado em rAF + 600ms + 1500ms + load.
+- test-mobile.mjs (permanente): 38/38 PASS no iPhone 13 viewport. Desktop sem regressão (test-pattern + test-shaper ALL PASS).
+- Pendente 13.2: essenciais 4-6 sliders por ferramenta (decidir line-up COM Daniel), capture attribute, double-tap. 13.3 (formatos 9:16/1:1/4:5 + Web Share API) e 13.4 (landing mobile) não começados.
 
 ### 11.4 Gradient Shaper construído (shaper.html — ferramenta #38, 15ª visual tool)
 Daniel confirmou que quer TUDO do reel (@antoncreations): formas, desenho livre e grid — e pediu diferenciais.

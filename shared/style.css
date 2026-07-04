@@ -624,39 +624,88 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
 }
 
 /* ============================================================
-   RESPONSIVE — Mobile panel toggle
+   RESPONSIVE — Mobile bottom sheet (Fase 13.2)
+   The side panel becomes a draggable bottom sheet: a 54px grip
+   peeks at the bottom; tap or drag opens it over the canvas.
+   TipoMobile (ui.js) injects the grip and wires the gestures.
    ============================================================ */
 @media (max-width: 768px) {
-  .tipo-panel {
+  .tipo-panel, #controlPanel {
     position: fixed;
-    left: 0; top: 0; bottom: 0;
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    width: 280px;
-    min-width: 280px;
+    left: 0; right: 0; bottom: 0; top: auto;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;     /* pages with their own panel CSS (dithering) set height:100vh */
+    max-height: 68vh !important;
+    z-index: 300;
+    transform: translateY(calc(100% - 54px));
+    transition: transform 0.28s cubic-bezier(.3, .9, .3, 1);
+    border-right: none !important;
+    border-top: 1px solid var(--border-2);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.28);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
-  .tipo-panel.open { transform: translateX(0); }
-  .tipo-panel-toggle { display: flex !important; }
-  #canvasContainer { width: 100vw !important; }
-  .tipo-back-btn { top: 60px; } /* below the mobile panel toggle */
-  .tipo-panel h1 { padding-left: 0; } /* back button isn't over the panel on mobile */
-}
+  .tipo-panel.sheet-open, #controlPanel.sheet-open { transform: translateY(0); }
+  .tipo-panel.sheet-drag, #controlPanel.sheet-drag { transition: none; }
+  #canvasContainer, #canvasWrap { width: 100vw !important; }
+  .tipo-panel h1 { padding-left: 0; }
 
-.tipo-panel-toggle {
-  display: none;
-  position: fixed;
-  top: 12px; left: 12px;
-  z-index: 101;
-  width: 36px; height: 36px;
-  background: var(--bg-1);
-  border: 1px solid var(--border-2);
-  border-radius: 6px;
-  color: var(--text-1);
-  font-size: 18px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-family: var(--font-ui);
+  .tipo-sheet-grip {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 54px;
+    margin: -20px -20px 10px;
+    padding: 0 20px;
+    background: var(--bg-1);
+    cursor: grab;
+    touch-action: none;
+    z-index: 6;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tipo-sheet-bar {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border-2);
+  }
+  .tipo-sheet-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-5);
+  }
+  .sheet-open .tipo-sheet-label { color: var(--accent); }
+
+  /* collapsible sections: everything starts folded except the essentials */
+  .tipo-mobile .section > .section-title { cursor: pointer; position: relative; }
+  .tipo-mobile .section > .section-title::after {
+    content: '▾';
+    position: absolute;
+    right: 0;
+    color: var(--text-5);
+    font-size: 10px;
+  }
+  .tipo-mobile .section.sec-collapsed > .section-title::after { content: '▸'; }
+  .tipo-mobile .section.sec-collapsed > *:not(.section-title) { display: none !important; }
+
+  /* touch targets */
+  .tipo-mobile .btn { min-height: 44px; }
+  .tipo-mobile .preset-chip { padding: 10px 14px; }
+  .tipo-mobile select { min-height: 40px; }
+  .tipo-mobile input[type="text"] { min-height: 42px; font-size: 16px; } /* 16px kills iOS zoom-on-focus */
+  .tipo-mobile input[type="range"] { height: 30px; }
+  .tipo-mobile input[type="range"]::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .tipo-mobile input[type="color"] { width: 36px; height: 32px; }
+  .tipo-mobile .tipo-toast { bottom: 68px; }
+  .tipo-mobile .tipo-back-btn { top: 12px; }
 }
-.tipo-panel-toggle:hover { border-color: var(--accent); }

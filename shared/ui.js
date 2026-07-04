@@ -2085,6 +2085,93 @@ body.tipo-full #tipoTL, body.tipo-full .tipo-full-btn { display:none !important;
 
 // Auto-init: inject "~" buttons once the DOM is ready, and re-scan when
 // tools create sliders dynamically (e.g. riso CMYK section, dithering panel)
+/* ============================================================
+   TIPÓ — Mobile bottom sheet (13.2)
+   On small viewports the control panel becomes a draggable
+   bottom sheet: tap the grip to open/close, drag to follow the
+   finger. Presets are promoted to the top and every section
+   collapses except the essentials — preset-first UX on mobile.
+   ============================================================ */
+
+const TipoMobile = {
+  active: false,
+
+  init() {
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    const panel = document.querySelector('.tipo-panel') || document.getElementById('controlPanel');
+    if (!panel || panel.querySelector('.tipo-sheet-grip')) return;
+    this.active = true;
+    document.body.classList.add('tipo-mobile');
+
+    // grip: the only part visible in the peek state
+    const grip = document.createElement('div');
+    grip.className = 'tipo-sheet-grip';
+    grip.innerHTML = '<span class="tipo-sheet-bar"></span><span class="tipo-sheet-label">Ajustes</span>';
+    panel.insertBefore(grip, panel.firstChild);
+
+    // tap toggles; drag follows the finger and snaps on release
+    let startY = null, baseOff = 0, panelH = 0, moved = false;
+    grip.addEventListener('pointerdown', e => {
+      startY = e.clientY;
+      moved = false;
+      panelH = panel.getBoundingClientRect().height;
+      baseOff = panel.classList.contains('sheet-open') ? 0 : panelH - 54;
+      panel.classList.add('sheet-drag');
+      grip.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    grip.addEventListener('pointermove', e => {
+      if (startY === null) return;
+      const dy = e.clientY - startY;
+      if (Math.abs(dy) > 6) moved = true;
+      const off = Math.max(0, Math.min(panelH - 54, baseOff + dy));
+      panel.style.transform = `translateY(${off}px)`;
+    });
+    const finish = e => {
+      if (startY === null) return;
+      panel.classList.remove('sheet-drag');
+      panel.style.transform = '';
+      if (!moved) {
+        panel.classList.toggle('sheet-open');
+      } else {
+        const dy = e.clientY - startY;
+        const open = baseOff === 0 ? dy < panelH * 0.3 : dy < -40;
+        panel.classList.toggle('sheet-open', open);
+      }
+      startY = null;
+    };
+    grip.addEventListener('pointerup', finish);
+    grip.addEventListener('pointercancel', finish);
+
+    // presets first: mobile flow is preset-driven
+    const sections = [...panel.querySelectorAll('.section')];
+    const presetSec = sections.find(s => s.querySelector('.preset-grid'));
+    const textSec = sections.find(s => s.querySelector('#textInput'));
+    if (presetSec) (textSec || panel.querySelector('h1') || grip).insertAdjacentElement('afterend', presetSec);
+
+    // collapsible sections — fold everything but the essentials
+    const KEEP_OPEN = ['text', 'presets', 'preset', 'export'];
+    panel.querySelectorAll('.section').forEach(sec => {
+      const title = sec.querySelector('.section-title');
+      if (!title) return;
+      const name = title.textContent.trim().toLowerCase();
+      if (!KEEP_OPEN.some(k => name.startsWith(k))) sec.classList.add('sec-collapsed');
+      title.addEventListener('click', e => {
+        if (e.target.classList && e.target.classList.contains('tipo-help-icon')) return;
+        sec.classList.toggle('sec-collapsed');
+      });
+    });
+
+    // panels swap from side column to overlay — let canvases refit.
+    // p5 sketches boot AFTER DOMContentLoaded, so fire again later and on load.
+    const refit = () => window.dispatchEvent(new Event('resize'));
+    requestAnimationFrame(refit);
+    setTimeout(refit, 600);
+    setTimeout(refit, 1500);
+    window.addEventListener('load', () => setTimeout(refit, 100));
+  },
+};
+
 if (typeof document !== 'undefined') {
   const boot = () => {
     TipoBehavior.scan();
@@ -2094,6 +2181,7 @@ if (typeof document !== 'undefined') {
     TipoShare.init();
     TipoFull.init();
     TipoHelp.init();
+    TipoMobile.init();
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;
