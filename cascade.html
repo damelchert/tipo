@@ -252,8 +252,14 @@ function draw() {
   const wSpd = val('waveSpeed') / 100;
   const slp = val('slope') / 10;
 
-  const runLen = txt.length;
+  // Repeat the text to fill the canvas width — a 4-char word at X-Scale 20
+  // otherwise renders as a skinny 130px tower (the STG original assumes a
+  // long sentence). Whole-word tiling keeps the column rhythm intact.
   const xSpace = tX + trk;
+  const fitCols = max(txt.length, floor((width - 100) / max(1, xSpace)));
+  const reps = max(1, round(fitCols / txt.length));
+  const runTxt = txt.repeat(reps);
+  const runLen = runTxt.length;
 
   const stgMode = document.getElementById('stgMode').value;
   const stgAmt = val('stgAmt');
@@ -273,7 +279,7 @@ function draw() {
 
   // ========== RENDER GRID (normal) ==========
   for (let k = 0; k < runLen; k++) {
-    const ch = txt.charAt(k);
+    const ch = runTxt.charAt(k);
     push();
 
     for (let i = 0; i < rws; i++) {
@@ -329,7 +335,7 @@ function draw() {
     translate(0, yField / 2);
 
     for (let m = 0; m < runLen; m++) {
-      const ch = txt.charAt(m);
+      const ch = runTxt.charAt(m);
       push();
 
       for (let n = 1; n <= rws; n++) {

@@ -159,6 +159,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### FASE 10 FECHADA — Cascade side-by-side com o STG real
+- Referência capturada AO VIVO: Playwright carregou spacetypegenerator.com/cascade e screenshotou. Comparação revelou: STG = parede full-canvas (assume frase longa tipo "HERE TODAY & GONE TOMORROW"); nosso = torre de 130px (TIPÓ 4 chars × X-Scale 20). MESMA doença do cylinder.
+- Fix: `runTxt = txt.repeat(reps)` com reps = largura útil / (xSpace × len), tiles de palavra inteira. Cascade agora preenche o canvas com as fitas diagonais brand. A compressão na costura do mirror é fiel ao original (natureza da distribuição triangular).
+- Morisawa já modernizada além do original; fases 3-5 auditadas nos dois temas + fonte nova + badge consertado → Fase 10 INTEIRA marcada como fechada. Ajuste estético preset-a-preset fica sob demanda.
+
 ### Faxinas: smoke dark 39/39 + dithering migrado pro shared (dívida da FASE 0 paga)
 - **Smoke dark**: as 39 em tema escuro screenshotadas em grid — painéis escuros corretos, canvas mantém defaults brand (conteúdo ≠ tema), zero pageerrors, nada quebrado. Light é auditado continuamente. Item 7.5.1 fechado.
 - **Dithering migrado**: shared/style.css linkado ANTES do <style> local — empates de especificidade resolvem pro local, visual fica idêntico, e o shared passa a valer onde o local não define (bottom sheet mobile SEM cópia local, micro-interações, toast animado, ponto dourado no h1). PEGADINHA: as regras dz-mobile/dz-desktop do dropzone moravam dentro do bloco mobile deletado → desktop mostrava os dois textos; realocadas pro CSS da ferramenta (onde sempre deviam estar).

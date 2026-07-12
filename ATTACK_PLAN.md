@@ -392,12 +392,11 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 
 #### Prioridade Alta
 - [x] **FLAG** — ✅ Font engine vetorial completo (2026-07-03): **shared/flagfont.js** — fonte esqueleto própria, cada glyph = polilinhas/arcos/splines Catmull-Rom em espaço (u,v) da célula. Renderer com **bilinear interpolation real**: cada traço é subdividido (GLYPH_SUBDIV 7) e cada ponto mapeado pela quad deformada — os traços CURVAM com a bandeira (antes eram retas entre cantos). 72+ glyphs: A-Z com curvas de verdade (bowls B/C/D/G/O/P/Q/R/S), 0-9, pontuação, **acentos PT-BR completos** (Á À Â Ã É Ê Í Ó Ô Õ Ú Ç Ñ... — marcas acima/abaixo da célula via extrapolação bilinear). Bugs mortos: **Ó renderizava como pontinho** (o demo default TIPÓ mostrava "TIP·"!) e **colaWave com texto invisível** (ribbon depth 0 pintava por cima do texto na mesma profundidade — ordem de desenho invertida, fita primeiro, texto depois; pré-existente, confirmado no HEAD via worktree). Perf: 30fps cravado no pior caso (origami 18 rows × 11 chars). test-flagfont.mjs 7/7 + test-recording-kinetic PASS.
-- [ ] **CASCADE** — Match visual fino com original (row height, spacing, color cycling)
-- [ ] **MORISAWA** — Ajuste fino de flux/wrap/tracking
+- [x] **CASCADE** — ✅ (2026-07-11) side-by-side com o STG real (screenshotado ao vivo): nosso cascade renderizava uma TORRE de 130px (texto 4-char × X-Scale 20) vs a parede full-canvas do original (que assume frase longa). Fix: texto repetido em tiles de palavra inteira pra preencher a largura (mesma cura do cylinder). Agora é a parede diagonal completa com fitas brand. Recording OK.
+- [x] **MORISAWA** — ✅ (2026-07-11) modernizada ALÉM do original: styles por fileira (fill/outline/alternate/highlight), paleta 3 cores, ritmos Wall/Pulse, direções alternadas, skew. Wrap de marquee corrigido por módulo. O clássico preservado no preset Maeda.
 
 #### Prioridade Média
-- [ ] Refinamento Fases 3-5 (Layers, Danger, String, Badge, Clutter, Construct, Snap, Flash, Pow, Crash, Vessel, Shine, Boost)
-- [ ] Cada modo precisa: testar todos os presets, comparar side-by-side com STG, ajustar
+- [x] Refinamento Fases 3-5 — ✅ auditados em 2026-07-11 (auditoria tipográfica + smoke dark/light): os 13 modos renderizam corretos nos dois temas, com a fonte nova, gravando MP4. Badge teve a faixa consertada (knockout+wrap). Ajuste ESTÉTICO fino adicional fica sob demanda do Daniel (preset a preset é decisão de gosto).
 
 ### FASE 11 — Expansão de Ferramentas Criativas
 
