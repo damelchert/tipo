@@ -721,15 +721,15 @@ const MODES = {
     { id: 'field', name: 'Field', desc: 'Grid of letters with wave distortion on X, Y, Z axes. Stretch and offset controls.', meta: '7 presets · 21 controls',
       preview: '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;font-size:10px;font-weight:700"><span style="animation:prev-field .8s ease infinite">T</span><span style="animation:prev-field .8s ease infinite .1s">I</span><span style="animation:prev-field .8s ease infinite .2s">P</span><span style="animation:prev-field .8s ease infinite .3s">Ó</span><span style="animation:prev-field .8s ease infinite .4s">T</span><span style="animation:prev-field .8s ease infinite .5s">I</span></div>' },
     { id: 'stripes', name: 'Stripes', desc: 'Text on colored ribbons weaving through space. Multi-color support.', meta: '11 presets · 13 controls',
-      preview: '<div style="display:flex;flex-direction:column;gap:3px"><div style="height:4px;width:50px;background:#ff0000;animation:prev-stripe 2s ease-in-out infinite;border-radius:2px"></div><div style="height:4px;width:50px;background:#ffff00;animation:prev-stripe 2s ease-in-out infinite .3s;border-radius:2px"></div><div style="height:4px;width:50px;background:#0000ff;animation:prev-stripe 2s ease-in-out infinite .6s;border-radius:2px"></div></div>' },
+      preview: '<div style="display:flex;flex-direction:column;gap:3px"><div style="height:4px;width:50px;background:#D4A040;animation:prev-stripe 2s ease-in-out infinite;border-radius:2px"></div><div style="height:4px;width:50px;background:#99E0D2;animation:prev-stripe 2s ease-in-out infinite .3s;border-radius:2px"></div><div style="height:4px;width:50px;background:#F8F5F0;animation:prev-stripe 2s ease-in-out infinite .6s;border-radius:2px"></div></div>' },
     { id: 'coil', name: 'Coil', desc: 'Text coiled into spirals, springs, and pretzels. Parametric geometry.', meta: '11 presets · 13 controls',
       preview: '<div style="width:40px;height:40px;border:3px solid var(--text-4);border-radius:50%;animation:prev-coil 4s linear infinite;border-top-color:transparent"></div>' },
     { id: 'flag', name: 'Flag', desc: 'Text as a waving flag or folded surface. Origami, barber, silos effects.', meta: '14 presets · 17 controls',
-      preview: '<div style="font-size:16px;font-weight:700;animation:prev-flag 2s ease-in-out infinite">FLAG</div>' },
+      preview: '<div style="display:flex;flex-direction:column;gap:2px"><div style="height:8px;width:48px;background:#D4A040;animation:prev-flag 2s ease-in-out infinite"></div><div style="height:8px;width:48px;background:#99E0D2;animation:prev-flag 2s ease-in-out infinite .25s"></div><div style="height:8px;width:48px;background:#F8F5F0;animation:prev-flag 2s ease-in-out infinite .5s"></div></div>' },
     { id: 'cascade', name: 'Cascade', desc: 'Cascading letters with wave-controlled row heights. Grid and pixel gradients.', meta: '12 presets · 8 controls',
       preview: '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;font-size:8px;font-weight:700"><span style="animation:prev-cascade 1.5s ease infinite">T</span><span style="animation:prev-cascade 1.5s ease infinite .2s;font-size:12px">TI</span><span style="animation:prev-cascade 1.5s ease infinite .4s;font-size:16px">TIP</span></div>' },
     { id: 'ribbon', name: 'Ribbon', desc: 'Text flowing on 3D ribbon paths. Streamers, terraces, snakes.', meta: '13 presets · 15 controls',
-      preview: '<div style="width:50px;height:6px;background:linear-gradient(90deg,#ff0000,#ff9300,#ffff00,#00ff00,#0000ff);border-radius:3px;animation:prev-ribbon 3s ease-in-out infinite"></div>' },
+      preview: '<div style="width:50px;height:6px;background:linear-gradient(90deg,#2A8A7A,#99E0D2,#E8C97E,#D4A040);border-radius:3px;animation:prev-ribbon 3s ease-in-out infinite"></div>' },
     { id: 'morisawa', name: 'Morisawa', desc: 'Japanese-inspired generative typography. Moon, bridge, flux loops.', meta: '8 presets · 6 controls',
       preview: '<div style="font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;line-height:1"><span style="animation:prev-mori 4s linear infinite;letter-spacing:8px">T</span><span style="animation:prev-mori 4s linear infinite .5s;letter-spacing:4px">TI</span><span style="animation:prev-mori 4s linear infinite 1s">TIPÓ</span></div>' },
   ],
@@ -895,7 +895,7 @@ buildKineticPreview();
 // Theme toggle (same logic as TipoUI but standalone for landing page)
 (function initTheme() {
   const saved = localStorage.getItem('tipo-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
+  document.documentElement.classList.add('theme-anim'); setTimeout(() => document.documentElement.classList.remove('theme-anim'), 380); document.documentElement.setAttribute('data-theme', saved);
   const btn = document.createElement('button');
   btn.className = 'tipo-theme-toggle';
   btn.title = 'Toggle light/dark theme';
@@ -903,7 +903,7 @@ buildKineticPreview();
   btn.addEventListener('click', () => {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
+    document.documentElement.classList.add('theme-anim'); setTimeout(() => document.documentElement.classList.remove('theme-anim'), 380); document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('tipo-theme', next);
     btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
   });

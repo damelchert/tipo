@@ -410,10 +410,14 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   padding: 12px 20px;
   border-radius: 6px;
   font-size: 12px;
-  display: none;
   z-index: 100;
   font-family: var(--font-ui);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s cubic-bezier(.3, .9, .3, 1);
 }
+.tipo-toast.show { opacity: 1; transform: translateY(0); }
 
 /* Progress overlay */
 .tipo-progress-overlay {
@@ -738,3 +742,25 @@ input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.2); }
 @media (prefers-reduced-motion: reduce) {
   .preset-chip, .btn, input[type="range"]::-webkit-slider-thumb { transition: none; }
 }
+
+/* smooth theme swap: TipoUI adds .theme-anim to <html> for ~350ms on toggle */
+html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease !important;
+}
+
+/* gold dot signature after every tool title (echoes the TIPÓ• logo) */
+.tipo-h1-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #D4A040;
+  margin-left: 8px;
+  margin-right: auto;
+  align-self: center;
+  animation: tipoDotPulse 3.2s ease-in-out infinite;
+}
+@keyframes tipoDotPulse {
+  0%, 100% { transform: scale(1); opacity: .8; }
+  50% { transform: scale(1.5); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .tipo-h1-dot { animation: none; } }

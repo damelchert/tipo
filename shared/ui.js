@@ -405,9 +405,11 @@ const TipoUI = {
       btn.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') || 'dark';
         const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.classList.add('theme-anim');
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('tipo-theme', next);
         btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+        setTimeout(() => document.documentElement.classList.remove('theme-anim'), 380);
       });
       document.body.appendChild(btn);
     }
@@ -758,8 +760,10 @@ const TipoUI = {
     const el = document.getElementById('toast');
     if (!el) return;
     el.textContent = msg;
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 2500);
+    el.style.display = ''; // legacy pages set display:none inline via old flow
+    el.classList.add('show');
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => el.classList.remove('show'), 2500);
   },
 
   /** Capture frame for recording (call in draw loop) */
@@ -2385,6 +2389,13 @@ if (typeof document !== 'undefined') {
     TipoShare.init();
     TipoFull.init();
     TipoHelp.init();
+    // gold dot signature after the tool title (mirrors the TIPÓ• logo)
+    const h1 = document.querySelector('.tipo-panel h1, #controlPanel h1');
+    if (h1 && !h1.querySelector('.tipo-h1-dot') && h1.firstChild) {
+      const dot = document.createElement('span');
+      dot.className = 'tipo-h1-dot';
+      h1.insertBefore(dot, h1.firstChild.nextSibling);
+    }
     TipoMobile.init();
     TipoFormat.init();
     // MP4s go through TipoRecorder.download — route them through the
