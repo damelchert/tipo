@@ -18,9 +18,12 @@ const TipoHQ = {
   _cfg: null,
   _running: false,
   _cancel: false,
+  _perf: null,      // 16.5 — { events, startState, active, use }
+  _perfInit: false,
 
   enable(cfg) {
     this._cfg = cfg;
+    this._initPerf();
     const rec = document.getElementById('recBtn') || document.getElementById('recordBtn');
     if (!rec || document.getElementById('hqBtn')) return;
     if (!document.getElementById('tipoHQcss')) {
@@ -54,6 +57,92 @@ const TipoHQ = {
       document.addEventListener('DOMContentLoaded', () => setTimeout(place, 0));
     } else {
       setTimeout(place, 0);
+    }
+  },
+
+  /* ============================================================
+     16.5 — PERFORMANCE CAPTURE: durante o Record MP4 ao vivo,
+     loga a automação de sliders e eventos da ferramenta (ex.:
+     drop de keyframe do datamosh) com o TIMESTAMP DO VÍDEO.
+     No Export HQ, a passada offline reaplica os eventos nos
+     tempos certos — performance de VJ + arquivo master.
+     ============================================================ */
+  _initPerf() {
+    if (this._perfInit) return;
+    this._perfInit = true;
+    document.addEventListener('tipo-rec-start', () => {
+      const v = this._cfg && this._cfg.getVideo ? this._cfg.getVideo() : null;
+      if (!v || !isFinite(v.duration) || !v.duration) return;
+      this._perf = { events: [], startState: this._snapshotSliders(), active: true, use: false };
+      this._syncPerfChip();
+    });
+    document.addEventListener('tipo-rec-stop', () => {
+      if (!this._perf || !this._perf.active) return;
+      this._perf.active = false;
+      if (this._perf.events.length) {
+        this._perf.use = true;
+        TipoUI.showToast(`Performance capturada — ${this._perf.events.length} eventos. Export HQ vai reaplicar ✦`);
+      } else {
+        this._perf = null;
+      }
+      this._syncPerfChip();
+    });
+    // automação de sliders (só interação REAL do usuário)
+    document.addEventListener('input', (e) => {
+      if (!this._perf || !this._perf.active || !e.isTrusted) return;
+      const el = e.target;
+      if (!el.matches || !el.matches('input[type="range"]') || !el.id || el.closest('#tipoTL')) return;
+      const v = this._cfg.getVideo();
+      if (!v) return;
+      this._perf.events.push({ kind: 'slider', id: el.id, v: Number(el.value), t: v.currentTime });
+    });
+  },
+
+  /** Ferramentas chamam pra registrar momentos próprios com timestamp do
+   *  vídeo (ex.: datamosh dropKeyframe). No-op fora de gravação. */
+  perfEvent(name) {
+    if (!this._perf || !this._perf.active || !this._cfg) return;
+    const v = this._cfg.getVideo();
+    if (!v) return;
+    this._perf.events.push({ kind: 'custom', name, t: v.currentTime });
+  },
+
+  _snapshotSliders() {
+    return Array.from(document.querySelectorAll('.range-row input[type="range"]'))
+      .filter(el => el.id && !el.closest('#tipoTL'))
+      .map(el => ({ id: el.id, v: el.value }));
+  },
+
+  _applySlider(id, v) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  },
+
+  _syncPerfChip() {
+    let chip = document.getElementById('hqPerfChip');
+    const hqBtn = document.getElementById('hqBtn');
+    if (!this._perf || !this._perf.events.length || this._perf.active) {
+      if (chip) chip.remove();
+      return;
+    }
+    if (!chip && hqBtn) {
+      chip = document.createElement('button');
+      chip.id = 'hqPerfChip';
+      chip.type = 'button';
+      chip.className = hqBtn.className;
+      chip.addEventListener('click', () => {
+        this._perf.use = !this._perf.use;
+        this._syncPerfChip();
+      });
+      hqBtn.insertAdjacentElement('afterend', chip);
+    }
+    if (chip) {
+      chip.textContent = `✦ Performance (${this._perf.events.length} ev) ${this._perf.use ? 'ON' : 'OFF'}`;
+      chip.title = 'Sua performance ao vivo (sliders + drops, com timestamp do vídeo) reaplicada no Export HQ. Clique pra ligar/desligar.';
+      chip.style.borderColor = this._perf.use ? 'var(--accent, #2A8A7A)' : '';
+      chip.style.color = this._perf.use ? 'var(--accent, #2A8A7A)' : '';
     }
   },
 
@@ -244,15 +333,32 @@ const TipoHQ = {
     const t0 = performance.now();
     const frameUs = Math.round(1e6 / fps);
 
+    // 16.5 — replay da performance: estado inicial do take + eventos por tempo
+    const perf = (this._perf && this._perf.use && this._perf.events.length) ? this._perf : null;
+    let perfIdx = 0;
+    let perfRestore = null;
+    if (perf) {
+      perf.events.sort((a, b) => a.t - b.t);
+      perfRestore = this._snapshotSliders(); // estado atual (pós-performance)
+      perf.startState.forEach(s => this._applySlider(s.id, s.v));
+    }
+
     try {
       ui.open();
-      ui.set(0, 'Export HQ — renderizando', `${enc.width}×${enc.height} · frame 0/${total}`);
+      ui.set(0, 'Export HQ — renderizando', `${enc.width}×${enc.height} · frame 0/${total}${perf ? ' · ✦ performance' : ''}`);
       // temporais (datamosh/rastro) resetam buffers no tamanho HQ antes da passada
       if (cfg.begin) await cfg.begin(enc.width, enc.height);
       for (let i = 0; i < total; i++) {
         if (this._cancel) break;
         const t = Math.min((i + 0.5) / fps, dur - 0.001);
         await this._seek(video, t);
+        if (perf) {
+          while (perfIdx < perf.events.length && perf.events[perfIdx].t <= t) {
+            const ev = perf.events[perfIdx++];
+            if (ev.kind === 'slider') this._applySlider(ev.id, ev.v);
+            else if (cfg.perfEvent) cfg.perfEvent(ev.name);
+          }
+        }
         cfg.render(video, t, ctx, enc.width, enc.height);
         const vf = new VideoFrame(canvas, { timestamp: i * frameUs, duration: frameUs });
         encoder.encode(vf, { keyFrame: i % fps === 0 });
@@ -293,6 +399,7 @@ const TipoHQ = {
       TipoUI.showToast('Export HQ falhou — veja o console');
     } finally {
       window.__tipoHQactive = false;
+      if (perfRestore) perfRestore.forEach(s => this._applySlider(s.id, s.v));
       if (cfg.end) { try { cfg.end(); } catch (e) {} }
       try { encoder.close(); } catch (e) {}
       ui.close();

@@ -365,6 +365,7 @@ const TipoUI = {
         btn.textContent = 'Stop Recording';
         btn.style.borderColor = 'var(--red)';
       }
+      document.dispatchEvent(new CustomEvent('tipo-rec-start'));
       if (opts.onStart) opts.onStart();
     } else {
       const prog = document.getElementById('exportProgress');
@@ -384,6 +385,7 @@ const TipoUI = {
           btn.textContent = 'Record MP4';
           btn.style.borderColor = '';
         }
+        document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
         if (opts.onStop) opts.onStop();
       }
     }
@@ -728,6 +730,7 @@ const TipoUI = {
         await this.recorder.start(8000000);
         btn.textContent = 'Stop Recording';
         btn.style.borderColor = 'var(--red)';
+        document.dispatchEvent(new CustomEvent('tipo-rec-start'));
       } catch (err) {
         console.error(err);
         this.showToast('Recording failed to start');
@@ -751,6 +754,7 @@ const TipoUI = {
         btn.disabled = false;
         btn.textContent = 'Record MP4';
         btn.style.borderColor = '';
+        document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
       }
     }
   },
