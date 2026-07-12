@@ -1909,8 +1909,9 @@ const TipoHelp = {
       'Camera': 'Órbita da câmera em X/Y/Z. Não muda a geometria, só o ponto de vista.',
     },
     morisawa: {
-      'Type': 'Rows = linhas da pirâmide; Weight/Tracking/Line Space = peso e espaçamentos; Matte esconde as faces de trás.',
-      'Animation': 'Scroll Speed = velocidade da rolagem que expande a pirâmide (negativo inverte o fluxo).',
+      'Type': 'Rows = fileiras; Rhythm = distribuição das alturas: Pyramid (clássico Maeda, grande→pequeno), Wall (parede densa uniforme), Pulse (alturas respirando animadas). Weight = traço do outline; Tracking/Line Space = espaçamentos; Matte = margens; Skew inclina os glyphs na direção do scroll.',
+      'Style': 'Glyphs: Fill = cheio, Outline = vazado, Alternate = fileiras alternando cheio/vazado, Highlight = uma fileira dourada CHEIA percorre a grade sobre contornos. As 3 cores ciclam pelas fileiras (Num Colors limita).',
+      'Animation': 'Scroll Speed = velocidade do marquee (fileiras de baixo mais rápidas). Direction: Alternate = fileiras vizinhas em sentidos opostos (passarela); One way = todas juntas. Mirror duplica espelhado embaixo; Row flux faz o nº de fileiras oscilar.',
     },
     layers: {
       'Layers': 'Cópias do texto empilhadas com simetria 4-fold: Count = nº de camadas, Speed = scroll em profundidade (0 congela), Inner H/V deslocam o miolo, Rotate gira o conjunto. Block preenche o fundo das letras.',

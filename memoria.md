@@ -159,6 +159,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### Morisawa modernizada (pedido do Daniel: "tá meio defasado")
+- Diagnóstico: wireframe 1996 — contorno fino único, 1 cor, pirâmide rígida, scroll unidirecional.
+- **Style por fileira**: Fill / Outline / Alternate (cheio+vazado alternando) / **Highlight** (uma fileira dourada CHEIA percorre a grade sobre contornos — `floor(mover*0.02) % rows`). Paleta de 3 cores ciclando por fileira (ink/gold/teal default). drawGlyphInBox ganhou mode fill|outline + **skew** (shearX ancorado no centro vertical, direção acompanha o scroll da fileira).
+- **Rhythm**: Pyramid (triangular clássico Maeda) / **Wall** (altura uniforme, copies derivado da altura pra proporção saudável) / **Pulse** (alturas respirando, sine com fase por fileira). **Direction**: Alternate rows (passarela — vizinhas em sentidos opostos) / One way.
+- Default novo (=Reset): pyramid + alternate + 3 cores brand + direções alternadas, rows 9. Presets: **Runway** (parede fill cream/mint s/ dark teal, skew 12), **Editorial** (highlight dourado s/ cream), **Pulse** (tricolor respirando s/ ink), Maeda (o clássico outline preservado como herança), X/Bridge/Whitney/Recede rebrandados, Pride. "Moon"/"Post Space"/"Beach" saíram (redundantes com Maeda).
+- typeColor removido (paleta c1-c3 + bg); swapColors agora c1↔bg. TipoHelp reescrito (Type/Style/Animation). Recording OK.
+
 ### FASE 15 — HERO "O ENSAIO" implementada (design-squad conceito + build)
 - **Conceito**: extensão da mitologia da Impressora Viva — o ensaio antes da impressão. O PONTO DOURADO é o maestro: pulsa no centro, corre e "imprime" cada letra com uma ferramenta real (T dither, I glitch, P coil, Ó crash + anel de badge), a palavra faz a onda do field, a aura do Shaper floresce atrás, e o ponto estaciona como a assinatura TIPÓ•. Log de máquina narra os passes.
 - **Regra da casa aplicada**: GSAP = timeline da coreografia (atos, dot dashes, entradas por letra); CSS = loops do parked (heroBreathe stagger, heroDotPulse). Aura = canvas 2D com anéis roundRect expandindo (42 strokes/frame, 30fps, alpha decrescente, cores brand alternadas) — vetorial, não per-pixel.

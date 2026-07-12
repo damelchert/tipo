@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Morisawa</title>
-<link rel="stylesheet" href="shared/style.css?v=20260711-typ2">
+<link rel="stylesheet" href="shared/style.css?v=20260711-mor1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260711-typ2"></script>
+<script src="shared/ui.js?v=20260711-mor1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -33,12 +33,13 @@
   <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
-      <span class="preset-chip" onclick="applyPreset('moon')">Moon</span>
-      <span class="preset-chip" onclick="applyPreset('postSpace')">Post Space</span>
+      <span class="preset-chip" onclick="applyPreset('runway')">Runway</span>
+      <span class="preset-chip" onclick="applyPreset('editorial')">Editorial</span>
+      <span class="preset-chip" onclick="applyPreset('pulse')">Pulse</span>
+      <span class="preset-chip" onclick="applyPreset('maeda')">Maeda</span>
       <span class="preset-chip" onclick="applyPreset('cross')">X</span>
       <span class="preset-chip" onclick="applyPreset('bridge')">Bridge</span>
       <span class="preset-chip" onclick="applyPreset('whitney')">Whitney</span>
-      <span class="preset-chip" onclick="applyPreset('beach')">Beach</span>
       <span class="preset-chip" onclick="applyPreset('recede')">Recede</span>
       <span class="preset-chip" onclick="applyPreset('pride')">Pride</span>
       <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
@@ -47,16 +48,42 @@
 
   <div class="section">
     <div class="section-title">Type</div>
-    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="60" value="7"><span class="range-value" id="rowsVal">7</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="1" max="60" value="9"><span class="range-value" id="rowsVal">9</span></div>
+    <div class="range-row"><span class="range-label">Rhythm</span><select id="rhythm" style="flex:1;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+      <option value="pyramid" selected>Pyramid (Maeda)</option>
+      <option value="wall">Wall (denso uniforme)</option>
+      <option value="pulse">Pulse (respirando)</option>
+    </select></div>
     <div class="range-row"><span class="range-label">Weight</span><input type="range" id="typeWeight" min="0" max="40" value="10"><span class="range-value" id="typeWeightVal">1.0</span></div>
-    <div class="range-row"><span class="range-label">Tracking</span><input type="range" id="tracking" min="0" max="500" value="60"><span class="range-value" id="trackingVal">60</span></div>
+    <div class="range-row"><span class="range-label">Tracking</span><input type="range" id="tracking" min="0" max="500" value="40"><span class="range-value" id="trackingVal">40</span></div>
     <div class="range-row"><span class="range-label">Line Space</span><input type="range" id="lineSpace" min="0" max="40" value="5"><span class="range-value" id="lineSpaceVal">5</span></div>
     <div class="range-row"><span class="range-label">Matte</span><input type="range" id="matte" min="0" max="500" value="40"><span class="range-value" id="matteVal">40</span></div>
+    <div class="range-row"><span class="range-label">Skew</span><input type="range" id="skew" min="-30" max="30" value="0"><span class="range-value" id="skewVal">0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Style</div>
+    <div class="range-row"><span class="range-label">Glyphs</span><select id="glyphStyle" style="flex:1;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+      <option value="alternate" selected>Alternate (cheio + vazado)</option>
+      <option value="fill">Fill</option>
+      <option value="outline">Outline</option>
+      <option value="highlight">Highlight (fileira dourada cíclica)</option>
+    </select></div>
+    <div class="color-row" style="display:flex;align-items:center;gap:6px;">
+      <input type="color" id="c1" value="#1A1818" style="width:28px;height:22px;"><label style="font-size:10px;color:var(--text-4);">1</label>
+      <input type="color" id="c2" value="#D4A040" style="width:28px;height:22px;"><label style="font-size:10px;color:var(--text-4);">2</label>
+      <input type="color" id="c3" value="#2A8A7A" style="width:28px;height:22px;"><label style="font-size:10px;color:var(--text-4);">3</label>
+    </div>
+    <div class="range-row"><span class="range-label">Num Colors</span><input type="range" id="numColors" min="1" max="3" value="3"><span class="range-value" id="numColorsVal">3</span></div>
   </div>
 
   <div class="section">
     <div class="section-title">Animation</div>
-    <div class="range-row"><span class="range-label">Scroll Speed</span><input type="range" id="speed" min="0" max="200" value="30"><span class="range-value" id="speedVal">0.30</span></div>
+    <div class="range-row"><span class="range-label">Scroll Speed</span><input type="range" id="speed" min="0" max="200" value="40"><span class="range-value" id="speedVal">0.40</span></div>
+    <div class="range-row"><span class="range-label">Direction</span><select id="direction" style="flex:1;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border-2);padding:6px;font-size:11px;font-family:var(--font-ui);">
+      <option value="alternate" selected>Alternate rows (passarela)</option>
+      <option value="one">One way</option>
+    </select></div>
     <label class="checkbox-label"><input type="checkbox" id="mirror" checked> Mirror</label>
     <label class="checkbox-label"><input type="checkbox" id="flipSpeed"> Flip speed (mirror)</label>
     <label class="checkbox-label"><input type="checkbox" id="flux"> Row flux</label>
@@ -65,11 +92,9 @@
   <div class="section">
     <div class="section-title">Color</div>
     <div class="color-section-row">
-      <span class="range-label">Type</span>
-      <input type="color" id="typeColor" value="#1A1818">
-      <button class="swap-btn" onclick="swapColors()" title="Swap colors">&#8646;</button>
-      <input type="color" id="bgColor" value="#F8F5F0">
       <span class="range-label">Bg</span>
+      <input type="color" id="bgColor" value="#F8F5F0">
+      <button class="swap-btn" onclick="swapColors()" title="Swap color 1 with background">&#8646;</button>
     </div>
   </div>
 
@@ -144,8 +169,9 @@ function sinEng(spd, slopeN) {
   return sign * (1 - pow(1 - abs(s), slopeN));
 }
 
-function drawGlyphInBox(ch, x, y, boxW, boxH, strokeC, weight) {
-  if (ch === ' ' || weight <= 0 || boxW <= 0 || boxH <= 0) return;
+function drawGlyphInBox(ch, x, y, boxW, boxH, colr, weight, mode, skewDeg) {
+  if (ch === ' ' || boxW <= 0 || boxH <= 0) return;
+  if (mode === 'outline' && weight <= 0) return;
 
   textSize(max(boxH * 0.88, 1));
   const measured = max(textWidth(ch), 1);
@@ -154,21 +180,52 @@ function drawGlyphInBox(ch, x, y, boxW, boxH, strokeC, weight) {
   const refN = max(measured, textWidth('N') * 0.62 || measured);
 
   push();
-  translate(x, y);
+  translate(x, y + boxH / 2);
+  if (skewDeg) shearX(-radians(skewDeg));
+  translate(0, -boxH / 2);
   scale(boxW / refN, 1);
-  noFill();
-  stroke(strokeC);
-  strokeWeight(weight);
-  strokeCap(ROUND);
-  strokeJoin(ROUND);
+  if (mode === 'fill') {
+    fill(colr);
+    noStroke();
+  } else {
+    noFill();
+    stroke(colr);
+    strokeWeight(weight);
+    strokeCap(ROUND);
+    strokeJoin(ROUND);
+  }
   textAlign(LEFT, TOP);
   text(ch, 0, 0);
   pop();
 }
 
+// Estilo por fileira: cor da paleta + cheio/vazado conforme o modo
+function rowLook(j, rowsTotal) {
+  const style = document.getElementById('glyphStyle').value;
+  const n = val('numColors');
+  const palette = [
+    document.getElementById('c1').value,
+    document.getElementById('c2').value,
+    document.getElementById('c3').value,
+  ].slice(0, n);
+  if (prideMode) {
+    return { color: prideColors[j % 6], mode: style === 'outline' ? 'outline' : 'fill' };
+  }
+  if (style === 'highlight') {
+    // uma fileira dourada CHEIA percorre a grade; o resto fica vazado na cor 1
+    const hi = floor(mover * 0.02) % max(1, rowsTotal);
+    return j === hi
+      ? { color: palette[1] || palette[0], mode: 'fill' }
+      : { color: palette[0], mode: 'outline' };
+  }
+  const color = palette[j % palette.length];
+  if (style === 'fill') return { color, mode: 'fill' };
+  if (style === 'outline') return { color, mode: 'outline' };
+  return { color, mode: j % 2 ? 'outline' : 'fill' }; // alternate
+}
+
 function draw() {
   const bgC = document.getElementById('bgColor').value;
-  const txtC = document.getElementById('typeColor').value;
   background(bgC);
 
   const txt = document.getElementById('textInput').value || 'TIPÓ';
@@ -178,6 +235,9 @@ function draw() {
   const spd = val('speed') / 100;
   const lineSpc = val('lineSpace');
   const pad = val('matte');
+  const skewDeg = val('skew');
+  const rhythm = document.getElementById('rhythm').value;
+  const dirMode = document.getElementById('direction').value;
   const isMirror = chk('mirror');
   const isFlipSpeed = chk('flipSpeed');
   const isFlux = chk('flux');
@@ -193,7 +253,10 @@ function draw() {
   const xField = width - 2 * pad;
   const yField = height - 80;
 
-  // Triangular number for row distribution
+  // Row height per rhythm: Pyramid = triangular (Maeda), Wall = uniform,
+  // Pulse = uniform breathing per-row (phase-shifted sine)
+  const halfField = isMirror ? yField / 2 : yField;
+  const flatH = max(1, (halfField - floor(rws) * lineSpc) / max(1, floor(rws)));
   const step = (rws * rws + rws) / 2;
   let yBlock;
   if (isMirror) {
@@ -201,6 +264,19 @@ function draw() {
   } else {
     yBlock = (yField - (rws - 1) * lineSpc) / step;
   }
+  function rowH(j) {
+    if (rhythm === 'wall') return flatH;
+    if (rhythm === 'pulse') return flatH * (0.55 + 0.7 * (0.5 + 0.5 * sin(mover * 0.03 + j * 0.85)));
+    return yBlock * (rws - j); // pyramid
+  }
+  // copies: pyramid = densidade cresce por fileira; wall/pulse = derivada da
+  // altura pra glyphs com proporção saudável
+  function rowCopies(j) {
+    if (rhythm === 'pyramid') return j + 1;
+    const h = rowH(j);
+    return max(1, round(xField / max(1, h * 0.72 * runLen)));
+  }
+  const dirFor = j => (dirMode === 'alternate' && j % 2) ? 1 : -1;
 
   push();
   translate(pad, 40);
@@ -214,14 +290,14 @@ function draw() {
   // ========== PRIMARY GRID (top half) ==========
   let yPos = 0;
   for (let j = 0; j < floor(rws); j++) {
-    const copies = j + 1;
+    const copies = rowCopies(j);
     const typeX = xField / (copies * runLen + (copies * runLen - 1) * tracking);
     const track = typeX * tracking;
-    const typeY = yBlock * (rws - j);
-    const rowColor = prideMode ? prideColors[j % 6] : txtC;
+    const typeY = rowH(j);
+    const look = rowLook(j, floor(rws));
 
     const totalW = copies * runLen * typeX + (copies * runLen - 1) * track;
-    const scrollOffset = spd > 0 ? -(mover * spd * (rws - j)) % (totalW / copies + track) : 0;
+    const scrollOffset = spd > 0 ? dirFor(j) * (mover * spd * (rws - j)) % (totalW / copies + track) : 0;
 
     for (let i = 0; i < copies; i++) {
       for (let k = 0; k < runLen; k++) {
@@ -232,8 +308,8 @@ function draw() {
         // NEXT repetition's glyphs and doubled every letter while scrolling
         const period = totalW + track;
         let x = ((xBase + scrollOffset) % period + period) % period;
-        drawGlyphInBox(ch, x, yPos, typeX, typeY, rowColor, tW);
-        if (x > period - typeX) drawGlyphInBox(ch, x - period, yPos, typeX, typeY, rowColor, tW);
+        drawGlyphInBox(ch, x, yPos, typeX, typeY, look.color, tW, look.mode, skewDeg * dirFor(j));
+        if (x > period - typeX) drawGlyphInBox(ch, x - period, yPos, typeX, typeY, look.color, tW, look.mode, skewDeg * dirFor(j));
       }
     }
 
@@ -245,16 +321,16 @@ function draw() {
     let yPosM = yField;
 
     for (let m = 0; m < floor(rws); m++) {
-      const copies = m + 1;
+      const copies = rowCopies(m);
       const typeX = xField / (copies * runLen + (copies * runLen - 1) * tracking);
       const track = typeX * tracking;
-      const typeY = yBlock * (rws - m);
-      const rowColor = prideMode ? prideColors[m % 6] : txtC;
+      const typeY = rowH(m);
+      const look = rowLook(m, floor(rws));
 
       yPosM -= typeY + lineSpc;
 
       const totalW = copies * runLen * typeX + (copies * runLen - 1) * track;
-      const scrollDir = isFlipSpeed ? 1 : -1;
+      const scrollDir = dirFor(m) * (isFlipSpeed ? -1 : 1) * -1;
       const scrollOffset = spd > 0 ? scrollDir * (mover * spd * (rws - m)) % (totalW / copies + track) : 0;
 
       for (let n = 0; n < copies; n++) {
@@ -264,8 +340,8 @@ function draw() {
           const period = totalW + track;
           let x = ((xBase + scrollOffset) % period + period) % period;
 
-          drawGlyphInBox(ch, x, yPosM, typeX, typeY, rowColor, tW);
-          if (x > period - typeX) drawGlyphInBox(ch, x - period, yPosM, typeX, typeY, rowColor, tW);
+          drawGlyphInBox(ch, x, yPosM, typeX, typeY, look.color, tW, look.mode, -skewDeg * dirFor(m));
+          if (x > period - typeX) drawGlyphInBox(ch, x - period, yPosM, typeX, typeY, look.color, tW, look.mode, -skewDeg * dirFor(m));
         }
       }
     }
@@ -287,67 +363,86 @@ function draw() {
 // ============================================================
 // PRESETS
 // ============================================================
-function swapColors() { TipoUI.swapColors('typeColor', 'bgColor'); }
+function swapColors() { TipoUI.swapColors('c1', 'bgColor'); }
+
+function setSel(id, v) { document.getElementById(id).value = v; }
 
 function resetAll() {
   prideMode = false;
-  setVal('rows', 7); setVal('typeWeight', 10);
-  setVal('tracking', 60); setVal('lineSpace', 5);
-  setVal('matte', 40); setVal('speed', 30);
+  setVal('rows', 9); setVal('typeWeight', 10);
+  setVal('tracking', 40); setVal('lineSpace', 5);
+  setVal('matte', 40); setVal('speed', 40); setVal('skew', 0);
+  setVal('numColors', 3);
+  setSel('rhythm', 'pyramid'); setSel('glyphStyle', 'alternate'); setSel('direction', 'alternate');
   setVal('mirror', true); setVal('flipSpeed', false); setVal('flux', false);
-  document.getElementById('typeColor').value = '#1A1818';
+  document.getElementById('c1').value = '#1A1818';
+  document.getElementById('c2').value = '#D4A040';
+  document.getElementById('c3').value = '#2A8A7A';
   document.getElementById('bgColor').value = '#F8F5F0';
 }
 
 const PRESETS = {
-  moon: () => { resetAll();
-    setVal('rows',20);setVal('typeWeight',10);setVal('tracking',168);
-    setVal('speed',0);setVal('lineSpace',2);setVal('matte',100);
-    setVal('mirror',true);setVal('flipSpeed',false);setVal('flux',false);
-    document.getElementById('typeColor').value='#d8e9ef';
-    document.getElementById('bgColor').value='#000000';
+  runway: () => { resetAll();
+    setSel('rhythm', 'wall'); setSel('glyphStyle', 'fill'); setSel('direction', 'alternate');
+    setVal('rows', 8); setVal('speed', 80); setVal('skew', 12);
+    setVal('tracking', 20); setVal('lineSpace', 8); setVal('matte', 0); setVal('numColors', 2);
+    document.getElementById('c1').value = '#F8F5F0';
+    document.getElementById('c2').value = '#99E0D2';
+    document.getElementById('bgColor').value = '#1B5A4E';
   },
-  postSpace: () => { resetAll();
-    setVal('rows',23);setVal('typeWeight',10);setVal('tracking',200);
-    setVal('speed',0);setVal('lineSpace',5);setVal('matte',20);
-    setVal('mirror',false);setVal('flipSpeed',false);setVal('flux',false);
-    document.getElementById('typeColor').value='#ffffff';
-    document.getElementById('bgColor').value='#000000';
+  editorial: () => { resetAll();
+    setSel('rhythm', 'wall'); setSel('glyphStyle', 'highlight'); setSel('direction', 'one');
+    setVal('rows', 14); setVal('speed', 25); setVal('tracking', 10);
+    setVal('lineSpace', 4); setVal('matte', 60); setVal('typeWeight', 12);
+    document.getElementById('c1').value = '#1A1818';
+    document.getElementById('c2').value = '#D4A040';
+    document.getElementById('bgColor').value = '#F8F5F0';
+  },
+  pulse: () => { resetAll();
+    setSel('rhythm', 'pulse'); setSel('glyphStyle', 'fill'); setSel('direction', 'alternate');
+    setVal('rows', 10); setVal('speed', 45); setVal('tracking', 30); setVal('numColors', 3);
+    document.getElementById('c1').value = '#2A8A7A';
+    document.getElementById('c2').value = '#D4A040';
+    document.getElementById('c3').value = '#99E0D2';
+    document.getElementById('bgColor').value = '#1A1818';
+  },
+  maeda: () => { resetAll();
+    setSel('rhythm', 'pyramid'); setSel('glyphStyle', 'outline'); setSel('direction', 'one');
+    setVal('rows', 20); setVal('typeWeight', 10); setVal('tracking', 168);
+    setVal('speed', 0); setVal('lineSpace', 2); setVal('matte', 100); setVal('numColors', 1);
+    document.getElementById('c1').value = '#d8e9ef';
+    document.getElementById('bgColor').value = '#000000';
   },
   cross: () => { resetAll();
-    setVal('rows',22);setVal('typeWeight',10);setVal('tracking',500);
-    setVal('speed',0);setVal('lineSpace',0);setVal('matte',Math.round(width/4));
-    setVal('mirror',true);setVal('flipSpeed',false);setVal('flux',false);
-    document.getElementById('typeColor').value='#000000';
-    document.getElementById('bgColor').value='#ffffff';
+    setSel('glyphStyle', 'outline'); setSel('direction', 'one');
+    setVal('rows', 22); setVal('typeWeight', 10); setVal('tracking', 500);
+    setVal('speed', 0); setVal('lineSpace', 0); setVal('matte', Math.round(width / 4)); setVal('numColors', 1);
+    document.getElementById('c1').value = '#1A1818';
+    document.getElementById('bgColor').value = '#F8F5F0';
   },
   bridge: () => { resetAll();
-    setVal('rows',7);setVal('typeWeight',40);setVal('tracking',0);
-    setVal('speed',66);setVal('lineSpace',11);setVal('matte',50);
-    setVal('mirror',true);setVal('flipSpeed',true);setVal('flux',false);
-    document.getElementById('typeColor').value='#000000';
-    document.getElementById('bgColor').value='#d6d6d6';
+    setSel('glyphStyle', 'fill'); setSel('direction', 'one');
+    setVal('rows', 7); setVal('typeWeight', 40); setVal('tracking', 0);
+    setVal('speed', 66); setVal('lineSpace', 11); setVal('matte', 50); setVal('numColors', 2);
+    setVal('flipSpeed', true);
+    document.getElementById('c1').value = '#1A1818';
+    document.getElementById('c2').value = '#2A8A7A';
+    document.getElementById('bgColor').value = '#E8C97E';
   },
   whitney: () => { resetAll();
-    setVal('rows',17);setVal('typeWeight',15);setVal('tracking',15);
-    setVal('speed',89);setVal('lineSpace',4);setVal('matte',0);
-    setVal('mirror',true);setVal('flipSpeed',false);setVal('flux',false);
-    document.getElementById('typeColor').value='#000000';
-    document.getElementById('bgColor').value='#ffffff';
-  },
-  beach: () => { resetAll();
-    setVal('rows',35);setVal('typeWeight',10);setVal('tracking',208);
-    setVal('speed',30);setVal('lineSpace',5);setVal('matte',20);
-    setVal('mirror',true);setVal('flipSpeed',true);setVal('flux',false);
-    document.getElementById('typeColor').value='#000000';
-    document.getElementById('bgColor').value='#ffffff';
+    setSel('glyphStyle', 'outline'); setSel('direction', 'one');
+    setVal('rows', 17); setVal('typeWeight', 15); setVal('tracking', 15);
+    setVal('speed', 89); setVal('lineSpace', 4); setVal('matte', 0); setVal('numColors', 1);
+    document.getElementById('c1').value = '#1A1818';
+    document.getElementById('bgColor').value = '#F8F5F0';
   },
   recede: () => { resetAll();
-    setVal('rows',20);setVal('typeWeight',10);setVal('tracking',0);
-    setVal('speed',0);setVal('lineSpace',7);setVal('matte',0);
-    setVal('mirror',true);setVal('flipSpeed',false);setVal('flux',true);
-    document.getElementById('typeColor').value='#ffffff';
-    document.getElementById('bgColor').value='#242424';
+    setSel('glyphStyle', 'outline'); setSel('direction', 'one');
+    setVal('rows', 20); setVal('typeWeight', 10); setVal('tracking', 0);
+    setVal('speed', 0); setVal('lineSpace', 7); setVal('matte', 0); setVal('numColors', 1);
+    setVal('flux', true);
+    document.getElementById('c1').value = '#F8F5F0';
+    document.getElementById('bgColor').value = '#242424';
   },
   pride: () => { prideMode = true; },
 };
