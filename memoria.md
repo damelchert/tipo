@@ -159,6 +159,14 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### FASE 15 — HERO "O ENSAIO" implementada (design-squad conceito + build)
+- **Conceito**: extensão da mitologia da Impressora Viva — o ensaio antes da impressão. O PONTO DOURADO é o maestro: pulsa no centro, corre e "imprime" cada letra com uma ferramenta real (T dither, I glitch, P coil, Ó crash + anel de badge), a palavra faz a onda do field, a aura do Shaper floresce atrás, e o ponto estaciona como a assinatura TIPÓ•. Log de máquina narra os passes.
+- **Regra da casa aplicada**: GSAP = timeline da coreografia (atos, dot dashes, entradas por letra); CSS = loops do parked (heroBreathe stagger, heroDotPulse). Aura = canvas 2D com anéis roundRect expandindo (42 strokes/frame, 30fps, alpha decrescente, cores brand alternadas) — vetorial, não per-pixel.
+- **PEGADINHA de medição**: os alvos do dot vêm de getBoundingClientRect das letras EM REPOUSO — medir depois de document.fonts.ready (Clash via @font-face muda o layout) e ANTES dos gsap.set iniciais (o Ó começa a -120vh; medir depois manda o dot pra fora da tela).
+- **Gates**: 1×/sessão (sessionStorage tipo-hero), location.hash pula (back das ferramentas → index#visual NÃO vê hero), prefers-reduced-motion pula, skip sempre visível. Saída por wheel/swipe(-34px)/Enter/Space/Esc(rápida)/CTA. Body nunca trava (hero é overlay fixed z-950).
+- Clash Display agora tem @font-face no index (antes só via loadFont/FontFace JS nas ferramentas).
+- Validado: intro completa, parked, saída por wheel, skip de sessão no reload, swipe no iPhone, dark theme (cream sobre ink — o frame mais bonito do site), zero pageerrors.
+
 ### Auditoria tipográfica pente-fino (28 ferramentas de texto screenshotadas com Clash) — 4 bugs mortos
 Feedback do Daniel: "I estranho no Field" + "fonte não muda na Flag" + pedido de auditoria geral.
 - **PADRÃO-RAIZ dos bugs**: `scale(cellW / textWidth(ch))` — normalizar cada glyph pela própria largura pra encher a célula. Com mono (Plex) era invisível (larguras iguais); com proporcional, o I estreito ganha multiplicador gigante e vira LAJE. Fix aplicado em **field, cylinder e morisawa**: referência = largura média do texto com clamp 0.62 (`max(charW, avgW*0.62)`) — parede densa continua, I fica letra.

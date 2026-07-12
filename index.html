@@ -503,9 +503,133 @@ body { overflow: hidden; }
 @keyframes pvMock {
   0%, 100% { transform: perspective(90px) rotateY(14deg); }
   50% { transform: perspective(90px) rotateY(-14deg); } }
+
+/* ============================================================
+   HERO — "O ENSAIO" (Fase 15)
+   O ponto dourado imprime cada letra com uma ferramenta da casa,
+   depois estaciona como a assinatura TIPÓ•. GSAP = coreografia,
+   CSS = loops do estado parked.
+   ============================================================ */
+@font-face {
+  font-family: 'ClashDisplay';
+  src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-display: swap;
+}
+#tipoHero {
+  position: fixed; inset: 0; z-index: 950;
+  background: #F8F5F0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  color: #1A1818;
+  cursor: default;
+}
+:root[data-theme="dark"] #tipoHero { background: #141212; color: #F8F5F0; }
+#heroBands { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.hero-word {
+  position: relative; z-index: 3;
+  display: flex; align-items: baseline;
+  font-family: 'ClashDisplay', 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  font-size: clamp(88px, 21vw, 300px);
+  line-height: 1;
+  letter-spacing: -0.015em;
+  user-select: none; -webkit-user-select: none;
+}
+.hw { display: inline-block; position: relative; opacity: 0; will-change: transform; }
+.hw-o { position: relative; }
+.hero-ring {
+  position: absolute; inset: 8% -4% -8% -4%;
+  border: 2px solid #D4A040; border-radius: 50%;
+  opacity: 0; transform: scale(.4); pointer-events: none;
+}
+.hero-dot {
+  position: absolute; z-index: 4;
+  width: clamp(14px, 2.6vw, 34px); height: clamp(14px, 2.6vw, 34px);
+  border-radius: 50%;
+  background: #D4A040;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  will-change: transform;
+}
+.hero-log, .hero-tag, .hero-hint, .hero-skip {
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.hero-log {
+  position: absolute; left: 28px; bottom: 26px; z-index: 3;
+  font-size: 10px; color: #B08830; opacity: 0;
+}
+.hero-tag {
+  position: absolute; top: 26px; left: 28px; z-index: 3;
+  font-size: 10px; opacity: 0; color: inherit;
+}
+.hero-tag b { color: #2A8A7A; font-weight: 400; }
+.hero-skip {
+  position: absolute; top: 22px; right: 24px; z-index: 5;
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; color: inherit; opacity: .45;
+  padding: 8px 10px;
+}
+.hero-skip:hover { opacity: 1; color: #2A8A7A; }
+.hero-cta {
+  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+  z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  opacity: 0;
+}
+.hero-cta button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+  background: #1A1818; color: #F8F5F0;
+  border: none; border-radius: 999px;
+  padding: 15px 34px; cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+:root[data-theme="dark"] #tipoHero .hero-cta button { background: #F8F5F0; color: #1A1818; }
+.hero-cta button:hover { transform: translateY(-2px); background: #2A8A7A; color: #F8F5F0; }
+.hero-hint { font-size: 9px; opacity: .5; animation: heroHint 2.4s ease-in-out infinite; }
+@keyframes heroHint { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+/* parked: a palavra respira, o ponto pulsa — loops ambientes em CSS */
+#tipoHero.parked .hw { animation: heroBreathe 4.6s ease-in-out infinite; }
+#tipoHero.parked .hw:nth-child(2) { animation-delay: .35s; }
+#tipoHero.parked .hw:nth-child(3) { animation-delay: .7s; }
+#tipoHero.parked .hw:nth-child(4) { animation-delay: 1.05s; }
+@keyframes heroBreathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.6%); } }
+#tipoHero.parked .hero-dot { animation: heroDotPulse 3.2s ease-in-out infinite; }
+@keyframes heroDotPulse { 0%, 100% { scale: 1; } 50% { scale: 1.3; } }
+@media (prefers-reduced-motion: reduce) {
+  #tipoHero.parked .hw, #tipoHero.parked .hero-dot, .hero-hint { animation: none !important; }
+}
+@media (max-width: 768px) {
+  .hero-log { left: 16px; bottom: 18px; }
+  .hero-tag { left: 16px; top: 18px; }
+  .hero-cta { bottom: 44px; width: max-content; }
+  .hero-cta button { font-size: 11px; letter-spacing: 2px; padding: 13px 22px; white-space: nowrap; }
+}
 </style>
 </head>
 <body>
+
+
+<!-- HERO — O Ensaio (Fase 15): toca 1x por sessão; deep links e reduced-motion pulam -->
+<div id="tipoHero" style="display:none;">
+  <canvas id="heroBands"></canvas>
+  <div class="hero-tag" id="heroTag">tipó · <b>kinetic type studio</b></div>
+  <button class="hero-skip" id="heroSkip" type="button">pular →</button>
+  <div class="hero-word" id="heroWord"
+    ><span class="hw" id="hwT">T</span
+    ><span class="hw" id="hwI">I</span
+    ><span class="hw" id="hwP">P</span
+    ><span class="hw hw-o" id="hwO">Ó<i class="hero-ring" id="heroRing"></i></span
+  ></div>
+  <div class="hero-dot" id="heroDot"></div>
+  <div class="hero-log" id="heroLog">ensaio 00 · aquecendo as máquinas</div>
+  <div class="hero-cta" id="heroCta">
+    <button type="button" id="heroEnter">explorar as 39 ferramentas</button>
+    <span class="hero-hint">role pra entrar ↓</span>
+  </div>
+</div>
 
 <div class="tipo-nav">
   <!-- HEADER -->
@@ -1892,5 +2016,167 @@ goKineticType = function() {
 })();
 </script>
 
+
+<script>
+// ============================================================
+// HERO — "O ENSAIO" (Fase 15)
+// O ponto dourado imprime cada letra com uma ferramenta da casa
+// (T dither, I glitch, P coil, Ó crash+badge), a palavra faz a
+// onda do field, o campo do Shaper floresce atrás, e o ponto
+// estaciona como a assinatura TIPÓ•.
+// ============================================================
+(function initHero() {
+  const hero = document.getElementById('tipoHero');
+  if (!hero || typeof gsap === 'undefined') return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 1x por sessão; deep links (#visual etc) e reduced-motion vão direto pra home
+  if (sessionStorage.getItem('tipo-hero') || location.hash || reduced) return;
+
+  hero.style.display = 'flex';
+  const dot = document.getElementById('heroDot');
+  const log = document.getElementById('heroLog');
+  const word = document.getElementById('heroWord');
+  const letters = ['hwT', 'hwI', 'hwP', 'hwO'].map(id => document.getElementById(id));
+
+  // ---- Shaper aura: anéis de retângulo arredondado emanando da palavra ----
+  const bands = document.getElementById('heroBands');
+  const bctx = bands.getContext('2d');
+  let bandsRunning = true, bandsLast = 0;
+  const BAND_COLORS = ['rgba(42,138,122,ALPHA)', 'rgba(212,160,64,ALPHA)', 'rgba(153,224,210,ALPHA)'];
+  function drawBands(now) {
+    if (!bandsRunning) return;
+    requestAnimationFrame(drawBands);
+    if (now - bandsLast < 33) return;
+    bandsLast = now;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = window.innerWidth, H = window.innerHeight;
+    if (bands.width !== W * dpr) { bands.width = W * dpr; bands.height = H * dpr; }
+    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bctx.clearRect(0, 0, W, H);
+    const r = word.getBoundingClientRect();
+    const spacing = Math.max(34, Math.min(W, H) * 0.05);
+    const t = (now * 0.014) % spacing;
+    const maxD = Math.hypot(W, H) * 0.6;
+    bctx.lineWidth = 1.5;
+    for (let i = 0; i < 42; i++) {
+      const d = i * spacing + t + spacing * 0.4;
+      if (d > maxD) break;
+      const a = Math.max(0, 0.16 * (1 - d / maxD));
+      bctx.strokeStyle = BAND_COLORS[i % 3].replace('ALPHA', a.toFixed(3));
+      bctx.beginPath();
+      bctx.roundRect(r.left - d, r.top - d, r.width + d * 2, r.height + d * 2, 24 + d * 0.6);
+      bctx.stroke();
+    }
+  }
+  requestAnimationFrame(drawBands);
+
+  // ---- Coreografia ----
+  const center = () => ({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  const setLog = txt => () => { log.textContent = txt; };
+  let tl = null;
+
+  // Os alvos do ponto vêm dos rects EM REPOUSO: medir depois da Clash carregar
+  // e ANTES de aplicar os transforms iniciais (o Ó começa a -120vh).
+  document.fonts.ready.then(() => requestAnimationFrame(buildIntro));
+
+  function buildIntro() {
+  const rests = letters.map(l => l.getBoundingClientRect());
+  const dotTo = idx => {
+    const r = rests[idx], c = center();
+    return { x: r.left + r.width / 2 - c.x, y: r.top - c.y - r.height * 0.12 };
+  };
+
+  gsap.set(dot, { xPercent: -50, yPercent: -50, scale: 0 });
+  gsap.set(letters, { opacity: 0 });
+  gsap.set(letters[0], { scale: 0.2, y: 50 });
+  gsap.set(letters[2], { rotation: -420, scale: 0.2, transformOrigin: '50% 70%' });
+  gsap.set(letters[3], { y: '-120vh' });
+
+  tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  window.__heroTl = tl;
+
+  // Ato 0 — o maestro entra
+  tl.to('#heroTag,#heroLog', { opacity: 1, duration: 0.5 }, 0.15)
+    .to(dot, { scale: 1, duration: 0.4, ease: 'back.out(2)' }, 0.2)
+    .to(dot, { scale: 1.35, duration: 0.28, yoyo: true, repeat: 1, ease: 'sine.inOut' });
+
+  // T — dither: flicker de impressão + snap
+  tl.add(setLog('ensaio 01 · dither'))
+    .to(dot, { ...dotTo(0), duration: 0.22, ease: 'power2.inOut' })
+    .to(letters[0], { opacity: 1, duration: 0.3, ease: 'steps(5)' }, '<0.05')
+    .to(letters[0], { scale: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, '<');
+
+  // I — glitch: fringes RGB + jitter em steps
+  tl.add(setLog('ensaio 02 · glitch'))
+    .to(dot, { ...dotTo(1), duration: 0.18, ease: 'power2.inOut' }, '-=0.1')
+    .set(letters[1], { opacity: 1, textShadow: '3px 0 #99E0D2, -3px 0 #D4A040' })
+    .to(letters[1], { keyframes: { x: [-14, 10, -6, 3, 0] }, duration: 0.36, ease: 'steps(4)' })
+    .set(letters[1], { textShadow: 'none' });
+
+  // P — coil: rola girando
+  tl.add(setLog('ensaio 03 · coil'))
+    .to(dot, { ...dotTo(2), duration: 0.18, ease: 'power2.inOut' }, '-=0.08')
+    .to(letters[2], { opacity: 1, duration: 0.12 }, '<0.05')
+    .to(letters[2], { rotation: 0, scale: 1, duration: 0.6, ease: 'back.out(1.5)' }, '<');
+
+  // Ó — crash: despenca, quica, e o anel de badge orbita
+  tl.add(setLog('ensaio 04 · crash'))
+    .to(dot, { ...dotTo(3), duration: 0.18, ease: 'power2.inOut' }, '-=0.2')
+    .to(letters[3], { opacity: 1, duration: 0.05 }, '<')
+    .to(letters[3], { y: 0, duration: 0.62, ease: 'bounce.out' }, '<')
+    .to(letters[3], { scaleY: 0.86, duration: 0.09, yoyo: true, repeat: 1, transformOrigin: '50% 100%' })
+    .to('#heroRing', { opacity: 1, scale: 1.12, duration: 0.3, ease: 'back.out(2)' }, '-=0.1')
+    .to('#heroRing', { opacity: 0, scale: 1.55, duration: 0.45, ease: 'power2.out' });
+
+  // Ato final — onda do field, aura do shaper, o ponto vira assinatura
+  tl.add(setLog('ensaio 05 · field wave'))
+    .to('.hw', { yPercent: -10, stagger: 0.07, duration: 0.3, yoyo: true, repeat: 1, ease: 'sine.inOut' })
+    .to('#heroBands', { opacity: 1, duration: 1.1, ease: 'power1.inOut' }, '<')
+    .add(() => {
+      const o = letters[3].getBoundingClientRect(), c = center();
+      gsap.to(dot, {
+        x: o.right - c.x + o.width * 0.13,
+        y: o.bottom - c.y - o.height * 0.1,
+        scale: 0.62, duration: 0.5, ease: 'power2.inOut',
+      });
+    }, '-=0.2')
+    .add(setLog('39 ferramentas · type em movimento · 100% browser'))
+    .to('#heroCta', { opacity: 1, duration: 0.6 })
+    .add(() => hero.classList.add('parked'));
+  } // buildIntro
+
+  // ---- Saída ----
+  let exiting = false;
+  function heroExit(fast) {
+    if (exiting) return;
+    exiting = true;
+    sessionStorage.setItem('tipo-hero', '1');
+    if (tl) tl.kill();
+    const out = gsap.timeline({
+      onComplete: () => { hero.style.display = 'none'; bandsRunning = false; },
+    });
+    if (fast) {
+      out.to(hero, { autoAlpha: 0, duration: 0.25 });
+      return;
+    }
+    out.to('.hw', { yPercent: -160, opacity: 0, stagger: 0.05, duration: 0.5, ease: 'power3.in' })
+      .to('#heroDot,#heroCta,#heroLog,#heroTag,#heroBands', { opacity: 0, duration: 0.3 }, 0)
+      .to(hero, { yPercent: -100, duration: 0.6, ease: 'power4.inOut' }, '-=0.2');
+  }
+  document.getElementById('heroEnter').addEventListener('click', () => heroExit(false));
+  document.getElementById('heroSkip').addEventListener('click', () => heroExit(true));
+  window.addEventListener('wheel', e => { if (!exiting && hero.style.display !== 'none' && e.deltaY > 6) heroExit(false); }, { passive: true });
+  let touchY = null;
+  hero.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+  hero.addEventListener('touchmove', e => {
+    if (touchY !== null && touchY - e.touches[0].clientY > 34) heroExit(false);
+  }, { passive: true });
+  document.addEventListener('keydown', e => {
+    if (hero.style.display === 'none') return;
+    if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') { e.preventDefault(); heroExit(e.key === 'Escape'); }
+  });
+  window.__heroExit = heroExit;
+})();
+</script>
 </body>
 </html>

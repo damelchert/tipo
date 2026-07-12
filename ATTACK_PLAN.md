@@ -457,7 +457,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Deve dar "palinha" das ferramentas: type cinético + efeitos visuais reais (reusar engines? HeaderFX ampliado? cenas em sequência com scroll ou auto-play?)
 - Direção a definir com squads (design-squad + dev-squad) como no Header v3 — é um capítulo de identidade, não só uma seção
 - Skip/entrar direto obrigatório (respeitar retorno de usuário; localStorage "já vi")
-- **Status:** [ ] Conceito — próximo item grande
+- **Status:** ✅ Implementado (2026-07-11) — **"O ENSAIO"**: o ponto dourado é o maestro — abre o show, imprime cada letra com uma ferramenta da casa (**T dither** flicker steps, **I glitch** com fringes mint/gold + jitter, **P coil** rolando de -420°, **Ó crash** bounce+squash com anel de **badge** orbitando), a palavra faz a onda do **field**, a aura do **Shaper** floresce atrás (anéis rounded-rect canvas 30fps, cores brand hairline), e o ponto estaciona como a assinatura TIPÓ•. Log de máquina em Plex Mono narra cada passe ("ensaio 01 · dither"...). GSAP timeline (coreografia) + CSS (parked: respiração das letras + pulso do ponto). Saída: scroll/swipe/Enter/CTA — letras voam, hero sobe, home revela. **1× por sessão** (sessionStorage), deep-links #hash e prefers-reduced-motion pulam direto, skip sempre visível. Clash Display via @font-face; rects medidos após document.fonts.ready e ANTES dos transforms iniciais (senão o Ó a -120vh distorce os alvos do ponto). Dark theme próprio. Zero pageerrors, testado desktop + iPhone (swipe exit) + dark.
 
 ### FASE 13 — MOBILE (pedido do Daniel 2026-07-03: "não tá funcionando bem no celular")
 
