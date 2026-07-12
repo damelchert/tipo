@@ -157,6 +157,16 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-11
+
+### Landing polish: cards das visual tools ANIMADOS (15 cenas CSS) + micro-interações
+- Daniel: "dar um talento nas mini animações... faz em GSAP?" → **decisão: CSS keyframes, não GSAP**. GSAP fica onde já está (entradas orquestradas + cometa do index); loops ambientes infinitos de 15 cards são melhores em CSS (GPU, zero JS/frame, mesmo modelo dos quadrantes kinetic).
+- **15 mini-cenas**, cada uma evocando o efeito da ferramenta: dithering (2 camadas de dots driftando), retícula (halftone pulsando via background-size), glitch (G com rgb-shadow + clip-path step-end), datamosh (bloco smear skew+blur), rastro (R com trail de text-shadow), pixelsort (3 colunas de gradiente em velocidades diferentes), depth (plano 3D basculante), gradientmap (pan de rampa 300%), riso (2 círculos multiply desregistrados — mint, não teal escuro: multiply c/ teal ficava lamacento), ascii (grade de chars rolando steps(4)), audiotype (4 barras <i> com delays negativos), pattern (arcos truchet em pan), palette (listras deslizando), shaper (anéis concêntricos respirando), overlay (grain step-end + light leak).
+- **Hover = 2.2× mais rápido** via var CSS (--pvs .45) + ring dourado inset + card translateX(4px). `prefers-reduced-motion` desliga tudo.
+- **Micro-interações globais** (style.css, todas as 38): chips levitam no hover e comprimem no active, botões .btn comprimem no clique, thumb do slider cresce 1.2× no hover.
+- Cache `?v=20260711-pol1`. Regressão mobile 38/38 + pattern ALL PASS.
+- NOTA: commit incluiu a remoção de um symlink quebrado `.claude/skills/seedance-prompter/SKILL.md` que já estava deletado do disco (mudança externa, não nossa).
+
 ## 2026-07-03
 
 ### RESUMO DA SESSÃO 2026-07-01 → 03 (pra próxima sessão começar daqui)
