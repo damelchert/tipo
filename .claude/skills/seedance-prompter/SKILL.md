@@ -1,1 +1,0 @@
-../../../squads/seedance-prompter.md

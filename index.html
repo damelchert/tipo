@@ -359,6 +359,141 @@ body { overflow: hidden; }
   .tipo-mode-list { padding: 16px; }
   .tipo-mode-card { padding: 14px 16px; gap: 14px; }
 }
+
+.tipo-mode-card { transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.tipo-mode-card:hover { transform: translateX(4px); }
+
+/* ============================================================
+   ANIMATED PREVIEWS — visual tool cards (each scene evokes the
+   tool's effect; pure CSS keyframes, GPU-friendly, hover = 2.2x)
+   ============================================================ */
+.tipo-mode-card-preview { position: relative; --pvs: 1; }
+.tipo-mode-card:hover .tipo-mode-card-preview { --pvs: .45; }
+.tipo-mode-card:hover .tipo-mode-card-preview { box-shadow: inset 0 0 0 2px rgba(212,160,64,.55); }
+
+.pv-dither { background-color: #2b8a7c;
+  background-image: radial-gradient(#D4A040 1.5px, transparent 1.7px), radial-gradient(rgba(153,224,210,.85) 1.2px, transparent 1.4px);
+  background-size: 10px 10px, 14px 14px;
+  animation: pvDither calc(7s * var(--pvs)) linear infinite; }
+@keyframes pvDither { to { background-position: 40px 20px, -28px 42px; } }
+
+.pv-reticula { background-image: radial-gradient(#D4A040 34%, transparent 38%);
+  background-size: 12px 12px; background-position: center;
+  animation: pvRet calc(1.8s * var(--pvs)) ease-in-out infinite alternate; }
+@keyframes pvRet { from { background-size: 8px 8px; } to { background-size: 15px 15px; } }
+
+.pv-glitch::before { content: 'G'; font-size: 26px; font-weight: 700; color: #D4A040;
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-shadow: 2px 0 #99E0D2, -2px 0 rgba(26,24,24,.8);
+  animation: pvGlitch calc(1.4s * var(--pvs)) step-end infinite; }
+@keyframes pvGlitch {
+  0%, 18% { transform: translate(0, 0); clip-path: inset(0); }
+  22% { transform: translate(-3px, 1px); clip-path: inset(18% 0 34% 0); }
+  30% { transform: translate(2px, -1px); clip-path: inset(0); }
+  55% { transform: translate(0); clip-path: inset(0); }
+  60% { transform: translate(3px, 2px); clip-path: inset(58% 0 8% 0); }
+  66% { transform: translate(-1px, 0); clip-path: inset(0 0 0 0); }
+  100% { transform: translate(0); clip-path: inset(0); } }
+
+.pv-mosh::before { content: ''; position: absolute; inset: 13px;
+  background: linear-gradient(120deg, #D4A040, #99E0D2 55%, #1B5A4E); border-radius: 2px;
+  animation: pvMosh calc(2.6s * var(--pvs)) ease-in-out infinite; }
+@keyframes pvMosh {
+  0%, 100% { transform: skewX(0) scaleY(1); filter: blur(0); }
+  38% { transform: skewX(-16deg) scaleY(1.18) translateX(3px); filter: blur(1px); }
+  62% { transform: skewX(12deg) scaleY(.85) translateX(-3px); filter: blur(2.2px); } }
+
+.pv-rastro::before { content: 'R'; font-size: 24px; font-weight: 700; color: #F8F5F0;
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-shadow: -5px 2px rgba(212,160,64,.65), -10px 4px rgba(212,160,64,.4), -15px 6px rgba(212,160,64,.2);
+  animation: pvRastro calc(3s * var(--pvs)) ease-in-out infinite; }
+@keyframes pvRastro { 0%, 100% { transform: translate(5px, -2px); } 50% { transform: translate(-5px, 2px); } }
+
+.pv-sort { background-color: #2b8a7c;
+  background-image: linear-gradient(0deg, #D4A040 30%, transparent 70%),
+    linear-gradient(180deg, #99E0D2 20%, transparent 60%),
+    linear-gradient(0deg, rgba(248,245,240,.9) 12%, transparent 55%);
+  background-size: 5px 130px, 7px 90px, 4px 110px;
+  background-position: 6px 0, 22px 0, 44px 0;
+  animation: pvSort calc(3.2s * var(--pvs)) linear infinite; }
+@keyframes pvSort { to { background-position: 6px 130px, 22px -90px, 44px 110px; } }
+
+.pv-depth::before { content: ''; position: absolute; inset: 14px;
+  background: linear-gradient(135deg, #99E0D2, #1B5A4E); border-radius: 3px;
+  animation: pvDepth calc(3.4s * var(--pvs)) ease-in-out infinite; }
+@keyframes pvDepth {
+  0%, 100% { transform: perspective(120px) rotateX(20deg) rotateY(-14deg); }
+  50% { transform: perspective(120px) rotateX(-16deg) rotateY(16deg); } }
+
+.pv-gmap { background: linear-gradient(90deg, #1A1818, #2A8A7A, #D4A040, #F8F5F0, #1A1818);
+  background-size: 300% 100%;
+  animation: pvGmap calc(4.5s * var(--pvs)) linear infinite; }
+@keyframes pvGmap { to { background-position: 300% 0; } }
+
+.pv-riso { background: #F8F5F0; }
+.pv-riso::before, .pv-riso::after { content: ''; position: absolute; width: 30px; height: 30px;
+  border-radius: 50%; mix-blend-mode: multiply; top: 17px; }
+.pv-riso::before { background: #D4A040; left: 11px; animation: pvRisoA calc(2.4s * var(--pvs)) ease-in-out infinite alternate; }
+.pv-riso::after { background: #99E0D2; left: 23px; animation: pvRisoB calc(2.4s * var(--pvs)) ease-in-out infinite alternate; }
+@keyframes pvRisoA { to { transform: translate(4px, -3px); } }
+@keyframes pvRisoB { to { transform: translate(-4px, 3px); } }
+
+.pv-ascii { font-family: var(--font-ui); }
+.pv-ascii::before { content: '@#%*+=-:. #%@*=+-:. %@#+*=-:. @#%*+=-:. #%@*=+.';
+  position: absolute; left: 6px; top: 0; width: 56px;
+  font-size: 10px; line-height: 11px; font-weight: 700; color: #D4A040;
+  word-break: break-all; white-space: normal;
+  animation: pvAscii calc(2.4s * var(--pvs)) steps(4) infinite; }
+@keyframes pvAscii { to { transform: translateY(-44px); } }
+
+.pv-audio { display: flex; align-items: flex-end; gap: 4px; padding: 13px; }
+.pv-audio i { flex: 1; background: #D4A040; border-radius: 1px;
+  animation: pvBar calc(.85s * var(--pvs)) ease-in-out infinite alternate; }
+.pv-audio i:nth-child(1) { height: 30%; }
+.pv-audio i:nth-child(2) { height: 65%; background: #99E0D2; animation-delay: -.2s; }
+.pv-audio i:nth-child(3) { height: 45%; background: #F8F5F0; animation-delay: -.45s; }
+.pv-audio i:nth-child(4) { height: 75%; background: #E8C97E; animation-delay: -.65s; }
+@keyframes pvBar { from { transform: scaleY(.35); } to { transform: scaleY(1); } }
+.pv-audio i { transform-origin: bottom; }
+
+.pv-pattern { background-color: #2b8a7c;
+  background-image:
+    radial-gradient(circle at 0 0, transparent 5px, #D4A040 5px 7px, transparent 7px),
+    radial-gradient(circle at 16px 16px, transparent 5px, #99E0D2 5px 7px, transparent 7px);
+  background-size: 16px 16px;
+  animation: pvPat calc(6s * var(--pvs)) linear infinite; }
+@keyframes pvPat { to { background-position: 32px 32px, 32px 32px; } }
+
+.pv-palette { background: repeating-linear-gradient(180deg,
+    #F8F5F0 0 8px, #99E0D2 8px 16px, #2A8A7A 16px 24px, #D4A040 24px 32px, #1A1818 32px 40px);
+  animation: pvPal calc(4s * var(--pvs)) linear infinite; }
+@keyframes pvPal { to { background-position: 0 40px; } }
+
+.pv-shaper { overflow: hidden; }
+.pv-shaper::before { content: ''; position: absolute; inset: -26px;
+  background: repeating-radial-gradient(circle at 50% 50%,
+    #99E0D2 0 2px, #2b8a7c 2px 8px, #D4A040 8px 9.5px, #2b8a7c 9.5px 17px);
+  animation: pvShaper calc(2.6s * var(--pvs)) ease-in-out infinite alternate; }
+@keyframes pvShaper { from { transform: scale(1); } to { transform: scale(1.3); } }
+
+.pv-overlay { background: linear-gradient(160deg, #1B5A4E, #2b8a7c); }
+.pv-overlay::before { content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(248,245,240,.85) .8px, transparent 1.1px),
+    radial-gradient(rgba(26,24,24,.7) .7px, transparent 1px);
+  background-size: 5px 7px, 7px 5px;
+  animation: pvGrain calc(.55s * var(--pvs)) step-end infinite; }
+@keyframes pvGrain {
+  0% { background-position: 0 0, 2px 3px; } 33% { background-position: 3px 1px, 0 4px; }
+  66% { background-position: 1px 4px, 4px 1px; } 100% { background-position: 0 0, 2px 3px; } }
+.pv-overlay::after { content: ''; position: absolute; inset: -20%;
+  background: linear-gradient(115deg, transparent 32%, rgba(212,160,64,.5) 50%, transparent 68%);
+  animation: pvLeak calc(4.5s * var(--pvs)) ease-in-out infinite; }
+@keyframes pvLeak { 0%, 100% { transform: translateX(-32%); } 50% { transform: translateX(32%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tipo-mode-card-preview, .tipo-mode-card-preview::before, .tipo-mode-card-preview::after,
+  .pv-audio i { animation: none !important; }
+}
 </style>
 </head>
 <body>
@@ -410,7 +545,7 @@ body { overflow: hidden; }
     <div class="tipo-level" id="levelVisual">
       <div class="tipo-mode-list">
         <a href="dithering.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">D</div>
+          <div class="tipo-mode-card-preview pv-dither"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Dithering</div>
             <div class="tipo-mode-card-desc">Transform images & video into SVG-based halftone art. 13 dither algorithms, 7-state mapping, 60+ shapes, tint, anamorphic epsilon glow.</div>
@@ -418,7 +553,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="reticula.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">R</div>
+          <div class="tipo-mode-card-preview pv-reticula"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Retícula</div>
             <div class="tipo-mode-card-desc">Professional halftone grid. 11 shapes, multi-tone color, contrast control, angle rotation. Text and emoji modes.</div>
@@ -426,7 +561,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="glitch.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">G</div>
+          <div class="tipo-mode-card-preview pv-glitch"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Glitch</div>
             <div class="tipo-mode-card-desc">Professional digital distortion. RGB shift, block corruption, channel swap, interlace, slicing, pixel sort, scanlines, noise.</div>
@@ -434,7 +569,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="datamosh.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Dm</div>
+          <div class="tipo-mode-card-preview pv-mosh"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Datamosh</div>
             <div class="tipo-mode-card-desc">Real-time parametric datamoshing. Motion-vector codec simulation: melt, bloom, channel tear, cross-mosh, keyframe drops.</div>
@@ -442,7 +577,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="rastro.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Ra</div>
+          <div class="tipo-mode-card-preview pv-rastro"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Rastro</div>
             <div class="tipo-mode-card-desc">Adobe-style Echo Effect for image, video and webcam. Echo Time, scale/pull source, motion matte, drawn masks and alpha PNG.</div>
@@ -450,7 +585,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="pixelsort.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Ps</div>
+          <div class="tipo-mode-card-preview pv-sort"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Pixel Sort</div>
             <div class="tipo-mode-card-desc">Asendorf-style interval pixel sorting. 6 sort keys, arbitrary angle, threshold mask, randomness, animated drift.</div>
@@ -458,7 +593,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="depth.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">3d</div>
+          <div class="tipo-mode-card-preview pv-depth"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Depth</div>
             <div class="tipo-mode-card-desc">Image to interactive 3D relief. Depth-map displacement mesh with parallax, orbit, wireframe and in-browser AI depth.</div>
@@ -466,7 +601,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="gradientmap.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Gm</div>
+          <div class="tipo-mode-card-preview pv-gmap"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Gradient Map</div>
             <div class="tipo-mode-card-desc">Remap luminance to any color ramp. Draggable gradient stops, S-curve contrast, posterize and animated palette cycle.</div>
@@ -474,7 +609,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="pattern.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">Pt</div>
+          <div class="tipo-mode-card-preview pv-pattern"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Pattern</div>
             <div class="tipo-mode-card-desc">Animated geometric tessellations — Truchet arcs, scales, type grids. 8 motifs &times; 5 symmetry rules with staggered motion.</div>
@@ -482,7 +617,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="palette.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Pl</div>
+          <div class="tipo-mode-card-preview pv-palette"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Palette</div>
             <div class="tipo-mode-card-desc">Extract dominant colors from any image (median cut) and generate harmonies — complementary, analogous, triadic &amp; more.</div>
@@ -490,7 +625,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="shaper.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Sh</div>
+          <div class="tipo-mode-card-preview pv-shaper"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Gradient Shaper</div>
             <div class="tipo-mode-card-desc">Any shape becomes a gradient — distance-field bands flow from text, blobs or hand-drawn shapes. Image/video warps the field.</div>
@@ -498,7 +633,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="overlay.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">O</div>
+          <div class="tipo-mode-card-preview pv-overlay"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Overlay Generator</div>
             <div class="tipo-mode-card-desc">Living film grain, light leaks, bokeh dust, riso grain, VHS tracking &amp; more — with real blend modes. Tileable PNG export.</div>
@@ -506,7 +641,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="riso.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">Ri</div>
+          <div class="tipo-mode-card-preview pv-riso"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">Risograph</div>
             <div class="tipo-mode-card-desc">Risograph print simulator. Spot inks or full CMYK process with halftone overprint, ink grain, dot gain & misregistration.</div>
@@ -514,7 +649,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="ascii.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview">A</div>
+          <div class="tipo-mode-card-preview pv-ascii"></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">ASCII</div>
             <div class="tipo-mode-card-desc">Professional ASCII art converter. 4 charsets (standard, blocks, braille, custom), color modes, contrast. 8 presets.</div>
@@ -522,7 +657,7 @@ body { overflow: hidden; }
           </div>
         </a>
         <a href="audiotype.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview" style="font-size:16px;">&#9835;</div>
+          <div class="tipo-mode-card-preview pv-audio"><i></i><i></i><i></i><i></i></div>
           <div class="tipo-mode-card-info">
             <div class="tipo-mode-card-title">AudioType</div>
             <div class="tipo-mode-card-desc">Audio-reactive typography. Text or images become colored bars that pulse with music. Upload audio or use microphone.</div>

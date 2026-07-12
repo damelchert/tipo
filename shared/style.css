@@ -724,3 +724,17 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   .tipo-mobile .tipo-hex-input { display: none !important; }
   .tipo-mobile .tipo-fmt-btn { display: none !important; } /* replaced by chips in the sheet */
 }
+
+/* ============================================================
+   MICRO-INTERACTIONS — tactile controls (2026-07-11)
+   ============================================================ */
+.preset-chip { transition: transform .15s ease, border-color .15s ease, color .15s ease, background .15s ease; }
+.preset-chip:hover { transform: translateY(-1px); }
+.preset-chip:active { transform: translateY(0) scale(.96); }
+.btn { transition: transform .12s ease, border-color .15s ease, background .15s ease, color .15s ease; }
+.btn:active { transform: scale(.97); }
+input[type="range"]::-webkit-slider-thumb { transition: transform .12s ease; }
+input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+@media (prefers-reduced-motion: reduce) {
+  .preset-chip, .btn, input[type="range"]::-webkit-slider-thumb { transition: none; }
+}
