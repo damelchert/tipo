@@ -450,6 +450,28 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - [ ] Pesos alternativos por fonte (hoje 1 peso curado por família)
 - [ ] Preview das fontes no próprio select (renderizar nome na própria fonte)
 
+
+### FASE 16 — EXPORT HQ: suíte de efeitos visuais para takes (pedido do Daniel 11/07)
+
+Visão: as visual tools viram uma suíte de VFX pra montagem — o take entra em 4K, sai em 4K com o efeito, frame-perfect, pronto pro corte.
+
+**Por que hoje sai menor**: tudo é realtime — as ferramentas processam vídeo em buffer capado (ex. gradientmap 860px) pra rodar a 30fps ao vivo, e o TipoRecorder captura o canvas da tela com encode capado em classe 1080p. Refém do relógio.
+
+**Arquitetura (render offline, como um NLE)**:
+- **shared/hq.js — TipoHQ**: loop de seek frame-exato no vídeo fonte (currentTime + seeked; v2: WebCodecs VideoDecoder pra velocidade) → renderiza o efeito em resolução NATIVA num canvas offscreen → VideoEncoder com timestamp = i × 1e6/fps → mp4-muxer. Sem realtime = sem trava; cada frame demora o que precisar (barra de progresso).
+- **Contrato por ferramenta**: expor `renderFrameHQ(frame, timeSec, ctx, W, H)` — o pipeline de frame como função pura, sem o cap do preview e com tempo VIRTUAL (animações drift/cycle ficam suaves e determinísticas).
+- Encoder: dims da fonte, codec ladder (avc1 High 5.1/5.2 pra 4K → fallback 1440/1080 se isConfigSupported negar), bitrate escalado por pixel. HW encode do Chrome segura 4K.
+- Bônus dos temporais: datamosh/rastro ficam MAIS corretos offline (sequencial garantido, echo sem drops).
+- UI: botão "Export HQ" + opções (resolução fonte/1080/720, fps fonte/24/30) + progresso com frame count + cancelar. Mobile: share sheet no final.
+- **Áudio**: v2 — remux da trilha original (decode + AudioEncoder AAC ou cópia de track). V1 exporta vídeo mudo (montagem geralmente re-linka áudio).
+
+**Rollout**:
+- 16.1 Motor TipoHQ + 2 pilotos (gradientmap + riso) — validar 4K real no ffprobe, frames exatos, A/B com realtime
+- 16.2 Rollout: dithering, reticula, glitch, pixelsort, ascii, shaper, overlay
+- 16.3 Temporais: datamosh, rastro (estado sequencial via passada única)
+- 16.4 Áudio remux + presets de entrega (ProRes? não — H.264 high bitrate + opção PNG sequence pra quem quer lossless)
+- **Status:** [ ] Especificado — aguardando "vai"
+
 ### FASE 15 — HERO SECTION (pedido do Daniel 11/07: "algo bem fodão com GSAP, imersivo, palinha do que vem a seguir")
 - Uma abertura imersiva ANTES da home: primeira impressão do site
 - GSAP para coreografia (regra da casa: GSAP = orquestração, CSS = loops ambientes)
