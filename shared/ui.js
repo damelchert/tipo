@@ -1395,6 +1395,9 @@ const TipoTimeline = {
 .tl-foot button:hover { border-color:var(--red,#CC4840); color:var(--red,#CC4840); }
 .tl-hint { font-size:10px; color:var(--text-5,#777); margin-top:7px; letter-spacing:.4px; }
 .tl-hint.warn { color:var(--accent-warm,#D4A040); font-weight:700; }
+.tl-lane-ghost { display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--text-5,#777); border:1px dashed var(--border-2,#3a3a3a); background:transparent; letter-spacing:.4px; border-radius:3px; }
+#tlDemo.pulse { border-color:var(--accent-warm,#D4A040); color:var(--accent-warm,#D4A040); animation: tl-demo-pulse 1.6s ease-in-out infinite; }
+@keyframes tl-demo-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(212,160,64,0); } 50% { box-shadow:0 0 0 3px rgba(212,160,64,.22); } }
 .tl-key.flash { animation: tl-key-flash .7s ease-out; }
 @keyframes tl-key-flash { 0% { transform:translate(-50%,-50%) rotate(45deg) scale(2.4); box-shadow:0 0 12px var(--accent-warm,#D4A040); } 100% { transform:translate(-50%,-50%) rotate(45deg) scale(1); } }
 #tlRuler.flash { animation: tl-ruler-flash .5s ease-out; }
@@ -1422,6 +1425,7 @@ const TipoTimeline = {
       '<input id="tlDur" type="number" min="1" max="60" step="0.5" value="4" data-notl title="Duration (s)">' +
       '<div id="tlRuler"><div id="tlPlayhead"></div></div>' +
       '<span id="tlTime">0.00 / 4.0s</span>' +
+      '<button id="tlDemo" title="Watch a 5s example: 2 keyframes + play">✨ demo</button>' +
       '<button id="tlRec" title="Record one pass as MP4">● REC</button>' +
       '<button id="tlClose" title="Close">×</button>' +
       '</div>' +
@@ -1451,6 +1455,7 @@ const TipoTimeline = {
       this._redraw();
     });
     bar.querySelector('#tlClose').addEventListener('click', () => this.toggleOpen());
+    bar.querySelector('#tlDemo').addEventListener('click', () => this.demo());
     bar.querySelector('#tlRec').addEventListener('click', () => this.recPass());
     bar.querySelector('#tlClear').addEventListener('click', () => {
       this.tracks.clear();
@@ -1486,6 +1491,49 @@ const TipoTimeline = {
 
   _toast(msg) {
     if (typeof TipoUI !== 'undefined' && TipoUI.showToast) TipoUI.showToast(msg);
+  },
+
+  /** Demo autoexplicativo: executa o fluxo real na frente do usuário —
+   *  keyframe no 0s, playhead adiante, 2º keyframe, play. O conceito
+   *  "playhead + slider = keyframe" se mostra em 5 segundos. */
+  demo() {
+    if (this._demoRunning) return;
+    const el = Array.from(document.querySelectorAll('.range-row input[type="range"]'))
+      .find(s => s.id && s.dataset.notl === undefined && !s.closest('#tipoTL') && s.offsetParent !== null);
+    if (!el) { this._toast('No visible slider to demo with'); return; }
+    this._demoRunning = true;
+    this.pause();
+    this.tracks.delete(el.id); // a faixa do exemplo recomeça limpa
+    const h = this._bar.querySelector('#tlHint');
+    const say = (msg) => { h.classList.add('warn'); h.textContent = msg; };
+    const min = Number(el.min || 0), max = Number(el.max || 100);
+    const v0 = Number(el.value);
+    const v1 = v0 < (min + max) / 2 ? min + (max - min) * 0.85 : min + (max - min) * 0.15;
+    const setSlider = (v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    el.closest('.range-row').style.outline = '2px solid var(--accent-warm,#D4A040)';
+    (async () => {
+      say(`demo 1/3 — playhead at 0s + "${this._labelFor(el.id)}" moved = ◆ keyframe`);
+      this.seek(0);
+      await wait(500);
+      setSlider(v0);
+      this.upsertKey(el.id, 0, v0);
+      say(`demo 1/3 — playhead at 0s + "${this._labelFor(el.id)}" moved = ◆ keyframe`);
+      await wait(1300);
+      say('demo 2/3 — playhead later + slider again = 2nd ◆');
+      this.seek(this.duration * 0.5);
+      await wait(700);
+      setSlider(v1);
+      this.upsertKey(el.id, this.duration * 0.5, v1);
+      say('demo 2/3 — playhead later + slider again = 2nd ◆');
+      await wait(1300);
+      say('demo 3/3 — ▶ play: it animates between the ◆s. Your turn — any slider works');
+      this.seek(0);
+      this.play();
+      await wait(2500);
+      el.closest('.range-row').style.outline = '';
+      this._demoRunning = false;
+    })();
   },
 
   // ---- keys ----
@@ -1577,6 +1625,20 @@ const TipoTimeline = {
       row.appendChild(lane);
       wrap.appendChild(row);
     });
+    // empty-state fantasma: mostra ONDE os keyframes vão aparecer
+    if (!this.tracks.size) {
+      const ghost = document.createElement('div');
+      ghost.className = 'tl-track';
+      const gl = document.createElement('div');
+      gl.className = 'tl-track-label';
+      gl.textContent = 'no keyframes';
+      const lane = document.createElement('div');
+      lane.className = 'tl-lane tl-lane-ghost';
+      lane.textContent = 'move any slider → a ◆ lands here at the playhead time';
+      ghost.appendChild(gl);
+      ghost.appendChild(lane);
+      wrap.appendChild(ghost);
+    }
     if (flashKey) {
       const ruler = this._bar.querySelector('#tlRuler');
       ruler.classList.remove('flash');
@@ -1597,6 +1659,9 @@ const TipoTimeline = {
   /** Guided hint: tells the user the exact next step */
   _syncHint() {
     if (!this._bar) return;
+    const db = this._bar.querySelector('#tlDemo');
+    if (db) db.classList.toggle('pulse', !this.tracks.size && !this._demoRunning);
+    if (this._demoRunning) return; // a narração do demo é dona da linha
     const h = this._bar.querySelector('#tlHint');
     if (!this.tracks.size) {
       h.textContent = 'Move any slider to record a keyframe at the playhead';

@@ -490,11 +490,10 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 
 ### FASE 18 — TIMELINE DIDÁTICA (feedback do Daniel 12/07: "os keyframes são um mistério, parece maquiagem")
 Diagnóstico: o modelo "mover playhead + mexer slider = keyframe" (padrão Cavalry/AE) é INVISÍVEL pra quem não conhece esses apps. Play/REC "não fazem nada" sem ≥2 keyframes — os hints de 03/07 não bastaram.
-- [ ] Opção A: **demo autoexplicativo** — botão "exemplo" na barra que cria 2 keyframes num slider visível e dá play (o conceito se mostra em 3s)
-- [ ] Opção B: help "?" na barra com micro-tutorial ilustrado
-- [ ] Opção C: empty-state persistente na régua ("1. arraste o cursor · 2. mexa um slider = keyframe · 3. play")
-- [ ] Opção D (decisão do Daniel): remover das ferramentas onde não agrega
-- **Status:** [ ] Aguardando decisão de direção (A+C é a aposta)
+- ✅ Opção A: **botão "✨ demo"** na barra (2026-07-13) — executa o fluxo REAL na frente do usuário em 5s: playhead no 0 + mexe um slider visível (a linha destaca em gold) = ◆, playhead pro meio + mexe de novo = 2º ◆, play — com narração passo a passo na linha de hint ("demo 1/3…2/3…3/3 — your turn"). Botão PULSA em gold enquanto não há keyframes (chama atenção exatamente de quem precisa).
+- ✅ Opção C: **empty-state fantasma** na área de tracks — linha "no keyframes" com lane tracejada dizendo "move any slider → a ◆ lands here at the playhead time". Some ao primeiro keyframe, volta no Clear all.
+- ~~Opção B (help ?)~~ e ~~Opção D (remover)~~ — desnecessárias com A+C.
+- **Status:** ✅ Implementado (2026-07-13) — smoke 8/8: ghost row, pulse, demo cria 2 ◆ + play, estados alternam certo, zero pageerrors
 
 ### FASE 17 — MODERNIZAÇÃO DE FERRAMENTAS (pedido do Daniel 11/07)
 - ✅ **ASCII** (2026-07-12) — modernização completa: **edge detection Sobel com caracteres direcionais |/-\\** (o look ASCII moderno — threshold (105-strength)/100 sobre luma cru do grid), charsets novos (Detail 70 níveis, Dots ·:°•, Digits/data), color modes novos (**Duotone** com par de cores, **Athos** — rampa da paleta por brilho), **Cell Fill** (mosaico: célula pintada + glifo knockout na cor do fundo), fine tuning (brightness/gamma/saturation/**flicker** temporal pra vídeo), **Copy TXT** (clipboard com fallback download), **Export HQ** via takeover p5 (9ª ferramenta da suíte, test-hq 42/42). 8 presets novos: Classic/Detail/Edge/Duotone/Matrix/Athos/Mosaic/Poster. Fixes de raiz: braille/katakana eram TOFU (p5 renderiza paths opentype sem fallback — glifo fora da Plex Mono = .notdef; removidos, charsets agora só com glifos verificados via charToGlyphIndex), blocks com calhas verticais (advance 0.6em — auto-size ×1.7), e **wake(ms)**: imagem estática congela no noLoop e nunca via o morph de 300ms do applyPreset — agora o loop fica vivo pela janela do morph (bug pré-existente).
