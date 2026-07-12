@@ -21,7 +21,7 @@ const TipoHQ = {
 
   enable(cfg) {
     this._cfg = cfg;
-    const rec = document.getElementById('recBtn');
+    const rec = document.getElementById('recBtn') || document.getElementById('recordBtn');
     if (!rec || document.getElementById('hqBtn')) return;
     const b = document.createElement('button');
     b.id = 'hqBtn';
@@ -114,6 +114,7 @@ const TipoHQ = {
 
     this._running = true;
     this._cancel = false;
+    window.__tipoHQactive = true; // ferramentas temporais pausam o loop ao vivo
     const ui = this._progressUI();
     const hqBtn = document.getElementById('hqBtn');
     if (hqBtn) hqBtn.disabled = true;
@@ -148,6 +149,8 @@ const TipoHQ = {
     try {
       ui.open();
       ui.set(0, 'Export HQ — renderizando', `${enc.width}×${enc.height} · frame 0/${total}`);
+      // temporais (datamosh/rastro) resetam buffers no tamanho HQ antes da passada
+      if (cfg.begin) await cfg.begin(enc.width, enc.height);
       for (let i = 0; i < total; i++) {
         if (this._cancel) break;
         const t = Math.min((i + 0.5) / fps, dur - 0.001);
@@ -183,6 +186,8 @@ const TipoHQ = {
       console.error('[TipoHQ]', e);
       TipoUI.showToast('Export HQ falhou — veja o console');
     } finally {
+      window.__tipoHQactive = false;
+      if (cfg.end) { try { cfg.end(); } catch (e) {} }
       try { encoder.close(); } catch (e) {}
       ui.close();
       if (hqBtn) hqBtn.disabled = false;

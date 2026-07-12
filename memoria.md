@@ -159,6 +159,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### 16.2/16.3 — Export HQ em 6 ferramentas (pixelsort, dithering, datamosh, rastro + pilotos)
+- **test-hq.mjs ALL PASS nas 6**: cada uma exportando 1920×1080 EXATO, 75/75 frames, decode limpo; 1440p nativo.
+- **Padrão "HQ takeover"** pros complexos/temporais: em vez de duplicar pipeline, um override de tamanho (hqSize/hqCellSize) força o pipeline REAL nas dimensões da fonte, e a flag global `window.__tipoHQactive` (setada pelo motor) PAUSA o loop ao vivo da ferramenta — SENÃO o rAF da página avançava o estado temporal entre os frames do export e corrompia a sequência (bug que teria sido invisível sem entender a arquitetura).
+- Por ferramenta: pixelsort = renderFrameHQ auto-contido (canvases próprios, driftT virtual = t×30×0.045, 3 caminhos de ângulo); dithering = hqCellSize = W/gridCols (a ESTÉTICA é o grid — célula escala, arte idêntica, nítida; slider overallScale intocado; âncora recordBtn); datamosh = step(t×1000) com hqSize + needKeyframe reset no begin (autoKf funciona em tempo virtual); rastro = render(t×1000) com hqSize no setCanvasSize + resetTemporal no begin/end.
+- Engine: hooks begin/end (async begin ok), recordBtn fallback. Frames extraídos confirmam: dither 7-estados vetorial nítido em 1080p, halftone riso full-res.
+- **Falta do rollout**: reticula e glitch — são p5; o render desenha no canvas p5 global. Plano: refactor pra desenhar em p5.Graphics(W,H) alvo (createGraphics) e blitar. Próximo turno.
+
 ### FASE 16.1 — Export HQ implementado (motor + pilotos) + Shaper removido
 - **Pergunta do Daniel respondida em código**: gravações saíam menores porque TUDO era realtime (buffer da ferramenta capado ~860px + encode do recorder capado 1080p). Export HQ = render OFFLINE: seek frame-exato no vídeo fonte → efeito renderizado em resolução NATIVA offscreen → encode com timestamp perfeito. Sem realtime = sem trava (barra de progresso com fps/ETA + cancelar).
 - **shared/hq.js (TipoHQ)**: contrato `enable({getVideo, render(frame,tSec,ctx,W,H), filename})`; codec ladder High 5.1→1440→1080 via isConfigSupported; bitrate 0.12bits/px/frame; keyframe/s; backpressure encodeQueueSize; restaura currentTime/play do player no fim; _downloadBlob = share no mobile de graça.

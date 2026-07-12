@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
 <script src="shared/ui.js?v=20260711-hq1"></script>
+<script src="shared/hq.js?v=20260711-hq1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -598,6 +599,86 @@ TipoUI.initChrome('visual');
 // Init
 updateLabels();
 requestRender();
+
+// ============================================================
+// EXPORT HQ (Fase 16): mesmo pipeline em resolução nativa, com
+// drift em tempo VIRTUAL do take. Auto-contido — não toca o preview.
+// ============================================================
+const hqWork = document.createElement('canvas');
+const hqWorkCtx = hqWork.getContext('2d', { willReadFrequently: true });
+const hqRot = document.createElement('canvas');
+const hqRotCtx = hqRot.getContext('2d', { willReadFrequently: true });
+
+function renderFrameHQ(frame, tSec, ctx, W, H) {
+  hqWork.width = W; hqWork.height = H;
+  const sw = frame.videoWidth || frame.width, sh = frame.videoHeight || frame.height;
+  const sc = Math.max(W / sw, H / sh);
+  const cw = W / sc, ch = H / sc;
+  hqWorkCtx.drawImage(frame, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, W, H);
+
+  let lo = val('thrLow') / 100, hi = val('thrHigh') / 100;
+  if (lo > hi) { const t = lo; lo = hi; hi = t; }
+  const drift = val('drift') / 100;
+  if (drift > 0) {
+    const span = hi - lo;
+    const center = (lo + hi) / 2 + Math.sin(tSec * 30 * 0.045) * drift * 0.45; // driftT virtual
+    lo = Math.max(0, Math.min(1, center - span / 2));
+    hi = Math.max(0, Math.min(1, center + span / 2));
+  }
+  const opts = {
+    lo, hi,
+    invert: document.getElementById('invertMask').checked,
+    keyFn: makeKeyFn(document.getElementById('sortBy').value),
+    desc: document.getElementById('reverse').checked,
+    maxSpan: val('maxSpan') > 0 ? Math.max(2, Math.round(val('maxSpan') / 100 * Math.max(W, H))) : 0,
+    breakP: val('randomness') > 0 ? Math.pow(val('randomness') / 100, 2) * 0.35 : 0,
+    vertical: false,
+  };
+  const angle = val('angle') % 360;
+  if (angle % 180 === 0) {
+    const id = hqWorkCtx.getImageData(0, 0, W, H);
+    opts.desc = angle === 180 ? !opts.desc : opts.desc;
+    sortImageData(id, W, H, opts);
+    ctx.putImageData(id, 0, 0);
+  } else if (angle % 180 === 90) {
+    const id = hqWorkCtx.getImageData(0, 0, W, H);
+    opts.vertical = true;
+    opts.desc = angle === 270 ? !opts.desc : opts.desc;
+    sortImageData(id, W, H, opts);
+    ctx.putImageData(id, 0, 0);
+  } else {
+    const rad = angle * Math.PI / 180;
+    const D = Math.ceil(Math.hypot(W, H));
+    hqRot.width = D; hqRot.height = D;
+    hqRotCtx.clearRect(0, 0, D, D);
+    hqRotCtx.save();
+    hqRotCtx.translate(D / 2, D / 2);
+    hqRotCtx.rotate(-rad);
+    hqRotCtx.drawImage(hqWork, -W / 2, -H / 2);
+    hqRotCtx.restore();
+    const id = hqRotCtx.getImageData(0, 0, D, D);
+    sortImageData(id, D, D, opts);
+    hqRotCtx.putImageData(id, 0, 0);
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(rad);
+    ctx.drawImage(hqRot, -D / 2, -D / 2);
+    ctx.restore();
+  }
+  const mix = val('mix') / 100;
+  if (mix < 1) {
+    ctx.save();
+    ctx.globalAlpha = 1 - mix;
+    ctx.drawImage(hqWork, 0, 0);
+    ctx.restore();
+  }
+}
+
+TipoHQ.enable({
+  getVideo: () => (sourceType === 'video' && sourceVideo) ? sourceVideo : null,
+  render: renderFrameHQ,
+  filename: () => 'tipo-pixelsort-HQ',
+});
 </script>
 </body>
 </html>

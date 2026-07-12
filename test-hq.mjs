@@ -41,6 +41,10 @@ function probe(file) {
 for (const [tool, src, expectW, expectH, expFrames] of [
   ['gradientmap', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],   // 2.5s × 30fps
   ['riso', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['pixelsort', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['datamosh', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['rastro', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['dithering', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
 ]) {
   const page = await ctx.newPage();
   let errs = 0;
@@ -54,7 +58,9 @@ for (const [tool, src, expectW, expectH, expFrames] of [
     page.evaluate(() => document.getElementById('fileInput').click()),
   ]);
   await chooser.setFiles(src);
-  await page.waitForFunction(() => sourceType === 'video', null, { timeout: 15000 });
+  await page.waitForFunction(() => {
+    try { return !!(TipoHQ._cfg && TipoHQ._cfg.getVideo && TipoHQ._cfg.getVideo()); } catch (e) { return false; }
+  }, null, { timeout: 20000 });
   await page.waitForTimeout(800);
   // roda o HQ
   const [dl] = await Promise.all([
