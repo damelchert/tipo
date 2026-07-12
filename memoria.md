@@ -159,6 +159,10 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### Export das visual tools reorganizado no padrão dithering (pedido do Daniel)
+- Dithering separava imagem (PNG/PNGα/SVG em linha) de vídeo (empilhado, largura cheia) — as outras espremiam até 6 botões numa row. Aplicado nas 7 com HQ: `.btn-col` (flex column) contendo recBtn → injetados (HQ/GIF/Link) empilham automaticamente full-width. Verificado nas 7: ordem Record→HQ→GIF→Link, stacked, largura cheia, zero erros.
+- Daniel confirmou: "HQ funcionando liso" no teste real dele.
+
 ### SUÍTE HQ COMPLETA — reticula e glitch via takeover p5 (8/8)
 - **Padrão takeover p5** (mais elegante que espelhar o draw em Graphics): begin = noLoop() + resizeCanvas(W,H) — o noLoop JÁ pausa o loop ao vivo (nem precisa da flag global); render = redraw() (roda o draw() real síncrono em HQ) + drawImage(drawingContext.canvas); end = resizeCanvas de volta + loop().
 - **hqK** = W/previewW multiplica os parâmetros com semântica de PIXEL (glitch: chShift/sliceInt/scanGap/bleed/blockSz/blockShift/scanOff/interlace; reticula: gap) — senão o efeito sai relativamente mais fino em 4K. Params estruturais (res da retícula = células) não escalam: a arte fica idêntica.
