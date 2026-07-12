@@ -8,6 +8,41 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 19 — SEGURANÇA / BLINDAGEM (pedido do Daniel 12/07: "cibersegurança completa nível premium — blindar cópia de ferramentas, código-fonte, prints e gravações de tela; avisar quando alguém tentar; blindar meus dados e engenharia reversa")
+
+> **Reality check antes de tudo** (honestidade > vender ilusão): a Tipó é um app **100% client-side** (HTML/JS/CSS estático no Vercel, roda inteiro no browser do usuário). Isso impõe limites FÍSICOS que nenhuma técnica contorna:
+> - **Impedir cópia do código-fonte: impossível em absoluto.** Pra rodar, o browser PRECISA baixar e executar o JS — ele está, por definição, na máquina do usuário. Dá pra *dificultar muito* (ofuscar/minificar), nunca *impedir*.
+> - **Bloquear print / gravação de tela: impossível na web aberta.** Screenshot e screen-record são de nível de SISTEMA OPERACIONAL — uma página web não tem permissão pra vê-los nem barrá-los. DRM (Widevine/EME) só cobre *streams de vídeo protegido*, não canvas/app. Qualquer "proteção" aqui é teatro que quebra em 5s e atrapalha usuário legítimo.
+> - **Detectar/avisar tentativa: heurística frágil, não garantia.** Dá pra logar SINAIS (devtools aberto, copy, right-click) mas todos são burláveis e a detecção de devtools é hack instável. Serve como telemetria, não como muralha.
+>
+> **O que É REAL e vale a pena** (blindagem de verdade, na ordem de impacto):
+>
+> **19.1 — Blindar DADOS e segredos (o mais importante — isso sim é 100% controlável)**
+> - [ ] Auditar que NENHUMA chave/segredo do Daniel vá pro client. A regra de ouro (CLAUDE.md) já vale; formalizar: Mockup AI (11.5) = BYO key do usuário, key só na memória da aba, nunca logada, nunca enviada pro nosso backend.
+> - [ ] Varredura de segredos no repo + histórico git (git-secrets/gitleaks) — garantir que nada vazou em commit antigo.
+> - [ ] `.env`/config fora do bundle; checar que o Vercel não expõe env vars no client.
+>
+> **19.2 — Security headers + defesa de rede (config, alto impacto, baixo custo)**
+> - [ ] **CSP** (Content-Security-Policy) restritiva — trava injeção de script, limita origens de CDN/fonte às conhecidas.
+> - [ ] **X-Frame-Options / frame-ancestors** — anti-clickjacking E anti-embedding: ninguém iframa as ferramentas da Tipó em outro site (protege a marca e o "roubo por incorporação").
+> - [ ] HSTS, Referrer-Policy, Permissions-Policy, X-Content-Type-Options. Via `vercel.json` headers.
+> - [ ] **SRI (Subresource Integrity)** nos scripts de CDN (p5, three, mp4-muxer, transformers) — defesa de supply-chain real: se a CDN for comprometida, o browser recusa o script adulterado. + pinar versões (já pinadas).
+>
+> **19.3 — Elevar a barra da engenharia reversa (deterrente honesto, não muralha)**
+> - [ ] Build step opcional de **minificação + ofuscação** dos shared/*.js e das ferramentas no deploy (mantendo os fontes legíveis no repo). Transforma "copiar e colar" em "horas de deofuscação" — filtra 99% dos oportunistas. Sem prometer que barra o determinado.
+> - [ ] Cabeçalho de licença/aviso legal nos arquivos + `LICENSE` no repo (proteção JURÍDICA — o desincentivo que de fato funciona contra cópia comercial).
+>
+> **19.4 — Proteger o OUTPUT (deterrente que realmente segura "roubo" de resultado)**
+> - [ ] **Watermark de marca** opcional/sutil nos exports (PNG/MP4) — canto com "tipó" discreto. É o que estúdios usam: não impede o print, mas marca a autoria. Toggle pro usuário pagante remover.
+>
+> **19.5 — Telemetria de abuso (o "me avisar" possível, com expectativa calibrada)**
+> - [ ] Endpoint leve de eventos (right-click bulk, copy de grandes blocos, devtools-open heurístico) → log/alerta. Explicitar: são SINAIS de curiosidade, não flagrante — servem pra entender comportamento, não pra "pegar o ladrão". Sem UX intrusiva (nada de bloquear F12/right-click, que só irrita).
+>
+> **19.6 — Se algum dia houver backend** (hoje não há): rate limiting, WAF do Vercel, validação de input server-side, CORS estrito.
+>
+> - **Como atacar:** usar o squad `.claude/skills/cybersecurity` (`*assess` no site → `*audit-app-security` → `*defend`) pra um assessment formal, priorizar 19.1+19.2 (impacto real imediato), depois 19.3/19.4. Escopo = review defensivo do próprio site (autorizado, é do Daniel).
+> - **Status:** [ ] Registrado — aguardando "vai". Recomendação: começar por **19.1 (dados/segredos) + 19.2 (headers/SRI)** — é onde blindagem de verdade acontece; o resto é deterrente honesto, com a ressalva de que print/screen-record e cópia-de-fonte não têm solução técnica na web aberta.
+
 ### FASE 0 — Infraestrutura ✅
 - [x] `shared/style.css` — design system (#99E0D2, dark/light theme, responsive)
 - [x] `shared/recorder.js` — TipoRecorder (MP4 2D / WebM WEBGL / MP4 nativo Chrome 130+)
