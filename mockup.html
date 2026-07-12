@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Mockup. Drop your art into procedural vector scenes: poster, tee, phone, card, billboard. Real perspective, no AI.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Mockup</title>
+<link rel="stylesheet" href="shared/style.css?v=20260711-mk1">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260711-mk1"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
+  #mainCanvas { display: block; width: 100%; height: 100%; }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .color-row { display: flex; align-items: center; gap: 6px; }
+  .color-row input[type="color"] { width: 28px; height: 22px; }
+  .color-row label { font-size: 10px; color: var(--text-4); }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  .range-row select { width: auto; }
+  .hint-line { font-size: 9px; color: var(--text-5); margin-top: 6px; letter-spacing: .4px; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Mockup <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('gallery')">Gallery</span>
+      <span class="preset-chip" onclick="applyPreset('studio')">Studio Tee</span>
+      <span class="preset-chip" onclick="applyPreset('pocket')">Pocket</span>
+      <span class="preset-chip" onclick="applyPreset('desk')">Desk</span>
+      <span class="preset-chip" onclick="applyPreset('street')">Street</span>
+      <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Art</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload Art</button>
+      <button class="btn btn-secondary" onclick="useDemo()">Demo</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    <div class="range-row"><span class="range-label">Fit</span><select id="fit" style="flex:1;">
+      <option value="cover" selected>Cover (preenche)</option>
+      <option value="contain">Contain (inteira)</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="zoom" min="70" max="150" value="100"><span class="range-value" id="zoomVal">100</span></div>
+    <div class="hint-line">arraste uma imagem no canvas ou cole (⌘V)</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Scene</div>
+    <div class="range-row"><span class="range-label">Mockup</span><select id="scene" style="flex:1;">
+      <option value="poster" selected>Poster na parede</option>
+      <option value="tee">Camiseta</option>
+      <option value="phone">Phone</option>
+      <option value="card">Cartão na mesa</option>
+      <option value="billboard">Outdoor</option>
+    </select></div>
+    <div class="range-row"><span class="range-label">Angle</span><input type="range" id="angle" min="-10" max="10" value="2"><span class="range-value" id="angleVal">2</span></div>
+    <div class="color-row">
+      <input type="color" id="surfColor" value="#E8E2D8"><label>Surface</label>
+      <input type="color" id="accColor" value="#2A8A7A"><label>Accent</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Light</div>
+    <div class="range-row"><span class="range-label">Shadows</span><input type="range" id="shadow" min="0" max="100" value="55"><span class="range-value" id="shadowVal">55</span></div>
+    <div class="range-row"><span class="range-label">Glow</span><input type="range" id="glow" min="0" max="100" value="40"><span class="range-value" id="glowVal">40</span></div>
+    <label class="checkbox-label"><input type="checkbox" id="grain" checked> Film grain sutil</label>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+      <button class="btn" onclick="exportPNG(2)" data-share-anchor>PNG 2×</button>
+    </div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <canvas id="mainCanvas"></canvas>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — MOCKUP COMPOSITOR (11.3)
+// Your art dropped into procedural vector scenes — poster, tee,
+// phone, card, billboard. Real projective mapping (homography +
+// affine triangle mesh), procedural lighting. No AI, no photos.
+// ============================================================
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+let needsRender = true;
+let art = null;            // HTMLImageElement | HTMLCanvasElement
+let artName = 'demo';
+
+const el = id => document.getElementById(id);
+const val = id => Number(el(id).value);
+const chk = id => el(id).checked;
+const sel = id => el(id).value;
+
+// ---- Projective mapping: homography + affine triangle mesh -------------------
+/** Maps unit square (u,v) → quad [TL,TR,BR,BL] with true perspective. */
+function homography(quad) {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = quad;
+  const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+  const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = (sx * dy2 - sy * dx2) / den;
+  const h = (sy * dx1 - sx * dy1) / den;
+  const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0;
+  const d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+  return (u, v) => {
+    const w = 1 + g * u + h * v;
+    return [(a * u + b * v + c) / w, (d * u + e * v + f) / w];
+  };
+}
+
+/** Affine-draw a source triangle of img onto a destination triangle. */
+function drawTri(ctx, img, s0, s1, s2, d0, d1, d2) {
+  // pad the dest triangle outward a hair to hide mesh seams
+  const cx = (d0[0] + d1[0] + d2[0]) / 3, cy = (d0[1] + d1[1] + d2[1]) / 3;
+  const pad = p => [p[0] + (p[0] - cx) * 0.012, p[1] + (p[1] - cy) * 0.012];
+  const p0 = pad(d0), p1 = pad(d1), p2 = pad(d2);
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]);
+  ctx.closePath();
+  ctx.clip();
+  const [sx0, sy0] = s0, [sx1, sy1] = s1, [sx2, sy2] = s2;
+  const den = sx0 * (sy1 - sy2) + sx1 * (sy2 - sy0) + sx2 * (sy0 - sy1);
+  const a = (d0[0] * (sy1 - sy2) + d1[0] * (sy2 - sy0) + d2[0] * (sy0 - sy1)) / den;
+  const b = (d0[1] * (sy1 - sy2) + d1[1] * (sy2 - sy0) + d2[1] * (sy0 - sy1)) / den;
+  const c = (d0[0] * (sx2 - sx1) + d1[0] * (sx0 - sx2) + d2[0] * (sx1 - sx0)) / den;
+  const dd = (d0[1] * (sx2 - sx1) + d1[1] * (sx0 - sx2) + d2[1] * (sx1 - sx0)) / den;
+  const e = (d0[0] * (sx1 * sy2 - sx2 * sy1) + d1[0] * (sx2 * sy0 - sx0 * sy2) + d2[0] * (sx0 * sy1 - sx1 * sy0)) / den;
+  const f = (d0[1] * (sx1 * sy2 - sx2 * sy1) + d1[1] * (sx2 * sy0 - sx0 * sy2) + d2[1] * (sx0 * sy1 - sx1 * sy0)) / den;
+  ctx.transform(a, b, c, dd, e, f);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+/** Draw img into an arbitrary quad with perspective (subdivided mesh). */
+function drawImageToQuad(ctx, img, quad, sub) {
+  sub = sub || 12;
+  const H = homography(quad);
+  const iw = img.width, ih = img.height;
+  for (let r = 0; r < sub; r++) {
+    for (let c = 0; c < sub; c++) {
+      const u0 = c / sub, u1 = (c + 1) / sub, v0 = r / sub, v1 = (r + 1) / sub;
+      const p00 = H(u0, v0), p10 = H(u1, v0), p11 = H(u1, v1), p01 = H(u0, v1);
+      drawTri(ctx, img, [iw * u0, ih * v0], [iw * u1, ih * v0], [iw * u0, ih * v1], p00, p10, p01);
+      drawTri(ctx, img, [iw * u1, ih * v0], [iw * u1, ih * v1], [iw * u0, ih * v1], p10, p11, p01);
+    }
+  }
+}
+
+/** Crops/frames the art to an aspect (cover or contain) at a given zoom
+ *  and returns a canvas — scenes always receive the exact aspect they need. */
+function framedArt(aspect) {
+  const size = 720;
+  const w = aspect >= 1 ? size : Math.round(size * aspect);
+  const h = aspect >= 1 ? Math.round(size / aspect) : size;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = '#F8F5F0';
+  g.fillRect(0, 0, w, h);
+  if (!art) return c;
+  const z = val('zoom') / 100;
+  const aw = art.width, ah = art.height;
+  const s = (sel('fit') === 'cover' ? Math.max(w / aw, h / ah) : Math.min(w / aw, h / ah)) * z;
+  g.drawImage(art, (w - aw * s) / 2, (h - ah * s) / 2, aw * s, ah * s);
+  return c;
+}
+
+// ---- shared drawing helpers ---------------------------------------------------
+function quadPath(ctx, q) {
+  ctx.beginPath();
+  ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]);
+  ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[3][0], q[3][1]);
+  ctx.closePath();
+}
+function rotQuad(cx, cy, w, h, deg) {
+  const a = deg * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+  const pt = (x, y) => [cx + x * cos - y * sin, cy + x * sin + y * cos];
+  return [pt(-w / 2, -h / 2), pt(w / 2, -h / 2), pt(w / 2, h / 2), pt(-w / 2, h / 2)];
+}
+function shade(hex, f) { // f<1 darkens, f>1 lightens toward white
+  const n = parseInt(hex.slice(1), 16);
+  const ch = i => {
+    let v = (n >> (16 - 8 * i)) & 255;
+    v = f <= 1 ? v * f : v + (255 - v) * (f - 1);
+    return Math.max(0, Math.min(255, Math.round(v)));
+  };
+  return `rgb(${ch(0)},${ch(1)},${ch(2)})`;
+}
+function grainPass(ctx, W, H) {
+  if (!chk('grain')) return;
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  for (let i = 0; i < 900; i++) {
+    const x = (i * 127.3) % W, y = (i * 311.7 + i * i * 0.13) % H;
+    ctx.fillStyle = i % 2 ? '#000' : '#fff';
+    ctx.fillRect(x, y, 1.2, 1.2);
+  }
+  ctx.restore();
+}
+
+// ---- Scenes ---------------------------------------------------------------------
+const SCENES = {
+  /** Framed poster on a wall — window light + drop shadow */
+  poster(ctx, W, H) {
+    const wall = el('surfColor').value;
+    const sh = val('shadow') / 100, gl = val('glow') / 100, ang = val('angle');
+    // wall
+    const gr = ctx.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, shade(wall, 1.06));
+    gr.addColorStop(1, shade(wall, 0.86));
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+    // window light sweep
+    if (gl > 0) {
+      const lg = ctx.createLinearGradient(0, 0, W, H * 0.9);
+      lg.addColorStop(0.12, 'rgba(255,250,235,0)');
+      lg.addColorStop(0.38, `rgba(255,250,235,${0.28 * gl})`);
+      lg.addColorStop(0.55, 'rgba(255,250,235,0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(0, 0, W, H);
+    }
+    const pw = Math.min(W, H) * 0.52, ph = pw * 1.32;
+    const q = rotQuad(W / 2, H * 0.48, pw, ph, ang);
+    // drop shadow
+    ctx.save();
+    ctx.shadowColor = `rgba(26,24,24,${0.45 * sh})`;
+    ctx.shadowBlur = 34 * sh + 6;
+    ctx.shadowOffsetX = 10 * sh;
+    ctx.shadowOffsetY = 16 * sh;
+    quadPath(ctx, q);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
+    // art + thin frame
+    drawImageToQuad(ctx, framedArt(pw / ph), q);
+    quadPath(ctx, q);
+    ctx.strokeStyle = '#1A1818';
+    ctx.lineWidth = Math.max(2, pw * 0.012);
+    ctx.stroke();
+    grainPass(ctx, W, H);
+  },
+
+  /** Tee shirt hanging flat — chest print, fabric folds */
+  tee(ctx, W, H) {
+    const bgc = el('surfColor').value, shirt = '#F5F2EC';
+    const sh = val('shadow') / 100, gl = val('glow') / 100, ang = val('angle');
+    const gr = ctx.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, shade(bgc, 1.05));
+    gr.addColorStop(1, shade(bgc, 0.88));
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, top = H * 0.13, sw = Math.min(W, H) * 0.62;
+    ctx.save();
+    ctx.translate(cx, 0);
+    ctx.rotate(ang * Math.PI / 900); // sutil
+    ctx.translate(-cx, 0);
+    // shadow behind shirt
+    ctx.save();
+    ctx.shadowColor = `rgba(26,24,24,${0.35 * sh})`;
+    ctx.shadowBlur = 30 * sh + 4;
+    ctx.shadowOffsetY = 14 * sh;
+    // silhouette
+    ctx.beginPath();
+    ctx.moveTo(cx - sw * 0.22, top);                                     // left neck
+    ctx.quadraticCurveTo(cx, top + sw * 0.10, cx + sw * 0.22, top);       // collar
+    ctx.lineTo(cx + sw * 0.46, top + sw * 0.10);                          // right shoulder
+    ctx.lineTo(cx + sw * 0.60, top + sw * 0.38);                          // sleeve out
+    ctx.lineTo(cx + sw * 0.40, top + sw * 0.48);                          // sleeve in
+    ctx.lineTo(cx + sw * 0.38, top + sw * 1.06);                          // right side
+    ctx.quadraticCurveTo(cx, top + sw * 1.12, cx - sw * 0.38, top + sw * 1.06);
+    ctx.lineTo(cx - sw * 0.40, top + sw * 0.48);
+    ctx.lineTo(cx - sw * 0.60, top + sw * 0.38);
+    ctx.lineTo(cx - sw * 0.46, top + sw * 0.10);
+    ctx.closePath();
+    ctx.fillStyle = shirt;
+    ctx.fill();
+    ctx.restore();
+    // clip to shirt for print + folds
+    ctx.beginPath();
+    ctx.moveTo(cx - sw * 0.22, top);
+    ctx.quadraticCurveTo(cx, top + sw * 0.10, cx + sw * 0.22, top);
+    ctx.lineTo(cx + sw * 0.46, top + sw * 0.10);
+    ctx.lineTo(cx + sw * 0.60, top + sw * 0.38);
+    ctx.lineTo(cx + sw * 0.40, top + sw * 0.48);
+    ctx.lineTo(cx + sw * 0.38, top + sw * 1.06);
+    ctx.quadraticCurveTo(cx, top + sw * 1.12, cx - sw * 0.38, top + sw * 1.06);
+    ctx.lineTo(cx - sw * 0.40, top + sw * 0.48);
+    ctx.lineTo(cx - sw * 0.60, top + sw * 0.38);
+    ctx.lineTo(cx - sw * 0.46, top + sw * 0.10);
+    ctx.closePath();
+    ctx.save();
+    ctx.clip();
+    // chest print (slight inward taper = fabric)
+    const pw2 = sw * 0.44, ph2 = pw2 * 1.15, py = top + sw * 0.34;
+    const q = [
+      [cx - pw2 / 2, py], [cx + pw2 / 2, py],
+      [cx + pw2 / 2 * 0.97, py + ph2], [cx - pw2 / 2 * 0.97, py + ph2],
+    ];
+    drawImageToQuad(ctx, framedArt(pw2 / ph2), q);
+    // fabric folds
+    const folds = ctx.createLinearGradient(cx - sw * 0.4, 0, cx + sw * 0.4, 0);
+    folds.addColorStop(0, `rgba(26,24,24,${0.16 * sh})`);
+    folds.addColorStop(0.12, 'rgba(26,24,24,0)');
+    folds.addColorStop(0.5, `rgba(26,24,24,${0.05 * sh})`);
+    folds.addColorStop(0.88, 'rgba(26,24,24,0)');
+    folds.addColorStop(1, `rgba(26,24,24,${0.16 * sh})`);
+    ctx.fillStyle = folds;
+    ctx.fillRect(0, 0, W, H);
+    if (gl > 0) {
+      const lg = ctx.createLinearGradient(0, top, 0, top + sw * 0.5);
+      lg.addColorStop(0, `rgba(255,255,250,${0.35 * gl})`);
+      lg.addColorStop(1, 'rgba(255,255,250,0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.restore();
+    // collar rib
+    ctx.beginPath();
+    ctx.moveTo(cx - sw * 0.22, top);
+    ctx.quadraticCurveTo(cx, top + sw * 0.10, cx + sw * 0.22, top);
+    ctx.strokeStyle = shade(shirt, 0.8);
+    ctx.lineWidth = sw * 0.02;
+    ctx.stroke();
+    ctx.restore();
+    grainPass(ctx, W, H);
+  },
+
+  /** Phone standing upright — screen art, glass reflection */
+  phone(ctx, W, H) {
+    const bgc = el('surfColor').value, acc = el('accColor').value;
+    const sh = val('shadow') / 100, gl = val('glow') / 100, ang = val('angle');
+    const gr = ctx.createRadialGradient(W * 0.5, H * 0.32, 40, W * 0.5, H * 0.5, Math.max(W, H) * 0.75);
+    gr.addColorStop(0, shade(bgc, 1.08));
+    gr.addColorStop(1, shade(bgc, 0.8));
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+    // accent arc behind (brand touch)
+    ctx.strokeStyle = acc;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 26;
+    ctx.beginPath();
+    ctx.arc(W * 0.78, H * 0.24, Math.min(W, H) * 0.3, Math.PI * 0.5, Math.PI * 1.4);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    const phH = Math.min(W, H) * 0.86, phW = phH * 0.485;
+    const cx = W / 2, cy = H * 0.52;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(ang * Math.PI / 360);
+    ctx.translate(-cx, -cy);
+    // ground shadow
+    ctx.save();
+    ctx.fillStyle = `rgba(26,24,24,${0.3 * sh})`;
+    ctx.filter = `blur(${10 + 14 * sh}px)`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + phH / 2 + 8, phW * 0.62, phH * 0.045, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // body
+    const r = phW * 0.14;
+    ctx.beginPath();
+    ctx.roundRect(cx - phW / 2, cy - phH / 2, phW, phH, r);
+    ctx.fillStyle = '#1A1818';
+    ctx.fill();
+    // screen
+    const inset = phW * 0.035;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cx - phW / 2 + inset, cy - phH / 2 + inset, phW - inset * 2, phH - inset * 2, r * 0.72);
+    ctx.clip();
+    const sw2 = phW - inset * 2, sh2 = phH - inset * 2;
+    const artC = framedArt(sw2 / sh2);
+    ctx.drawImage(artC, cx - phW / 2 + inset, cy - phH / 2 + inset, sw2, sh2);
+    // glass reflection
+    if (gl > 0) {
+      const lg = ctx.createLinearGradient(cx - phW / 2, cy - phH / 2, cx + phW / 2, cy + phH / 2);
+      lg.addColorStop(0.32, 'rgba(255,255,255,0)');
+      lg.addColorStop(0.46, `rgba(255,255,255,${0.22 * gl})`);
+      lg.addColorStop(0.52, `rgba(255,255,255,${0.10 * gl})`);
+      lg.addColorStop(0.6, 'rgba(255,255,255,0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(cx - phW / 2, cy - phH / 2, phW, phH);
+    }
+    ctx.restore();
+    // notch pill
+    ctx.fillStyle = '#1A1818';
+    ctx.beginPath();
+    ctx.roundRect(cx - phW * 0.14, cy - phH / 2 + inset * 1.9, phW * 0.28, phH * 0.022, phH * 0.011);
+    ctx.fill();
+    ctx.restore();
+    grainPass(ctx, W, H);
+  },
+
+  /** Business card on a desk — strong perspective, second card behind */
+  card(ctx, W, H) {
+    const surf = el('surfColor').value, acc = el('accColor').value;
+    const sh = val('shadow') / 100, gl = val('glow') / 100, ang = val('angle') / 10;
+    const gr = ctx.createRadialGradient(W * 0.42, H * 0.3, 60, W * 0.5, H * 0.55, Math.max(W, H));
+    gr.addColorStop(0, shade(surf, 1.1));
+    gr.addColorStop(1, shade(surf, 0.72));
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+    const s = Math.min(W, H);
+    const mid = [W / 2, H * 0.52];
+    // back card (verso brand)
+    const back = [
+      [mid[0] - s * (0.30 - ang * 0.01), mid[1] - s * 0.26],
+      [mid[0] + s * 0.24, mid[1] - s * 0.335],
+      [mid[0] + s * 0.33, mid[1] - s * 0.155],
+      [mid[0] - s * 0.20, mid[1] - s * 0.075],
+    ];
+    ctx.save();
+    ctx.shadowColor = `rgba(26,24,24,${0.3 * sh})`;
+    ctx.shadowBlur = 16 * sh + 3;
+    ctx.shadowOffsetY = 8 * sh;
+    quadPath(ctx, back);
+    ctx.fillStyle = acc;
+    ctx.fill();
+    ctx.restore();
+    // gold dot on the verso (assinatura)
+    const H2 = homography(back);
+    const dot = H2(0.82, 0.5);
+    ctx.fillStyle = '#D4A040';
+    ctx.beginPath();
+    ctx.arc(dot[0], dot[1], s * 0.014, 0, Math.PI * 2);
+    ctx.fill();
+    // front card with the art
+    const front = [
+      [mid[0] - s * (0.34 + ang * 0.012), mid[1] - s * 0.03],
+      [mid[0] + s * (0.28 - ang * 0.008), mid[1] - s * 0.115],
+      [mid[0] + s * 0.40, mid[1] + s * 0.135],
+      [mid[0] - s * 0.24, mid[1] + s * 0.24],
+    ];
+    ctx.save();
+    ctx.shadowColor = `rgba(26,24,24,${0.42 * sh})`;
+    ctx.shadowBlur = 22 * sh + 4;
+    ctx.shadowOffsetY = 10 * sh;
+    quadPath(ctx, front);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
+    drawImageToQuad(ctx, framedArt(1.75), front, 14);
+    if (gl > 0) {
+      const lg = ctx.createLinearGradient(front[0][0], front[0][1], front[2][0], front[2][1]);
+      lg.addColorStop(0, `rgba(255,255,250,${0.24 * gl})`);
+      lg.addColorStop(0.45, 'rgba(255,255,250,0)');
+      ctx.save();
+      quadPath(ctx, front);
+      ctx.clip();
+      ctx.fillStyle = lg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+    grainPass(ctx, W, H);
+  },
+
+  /** Billboard by the road — sky, structure, lateral perspective */
+  billboard(ctx, W, H) {
+    const acc = el('accColor').value;
+    const sh = val('shadow') / 100, gl = val('glow') / 100, ang = val('angle');
+    // sky
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, shade(el('surfColor').value, 1.12));
+    sky.addColorStop(0.72, shade(el('surfColor').value, 0.95));
+    sky.addColorStop(0.72, shade(acc, 0.55));
+    sky.addColorStop(1, shade(acc, 0.4));
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    // sun/glow
+    if (gl > 0) {
+      const g2 = ctx.createRadialGradient(W * 0.76, H * 0.2, 4, W * 0.76, H * 0.2, s0() * 0.34);
+      g2.addColorStop(0, `rgba(232,201,126,${0.8 * gl})`);
+      g2.addColorStop(1, 'rgba(232,201,126,0)');
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, W, H);
+    }
+    function s0() { return Math.min(W, H); }
+    const s = s0();
+    const t = ang / 10; // -1..1: lateral perspective
+    const bw = s * 0.74, bh = bw * 0.56;
+    const cx = W / 2, cy = H * 0.4;
+    const q = [
+      [cx - bw / 2, cy - bh / 2 + t * s * 0.05],
+      [cx + bw / 2, cy - bh / 2 - t * s * 0.05],
+      [cx + bw / 2 + t * s * 0.03, cy + bh / 2 - t * s * 0.028],
+      [cx - bw / 2 - t * s * 0.03, cy + bh / 2 + t * s * 0.028],
+    ];
+    // structure: pole + braces
+    ctx.fillStyle = '#3a3634';
+    ctx.fillRect(cx - s * 0.02, cy, s * 0.04, H - cy);
+    ctx.save();
+    ctx.strokeStyle = '#3a3634';
+    ctx.lineWidth = s * 0.016;
+    ctx.beginPath();
+    ctx.moveTo(cx - bw * 0.3, cy + bh / 2);
+    ctx.lineTo(cx, cy + bh * 0.85);
+    ctx.moveTo(cx + bw * 0.3, cy + bh / 2);
+    ctx.lineTo(cx, cy + bh * 0.85);
+    ctx.stroke();
+    ctx.restore();
+    // panel frame + shadowed edge
+    ctx.save();
+    ctx.shadowColor = `rgba(26,24,24,${0.4 * sh})`;
+    ctx.shadowBlur = 26 * sh + 4;
+    ctx.shadowOffsetY = 12 * sh;
+    quadPath(ctx, q);
+    ctx.fillStyle = '#1A1818';
+    ctx.fill();
+    ctx.restore();
+    const inset = s * 0.015;
+    const qi = q.map(([x, y]) => [x + (cx - x) * (inset / (bw / 2)), y + (cy - y) * (inset / (bh / 2))]);
+    // light backing under the mesh: AA edges of the triangles blend with what
+    // is behind — against the ink frame they read as hairline seams
+    quadPath(ctx, qi);
+    ctx.fillStyle = '#F8F5F0';
+    ctx.fill();
+    drawImageToQuad(ctx, framedArt(bw / bh), qi, 14);
+    grainPass(ctx, W, H);
+  },
+};
+
+// ---- Demo art (brand poster) ----------------------------------------------------
+function getDemoArt() {
+  const c = document.createElement('canvas');
+  c.width = 760; c.height = 1000;
+  const g = c.getContext('2d');
+  g.fillStyle = '#F8F5F0';
+  g.fillRect(0, 0, 760, 1000);
+  g.lineWidth = 30;
+  for (let i = 0; i < 5; i++) {
+    g.strokeStyle = i % 2 ? '#1B5A4E' : '#2A8A7A';
+    g.beginPath();
+    g.arc(560, 300, 60 + i * 42, Math.PI * 0.65, Math.PI * 2.15);
+    g.stroke();
+  }
+  g.save();
+  g.translate(180, 700); g.rotate(-0.3);
+  g.fillStyle = '#D4A040';
+  g.fillRect(-240, -40, 520, 80);
+  g.fillStyle = '#E8C97E';
+  g.fillRect(-240, 40, 520, 22);
+  g.restore();
+  g.fillStyle = '#99E0D2';
+  g.beginPath();
+  g.moveTo(0, 1000); g.arc(0, 1000, 220, -Math.PI / 2, 0); g.closePath();
+  g.fill();
+  g.fillStyle = '#1A1818';
+  g.font = '900 130px "IBM Plex Mono", monospace';
+  g.textBaseline = 'top';
+  g.fillText('TIPÓ', 52, 80);
+  g.fillRect(52, 232, 260, 22);
+  g.font = '400 34px "IBM Plex Mono", monospace';
+  g.fillText('kinetic type studio', 52, 300);
+  return c;
+}
+
+function useDemo() {
+  art = getDemoArt();
+  artName = 'demo';
+  needsRender = true;
+}
+
+function loadFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return;
+  const img = new Image();
+  img.onload = () => {
+    art = img;
+    artName = file.name.replace(/\.[^.]+$/, '');
+    needsRender = true;
+    TipoUI.showToast('Art aplicada');
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+// ---- Render loop -----------------------------------------------------------------
+function render() {
+  const wrap = document.getElementById('canvasWrap');
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  if (!W || !H) return;
+  if (mainCanvas.width !== W || mainCanvas.height !== H) {
+    mainCanvas.width = W; mainCanvas.height = H;
+  }
+  SCENES[sel('scene')](mainCtx, W, H);
+}
+
+let last = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - last < 33) return;
+  last = now;
+  if (needsRender) { render(); needsRender = false; }
+}
+
+// ---- Export -----------------------------------------------------------------------
+function exportPNG(scale) {
+  scale = scale || 1;
+  const W = mainCanvas.width * scale, H = mainCanvas.height * scale;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.scale(scale, scale);
+  const saved = { w: mainCanvas.width, h: mainCanvas.height };
+  SCENES[sel('scene')](g, saved.w, saved.h);
+  c.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('PNG failed'); return; }
+    TipoUI._downloadBlob(blob, `tipo-mockup-${sel('scene')}-${artName}.png`);
+    TipoUI.showToast(scale > 1 ? 'PNG 2× saved' : 'PNG saved');
+  }, 'image/png');
+}
+
+// ---- Presets / reset ----------------------------------------------------------------
+function setV(id, v) {
+  const node = el(id);
+  if (node.type === 'checkbox') node.checked = v;
+  else node.value = v;
+  const lbl = el(id + 'Val');
+  if (lbl) lbl.textContent = v;
+}
+
+function resetAll() {
+  setV('scene', 'poster'); setV('fit', 'cover'); setV('zoom', 100);
+  setV('angle', 2); setV('shadow', 55); setV('glow', 40); setV('grain', true);
+  el('surfColor').value = '#E8E2D8';
+  el('accColor').value = '#2A8A7A';
+  if (artName === 'demo') useDemo();
+  needsRender = true;
+}
+
+const PRESETS = {
+  gallery: () => {},
+  studio: () => { setV('scene', 'tee'); el('surfColor').value = '#DCE7E2'; setV('shadow', 45); setV('glow', 55); },
+  pocket: () => { setV('scene', 'phone'); el('surfColor').value = '#1B5A4E'; el('accColor').value = '#99E0D2'; setV('glow', 60); setV('angle', -3); },
+  desk: () => { setV('scene', 'card'); el('surfColor').value = '#C9BFAE'; setV('shadow', 70); setV('angle', 4); },
+  street: () => { setV('scene', 'billboard'); el('surfColor').value = '#BFE0D8'; el('accColor').value = '#1B5A4E'; setV('glow', 70); setV('angle', 6); },
+};
+
+function applyPreset(name) {
+  resetAll();
+  if (PRESETS[name]) PRESETS[name]();
+  needsRender = true;
+  document.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
+  if (window.event && window.event.target && window.event.target.classList) window.event.target.classList.add('active');
+}
+
+// ---- Boot ---------------------------------------------------------------------------
+document.querySelectorAll('input, select').forEach(node => {
+  node.addEventListener('input', () => {
+    const lbl = el(node.id + 'Val');
+    if (lbl && node.type === 'range') lbl.textContent = node.value;
+    needsRender = true;
+  });
+});
+el('fileInput').addEventListener('change', e => loadFile(e.target.files[0]));
+window.addEventListener('paste', e => {
+  const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith('image/'));
+  if (item) loadFile(item.getAsFile());
+});
+const wrapEl = document.getElementById('canvasWrap');
+wrapEl.addEventListener('dragover', e => e.preventDefault());
+wrapEl.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+window.addEventListener('resize', () => { needsRender = true; });
+
+TipoUI.initChrome('visual');
+
+window.render = render;
+window.resetAll = resetAll;
+window.applyPreset = applyPreset;
+window.exportPNG = exportPNG;
+window.useDemo = useDemo;
+window.homography = homography;
+window.drawImageToQuad = drawImageToQuad;
+window.getArt = () => ({ name: artName, w: art && art.width, h: art && art.height });
+window.setArtCanvas = c => { art = c; artName = 'test'; needsRender = true; };
+
+useDemo();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

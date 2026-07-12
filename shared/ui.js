@@ -309,7 +309,7 @@ const TipoUI = {
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
-    pattern: 'visual', palette: 'visual', shaper: 'visual',
+    pattern: 'visual', palette: 'visual', shaper: 'visual', mockup: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
     flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
@@ -1919,6 +1919,12 @@ const TipoHelp = {
       'Motion': 'Spin gira os motivos continuamente; Pulse faz a escala respirar. A onda percorre as células na ordem do Stagger (Center = do meio pra fora); Amount = defasagem. Speed é o relógio geral.',
       'Colors': 'Como as cores se distribuem: Cycle alterna as N cores pela malha, Checker = xadrez com 2, Random sorteia com seed, Single usa só a 1ª.',
       'Export': 'PNG = o canvas como está. Tile PNG = 1 período seamless do padrão (repete perfeito). SVG = o mesmo tile em vetor (abre no Illustrator/Figma). Tile e SVG congelam a animação.',
+    },
+    mockup: {
+      'Art': 'Sua arte entra na cena: Upload, arraste no canvas ou cole (⌘V). Fit: Cover preenche o espaço (corta sobras), Contain mostra inteira. Zoom ajusta dentro do frame. Demo volta pro poster da marca.',
+      'Scene': 'O mockup: poster emoldurado, camiseta, phone, cartão em perspectiva na mesa ou outdoor. Angle inclina o objeto (no cartão e outdoor muda a perspectiva). Surface = cor da parede/fundo; Accent = elementos da cena (verso do cartão, arco, pôr-do-sol).',
+      'Light': 'Shadows = intensidade das sombras projetadas e dobras. Glow = luz de janela/reflexo de vidro/sol conforme a cena. Grain adiciona textura de filme sutil no resultado.',
+      'Export': 'PNG no tamanho do canvas; PNG 2× dobra a resolução (bom pra post e portfólio). Tudo é vetorial-procedural — sem fotos, sem IA.',
     },
     shaper: {
       'Source': 'Imagem, vídeo ou webcam modulam o campo: no Field a luminância DOBRA as bandas (Warp); no Grid ela controla o tamanho da forma em cada célula. None = só a forma pura.',

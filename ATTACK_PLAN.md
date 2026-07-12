@@ -417,7 +417,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Upload arte 2D + seleciona mockup (poster, camiseta, tela, cartão)
 - Perspectiva + lighting automáticos
 - Inspirado no Brand Forge mas simplificado (sem IA)
-- **Status:** [ ] Conceito
+- **Status:** ✅ Implementado (2026-07-11) — mockup.html (ferramenta #39, 16ª visual). **Sem fotos, sem IA**: 5 cenas 100% vetoriais-procedurais na paleta (Poster emoldurado na parede, Camiseta com dobras, Phone com notch e reflexo, Cartão na mesa com verso teal+ponto dourado, Outdoor com estrutura e pôr-do-sol). **Perspectiva REAL**: homografia unit-square→quad + malha de triângulos afins (drawImageToQuad, sub 12-14, triângulos com pad 1.2% pra esconder emendas; PEGADINHA: fundo claro atrás do mesh obrigatório — as bordas AA dos triângulos deixam vazar o que está atrás, contra moldura ink viravam hairlines). Controles: Fit cover/contain + Zoom, Angle (rotação/perspectiva por cena), Surface/Accent colors, Shadows/Glow procedurais, grain. Upload/drag&drop/⌘V, demo poster brand. Export PNG + PNG 2× (re-render, não upscale). 5 presets. test-mockup.mjs 10/10 (homografia erro 1e-14, perspectiva não-afim confirmada, cenas/presets distintos).
 
 #### 11.4 — Gradient Shaper (referência: reel @antoncreations, pedido do Daniel 2026-07-03)
 - Referência: https://www.instagram.com/reels/DZ45So6sjym/ — ferramenta de arte com gradientes do Anton (@antoncreations), single HTML file (mesmo espírito da Tipó)

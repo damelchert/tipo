@@ -159,6 +159,15 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### 11.3 Mockup Compositor construído (mockup.html — ferramenta #39, 16ª visual tool) — ROADMAP DE FERRAMENTAS COMPLETO
+- **Conceito**: sem fotos e sem IA — 5 cenas ilustração vetorial procedural na paleta Athos: Poster (parede+moldura+luz de janela), Camiseta (silhueta bezier, dobras, print com taper), Phone (corpo ink, notch, reflexo de vidro, arco accent), Cartão (perspectiva forte, verso teal com ponto dourado — assinatura), Outdoor (céu, sol, estrutura, painel lateral).
+- **Perspectiva real**: `homography()` (unit square→quad, projetiva de verdade — teste confirma midpoint não-afim Δ21px num trapézio) + `drawImageToQuad()` (malha sub×sub, 2 triângulos afins por célula via ctx.transform, clip com pad 1.2% do centróide contra emendas).
+- **PEGADINHA de AA**: emendas hairline apareceram SÓ no outdoor — bordas anti-aliased dos triângulos blendam com o que está ATRÁS; contra a moldura ink escura viram linhas visíveis. Fix: fill claro no quad antes do mesh (poster/cartão já tinham fill branco da sombra, por isso não mostravam).
+- **framedArt(aspect)**: recorta a arte no aspect exato da cena (cover/contain + zoom) num canvas 720 — cada cena pede o aspect que precisa.
+- Export PNG e **PNG 2× por re-render** (a cena redesenha em 2× — nítido de verdade, não upscale). data-share-anchor no PNG 2× destrava Link/⛶ (ferramenta estática, padrão do palette).
+- test-mockup.mjs 10/10; mobile sweep 39/39 (mockup entrou automático — o teste descobre *.html).
+- **Total: 39 ferramentas (16 visual + 23 kinetic). Fase 11 COMPLETA. Não há mais ferramentas pendentes no roadmap.**
+
 ### Landing polish: cards das visual tools ANIMADOS (15 cenas CSS) + micro-interações
 - Daniel: "dar um talento nas mini animações... faz em GSAP?" → **decisão: CSS keyframes, não GSAP**. GSAP fica onde já está (entradas orquestradas + cometa do index); loops ambientes infinitos de 15 cards são melhores em CSS (GPU, zero JS/frame, mesmo modelo dos quadrantes kinetic).
 - **15 mini-cenas**, cada uma evocando o efeito da ferramenta: dithering (2 camadas de dots driftando), retícula (halftone pulsando via background-size), glitch (G com rgb-shadow + clip-path step-end), datamosh (bloco smear skew+blur), rastro (R com trail de text-shadow), pixelsort (3 colunas de gradiente em velocidades diferentes), depth (plano 3D basculante), gradientmap (pan de rampa 300%), riso (2 círculos multiply desregistrados — mint, não teal escuro: multiply c/ teal ficava lamacento), ascii (grade de chars rolando steps(4)), audiotype (4 barras <i> com delays negativos), pattern (arcos truchet em pan), palette (listras deslizando), shaper (anéis concêntricos respirando), overlay (grain step-end + light leak).

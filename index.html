@@ -494,6 +494,15 @@ body { overflow: hidden; }
   .tipo-mode-card-preview, .tipo-mode-card-preview::before, .tipo-mode-card-preview::after,
   .pv-audio i { animation: none !important; }
 }
+
+.pv-mockup { background: linear-gradient(180deg, #E8E2D8 62%, #c9bfae 62%); }
+.pv-mockup::before { content: ''; position: absolute; left: 14px; top: 12px; width: 30px; height: 38px;
+  background: linear-gradient(135deg, #F8F5F0 30%, #99E0D2 30% 55%, #2A8A7A 55% 80%, #D4A040 80%);
+  border: 2px solid #1A1818; box-shadow: 5px 6px 8px rgba(26,24,24,.35);
+  animation: pvMock calc(3.4s * var(--pvs)) ease-in-out infinite; }
+@keyframes pvMock {
+  0%, 100% { transform: perspective(90px) rotateY(14deg); }
+  50% { transform: perspective(90px) rotateY(-14deg); } }
 </style>
 </head>
 <body>
@@ -507,7 +516,7 @@ body { overflow: hidden; }
       <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
     </div>
     <div class="tipo-breadcrumb" id="breadcrumb">
-      <span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>
+      <span class="header-stats">39 tools &bull; 0 install &bull; 100% browser</span>
       <span class="current">Home</span>
     </div>
     <div class="tipo-header-line"></div>
@@ -526,7 +535,7 @@ body { overflow: hidden; }
           </div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
-          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Overlays · AudioType&nbsp;·&nbsp;</div></div>
+          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -630,6 +639,14 @@ body { overflow: hidden; }
             <div class="tipo-mode-card-title">Gradient Shaper</div>
             <div class="tipo-mode-card-desc">Any shape becomes a gradient — distance-field bands flow from text, blobs or hand-drawn shapes. Image/video warps the field.</div>
             <div class="tipo-mode-card-meta">image &bull; video &bull; webcam &bull; draw &bull; 9 presets &bull; export mp4/png</div>
+          </div>
+        </a>
+        <a href="mockup.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview pv-mockup"></div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Mockup</div>
+            <div class="tipo-mode-card-desc">Drop your art into procedural vector scenes — framed poster, tee, phone, card & billboard. Real perspective mapping, no AI.</div>
+            <div class="tipo-mode-card-meta">5 scenes &bull; perspective &bull; lighting &bull; export png/2x</div>
           </div>
         </a>
         <a href="overlay.html" class="tipo-mode-card">
@@ -785,7 +802,7 @@ function showLevel(id) {
 
 function updateBreadcrumb(path) {
   const bc = document.getElementById('breadcrumb');
-  let html = '<span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>' +
+  let html = '<span class="header-stats">39 tools &bull; 0 install &bull; 100% browser</span>' +
     '<span onclick="goHome()">Home</span>';
   path.forEach((item, i) => {
     html += '<span class="sep">/</span>';
