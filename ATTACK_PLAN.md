@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-36 ferramentas ativas: 13 visual tools + 23 kinetic type modes.
+39 ferramentas ativas: 16 visual tools + 23 kinetic type modes.
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
