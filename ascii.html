@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
 <script src="shared/ui.js?v=20260711-hq1"></script>
+<script src="shared/hq.js?v=20260712-hq3"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -39,31 +40,40 @@
     <div class="section-title">Presets</div>
     <div class="preset-grid">
       <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
-      <span class="preset-chip" onclick="applyPreset('dense')">Dense</span>
-      <span class="preset-chip" onclick="applyPreset('blocks')">Blocks</span>
-      <span class="preset-chip" onclick="applyPreset('braille')">Braille</span>
+      <span class="preset-chip" onclick="applyPreset('detail')">Detail</span>
+      <span class="preset-chip" onclick="applyPreset('edge')">Edge</span>
+      <span class="preset-chip" onclick="applyPreset('duotone')">Duotone</span>
       <span class="preset-chip" onclick="applyPreset('matrix')">Matrix</span>
-      <span class="preset-chip" onclick="applyPreset('colorphoto')">Color Photo</span>
-      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
+      <span class="preset-chip" onclick="applyPreset('athos')">Athos</span>
+      <span class="preset-chip" onclick="applyPreset('mosaic')">Mosaic</span>
       <span class="preset-chip" onclick="applyPreset('poster')">Poster</span>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Resolution</div>
-    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="10" max="200" value="80"><span class="range-value" id="columnsVal">80</span></div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="columns" min="10" max="240" value="80"><span class="range-value" id="columnsVal">80</span></div>
     <div class="range-row"><span class="range-label">Font Size</span><input type="range" id="fontSize" min="0" max="40" value="0"><span class="range-value" id="fontSizeVal">auto</span></div>
+    <div class="range-row"><span class="range-label">Line Height</span><input type="range" id="lineHeight" min="5" max="20" value="16"><span class="range-value" id="lineHeightVal">1.6</span></div>
   </div>
 
   <div class="section">
     <div class="section-title">Character Set</div>
     <select id="charset">
       <option value="standard">Standard ( .:-=+*#%@)</option>
-      <option value="blocks">Blocks</option>
-      <option value="braille">Braille</option>
+      <option value="detail">Detail (70 levels)</option>
+      <option value="blocks">Blocks (&#9617;&#9618;&#9619;&#9608;)</option>
+      <option value="dots">Dots ( &#183;:&#176;&#8226;)</option>
+      <option value="digits">Digits (data)</option>
       <option value="custom">Custom</option>
     </select>
     <input type="text" id="customChars" value=" .oO@#" placeholder="Custom characters (dark to light)" style="display:none; font-size:12px;">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Edges</div>
+    <label class="checkbox-label"><input type="checkbox" id="edgeOn"> Edge Detection ( | / &#8212; \ )</label>
+    <div class="range-row"><span class="range-label">Strength</span><input type="range" id="edgeStrength" min="5" max="100" value="30"><span class="range-value" id="edgeStrengthVal">30</span></div>
   </div>
 
   <div class="section">
@@ -72,6 +82,8 @@
     <select id="colorMode">
       <option value="original">Original Colors</option>
       <option value="mono">Monochrome</option>
+      <option value="duotone">Duotone</option>
+      <option value="athos">Athos Palette</option>
       <option value="matrix">Matrix (green)</option>
     </select>
     <label style="font-size:11px;">Background</label>
@@ -83,23 +95,38 @@
       <span class="range-label">BG Color</span>
       <input type="color" id="bgColor" value="#F8F5F0">
     </div>
-    <div class="color-section-row">
+    <div class="color-section-row" id="monoRow" style="display:none;">
       <span class="range-label">Mono Color</span>
       <input type="color" id="monoColor" value="#1A1818">
     </div>
+    <div class="color-section-row" id="duoRowA" style="display:none;">
+      <span class="range-label">Duo Dark</span>
+      <input type="color" id="duoA" value="#1B5A4E">
+    </div>
+    <div class="color-section-row" id="duoRowB" style="display:none;">
+      <span class="range-label">Duo Light</span>
+      <input type="color" id="duoB" value="#99E0D2">
+    </div>
+    <label class="checkbox-label"><input type="checkbox" id="cellFill"> Cell Fill (mosaic)</label>
     <label class="checkbox-label"><input type="checkbox" id="invertBright"> Invert Brightness</label>
   </div>
 
   <div class="section">
     <div class="section-title">Fine Tuning</div>
-    <div class="range-row"><span class="range-label">Line Height</span><input type="range" id="lineHeight" min="5" max="20" value="16"><span class="range-value" id="lineHeightVal">1.6</span></div>
+    <div class="range-row"><span class="range-label">Brightness</span><input type="range" id="brightness" min="-100" max="100" value="0"><span class="range-value" id="brightnessVal">0</span></div>
     <div class="range-row"><span class="range-label">Contrast</span><input type="range" id="contrast" min="0" max="100" value="0"><span class="range-value" id="contrastVal">0</span></div>
+    <div class="range-row"><span class="range-label">Gamma</span><input type="range" id="gamma" min="20" max="300" value="100"><span class="range-value" id="gammaVal">1.00</span></div>
+    <div class="range-row"><span class="range-label">Saturation</span><input type="range" id="saturation" min="0" max="200" value="100"><span class="range-value" id="saturationVal">100</span></div>
+    <div class="range-row"><span class="range-label">Flicker</span><input type="range" id="flicker" min="0" max="100" value="0"><span class="range-value" id="flickerVal">0</span></div>
   </div>
 
   <div class="section section-divider">
     <div class="section-title">Export</div>
     <div class="btn-row">
       <button class="btn" onclick="savePNG()">PNG</button>
+      <button class="btn btn-secondary" onclick="copyTXT()">Copy TXT</button>
+    </div>
+    <div class="btn-col" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
       <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
     </div>
     <div class="record-timer" id="recTimer"></div>
@@ -114,10 +141,18 @@
 <div class="tipo-toast" id="toast"></div>
 
 <script>
+// ============================================================
+// TIPÓ — ASCII (Fase 17: modernização)
+// Image + Video + Webcam → texto. 6 charsets + custom, edge
+// detection Sobel com caracteres direcionais, duotone/Athos,
+// cell fill (mosaico), gamma/saturation/flicker, copy TXT,
+// Export HQ na resolução do vídeo fonte.
+// ============================================================
 let font, recorder;
 let sourceImg = null;
 let sourceVideo = null;
 let webcamStream = null;
+let hqK = 1; // Export HQ: multiplicador do font size manual (px)
 let mediaUrl = null; // object URL of current video file (revoked on replace)
 
 function setMediaUrl(url) {
@@ -126,13 +161,34 @@ function setMediaUrl(url) {
 }
 let sourceType = null; // 'image' | 'video' | 'webcam'
 let sampleBuffer = null;
+let lastGrid = null; // último grid renderizado (pro Copy TXT)
+let wakeUntil = 0;   // imagem estática: mantém o loop vivo até este millis()
+                     // (o morph de preset do TipoUI leva 300ms sem disparar input)
 
+function wake(ms) { wakeUntil = millis() + ms; loop(); }
+
+// só glifos que EXISTEM na IBM Plex Mono — p5 renderiza paths opentype
+// sem fallback do sistema, então glifo ausente vira tofu (.notdef)
 const CHARSETS = {
   standard: ' .:-=+*#%@',
-  blocks: ' \u2591\u2592\u2593\u2588',
-  braille: ' \u2801\u2803\u2807\u2847\u28C7\u28E7\u28F7\u28FF',
+  detail: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+  blocks: ' ░▒▓█',
+  dots: ' ·:°•',
+  digits: ' .1372456098#@',
   custom: null
 };
+
+// bins de direção do gradiente → caractere da ARESTA (perpendicular)
+const EDGE_CHARS = ['', '|', '/', '-', '\\'];
+
+// rampa Athos: sombra → luz
+const ATHOS_HEX = ['#1A1818', '#1B5A4E', '#2A8A7A', '#D4A040', '#99E0D2', '#F8F5F0'];
+
+function hexRGB(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const ATHOS_RGB = ATHOS_HEX.map(hexRGB);
 
 function preload() { font = loadFont('assets/fonts/IBMPlexMono-Regular.ttf'); }
 
@@ -148,13 +204,15 @@ function setup() {
   TipoUI.init({
     mode: 'ascii',
     formatters: {
-      lineHeight: { div: 10, decimals: 1 }
+      lineHeight: { div: 10, decimals: 1 },
+      gamma: { div: 100, decimals: 2 }
     }
   });
   recorder = TipoUI.recorder;
 
   createDefaultImage();
   bindInputs();
+  updateColorUI();
 }
 
 function windowResized() {
@@ -264,22 +322,30 @@ function getCurrentFrame() {
   return sourceImg;
 }
 
+function updateColorUI() {
+  const m = document.getElementById('colorMode').value;
+  document.getElementById('monoRow').style.display = m === 'mono' ? '' : 'none';
+  document.getElementById('duoRowA').style.display = m === 'duotone' ? '' : 'none';
+  document.getElementById('duoRowB').style.display = m === 'duotone' ? '' : 'none';
+}
+
 function bindInputs() {
   document.getElementById('fileInput').addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) handleFile(file);
   });
 
-  // Show/hide custom chars input
   document.getElementById('charset').addEventListener('change', () => {
     const v = document.getElementById('charset').value;
     document.getElementById('customChars').style.display = v === 'custom' ? 'block' : 'none';
-    if (sourceType === 'image') redraw();
+    if (sourceType === 'image') wake(80);
   });
+
+  document.getElementById('colorMode').addEventListener('change', updateColorUI);
 
   // Redraw on any control change for static images
   document.querySelectorAll('input[type="range"], select, input[type="checkbox"], input[type="color"], input[type="text"]').forEach(el => {
-    el.addEventListener('input', () => { if (sourceType === 'image') { loop(); setTimeout(() => { if (sourceType === 'image') noLoop(); }, 50); } });
+    el.addEventListener('input', () => { if (sourceType === 'image') wake(80); });
   });
 
   const cc = document.getElementById('canvasContainer');
@@ -291,13 +357,84 @@ function bindInputs() {
   });
 }
 
+// --- Grid: amostragem + brilho ajustado + chars + edges ---
+
+function buildGrid(frame, cols, rows, o) {
+  if (!sampleBuffer || sampleBuffer.width !== cols || sampleBuffer.height !== rows) {
+    if (sampleBuffer) sampleBuffer.remove();
+    sampleBuffer = createGraphics(cols, rows);
+    sampleBuffer.pixelDensity(1);
+  }
+  sampleBuffer.image(frame, 0, 0, cols, rows);
+  sampleBuffer.loadPixels();
+  const px = sampleBuffer.pixels;
+
+  const n = cols * rows;
+  const lum = new Float32Array(n); // luma CRU (pré-ajustes) — base do Sobel
+  for (let i = 0; i < n; i++) {
+    const j = i * 4;
+    lum[i] = ((px[j] || 0) * 0.299 + (px[j + 1] || 0) * 0.587 + (px[j + 2] || 0) * 0.114) / 255;
+  }
+
+  // Sobel: magnitude acima do threshold vira caractere direcional
+  let edge = null;
+  if (o.edgeOn) {
+    edge = new Uint8Array(n);
+    const th = (105 - o.edgeStrength) / 100; // strength alto = mais arestas
+    for (let r = 1; r < rows - 1; r++) {
+      for (let c = 1; c < cols - 1; c++) {
+        const i = r * cols + c;
+        const gx = (lum[i - cols + 1] + 2 * lum[i + 1] + lum[i + cols + 1])
+                 - (lum[i - cols - 1] + 2 * lum[i - 1] + lum[i + cols - 1]);
+        const gy = (lum[i + cols - 1] + 2 * lum[i + cols] + lum[i + cols + 1])
+                 - (lum[i - cols - 1] + 2 * lum[i - cols] + lum[i - cols + 1]);
+        if (Math.sqrt(gx * gx + gy * gy) < th) continue;
+        // direção do gradiente (0..PI) → aresta perpendicular
+        const a = (Math.atan2(gy, gx) + Math.PI) % Math.PI;
+        if (a < Math.PI / 8 || a >= Math.PI * 7 / 8) edge[i] = 1;      // |
+        else if (a < Math.PI * 3 / 8) edge[i] = 2;                     // /
+        else if (a < Math.PI * 5 / 8) edge[i] = 3;                     // -
+        else edge[i] = 4;                                              // \
+      }
+    }
+  }
+
+  const chars = new Array(n);
+  const bArr = new Float32Array(n);
+  const last = o.chars.length - 1;
+  const gammaInv = o.gammaV !== 1 ? 1 / o.gammaV : 1;
+  const flickerP = o.flickerV / 250; // 0..0.4 de chance por célula
+
+  for (let i = 0; i < n; i++) {
+    let b = lum[i] + o.brightnessV / 100;
+    if (o.contrastV > 0) {
+      const factor = 1 + o.contrastV / 25;
+      b = (b - 0.5) * factor + 0.5;
+    }
+    b = Math.min(1, Math.max(0, b));
+    if (gammaInv !== 1) b = Math.pow(b, gammaInv);
+    if (o.invertB) b = 1 - b;
+
+    let idx = Math.floor(b * last + 0.0001);
+    if (o.flickerV > 0 && o.isMotion && Math.random() < flickerP) {
+      idx += Math.random() < 0.5 ? -1 : 1;
+    }
+    idx = Math.min(last, Math.max(0, idx));
+    let ch = o.chars.charAt(idx);
+    if (edge && edge[i]) { ch = EDGE_CHARS[edge[i]]; b = Math.max(b, 0.9); }
+    chars[i] = ch;
+    bArr[i] = b;
+  }
+
+  return { chars, bright: bArr, px, cols, rows };
+}
+
 // --- Draw Loop ---
 
 function draw() {
   const frame = getCurrentFrame();
   if (!frame) return;
 
-  // Check if video is ready
   if ((sourceType === 'video' || sourceType === 'webcam') && sourceVideo) {
     if (sourceVideo.elt.readyState < 2) return;
   }
@@ -311,38 +448,37 @@ function draw() {
   const bgMode = document.getElementById('bgMode').value;
   const bgC = document.getElementById('bgColor').value;
   const monoC = document.getElementById('monoColor').value;
-  const invertB = document.getElementById('invertBright').checked;
   const lineH = val('lineHeight') / 10;
-  const contrastV = val('contrast');
   const fontSizeRaw = val('fontSize');
+  const cellFillOn = document.getElementById('cellFill').checked;
 
-  // Calculate cell dimensions
   const cellW = width / cols;
-  const fSize = fontSizeRaw === 0 ? max(4, cellW * 1.1) : fontSizeRaw;
+  // blocks: advance da Plex Mono é 0.6em — 1.7× fecha as calhas verticais
+  const autoMult = charsetKey === 'blocks' ? 1.7 : 1.1;
+  const fSize = fontSizeRaw === 0 ? max(4, cellW * autoMult) : fontSizeRaw * hqK;
   const cellH = fSize * lineH;
-  const rows = floor(height / cellH);
+  const rows = max(1, floor(height / cellH));
 
-  // Background
-  if (bgMode === 'solid') {
-    background(bgC);
-  } else {
-    clear();
-  }
+  const grid = buildGrid(frame, cols, rows, {
+    chars,
+    invertB: document.getElementById('invertBright').checked,
+    brightnessV: val('brightness'),
+    contrastV: val('contrast'),
+    gammaV: val('gamma') / 100,
+    flickerV: val('flicker'),
+    edgeOn: document.getElementById('edgeOn').checked,
+    edgeStrength: val('edgeStrength'),
+    isMotion: sourceType !== 'image'
+  });
+  lastGrid = grid;
 
-  // Create off-screen buffer for sampling
-  const fw = frame.width || frame.elt?.videoWidth || 640;
-  const fh = frame.height || frame.elt?.videoHeight || 480;
+  if (bgMode === 'solid') background(bgC); else clear();
 
-  if (!sampleBuffer || sampleBuffer.width !== cols || sampleBuffer.height !== rows) {
-    if (sampleBuffer) sampleBuffer.remove();
-    sampleBuffer = createGraphics(cols, rows);
-  }
-  sampleBuffer.image(frame, 0, 0, cols, rows);
-  sampleBuffer.loadPixels();
-
-  // Parse mono color
-  const mc = color(monoC);
-  const mcR = red(mc), mcG = green(mc), mcB = blue(mc);
+  const [mR, mG, mB] = hexRGB(monoC);
+  const [dAR, dAG, dAB] = hexRGB(document.getElementById('duoA').value);
+  const [dBR, dBG, dBB] = hexRGB(document.getElementById('duoB').value);
+  const [bgR, bgG, bgB] = hexRGB(bgC);
+  const satV = val('saturation') / 100;
 
   textSize(fSize);
   textAlign(CENTER, CENTER);
@@ -350,43 +486,43 @@ function draw() {
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const idx = (row * cols + col) * 4;
-      let r = sampleBuffer.pixels[idx] || 0;
-      let g = sampleBuffer.pixels[idx + 1] || 0;
-      let b = sampleBuffer.pixels[idx + 2] || 0;
+      const i = row * cols + col;
+      const ch = grid.chars[i];
+      if (!cellFillOn && ch === ' ') continue;
 
-      // Brightness with contrast boost
-      let bright = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-
-      // Apply contrast
-      if (contrastV > 0) {
-        const factor = 1 + contrastV / 25;
-        bright = (bright - 0.5) * factor + 0.5;
-        bright = constrain(bright, 0, 1);
-      }
-
-      // Invert
-      if (invertB) bright = 1 - bright;
-
-      // Map to character
-      const charIdx = floor(bright * (chars.length - 1));
-      const ch = chars.charAt(constrain(charIdx, 0, chars.length - 1));
-
-      if (ch === ' ' && bgMode === 'solid') continue;
-
-      // Color
+      const b = grid.bright[i];
+      const j = i * 4;
+      let r, g, bl, alpha = 255;
       if (colorModeVal === 'original') {
-        fill(r, g, b);
-      } else if (colorModeVal === 'matrix') {
-        // Green shades mapped to brightness
-        const gv = floor(bright * 255);
-        fill(0, gv, floor(gv * 0.3));
-      } else {
-        // Monochrome: use mono color with brightness as alpha
-        fill(mcR, mcG, mcB, floor(bright * 255));
+        r = grid.px[j] || 0; g = grid.px[j + 1] || 0; bl = grid.px[j + 2] || 0;
+        if (satV !== 1) {
+          const m = r * 0.299 + g * 0.587 + bl * 0.114;
+          r = m + (r - m) * satV; g = m + (g - m) * satV; bl = m + (bl - m) * satV;
+        }
+      } else if (colorModeVal === 'mono') {
+        r = mR; g = mG; bl = mB; alpha = b * 255;
+      } else if (colorModeVal === 'duotone') {
+        r = dAR + (dBR - dAR) * b; g = dAG + (dBG - dAG) * b; bl = dAB + (dBB - dAB) * b;
+      } else if (colorModeVal === 'athos') {
+        const [ar, ag, ab] = ATHOS_RGB[Math.min(5, Math.floor(b * 6))];
+        r = ar; g = ag; bl = ab;
+      } else { // matrix
+        const gv = b * 255;
+        r = 0; g = gv; bl = gv * 0.3;
       }
 
-      text(ch, col * cellW + cellW / 2, row * cellH + cellH / 2);
+      const x = col * cellW, y = row * cellH;
+      if (cellFillOn) {
+        fill(r, g, bl, alpha);
+        rect(x, y, cellW + 0.5, cellH + 0.5);
+        if (ch !== ' ') {
+          fill(bgR, bgG, bgB);
+          text(ch, x + cellW / 2, y + cellH / 2);
+        }
+      } else {
+        fill(r, g, bl, alpha);
+        text(ch, x + cellW / 2, y + cellH / 2);
+      }
     }
   }
 
@@ -399,8 +535,8 @@ function draw() {
   // Capture frame for recording
   TipoUI.captureFrame();
 
-  // Static image: stop looping
-  if (sourceType === 'image') noLoop();
+  // Static image: stop looping (após esgotar a janela do wake)
+  if (sourceType === 'image' && millis() > wakeUntil) noLoop();
 }
 
 // --- Export ---
@@ -408,83 +544,119 @@ function draw() {
 function savePNG() { saveCanvas('tipo-ascii', 'png'); TipoUI.showToast('PNG saved'); }
 async function toggleRec() { await TipoUI.toggleRec(); }
 
+function copyTXT() {
+  if (!lastGrid) { TipoUI.showToast('Nothing rendered yet'); return; }
+  const { chars, cols, rows } = lastGrid;
+  const lines = [];
+  for (let r = 0; r < rows; r++) {
+    lines.push(chars.slice(r * cols, (r + 1) * cols).join('').replace(/\s+$/, ''));
+  }
+  const txt = lines.join('\n');
+  const fallback = () => TipoUI._downloadBlob(new Blob([txt], { type: 'text/plain' }), 'tipo-ascii.txt');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt)
+      .then(() => TipoUI.showToast('ASCII copied to clipboard'))
+      .catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
 // --- Presets ---
 
 function resetAll() {
   setVal('columns', 80);
   setVal('fontSize', 0);
+  setVal('lineHeight', 16);
   document.getElementById('charset').value = 'standard';
   document.getElementById('customChars').style.display = 'none';
+  document.getElementById('edgeOn').checked = false;
+  setVal('edgeStrength', 30);
   document.getElementById('colorMode').value = 'original';
   document.getElementById('bgMode').value = 'solid';
   document.getElementById('bgColor').value = '#F8F5F0';
   document.getElementById('monoColor').value = '#1A1818';
+  document.getElementById('duoA').value = '#1B5A4E';
+  document.getElementById('duoB').value = '#99E0D2';
+  document.getElementById('cellFill').checked = false;
   document.getElementById('invertBright').checked = false;
-  setVal('lineHeight', 16);
+  setVal('brightness', 0);
   setVal('contrast', 0);
+  setVal('gamma', 100);
+  setVal('saturation', 100);
+  setVal('flicker', 0);
+  updateColorUI();
+  if (sourceType === 'image') wake(100);
 }
 
 const PRESETS = {
   classic: () => {
     resetAll();
     setVal('columns', 80);
-    document.getElementById('charset').value = 'standard';
     document.getElementById('colorMode').value = 'mono';
-    document.getElementById('monoColor').value = '#ffffff';
+    document.getElementById('monoColor').value = '#F8F5F0';
+    document.getElementById('bgColor').value = '#1A1818';
   },
-  dense: () => {
+  detail: () => {
     resetAll();
-    setVal('columns', 160);
-    document.getElementById('charset').value = 'standard';
-    document.getElementById('colorMode').value = 'original';
+    setVal('columns', 180);
+    document.getElementById('charset').value = 'detail';
+    document.getElementById('bgColor').value = '#1A1818';
     setVal('lineHeight', 12);
+    setVal('contrast', 10);
+    setVal('saturation', 120);
   },
-  blocks: () => {
-    resetAll();
-    setVal('columns', 100);
-    document.getElementById('charset').value = 'blocks';
-    document.getElementById('colorMode').value = 'original';
-    setVal('lineHeight', 10);
-  },
-  braille: () => {
-    resetAll();
-    setVal('columns', 120);
-    document.getElementById('charset').value = 'braille';
-    document.getElementById('colorMode').value = 'mono';
-    document.getElementById('monoColor').value = '#ffffff';
-    setVal('lineHeight', 12);
-  },
-  matrix: () => {
-    resetAll();
-    setVal('columns', 90);
-    document.getElementById('charset').value = 'standard';
-    document.getElementById('colorMode').value = 'matrix';
-    document.getElementById('bgColor').value = '#000a00';
-    setVal('contrast', 30);
-  },
-  colorphoto: () => {
+  edge: () => {
     resetAll();
     setVal('columns', 140);
-    document.getElementById('charset').value = 'standard';
-    document.getElementById('colorMode').value = 'original';
+    document.getElementById('charset').value = 'dots';
+    document.getElementById('edgeOn').checked = true;
+    setVal('edgeStrength', 45);
+    document.getElementById('colorMode').value = 'mono';
+    document.getElementById('monoColor').value = '#99E0D2';
+    document.getElementById('bgColor').value = '#1A1818';
+    setVal('lineHeight', 12);
+    setVal('gamma', 130);
+  },
+  duotone: () => {
+    resetAll();
+    setVal('columns', 120);
+    document.getElementById('colorMode').value = 'duotone';
+    document.getElementById('bgColor').value = '#1A1818';
     setVal('lineHeight', 12);
     setVal('contrast', 20);
   },
-  minimal: () => {
+  matrix: () => {
     resetAll();
-    setVal('columns', 50);
-    document.getElementById('charset').value = 'custom';
-    document.getElementById('customChars').style.display = 'block';
-    document.getElementById('customChars').value = ' .o@';
-    document.getElementById('colorMode').value = 'mono';
-    document.getElementById('monoColor').value = '#cccccc';
-    setVal('lineHeight', 18);
+    setVal('columns', 100);
+    document.getElementById('charset').value = 'digits';
+    document.getElementById('colorMode').value = 'matrix';
+    document.getElementById('bgColor').value = '#000a00';
+    setVal('lineHeight', 12);
+    setVal('contrast', 30);
+    setVal('flicker', 35);
+  },
+  athos: () => {
+    resetAll();
+    setVal('columns', 90);
+    document.getElementById('charset').value = 'blocks';
+    document.getElementById('colorMode').value = 'athos';
+    document.getElementById('bgColor').value = '#F8F5F0';
+    setVal('lineHeight', 10);
+    setVal('contrast', 15);
+  },
+  mosaic: () => {
+    resetAll();
+    setVal('columns', 70);
+    document.getElementById('cellFill').checked = true;
+    document.getElementById('bgColor').value = '#1A1818';
+    setVal('lineHeight', 10);
+    setVal('saturation', 140);
   },
   poster: () => {
     resetAll();
     setVal('columns', 30);
     document.getElementById('charset').value = 'blocks';
-    document.getElementById('colorMode').value = 'original';
     setVal('lineHeight', 10);
     setVal('contrast', 50);
   }
@@ -492,8 +664,38 @@ const PRESETS = {
 
 function applyPreset(name) {
   TipoUI.applyPreset(name, PRESETS);
-  loop(); redraw();
+  document.getElementById('customChars').style.display =
+    document.getElementById('charset').value === 'custom' ? 'block' : 'none';
+  updateColorUI();
+  wake(450); // cobre o morph de 300ms do TipoUI + folga
 }
+
+// ============================================================
+// EXPORT HQ (Fase 16): takeover p5 — noLoop + resizeCanvas(W,H)
+// + redraw() por frame roda o draw() REAL em resolução nativa.
+// O grid (columns) é relativo, então o look fica idêntico.
+// ============================================================
+let hqPrev = null;
+TipoHQ.enable({
+  getVideo: () => (sourceType === 'video' && sourceVideo && sourceVideo.elt) ? sourceVideo.elt : null,
+  begin: (W, H) => {
+    hqPrev = { w: width, h: height };
+    hqK = W / width;
+    noLoop();
+    resizeCanvas(W, H);
+  },
+  render: (frame, tSec, ctx, W, H) => {
+    redraw();
+    ctx.drawImage(drawingContext.canvas, 0, 0, W, H);
+  },
+  end: () => {
+    hqK = 1;
+    if (hqPrev) resizeCanvas(hqPrev.w, hqPrev.h);
+    hqPrev = null;
+    if (sourceType === 'image') redraw(); else loop();
+  },
+  filename: () => 'tipo-ascii-HQ',
+});
 </script>
 </body>
 </html>

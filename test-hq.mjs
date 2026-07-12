@@ -47,6 +47,7 @@ for (const [tool, src, expectW, expectH, expFrames] of [
   ['dithering', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
   ['reticula', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
   ['glitch', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['ascii', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
 ]) {
   const page = await ctx.newPage();
   let errs = 0;

@@ -462,10 +462,10 @@ Diagnóstico: o modelo "mover playhead + mexer slider = keyframe" (padrão Caval
 - **Status:** [ ] Aguardando decisão de direção (A+C é a aposta)
 
 ### FASE 17 — MODERNIZAÇÃO DE FERRAMENTAS (pedido do Daniel 11/07)
-- [ ] **ASCII** — mais opções e ajustes mais finos (charsets extras? edge detection? cores por faixa? kerning/densidade fina)
+- ✅ **ASCII** (2026-07-12) — modernização completa: **edge detection Sobel com caracteres direcionais |/-\\** (o look ASCII moderno — threshold (105-strength)/100 sobre luma cru do grid), charsets novos (Detail 70 níveis, Dots ·:°•, Digits/data), color modes novos (**Duotone** com par de cores, **Athos** — rampa da paleta por brilho), **Cell Fill** (mosaico: célula pintada + glifo knockout na cor do fundo), fine tuning (brightness/gamma/saturation/**flicker** temporal pra vídeo), **Copy TXT** (clipboard com fallback download), **Export HQ** via takeover p5 (9ª ferramenta da suíte, test-hq 42/42). 8 presets novos: Classic/Detail/Edge/Duotone/Matrix/Athos/Mosaic/Poster. Fixes de raiz: braille/katakana eram TOFU (p5 renderiza paths opentype sem fallback — glifo fora da Plex Mono = .notdef; removidos, charsets agora só com glifos verificados via charToGlyphIndex), blocks com calhas verticais (advance 0.6em — auto-size ×1.7), e **wake(ms)**: imagem estática congela no noLoop e nunca via o morph de 300ms do applyPreset — agora o loop fica vivo pela janela do morph (bug pré-existente).
 - [ ] **Overlays** — funções toscas (Super 8 e outras) — modernizar os patterns fracos, revisar um a um
 - [ ] **Depth** — "podia ficar ainda mais irada, tem potencial" — refino geral (materiais? luz? presets mais dramáticos?)
-- **Status:** [ ] Fila — atacar após rollout do Export HQ
+- **Status:** [~] Em andamento — ASCII ✅, próximo: Overlays
 
 ### FASE 16 — EXPORT HQ: suíte de efeitos visuais para takes (pedido do Daniel 11/07)
 

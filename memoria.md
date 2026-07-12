@@ -6,7 +6,7 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 36 ferramentas (13 visual tools + 23 kinetic type modes)
+- **Total:** 38 ferramentas (15 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
@@ -23,7 +23,7 @@
   depth.html                   — image/video → 3D depth mesh, AI/manual/luminance depth (FUNCIONAL)
   gradientmap.html             — luminance → draggable color gradient map (FUNCIONAL)
   riso.html                    — risograph + CMYK halftone simulator, plates export (FUNCIONAL)
-  ascii.html                   — 4 charsets, 3 color modes, video+webcam+MP4 (FUNCIONAL)
+  ascii.html                   — 5 charsets + custom, edge detection, 5 color modes, cell fill, HQ (FUNCIONAL)
   overlay.html                 — gerador de texturas seamless, 12 patterns, image+video+webcam (FUNCIONAL)
   audiotype.html               — audio-reactive typography, text/image + audio/mic, 2-8 color levels (FUNCIONAL)
   pattern.html                 — animated tessellations, 8 motifs × 5 simetrias, tile seamless + SVG (FUNCIONAL)
@@ -154,6 +154,19 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - Single-color tools: type #1A1818 no bg #F8F5F0
 - resetAll sempre restaura esses valores (manter HTML inputs e resetAll em sincronia)
 - Aplicado em 2026-06-12: cascade, flag, stripes, ribbon, string (os demais já seguiam)
+
+---
+
+## 2026-07-12
+
+### ASCII modernizado (Fase 17.1) — "mais opções e ajustes mais finos"
+- **Edge detection Sobel** com caracteres direcionais |/-\ — o look ASCII moderno. Sobel roda no luma CRU do grid (pré-ajustes), threshold = (105−strength)/100; direção do gradiente quantizada em 4 bins → caractere da aresta perpendicular; brilho da célula de edge sobe pra ≥0.9 pra destacar.
+- Charsets novos: **Detail** (ramp de 70 níveis), **Dots** ( ·:°•), **Digits** (data). Color modes novos: **Duotone** (par de cores lerp por brilho), **Athos** (rampa de 6 cores da paleta por bucket). **Cell Fill** = mosaico (célula pintada com a cor + glifo knockout na cor do fundo). Fine tuning: brightness/gamma/saturation/**flicker** (ruído de índice por célula, só em vídeo/webcam). **Copy TXT** exporta o grid como texto (clipboard, fallback download). 8 presets: Classic/Detail/Edge/Duotone/Matrix/Athos/Mosaic/Poster — todos verificados em screenshot.
+- **Export HQ** via takeover p5 (9ª da suíte) — grid é relativo (columns), então o look fica idêntico em full-res; fontSize manual escala por hqK. Adicionado ao test-hq.mjs.
+- **GOTCHA TOFU**: p5 com loadFont renderiza PATHS opentype — NÃO tem fallback do sistema. Glifo fora da IBM Plex Mono = caixinha .notdef. O charset braille do ASCII antigo era 100% tofu desde sempre (⠁⠃… index 0), katakana idem, ● e ∙ também. Verificar com `font.font.charToGlyphIndex(ch)` (0 = ausente) ANTES de usar qualquer glifo exótico em ferramenta p5.
+- **GOTCHA blocks**: ░▒▓█ existem na Plex Mono mas advance é 0.6em → colunas com calhas verticais. Auto-size ×1.7 (vs 1.1 dos demais) fecha a cobertura.
+- **GOTCHA morph × noLoop (bug pré-existente, raiz do "preset não aplica")**: TipoUI.applyPreset restaura os valores ANTIGOS e faz morph de 300ms SEM disparar input/redraw — ferramenta estática (noLoop por frame) congelava no 1º frame com os valores velhos. Fix: mecanismo `wake(ms)` — loop() vive até millis() > wakeUntil (presets: 450ms; inputs: 80ms). Qualquer visual tool estática com presets morphed precisa disso.
+- Smoke test 20/20 (presets, cores pós-morph via pixel, edges, TXT, HQ 1920×1080 75/75, restore pós-HQ, zero pageerrors).
 
 ---
 
