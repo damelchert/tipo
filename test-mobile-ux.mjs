@@ -22,12 +22,12 @@ await ctx.route('**/*', async route => {
 let fails = 0;
 const check = (n, ok, x='') => { console.log(`${n}: ${ok?'OK':'FAIL'} ${x}`); if(!ok) fails++; };
 
-// shaper: declutter + chips + fullscreen exit
+// pattern: declutter + chips + fullscreen exit
 {
   const page = await ctx.newPage();
   let errs = 0;
-  page.on('pageerror', e => { errs++; console.log('[shaper]', e.message); });
-  await page.goto('http://localhost/shaper.html', { waitUntil: 'domcontentloaded' });
+  page.on('pageerror', e => { errs++; console.log('[pattern]', e.message); });
+  await page.goto('http://localhost/pattern.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2200);
   const st = await page.evaluate(() => {
     const vis = sel => { const e = document.querySelector(sel); return e ? getComputedStyle(e).display !== 'none' : null; };
@@ -64,7 +64,7 @@ const check = (n, ok, x='') => { console.log(`${n}: ${ok?'OK':'FAIL'} ${x}`); if
   await page.waitForTimeout(400);
   const fs2 = await page.evaluate(() => document.body.classList.contains('tipo-full'));
   check('fullscreen: ✕ visible and exits on tap', fs1.on && fs1.btnVisible && fs1.icon === '✕' && !fs2, JSON.stringify(fs1));
-  check('zero errors shaper', errs === 0, `(${errs})`);
+  check('zero errors pattern', errs === 0, `(${errs})`);
   await page.close();
 }
 
