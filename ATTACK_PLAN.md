@@ -18,15 +18,13 @@ Deploy: Vercel (auto-deploy on push).
 > **O que É REAL e vale a pena** (blindagem de verdade, na ordem de impacto):
 >
 > **19.1 — Blindar DADOS e segredos (o mais importante — isso sim é 100% controlável)**
-> - [ ] Auditar que NENHUMA chave/segredo do Daniel vá pro client. A regra de ouro (CLAUDE.md) já vale; formalizar: Mockup AI (11.5) = BYO key do usuário, key só na memória da aba, nunca logada, nunca enviada pro nosso backend.
-> - [ ] Varredura de segredos no repo + histórico git (git-secrets/gitleaks) — garantir que nada vazou em commit antigo.
-> - [ ] `.env`/config fora do bundle; checar que o Vercel não expõe env vars no client.
+> - ✅ Varredura de segredos (2026-07-13): working tree + HISTÓRICO git completo — zero chaves/tokens/segredos (padrões sk-/AKIA/ghp_/hf_/api_key/Bearer). O site não tem backend nem env vars — nada a vazar hoje.
+> - [ ] (quando 11.5 nascer) Mockup AI = BYO key do usuário, key só na memória da aba, nunca logada, nunca enviada pra backend nosso.
 >
-> **19.2 — Security headers + defesa de rede (config, alto impacto, baixo custo)**
-> - [ ] **CSP** (Content-Security-Policy) restritiva — trava injeção de script, limita origens de CDN/fonte às conhecidas.
-> - [ ] **X-Frame-Options / frame-ancestors** — anti-clickjacking E anti-embedding: ninguém iframa as ferramentas da Tipó em outro site (protege a marca e o "roubo por incorporação").
-> - [ ] HSTS, Referrer-Policy, Permissions-Policy, X-Content-Type-Options. Via `vercel.json` headers.
-> - [ ] **SRI (Subresource Integrity)** nos scripts de CDN (p5, three, mp4-muxer, transformers) — defesa de supply-chain real: se a CDN for comprometida, o browser recusa o script adulterado. + pinar versões (já pinadas).
+> **19.2 — Security headers + defesa de rede — ✅ (2026-07-13)**
+> - ✅ **vercel.json** criado com: **CSP** (script-src restrito a self+jsdelivr com wasm-unsafe-eval pro ONNX do AI depth; connect-src permite huggingface pro download do modelo; img/media blob: pros exports), **frame-ancestors 'none' + X-Frame-Options DENY** (ninguém embeda a Tipó em iframe — anti-clickjacking e anti-roubo-por-incorporação), HSTS preload, nosniff, Referrer-Policy, Permissions-Policy (camera/mic só self).
+> - ✅ **SRI sha384** nos 4 scripts de CDN pinados (p5, three, mp4-muxer, gsap) em TODOS os 39 HTML + crossorigin=anonymous — CDN comprometida = browser recusa o script adulterado.
+> - ✅ Validado com Playwright injetando o header real: field/depth/dithering/index carregam com **zero violações de CSP**, scripts CDN executam (SRI confere), zero pageerrors. Nota: 'unsafe-inline' é necessário (scripts inline em todas as ferramentas) — a CSP protege pelas ORIGENS; remover inline exigiria build step (fica com 19.3 se rolar).
 >
 > **19.3 — Elevar a barra da engenharia reversa (deterrente honesto, não muralha)**
 > - [ ] Build step opcional de **minificação + ofuscação** dos shared/*.js e das ferramentas no deploy (mantendo os fontes legíveis no repo). Transforma "copiar e colar" em "horas de deofuscação" — filtra 99% dos oportunistas. Sem prometer que barra o determinado.
