@@ -159,6 +159,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### Faxinas: smoke dark 39/39 + dithering migrado pro shared (dívida da FASE 0 paga)
+- **Smoke dark**: as 39 em tema escuro screenshotadas em grid — painéis escuros corretos, canvas mantém defaults brand (conteúdo ≠ tema), zero pageerrors, nada quebrado. Light é auditado continuamente. Item 7.5.1 fechado.
+- **Dithering migrado**: shared/style.css linkado ANTES do <style> local — empates de especificidade resolvem pro local, visual fica idêntico, e o shared passa a valer onde o local não define (bottom sheet mobile SEM cópia local, micro-interações, toast animado, ponto dourado no h1). PEGADINHA: as regras dz-mobile/dz-desktop do dropzone moravam dentro do bloco mobile deletado → desktop mostrava os dois textos; realocadas pro CSS da ferramenta (onde sempre deviam estar).
+- A última página fora do design system entrou no sistema. Toda mudança futura de CSS compartilhado agora flui pras 39 sem cópias manuais.
+
 ### Morisawa modernizada (pedido do Daniel: "tá meio defasado")
 - Diagnóstico: wireframe 1996 — contorno fino único, 1 cor, pirâmide rígida, scroll unidirecional.
 - **Style por fileira**: Fill / Outline / Alternate (cheio+vazado alternando) / **Highlight** (uma fileira dourada CHEIA percorre a grade sobre contornos — `floor(mover*0.02) % rows`). Paleta de 3 cores ciclando por fileira (ink/gold/teal default). drawGlyphInBox ganhou mode fill|outline + **skew** (shearX ancorado no centro vertical, direção acompanha o scroll da fileira).

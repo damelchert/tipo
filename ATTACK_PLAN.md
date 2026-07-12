@@ -14,7 +14,7 @@ Deploy: Vercel (auto-deploy on push).
 - [x] `shared/ui.js` — TipoUI: sliders, presets, export, recorder, theme toggle
 - [x] `index.html` — landing page com hash routing + video previews
 - [x] Git repo + Deploy Vercel
-- [ ] Migrar `dithering.html` pra usar shared CSS/JS
+- [x] Migrar `dithering.html` pra usar shared CSS/JS — ✅ (2026-07-11) shared/style.css linkado ANTES do CSS local (empates resolvem pro local = visual preservado); cópia local do bottom sheet mobile deletada (2.9KB) — dithering agora herda sheet/micro-interações/toasts/h1-dot do shared. Regras do dropzone (dz-mobile/desktop) realocadas pro CSS da ferramenta. test-dither-engine + mobile sweep PASS.
 
 ### FASE 1-5 — 22 Kinetic Type Modes ✅
 Todos implementados e funcionais. Ver detalhes na memoria.md.
@@ -84,7 +84,7 @@ Prioridade máxima — arrumar experiência antes de features novas.
 #### 7.5.1 — Light mode como padrão
 - [x] Mudar default do localStorage para `light` em todas as tools (+ base do :root no CSS invertida pra light, sem flash)
 - [x] Manter toggle dark/light funcionando
-- [ ] Testar TODAS as 28 ferramentas em light mode (smoke test visual pendente)
+- [x] Testar TODAS as ferramentas nos dois temas — ✅ (2026-07-11) smoke visual dark+light nas 39: grids de screenshots conferidos, zero pageerrors, nenhum contraste quebrado (light é olhado continuamente nas auditorias; dark varrido dedicado).
 
 #### 7.5.2 — Header disruptivo ✅ (v2 em 2026-07-03 — aguardando validação visual do Daniel no deploy)
 - [x] Header 96px com marquee TIPÓ 150px multicolor (teal/gold/mint) + stats "36 tools • 0 install • 100% browser"
