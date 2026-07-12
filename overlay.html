@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
 <script src="shared/ui.js?v=20260711-hq1"></script>
+<script src="shared/hq.js?v=20260712-hq3"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -105,6 +106,20 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Film FX</div>
+    <div class="range-row"><span class="range-label">Flicker</span><input type="range" id="flicker" min="0" max="100" value="0"><span class="range-value" id="flickerVal">0</span></div>
+    <div class="range-row"><span class="range-label">Gate Weave</span><input type="range" id="weave" min="0" max="100" value="0"><span class="range-value" id="weaveVal">0</span></div>
+    <div class="range-row"><span class="range-label">Vignette</span><input type="range" id="vigfx" min="0" max="100" value="0"><span class="range-value" id="vigfxVal">0</span></div>
+    <div class="range-row"><span class="range-label">Dust &amp; Hair</span><input type="range" id="dust" min="0" max="100" value="0"><span class="range-value" id="dustVal">0</span></div>
+    <div class="range-row"><span class="range-label">Tint</span><input type="range" id="tintAmt" min="0" max="100" value="0"><span class="range-value" id="tintAmtVal">0</span></div>
+    <div class="color-section-row">
+      <span class="range-label">Tint Color</span>
+      <input type="color" id="tintColor" value="#D4A040">
+    </div>
+    <div style="font-size:9px;color:var(--text-5);margin-top:4px">Artefatos de projeção animados a 18fps — combinam com os presets de filme</div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Output</div>
     <div class="size-row">
       <select id="tileSize">
@@ -126,6 +141,8 @@
     <div class="btn-row">
       <button class="btn" onclick="exportPNG()">PNG</button>
       <button class="btn" onclick="exportTile()">Tile PNG</button>
+    </div>
+    <div class="btn-col" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
       <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
     </div>
     <div class="record-timer" id="recTimer"></div>
@@ -284,13 +301,19 @@ function getDemo() {
 
 function shouldLoop() {
   return sourceType === 'video' || sourceType === 'webcam' ||
-    (recorder && recorder.isRecording) || chk('animate');
+    (recorder && recorder.isRecording) || chk('animate') ||
+    val('flicker') > 0 || val('weave') > 0 || val('dust') > 0;
 }
 
 let animTick = 0;
 function startLoop() {
   if (animFrame) return;
   function loop() {
+    // Export HQ em andamento: o render offline é dono do estado — só espera
+    if (window.__tipoHQactive) {
+      animFrame = requestAnimationFrame(loop);
+      return;
+    }
     // Live grain: drift the seed at ~30fps (pixel patterns, sane tile sizes only)
     if (chk('animate') &&
         !VECTOR_PATTERNS.includes(document.getElementById('pattern').value) &&
@@ -356,6 +379,126 @@ function fractalNoise(x, y, size, octaves, roughness) {
 function val(id) { return Number(document.getElementById(id).value); }
 function chk(id) { return document.getElementById(id).checked; }
 
+// ============================================================
+// FILM FX — artefatos de projeção ANIMADOS (flicker, gate weave,
+// vignette, dust & hair, tint). Steppados a 18fps como projeção
+// real de Super 8. Hash próprio (independente do seed do grão)
+// pro Export HQ reproduzir a mesma sequência de artefatos.
+// ============================================================
+const FILM_FPS = 18;
+function hashT(a, b) {
+  const n = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+// rect da mídia no preview (pro export escalar artefatos em px)
+let lastRect = { rx: 0, ry: 0, rw: 1, rh: 1 };
+
+function weaveOffset(tMs, K) {
+  const amp = val('weave') / 100 * 13 * K;
+  if (!amp) return { dx: 0, dy: 0 };
+  const f = Math.floor(tMs / (1000 / FILM_FPS));
+  return {
+    dx: (hashT(f, 7) - 0.5) * 2 * amp * 0.6,   // weave real é mais vertical
+    dy: (hashT(f, 97) - 0.5) * 2 * amp,
+  };
+}
+
+function drawFilmFX(ctx, rx, ry, rw, rh, tMs, K) {
+  const flick = val('flicker') / 100;
+  const vig = val('vigfx') / 100;
+  const dust = val('dust') / 100;
+  const tintA = val('tintAmt') / 100;
+  if (!flick && !vig && !dust && !tintA) return;
+
+  const f = Math.floor(tMs / (1000 / FILM_FPS));
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rx, ry, rw, rh);
+  ctx.clip();
+
+  // tint: banho de cor tipo processo químico
+  if (tintA > 0) {
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.globalAlpha = tintA;
+    ctx.fillStyle = document.getElementById('tintColor').value;
+    ctx.fillRect(rx, ry, rw, rh);
+  }
+
+  // vignette: cantos queimados da lente/gate
+  if (vig > 0) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    const cx = rx + rw / 2, cy = ry + rh / 2;
+    const inner = Math.min(rw, rh) * (0.55 - vig * 0.25);
+    const outer = Math.hypot(rw, rh) * 0.56;
+    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.6, `rgba(0,0,0,${(vig * 0.35).toFixed(3)})`);
+    grad.addColorStop(1, `rgba(0,0,0,${Math.min(0.92, vig).toFixed(3)})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(rx, ry, rw, rh);
+  }
+
+  // dust & hair: sujeira efêmera por frame + risco vertical ocasional
+  if (dust > 0) {
+    ctx.globalCompositeOperation = 'screen';
+    const specks = Math.round(dust * 11);
+    for (let i = 0; i < specks; i++) {
+      if (hashT(f + i * 31, 5) > 0.75) continue; // nem todo frame tem tudo
+      const x = rx + hashT(f, i * 3 + 1) * rw;
+      const y = ry + hashT(f, i * 3 + 2) * rh;
+      const r = (0.6 + hashT(f, i * 3 + 3) * 1.8) * K;
+      ctx.globalAlpha = 0.25 + hashT(f, i * 7 + 4) * 0.45;
+      ctx.fillStyle = '#f6f2e8';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // fio de cabelo preso no gate
+    if (hashT(f, 777) < dust * 0.3) {
+      const hx = rx + hashT(f, 801) * rw;
+      const hy = ry + hashT(f, 802) * rh * 0.8;
+      const len = rh * (0.08 + hashT(f, 803) * 0.14);
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = '#efe9dc';
+      ctx.lineWidth = Math.max(0.6, 0.8 * K);
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.quadraticCurveTo(
+        hx + (hashT(f, 804) - 0.5) * len * 1.6, hy + len * 0.5,
+        hx + (hashT(f, 805) - 0.5) * len * 0.8, hy + len);
+      ctx.stroke();
+    }
+    // risco vertical que persiste alguns frames (poeira no gate arranha o filme)
+    const sf = Math.floor(tMs / 400);
+    if (hashT(sf, 55) < dust * 0.45) {
+      const sx = rx + hashT(sf, 66) * rw;
+      ctx.globalAlpha = 0.10 + hashT(sf, 67) * 0.10;
+      ctx.strokeStyle = '#fffef8';
+      ctx.lineWidth = Math.max(0.6, 0.9 * K);
+      ctx.beginPath();
+      ctx.moveTo(sx + (hashT(f, 68) - 0.5) * 2 * K, ry);
+      ctx.lineTo(sx + (hashT(f, 69) - 0.5) * 2 * K, ry + rh);
+      ctx.stroke();
+    }
+  }
+
+  // flicker: variação de exposição por frame (por último — é global)
+  if (flick > 0) {
+    const h = (hashT(f, 313) - 0.5) * 2; // -1..1
+    const a = Math.abs(h) * flick * 0.30;
+    ctx.globalCompositeOperation = h > 0 ? 'screen' : 'multiply';
+    ctx.globalAlpha = a;
+    ctx.fillStyle = h > 0 ? '#fff8ea' : '#0a0806';
+    ctx.fillRect(rx, ry, rw, rh);
+  }
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 // Composite: source (or brand demo) + overlay texture with real blend modes
 function renderComposite() {
   const frame = getCurrentFrame() || getDemo();
@@ -372,6 +515,7 @@ function renderComposite() {
   mainCtx.fillRect(0, 0, w, h);
 
   // Draw source frame (letterboxed) and remember its rect
+  const tMs = performance.now();
   let rx = 0, ry = 0, rw = w, rh = h;
   const sw = frame.videoWidth || frame.naturalWidth || frame.width;
   const sh = frame.videoHeight || frame.naturalHeight || frame.height;
@@ -379,8 +523,22 @@ function renderComposite() {
     const sc = Math.min(w / sw, h / sh);
     rw = sw * sc; rh = sh * sc;
     rx = (w - rw) / 2; ry = (h - rh) / 2;
-    mainCtx.drawImage(frame, rx, ry, rw, rh);
+    if (val('weave') > 0) {
+      // gate weave: o frame dança dentro do gate — bordas viram preto de projeção
+      const o = weaveOffset(tMs, 1);
+      mainCtx.save();
+      mainCtx.beginPath();
+      mainCtx.rect(rx, ry, rw, rh);
+      mainCtx.clip();
+      mainCtx.fillStyle = '#000';
+      mainCtx.fillRect(rx, ry, rw, rh);
+      mainCtx.drawImage(frame, rx + o.dx, ry + o.dy, rw, rh);
+      mainCtx.restore();
+    } else {
+      mainCtx.drawImage(frame, rx, ry, rw, rh);
+    }
   }
+  lastRect = { rx, ry, rw, rh };
 
   // Generate overlay if dirty
   if (overlayDirty || !overlayBuffer) {
@@ -408,6 +566,9 @@ function renderComposite() {
     }
     mainCtx.restore();
   }
+
+  // Film FX por cima do composite (clipado no rect da mídia)
+  drawFilmFX(mainCtx, rx, ry, rw, rh, tMs, 1);
 
   // Recording
   if (recorder && recorder.isRecording) recorder.captureFrame();
@@ -732,6 +893,43 @@ function updateTilePreview() {
   }
 }
 
+// Composite em resolução arbitrária — usado pelo PNG e pelo Export HQ.
+// K escala a textura e os artefatos pra manter o TAMANHO VISUAL do preview
+// (senão o grão sai relativamente mais fino em 4K).
+function renderFullRes(frame, ctx, W, H, tMs) {
+  const K = Math.max(0.5, W / (lastRect.rw || W));
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  if (val('weave') > 0) {
+    const o = weaveOffset(tMs, K);
+    ctx.drawImage(frame, o.dx, o.dy, W, H);
+  } else {
+    ctx.drawImage(frame, 0, 0, W, H);
+  }
+
+  if (overlayBuffer) {
+    const pattern = document.getElementById('pattern').value;
+    ctx.globalAlpha = val('opacity') / 100;
+    ctx.globalCompositeOperation = document.getElementById('blend').value;
+    if (STRETCH_PATTERNS.includes(pattern)) {
+      ctx.drawImage(overlayBuffer, 0, 0, W, H);
+    } else {
+      const tw = overlayBuffer.width * K, th = overlayBuffer.height * K;
+      for (let ty = 0; ty < H; ty += th) {
+        for (let tx = 0; tx < W; tx += tw) {
+          ctx.drawImage(overlayBuffer, tx, ty, tw, th);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  drawFilmFX(ctx, 0, 0, W, H, tMs, K);
+}
+
 function exportPNG() {
   // Export at source resolution (not screen size)
   const frame = getCurrentFrame() || getDemo();
@@ -741,25 +939,9 @@ function exportPNG() {
   expCanvas.width = expW;
   expCanvas.height = expH;
   const ctx = expCanvas.getContext('2d');
-  ctx.drawImage(frame, 0, 0, expW, expH);
 
   if (overlayDirty || !overlayBuffer) { generateOverlay(); overlayDirty = false; }
-  if (overlayBuffer) {
-    const pattern = document.getElementById('pattern').value;
-    ctx.globalAlpha = val('opacity') / 100;
-    ctx.globalCompositeOperation = document.getElementById('blend').value;
-    if (STRETCH_PATTERNS.includes(pattern)) {
-      ctx.drawImage(overlayBuffer, 0, 0, expW, expH);
-    } else {
-      for (let ty = 0; ty < expH; ty += overlayBuffer.height) {
-        for (let tx = 0; tx < expW; tx += overlayBuffer.width) {
-          ctx.drawImage(overlayBuffer, tx, ty);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
+  renderFullRes(frame, ctx, expW, expH, performance.now());
 
   const link = document.createElement('a');
   link.download = 'tipo-overlay-composite.png';
@@ -811,6 +993,7 @@ async function toggleRec() {
 // Presets
 function resetAll() {
   setP('film-grain', 'soft-light', true, 55, 35, 40, 55, 55);
+  setFX(0, 0, 0, 0, 0, '#D4A040');
   document.getElementById('monochrome').checked = true;
   document.getElementById('invert').checked = false;
   document.getElementById('transparent').checked = true;
@@ -825,14 +1008,15 @@ function resetAll() {
 function applyPreset(name) {
   resetAll();
   const P = {
-    kodak:     () => { setP('film-grain', 'soft-light', true, 60, 30, 45, 60, 60); },
-    super8:    () => { setP('long-grain', 'overlay',    true, 65, 45, 50, 60, 65); },
-    vhs:       () => { setP('vhs',        'overlay',    true, 55, 50, 42, 50, 55); },
+    // presets de filme agora são LOOKS completos: textura + artefatos de projeção
+    kodak:     () => { setP('film-grain', 'soft-light', true, 60, 30, 45, 60, 60); setFX(12, 8, 22, 10, 12, '#E8C97E'); },
+    super8:    () => { setP('long-grain', 'overlay',    true, 70, 45, 55, 60, 65); setFX(45, 40, 55, 45, 30, '#D4A040'); },
+    vhs:       () => { setP('vhs',        'overlay',    true, 55, 50, 42, 50, 55); setFX(22, 18, 15, 0, 10, '#99E0D2'); },
     zine:      () => { setP('riso-grain', 'multiply',   false, 55, 40, 65, 55, 60); },
     newsprint: () => { setP('halftone',   'multiply',   false, 45, 35, 30, 30, 60); },
-    leak:      () => { setP('light-leak', 'screen',     false, 60, 60, 85, 50, 55); document.getElementById('monochrome').checked = false; },
-    bokeh:     () => { setP('bokeh-dust', 'screen',     false, 45, 55, 80, 50, 55); document.getElementById('monochrome').checked = false; },
-    fade:      () => { setP('vignette',   'multiply',   false, 60, 45, 75, 50, 50); },
+    leak:      () => { setP('light-leak', 'screen',     false, 60, 60, 85, 50, 55); setFX(15, 0, 20, 0, 15, '#D4A040'); document.getElementById('monochrome').checked = false; },
+    bokeh:     () => { setP('bokeh-dust', 'screen',     false, 45, 55, 80, 50, 55); setFX(10, 0, 0, 0, 0, '#D4A040'); document.getElementById('monochrome').checked = false; },
+    fade:      () => { setP('vignette',   'multiply',   false, 60, 45, 75, 50, 50); setFX(0, 0, 0, 0, 18, '#F8F5F0'); },
     paperp:    () => { setP('paper',      'multiply',   false, 50, 70, 30, 60, 45); },
   };
   if (P[name]) P[name]();
@@ -855,6 +1039,15 @@ function setP(pat, blend, animate, dens, sc, op, rough, cont) {
   document.getElementById('contrast').value = cont;
 }
 
+function setFX(flicker, weave, vignette, dust, tintAmt, tintColor) {
+  document.getElementById('flicker').value = flicker;
+  document.getElementById('weave').value = weave;
+  document.getElementById('vigfx').value = vignette;
+  document.getElementById('dust').value = dust;
+  document.getElementById('tintAmt').value = tintAmt;
+  document.getElementById('tintColor').value = tintColor;
+}
+
 // Keep the render loop in sync with what needs animation
 function syncLoop() {
   if (shouldLoop()) startLoop();
@@ -862,7 +1055,7 @@ function syncLoop() {
 }
 
 function updateLabels() {
-  ['density', 'scale', 'opacity', 'roughness', 'contrast'].forEach(id => {
+  ['density', 'scale', 'opacity', 'roughness', 'contrast', 'flicker', 'weave', 'vigfx', 'dust', 'tintAmt'].forEach(id => {
     document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
   });
 }
@@ -872,7 +1065,7 @@ document.querySelectorAll('input[type="range"], input[type="checkbox"], input[ty
   el.addEventListener('input', () => {
     updateLabels();
     overlayDirty = true;
-    if (el.id === 'animate') syncLoop();
+    if (['animate', 'flicker', 'weave', 'dust'].includes(el.id)) syncLoop();
     renderComposite();
   });
 });
@@ -897,6 +1090,34 @@ wrap.addEventListener('dblclick', () => {
 
 // Theme toggle + back button (shared)
 TipoUI.initChrome('visual');
+
+// ============================================================
+// EXPORT HQ (Fase 16): render offline na resolução da fonte.
+// Grão re-gerado deterministicamente por step de 15fps (mesma
+// cadência do preview), artefatos Film FX pelo hash de tempo.
+// ============================================================
+let hqSeedKeep = null;
+TipoHQ.enable({
+  getVideo: () => (sourceType === 'video' && sourceVideo) ? sourceVideo : null,
+  begin: () => { hqSeedKeep = seed; },
+  render: (frame, tSec, ctx, W, H) => {
+    const pattern = document.getElementById('pattern').value;
+    if (chk('animate') && !VECTOR_PATTERNS.includes(pattern)) {
+      const s = (hqSeedKeep + Math.floor(tSec * 15) * 977.131) % 99991;
+      if (s !== seed || !overlayBuffer) { seed = s; generateOverlay(); }
+    } else if (overlayDirty || !overlayBuffer) {
+      generateOverlay();
+      overlayDirty = false;
+    }
+    renderFullRes(frame, ctx, W, H, tSec * 1000);
+  },
+  end: () => {
+    if (hqSeedKeep !== null) seed = hqSeedKeep;
+    hqSeedKeep = null;
+    overlayDirty = true;
+  },
+  filename: () => 'tipo-overlay-HQ',
+});
 
 // Init
 overlayDirty = true;

@@ -159,6 +159,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-12
 
+### Overlays modernizado (Fase 17.2) — Film FX em camadas
+- Raiz do "Super 8 tosco": compositar 1 textura estática com blend ≠ filme. Filme = camadas ANIMADAS. Nova seção **Film FX**: flicker (exposição por frame), gate weave (frame offset com bordas pretas de projeção), vignette 3-stop, dust & hair (poeira + fio no gate + risco vertical persistente ~400ms), tint soft-light. Steppado a **18fps** (cadência de projeção real) via `hashT(a,b)` próprio — independente do seed do grão, então preview/HQ/PNG reproduzem a mesma sequência de artefatos.
+- Presets de filme = looks completos (setP textura + setFX artefatos). Reset zera FX (entry default preservado).
+- **renderFullRes(frame, ctx, W, H, tMs)** compartilhado entre exportPNG e Export HQ, com **K = W/lastRect.rw**: textura tileada em size×K e artefatos em px×K — paridade visual com o preview em qualquer resolução (o PNG antes tileava 1:1 e o grão afinava em fontes grandes).
+- Export HQ (10ª da suíte): grão animado re-gerado por step determinístico de 15fps (`seed = hqSeedKeep + floor(tSec×15)×977.131`), seed restaurado no end. Loop ao vivo gated por `__tipoHQactive` (o rAF do overlay é próprio, não p5).
+
 ### ASCII modernizado (Fase 17.1) — "mais opções e ajustes mais finos"
 - **Edge detection Sobel** com caracteres direcionais |/-\ — o look ASCII moderno. Sobel roda no luma CRU do grid (pré-ajustes), threshold = (105−strength)/100; direção do gradiente quantizada em 4 bins → caractere da aresta perpendicular; brilho da célula de edge sobe pra ≥0.9 pra destacar.
 - Charsets novos: **Detail** (ramp de 70 níveis), **Dots** ( ·:°•), **Digits** (data). Color modes novos: **Duotone** (par de cores lerp por brilho), **Athos** (rampa de 6 cores da paleta por bucket). **Cell Fill** = mosaico (célula pintada com a cor + glifo knockout na cor do fundo). Fine tuning: brightness/gamma/saturation/**flicker** (ruído de índice por célula, só em vídeo/webcam). **Copy TXT** exporta o grid como texto (clipboard, fallback download). 8 presets: Classic/Detail/Edge/Duotone/Matrix/Athos/Mosaic/Poster — todos verificados em screenshot.
