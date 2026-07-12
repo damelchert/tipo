@@ -419,6 +419,13 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Inspirado no Brand Forge mas simplificado (sem IA)
 - **Status:** ✅ Implementado (2026-07-11) — mockup.html (ferramenta #39, 16ª visual). **Sem fotos, sem IA**: 5 cenas 100% vetoriais-procedurais na paleta (Poster emoldurado na parede, Camiseta com dobras, Phone com notch e reflexo, Cartão na mesa com verso teal+ponto dourado, Outdoor com estrutura e pôr-do-sol). **Perspectiva REAL**: homografia unit-square→quad + malha de triângulos afins (drawImageToQuad, sub 12-14, triângulos com pad 1.2% pra esconder emendas; PEGADINHA: fundo claro atrás do mesh obrigatório — as bordas AA dos triângulos deixam vazar o que está atrás, contra moldura ink viravam hairlines). Controles: Fit cover/contain + Zoom, Angle (rotação/perspectiva por cena), Surface/Accent colors, Shadows/Glow procedurais, grain. Upload/drag&drop/⌘V, demo poster brand. Export PNG + PNG 2× (re-render, não upscale). 5 presets. test-mockup.mjs 10/10 (homografia erro 1e-14, perspectiva não-afim confirmada, cenas/presets distintos).
 
+#### 11.5 — Mockup AI (pedido do Daniel 11/07: "o mockup procedural tá tosco; capítulo à parte")
+- Referência: ~/PROJETOS/projeto x/brand-forge — screenshot do canvas + prompt → API de imagem (OpenAI images), com **BYO key** (chave do usuário tem prioridade; NUNCA usar chave do Daniel — regra absoluta do CLAUDE.md)
+- Para a Tipó (site estático): chamada client-side direto da API com a chave do usuário (Gemini/Nano Banana aceita CORS de browser) OU Vercel serverless function com rate limit como no brand-forge
+- Fluxo: arte da ferramenta (qualquer uma, via "Send to Mockup"?) + cena escolhida + prompt → mockup fotorrealista
+- O mockup.html procedural vira o modo "offline/free" e o AI o modo premium
+- **Status:** [ ] Conceito — decidir arquitetura de API com Daniel (chave, custos, hosting)
+
 #### 11.4 — Gradient Shaper (referência: reel @antoncreations, pedido do Daniel 2026-07-03)
 - Referência: https://www.instagram.com/reels/DZ45So6sjym/ — ferramenta de arte com gradientes do Anton (@antoncreations), single HTML file (mesmo espírito da Tipó)
 - Conceito do reel: "I can make whatever shape I want and use it as a gradient. I have full control over midtones, colours, details, grid space, and sizes"
@@ -430,6 +437,27 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - **Status:** ✅ Implementado (2026-07-04) — shaper.html (ferramenta #38). Daniel confirmou: funcionalidade completa (formas + desenho livre + grid). Motor: **campo de distância assinado (EDT exato Felzenszwalb, O(n))** da forma — as bandas do gradiente emanam do CONTORNO de qualquer forma. 8 shapes: **Text (a palavra vira o gradiente — hero default TIPÓ)**, circle/ring/blob(seed)/star/triangle/diamond e **Draw (desenha a forma no canvas)**. Rampa: Spacing, **Midtones** (gamma), **Bands** (posterização riso), **Dither** (grain anti-banding), Repeat/Mirror (loop sem emenda). **Warp**: imagem/vídeo/webcam DOBRAM as bandas (field) ou controlam tamanho por célula (**Grid** com Stagger). Flow anima as bandas emanando. Campo estendido analiticamente fora do quadrado SDF (sem listras de borda). 9 presets brand. Render half-res + upscale suave, 30fps. test-shaper.mjs 15/15 PASS (inclui SDF vs analítico, erro < 0.012).
 
 ---
+
+
+### FASE 14 — REPAGINADA TIPOGRÁFICA (pedido do Daniel 11/07: "a fonte tá sem graça, fontes mais modernas, opções de escolher")
+
+#### 14.1 — Biblioteca de fontes + novo default ✅ (2026-07-11)
+- [x] 6 fontes curadas self-hosted (licenças livres): **Clash Display Semibold** (novo DEFAULT — "geometric com presença", Fontshare ITF-FFL), General Sans Semibold, Space Grotesk Bold, Boska Bold, **Fraunces Black** (OFL, instanciada da variable com fonttools: wght 900/opsz 144), IBM Plex Mono (legado).
+- [x] **TipoFont v2**: select de biblioteca no font row de TODAS as ferramentas; troca ao vivo (p5 loadFont + textFont global + evento tipofont; canvas-2D via FontFace "TipoBuiltinFont"); **persistência site-wide** (localStorage tipo-font) — escolheu uma vez, vale em todas; upload custom continua por cima.
+- [x] Fontes comerciais da referência (Söhne, Canela, Reckless, Obviously, Acne, Tobias, Fenul) NÃO entraram — sem licença pra self-host. Se Daniel comprar licenças, é só dropar o arquivo em assets/fonts/ e adicionar no BUILTINS.
+- UI do site continua IBM Plex Mono (voz da marca); a biblioteca muda o TYPE das ferramentas.
+
+#### 14.2 — Refinamentos pendentes
+- [ ] Pesos alternativos por fonte (hoje 1 peso curado por família)
+- [ ] Preview das fontes no próprio select (renderizar nome na própria fonte)
+
+### FASE 15 — HERO SECTION (pedido do Daniel 11/07: "algo bem fodão com GSAP, imersivo, palinha do que vem a seguir")
+- Uma abertura imersiva ANTES da home: primeira impressão do site
+- GSAP para coreografia (regra da casa: GSAP = orquestração, CSS = loops ambientes)
+- Deve dar "palinha" das ferramentas: type cinético + efeitos visuais reais (reusar engines? HeaderFX ampliado? cenas em sequência com scroll ou auto-play?)
+- Direção a definir com squads (design-squad + dev-squad) como no Header v3 — é um capítulo de identidade, não só uma seção
+- Skip/entrar direto obrigatório (respeitar retorno de usuário; localStorage "já vi")
+- **Status:** [ ] Conceito — próximo item grande
 
 ### FASE 13 — MOBILE (pedido do Daniel 2026-07-03: "não tá funcionando bem no celular")
 
