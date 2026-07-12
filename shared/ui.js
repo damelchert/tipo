@@ -309,7 +309,7 @@ const TipoUI = {
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
-    pattern: 'visual', palette: 'visual', shaper: 'visual', mockup: 'visual',
+    pattern: 'visual', palette: 'visual', mockup: 'visual',
     // Kinetic — 3D
     cylinder: '3d', field: '3d', stripes: '3d', coil: '3d',
     flag: '3d', cascade: '3d', ribbon: '3d', morisawa: '3d',
@@ -2008,13 +2008,6 @@ const TipoHelp = {
       'Scene': 'O mockup: poster emoldurado, camiseta, phone, cartão em perspectiva na mesa ou outdoor. Angle inclina o objeto (no cartão e outdoor muda a perspectiva). Surface = cor da parede/fundo; Accent = elementos da cena (verso do cartão, arco, pôr-do-sol).',
       'Light': 'Shadows = intensidade das sombras projetadas e dobras. Glow = luz de janela/reflexo de vidro/sol conforme a cena. Grain adiciona textura de filme sutil no resultado.',
       'Export': 'PNG no tamanho do canvas; PNG 2× dobra a resolução (bom pra post e portfólio). Tudo é vetorial-procedural — sem fotos, sem IA.',
-    },
-    shaper: {
-      'Source': 'Imagem, vídeo ou webcam modulam o campo: no Field a luminância DOBRA as bandas (Warp); no Grid ela controla o tamanho da forma em cada célula. None = só a forma pura.',
-      'Shape': 'A forma emissora do gradiente: as bandas emanam do CONTORNO dela (campo de distância). Text usa a palavra digitada; Blob é orgânico com seed (Re-roll); Draw = desenhe a forma direto no canvas arrastando.',
-      'Gradient': 'Spacing = largura das bandas. Midtones desloca o meio da rampa (clareia/escurece os tons médios). Bands posteriza em N degraus (0 = suave). Dither adiciona grain que mata banding. Warp = quanto a fonte dobra as bandas. Repeat = bandas infinitas; Mirror = loop sem emenda na rampa.',
-      'Grid': 'Campo de células: Columns = densidade; Size Min/Max = tamanho da forma conforme a luminosidade da fonte (Invert troca claro/escuro). Stagger defasa a fase do flow por célula — a onda percorre o grid.',
-      'Motion': 'Flow faz as bandas emanarem do contorno (negativo = contraem). É o que dá vida ao MP4/GIF.',
     },
     palette: {
       'Source': 'Carregue uma imagem (botão, arraste ou ⌘V) e a paleta é extraída na hora. Demo/Reset volta pra composição da marca. Clicar na imagem dentro do canvas = conta-gotas (a cor vira a base das harmonias).',

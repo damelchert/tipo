@@ -91,28 +91,29 @@ const check = (name, ok, extra = '') => {
 {
   const page = await ctx.newPage();
   let errs = 0;
-  page.on('pageerror', e => { errs++; console.log('[shaper]', e.message); });
-  await page.goto('http://localhost/shaper.html', { waitUntil: 'load' });
+  page.on('pageerror', e => { errs++; console.log('[pattern]', e.message); });
+  await page.goto('http://localhost/pattern.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof render === 'function', null, { timeout: 20000 });
   await page.waitForTimeout(1600);
+  await page.evaluate(() => { const s = document.getElementById('shape'); s.value = 'letter'; s.dispatchEvent(new Event('input', { bubbles: true })); });
   const st = await page.evaluate(() => ({
     saved: localStorage.getItem('tipo-font'),
     family: TipoFont.family(),
     active: TipoFont.activeBuiltin,
   }));
   // Fraunces was saved by the coil page (same context/localStorage)
-  check('shaper: persistence across tools (Fraunces)', st.saved === 'Fraunces' && st.active === 'Fraunces' && st.family.includes('TipoBuiltinFont'), JSON.stringify(st));
+  check('pattern: persistence across tools (Fraunces)', st.saved === 'Fraunces' && st.active === 'Fraunces' && st.family.includes('TipoBuiltinFont'), JSON.stringify(st));
   const h1 = await page.evaluate(() => { render(); const d = mainCtx.getImageData(0, 0, mainCanvas.width, mainCanvas.height).data; let h = 0; for (let i = 0; i < d.length; i += 97) h = (h * 31 + d[i]) >>> 0; return h; });
   await page.evaluate(() => TipoFont.setBuiltin('Boska', true));
   await page.waitForTimeout(900);
   const h2 = await page.evaluate(() => { render(); const d = mainCtx.getImageData(0, 0, mainCanvas.width, mainCanvas.height).data; let h = 0; for (let i = 0; i < d.length; i += 97) h = (h * 31 + d[i]) >>> 0; return h; });
-  check('shaper: builtin swap changes the SDF text', h1 !== h2, `(${h1} vs ${h2})`);
+  check('pattern: builtin swap changes the letter tiles', h1 !== h2, `(${h1} vs ${h2})`);
   // back to Plex = CSS fallback (no FontFace)
   await page.evaluate(() => TipoFont.setBuiltin('IBM Plex Mono', true));
   await page.waitForTimeout(400);
   const plex = await page.evaluate(() => TipoFont.family());
-  check('shaper: Plex fallback family', plex.includes('IBM Plex Mono'), `(${plex})`);
-  check('shaper: zero errors', errs === 0, `(${errs})`);
+  check('pattern: Plex fallback family', plex.includes('IBM Plex Mono'), `(${plex})`);
+  check('pattern: zero errors', errs === 0, `(${errs})`);
   await page.close();
 }
 await browser.close();

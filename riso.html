@@ -7,10 +7,11 @@
 <meta name="description" content="Tipó — Risograph Simulator. Spot-color ink separation, halftone, misregistration and grain in the browser.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Riso</title>
-<link rel="stylesheet" href="shared/style.css?v=20260711-mor1">
+<link rel="stylesheet" href="shared/style.css?v=20260711-hq1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260711-mor1"></script>
+<script src="shared/ui.js?v=20260711-hq1"></script>
+<script src="shared/hq.js?v=20260711-hq1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -785,6 +786,19 @@ TipoUI.initChrome('visual');
 buildLayerUI();
 updateLabels();
 render();
+
+/** Export HQ (Fase 16): renderRiso já é parametrizado por (ctx, w, h, opts);
+ *  o mult escala os parâmetros de pixel (cell, misreg) pra resolução alvo —
+ *  o halftone mantém o TAMANHO VISUAL do preview, em full-res. */
+TipoHQ.enable({
+  getVideo: () => (sourceType === 'video' && sourceVideo) ? sourceVideo : null,
+  render: (frame, tSec, ctx, W, H) => {
+    const base = workingSize();
+    const mult = Math.max(1, W / base.w);
+    renderRiso(ctx, W, H, currentOpts(mult));
+  },
+  filename: () => 'tipo-riso-HQ',
+});
 </script>
 </body>
 </html>

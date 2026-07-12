@@ -1,7 +1,7 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-39 ferramentas ativas: 16 visual tools + 23 kinetic type modes.
+38 ferramentas ativas: 15 visual tools + 23 kinetic type modes. (Gradient Shaper removido a pedido do Daniel em 11/07.)
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
@@ -433,7 +433,7 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - Fontes: imagem, vídeo e webcam (pipeline igual às visual tools existentes)
 - Sinergia interna: reusar LUT/stops do gradientmap.html + grid infra do reticula/pattern; possivelmente extrair um campo de gradientes suaves por célula (visual "gradient blur grid" das demos da Dinamo)
 - Exports: PNG, MP4/GIF; explorar SVG se as formas forem vetoriais
-- **Status:** ✅ Implementado (2026-07-04) — shaper.html (ferramenta #38). Daniel confirmou: funcionalidade completa (formas + desenho livre + grid). Motor: **campo de distância assinado (EDT exato Felzenszwalb, O(n))** da forma — as bandas do gradiente emanam do CONTORNO de qualquer forma. 8 shapes: **Text (a palavra vira o gradiente — hero default TIPÓ)**, circle/ring/blob(seed)/star/triangle/diamond e **Draw (desenha a forma no canvas)**. Rampa: Spacing, **Midtones** (gamma), **Bands** (posterização riso), **Dither** (grain anti-banding), Repeat/Mirror (loop sem emenda). **Warp**: imagem/vídeo/webcam DOBRAM as bandas (field) ou controlam tamanho por célula (**Grid** com Stagger). Flow anima as bandas emanando. Campo estendido analiticamente fora do quadrado SDF (sem listras de borda). 9 presets brand. Render half-res + upscale suave, 30fps. test-shaper.mjs 15/15 PASS (inclui SDF vs analítico, erro < 0.012).
+- **Status:** ❌ REMOVIDO a pedido do Daniel (2026-07-11, "pode excluir") — shaper.html e test-shaper.mjs deletados, card/ticker/contagem/help limpos. Site volta a 38 ferramentas. O conceito SDF vive na aura da hero.
 
 ---
 
@@ -451,6 +451,13 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - [ ] Preview das fontes no próprio select (renderizar nome na própria fonte)
 
 
+
+### FASE 17 — MODERNIZAÇÃO DE FERRAMENTAS (pedido do Daniel 11/07)
+- [ ] **ASCII** — mais opções e ajustes mais finos (charsets extras? edge detection? cores por faixa? kerning/densidade fina)
+- [ ] **Overlays** — funções toscas (Super 8 e outras) — modernizar os patterns fracos, revisar um a um
+- [ ] **Depth** — "podia ficar ainda mais irada, tem potencial" — refino geral (materiais? luz? presets mais dramáticos?)
+- **Status:** [ ] Fila — atacar após rollout do Export HQ
+
 ### FASE 16 — EXPORT HQ: suíte de efeitos visuais para takes (pedido do Daniel 11/07)
 
 Visão: as visual tools viram uma suíte de VFX pra montagem — o take entra em 4K, sai em 4K com o efeito, frame-perfect, pronto pro corte.
@@ -466,7 +473,8 @@ Visão: as visual tools viram uma suíte de VFX pra montagem — o take entra em
 - **Áudio**: v2 — remux da trilha original (decode + AudioEncoder AAC ou cópia de track). V1 exporta vídeo mudo (montagem geralmente re-linka áudio).
 
 **Rollout**:
-- 16.1 Motor TipoHQ + 2 pilotos (gradientmap + riso) — validar 4K real no ffprobe, frames exatos, A/B com realtime
+- 16.1 Motor TipoHQ + 2 pilotos (gradientmap + riso) — ✅ (2026-07-11) **shared/hq.js**: seek-loop frame-exato → render full-res offscreen → VideoEncoder timestamps i×1e6/fps → mp4-muxer fastStart; codec ladder (High 5.1 pra >1080p, fallback 1440→1080 via isConfigSupported), bitrate 0.12 bits/px/frame cap 40Mbps, backpressure na fila, progresso com fps/ETA + cancelar, restaura estado do player. Botão "Export HQ" injetado ao lado do Record (só ativa com vídeo). Pilotos: gradientmap (renderFrameHQ com tempo VIRTUAL pro cycle — anda por segundos do take) e riso (renderRiso já parametrizado; currentOpts(mult) escala cell/misreg pra resolução alvo — halftone mantém o tamanho visual do preview em full-res). **test-hq.mjs 13/13: 1080p→1080p exato, 75/75 frames, duração 2.50s exata, decode limpo, e 1440p exporta NATIVO.** Frame extraído confirma o efeito em full-res.
+- **Ordem do rollout definida pelo Daniel**: Dithering, Reticula, Glitch, Datamosh, Rastro, Pixel Sort (+ os 2 pilotos prontos = as 8 mais úteis)
 - 16.2 Rollout: dithering, reticula, glitch, pixelsort, ascii, shaper, overlay
 - 16.3 Temporais: datamosh, rastro (estado sequencial via passada única)
 - 16.4 Áudio remux + presets de entrega (ProRes? não — H.264 high bitrate + opção PNG sequence pra quem quer lossless)

@@ -159,6 +159,14 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### FASE 16.1 — Export HQ implementado (motor + pilotos) + Shaper removido
+- **Pergunta do Daniel respondida em código**: gravações saíam menores porque TUDO era realtime (buffer da ferramenta capado ~860px + encode do recorder capado 1080p). Export HQ = render OFFLINE: seek frame-exato no vídeo fonte → efeito renderizado em resolução NATIVA offscreen → encode com timestamp perfeito. Sem realtime = sem trava (barra de progresso com fps/ETA + cancelar).
+- **shared/hq.js (TipoHQ)**: contrato `enable({getVideo, render(frame,tSec,ctx,W,H), filename})`; codec ladder High 5.1→1440→1080 via isConfigSupported; bitrate 0.12bits/px/frame; keyframe/s; backpressure encodeQueueSize; restaura currentTime/play do player no fim; _downloadBlob = share no mobile de graça.
+- **Pilotos**: gradientmap (pipeline já era (w,h)-paramétrico — HQ tira o cap e usa TEMPO VIRTUAL no cycle: cycleT = tSec×taxa, salva/restaura) e riso (renderRiso(ctx,w,h,opts) já existia + currentOpts(mult) escala cell/misreg — halftone mantém tamanho visual em full-res; getCurrentFrame() interno retorna o próprio vídeo seekado — arquitetura fechou sozinha).
+- **test-hq.mjs 13/13**: 1080p→1080p EXATO, 75/75 frames, 2.50s, decode limpo, 1440p NATIVO (nem precisou do ladder). Frame extraído do output confirma o halftone full-res. Vídeos sintéticos via ffmpeg testsrc2.
+- **Shaper EXCLUÍDO a pedido** ("pode excluir"): arquivos deletados, index/ticker/contagem 38/help/backTargets limpos, test-fonts migrado pra pattern (shape letter). Hero intocada (a aura é código próprio).
+- **Fila do rollout HQ (ordem do Daniel)**: dithering, reticula, glitch, datamosh, rastro, pixelsort. FASE 17 registrada: modernizar ASCII (opções finas), Overlays (Super 8 tosco), Depth (potencial não realizado).
+
 ### FASE 10 FECHADA — Cascade side-by-side com o STG real
 - Referência capturada AO VIVO: Playwright carregou spacetypegenerator.com/cascade e screenshotou. Comparação revelou: STG = parede full-canvas (assume frase longa tipo "HERE TODAY & GONE TOMORROW"); nosso = torre de 130px (TIPÓ 4 chars × X-Scale 20). MESMA doença do cylinder.
 - Fix: `runTxt = txt.repeat(reps)` com reps = largura útil / (xSpace × len), tiles de palavra inteira. Cascade agora preenche o canvas com as fitas diagonais brand. A compressão na costura do mirror é fiel ao original (natureza da distribuição triangular).

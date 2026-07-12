@@ -626,7 +626,7 @@ body { overflow: hidden; }
   <div class="hero-dot" id="heroDot"></div>
   <div class="hero-log" id="heroLog">ensaio 00 · aquecendo as máquinas</div>
   <div class="hero-cta" id="heroCta">
-    <button type="button" id="heroEnter">explorar as 39 ferramentas</button>
+    <button type="button" id="heroEnter">explorar as 38 ferramentas</button>
     <span class="hero-hint">role pra entrar ↓</span>
   </div>
 </div>
@@ -640,7 +640,7 @@ body { overflow: hidden; }
       <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
     </div>
     <div class="tipo-breadcrumb" id="breadcrumb">
-      <span class="header-stats">39 tools &bull; 0 install &bull; 100% browser</span>
+      <span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>
       <span class="current">Home</span>
     </div>
     <div class="tipo-header-line"></div>
@@ -659,7 +659,7 @@ body { overflow: hidden; }
           </div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
-          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Shaper · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
+          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -755,14 +755,6 @@ body { overflow: hidden; }
             <div class="tipo-mode-card-title">Palette</div>
             <div class="tipo-mode-card-desc">Extract dominant colors from any image (median cut) and generate harmonies — complementary, analogous, triadic &amp; more.</div>
             <div class="tipo-mode-card-meta">image &bull; eyedropper &bull; 6 harmonies &bull; export ASE/CSS/JSON/PNG</div>
-          </div>
-        </a>
-        <a href="shaper.html" class="tipo-mode-card">
-          <div class="tipo-mode-card-preview pv-shaper"></div>
-          <div class="tipo-mode-card-info">
-            <div class="tipo-mode-card-title">Gradient Shaper</div>
-            <div class="tipo-mode-card-desc">Any shape becomes a gradient — distance-field bands flow from text, blobs or hand-drawn shapes. Image/video warps the field.</div>
-            <div class="tipo-mode-card-meta">image &bull; video &bull; webcam &bull; draw &bull; 9 presets &bull; export mp4/png</div>
           </div>
         </a>
         <a href="mockup.html" class="tipo-mode-card">
@@ -926,7 +918,7 @@ function showLevel(id) {
 
 function updateBreadcrumb(path) {
   const bc = document.getElementById('breadcrumb');
-  let html = '<span class="header-stats">39 tools &bull; 0 install &bull; 100% browser</span>' +
+  let html = '<span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>' +
     '<span onclick="goHome()">Home</span>';
   path.forEach((item, i) => {
     html += '<span class="sep">/</span>';
@@ -2140,7 +2132,7 @@ goKineticType = function() {
         scale: 0.62, duration: 0.5, ease: 'power2.inOut',
       });
     }, '-=0.2')
-    .add(setLog('39 ferramentas · type em movimento · 100% browser'))
+    .add(setLog('38 ferramentas · type em movimento · 100% browser'))
     .to('#heroCta', { opacity: 1, duration: 0.6 })
     .add(() => hero.classList.add('parked'));
   } // buildIntro
