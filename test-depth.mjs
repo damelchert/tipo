@@ -81,11 +81,13 @@ await setV('displace', 100);
 const h1 = await snap();
 console.log('displacement changes render:', h0 !== h1 ? 'OK' : 'FAIL');
 
-// 3. wireframe
-await setV('wireframe', true);
+// 3. render modes (solid / wireframe / particles)
+await setV('renderMode', 'wire');
 const hw = await snap();
-await setV('wireframe', false);
-console.log('wireframe changes render:', hw !== h1 ? 'OK' : 'FAIL');
+await setV('renderMode', 'points');
+const hp = await snap();
+await setV('renderMode', 'solid');
+console.log('wireframe changes render:', hw !== h1 ? 'OK' : 'FAIL', '| particles mode:', hp !== h1 && hp !== hw ? 'OK' : 'FAIL');
 
 // 4. invert depth
 await setV('invertDepth', true);
@@ -125,13 +127,13 @@ await setV('depthMode', 'lum');
 
 // 7. presets distinct
 const ph = {};
-for (const p of ['relief', 'pop', 'wire', 'orbit', 'canyon', 'hologram']) {
+for (const p of ['relief', 'pop', 'wire', 'orbit', 'canyon', 'hologram', 'particles', 'neon']) {
   await page.evaluate(n => applyPreset(n), p);
   await freeze();
   ph[p] = await snap();
 }
 const uniq = new Set(Object.values(ph)).size;
-console.log('presets distinct:', uniq === 6 ? 'OK (6/6)' : `FAIL (${uniq}/6)`);
+console.log('presets distinct:', uniq === 8 ? 'OK (8/8)' : `FAIL (${uniq}/8)`);
 
 // 8. parallax reacts to pointer
 await page.evaluate(() => applyPreset('relief'));

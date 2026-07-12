@@ -159,6 +159,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-12
 
+### Depth modernizado (Fase 17.3) — material de verdade + Particles
+- Shader upgrade: specular Blinn-Phong (half-vector com view (0,0,1) — plano de frente, aproximação válida), rim light colorido `pow(1-n.z, 1.6)`, fog por profundidade `mix(col, fogColor, fogAmt*(1-vDepth))`, luz direcional com ângulo 0-360.
+- **Particles**: THREE.Points com o MESMO par de shaders via `defines:{POINTS:1}` — vertex ganha `gl_PointSize = pointSize*5.5/-mv.z`, fragment descarta fora do círculo (`gl_PointCoord`). Os DOIS materiais compartilham o MESMO objeto uniforms (padrão three.js) — atualiza uma vez, vale pros dois. mesh.visible/points.visible alternam pelo select renderMode (substituiu o checkbox wireframe — test-depth migrado).
+- Densidade de particles: meshRes 170 + pointSize 2 pros pontos LEREM como nuvem (340 fundia em superfície — espaçamento tem que ser > diâmetro do ponto).
+- Presets com cores completas (rim/fog/bg); novos: Particles e Neon. 8/8 distintos no teste.
+
 ### Overlays modernizado (Fase 17.2) — Film FX em camadas
 - Raiz do "Super 8 tosco": compositar 1 textura estática com blend ≠ filme. Filme = camadas ANIMADAS. Nova seção **Film FX**: flicker (exposição por frame), gate weave (frame offset com bordas pretas de projeção), vignette 3-stop, dust & hair (poeira + fio no gate + risco vertical persistente ~400ms), tint soft-light. Steppado a **18fps** (cadência de projeção real) via `hashT(a,b)` próprio — independente do seed do grão, então preview/HQ/PNG reproduzem a mesma sequência de artefatos.
 - Presets de filme = looks completos (setP textura + setFX artefatos). Reset zera FX (entry default preservado).

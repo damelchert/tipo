@@ -50,6 +50,8 @@
       <span class="preset-chip" onclick="applyPreset('orbit')">Orbit</span>
       <span class="preset-chip" onclick="applyPreset('canyon')">Canyon</span>
       <span class="preset-chip" onclick="applyPreset('hologram')">Hologram</span>
+      <span class="preset-chip" onclick="applyPreset('particles')">Particles</span>
+      <span class="preset-chip" onclick="applyPreset('neon')">Neon</span>
       <span class="preset-chip" onclick="applyPreset('relief')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
@@ -76,11 +78,18 @@
   </div>
 
   <div class="section">
-    <div class="section-title">3D Mesh<span class="help-icon" data-help="Displacement: o quanto o relevo salta da superfície. Resolution: subdivisões da malha — mais = relevo detalhado (custa GPU). Wireframe: mostra só as arestas da malha — ótimo com tipografia. Zoom aproxima a câmera.">?</span></div>
+    <div class="section-title">3D Mesh<span class="help-icon" data-help="Displacement: o quanto o relevo salta da superfície. Resolution: subdivisões da malha — mais = relevo detalhado (custa GPU). Render: Solid = superfície, Wireframe = arestas (ótimo com tipografia), Particles = nuvem de pontos. Zoom aproxima a câmera.">?</span></div>
     <div class="range-row"><span class="range-label">Displace</span><input type="range" id="displace" min="0" max="100" value="35"><span class="range-value" id="displaceVal">35</span></div>
     <div class="range-row"><span class="range-label">Resolution</span><input type="range" id="meshRes" min="16" max="400" value="220"><span class="range-value" id="meshResVal">220</span></div>
     <div class="range-row"><span class="range-label">Zoom</span><input type="range" id="zoom" min="50" max="200" value="100"><span class="range-value" id="zoomVal">100</span></div>
-    <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="wireframe"> Wireframe</label>
+    <div class="range-row"><span class="range-label">Render</span>
+      <select id="renderMode" style="flex:1;">
+        <option value="solid" selected>Solid</option>
+        <option value="wire">Wireframe</option>
+        <option value="points">Particles</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">Point Size</span><input type="range" id="pointSize" min="1" max="8" value="2"><span class="range-value" id="pointSizeVal">2</span></div>
   </div>
 
   <div class="section">
@@ -91,8 +100,14 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Light<span class="help-icon" data-help="Shading: iluminação fake calculada a partir do próprio depth map (normais por derivada) — dá volume sem luzes reais. 0 = cores originais puras.">?</span></div>
+    <div class="section-title">Light &amp; Atmosphere<span class="help-icon" data-help="Shading: difusa fake das normais do depth map. Specular: brilho de material (metálico/molhado). Rim: luz de contorno colorida nas bordas do relevo — o que faz o 3D POPAR. Angle: direção da luz. Fog: névoa por profundidade — longe some na cor do fog (atmosfera cinematográfica).">?</span></div>
     <div class="range-row"><span class="range-label">Shading</span><input type="range" id="shading" min="0" max="100" value="35"><span class="range-value" id="shadingVal">35</span></div>
+    <div class="range-row"><span class="range-label">Specular</span><input type="range" id="specular" min="0" max="100" value="0"><span class="range-value" id="specularVal">0</span></div>
+    <div class="range-row"><span class="range-label">Rim Light</span><input type="range" id="rim" min="0" max="100" value="0"><span class="range-value" id="rimVal">0</span></div>
+    <div class="range-row"><span class="range-label">Rim Color</span><input type="color" id="rimColor" value="#99E0D2" style="flex:1;height:26px;border:1px solid var(--border-2);background:var(--bg-2);"></div>
+    <div class="range-row"><span class="range-label">Angle</span><input type="range" id="lightAngle" min="0" max="360" value="50"><span class="range-value" id="lightAngleVal">50</span></div>
+    <div class="range-row"><span class="range-label">Fog</span><input type="range" id="fog" min="0" max="100" value="0"><span class="range-value" id="fogVal">0</span></div>
+    <div class="range-row"><span class="range-label">Fog Color</span><input type="color" id="fogColor" value="#1A1818" style="flex:1;height:26px;border:1px solid var(--border-2);background:var(--bg-2);"></div>
     <div class="range-row"><span class="range-label">Background</span><input type="color" id="bgColor" value="#F8F5F0" style="flex:1;height:26px;border:1px solid var(--border-2);background:var(--bg-2);"></div>
   </div>
 
@@ -391,49 +406,98 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 20);
 
 let colorTexture = null, depthTexture = null, videoTexture = null;
-let mesh = null, geometry = null;
+let mesh = null, points = null, geometry = null;
 
 const uniforms = {
-  map:       { value: null },
-  depthMap:  { value: null },
-  displace:  { value: 0.35 },
-  shading:   { value: 0.35 },
-  texel:     { value: new THREE.Vector2(1 / DEPTH_RES, 1 / DEPTH_RES) },
+  map:        { value: null },
+  depthMap:   { value: null },
+  displace:   { value: 0.35 },
+  shading:    { value: 0.35 },
+  specular:   { value: 0 },
+  rim:        { value: 0 },
+  rimColor:   { value: new THREE.Color('#99E0D2') },
+  fogAmt:     { value: 0 },
+  fogColor:   { value: new THREE.Color('#1A1818') },
+  lightDir:   { value: new THREE.Vector3(0.45, 0.55, 0.72) },
+  pointSize:  { value: 2 },
+  texel:      { value: new THREE.Vector2(1 / DEPTH_RES, 1 / DEPTH_RES) },
 };
+
+const VERT = `
+  uniform sampler2D depthMap;
+  uniform float displace;
+  uniform float pointSize;
+  varying vec2 vUv;
+  varying float vDepth;
+  void main() {
+    vUv = uv;
+    float d = texture2D(depthMap, uv).r;
+    vDepth = d;
+    vec3 p = position + vec3(0.0, 0.0, (d - 0.5) * displace);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    #ifdef POINTS
+    gl_PointSize = pointSize * 5.5 / -mv.z;
+    #endif
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const FRAG = `
+  uniform sampler2D map;
+  uniform sampler2D depthMap;
+  uniform float shading;
+  uniform float specular;
+  uniform float rim;
+  uniform vec3 rimColor;
+  uniform float fogAmt;
+  uniform vec3 fogColor;
+  uniform vec3 lightDir;
+  uniform float displace;
+  uniform vec2 texel;
+  varying vec2 vUv;
+  varying float vDepth;
+  void main() {
+    #ifdef POINTS
+    if (length(gl_PointCoord - 0.5) > 0.5) discard;
+    #endif
+    vec4 col = texture2D(map, vUv);
+    float dx = texture2D(depthMap, vUv + vec2(texel.x, 0.0)).r - texture2D(depthMap, vUv - vec2(texel.x, 0.0)).r;
+    float dy = texture2D(depthMap, vUv + vec2(0.0, texel.y)).r - texture2D(depthMap, vUv - vec2(0.0, texel.y)).r;
+    vec3 n = normalize(vec3(-dx * displace * 14.0, -dy * displace * 14.0, 0.55));
+    vec3 L = normalize(lightDir);
+    if (shading > 0.001) {
+      float light = clamp(dot(n, L), 0.0, 1.0);
+      col.rgb *= mix(1.0, 0.35 + light * 0.95, shading);
+    }
+    if (specular > 0.001) {
+      vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+      float sp = pow(clamp(dot(n, H), 0.0, 1.0), 24.0);
+      col.rgb += sp * specular * 0.9;
+    }
+    if (rim > 0.001) {
+      float r = pow(1.0 - clamp(n.z, 0.0, 1.0), 1.6);
+      col.rgb += rimColor * r * rim * 1.4;
+    }
+    if (fogAmt > 0.001) {
+      col.rgb = mix(col.rgb, fogColor, clamp(fogAmt * (1.0 - vDepth) * 1.25, 0.0, 1.0));
+    }
+    gl_FragColor = col;
+  }
+`;
 
 const material = new THREE.ShaderMaterial({
   uniforms,
-  vertexShader: `
-    uniform sampler2D depthMap;
-    uniform float displace;
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      float d = texture2D(depthMap, uv).r;
-      vec3 p = position + vec3(0.0, 0.0, (d - 0.5) * displace);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform sampler2D map;
-    uniform sampler2D depthMap;
-    uniform float shading;
-    uniform float displace;
-    uniform vec2 texel;
-    varying vec2 vUv;
-    void main() {
-      vec4 col = texture2D(map, vUv);
-      if (shading > 0.001) {
-        float dx = texture2D(depthMap, vUv + vec2(texel.x, 0.0)).r - texture2D(depthMap, vUv - vec2(texel.x, 0.0)).r;
-        float dy = texture2D(depthMap, vUv + vec2(0.0, texel.y)).r - texture2D(depthMap, vUv - vec2(0.0, texel.y)).r;
-        vec3 n = normalize(vec3(-dx * displace * 14.0, -dy * displace * 14.0, 0.55));
-        float light = clamp(dot(n, normalize(vec3(0.45, 0.55, 0.72))), 0.0, 1.0);
-        col.rgb *= mix(1.0, 0.35 + light * 0.95, shading);
-      }
-      gl_FragColor = col;
-    }
-  `,
+  vertexShader: VERT,
+  fragmentShader: FRAG,
   side: THREE.DoubleSide,
+});
+
+// mesmo shader com POINTS: nuvem de partículas redondas (uniforms COMPARTILHADOS)
+const pointsMaterial = new THREE.ShaderMaterial({
+  uniforms,
+  vertexShader: VERT,
+  fragmentShader: FRAG,
+  defines: { POINTS: 1 },
 });
 
 function sourceAspect() {
@@ -456,8 +520,12 @@ function rebuildMesh() {
   if (!mesh) {
     mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+    points = new THREE.Points(geometry, pointsMaterial);
+    points.visible = false;
+    scene.add(points);
   } else {
     mesh.geometry = geometry;
+    points.geometry = geometry;
   }
 }
 
@@ -536,7 +604,18 @@ function animate(now) {
 
   uniforms.displace.value = val('displace') / 100 * 0.85;
   uniforms.shading.value = val('shading') / 100;
-  material.wireframe = chk('wireframe');
+  uniforms.specular.value = val('specular') / 100;
+  uniforms.rim.value = val('rim') / 100;
+  uniforms.fogAmt.value = val('fog') / 100;
+  uniforms.pointSize.value = val('pointSize');
+  uniforms.rimColor.value.set(document.getElementById('rimColor').value);
+  uniforms.fogColor.value.set(document.getElementById('fogColor').value);
+  const az = val('lightAngle') * Math.PI / 180;
+  uniforms.lightDir.value.set(Math.cos(az) * 0.72, Math.sin(az) * 0.72, 0.65);
+  const rMode = document.getElementById('renderMode').value;
+  material.wireframe = rMode === 'wire';
+  mesh.visible = rMode !== 'points';
+  if (points) points.visible = rMode === 'points';
   uniforms.texel.value.set(1 / depthCanvas.width, 1 / depthCanvas.height);
 
   // camera
@@ -601,23 +680,28 @@ async function toggleRec() {
 // ============================================================
 // PRESETS
 // ============================================================
+const PRESET_SLIDERS = ['displace', 'meshRes', 'zoom', 'pointSize', 'parallax', 'rotate', 'rotSpeed', 'shading', 'specular', 'rim', 'lightAngle', 'fog', 'depthContrast', 'depthSmooth'];
+
 const PRESETS = {
-  relief:   { displace: 35, meshRes: 220, zoom: 100, wireframe: false, parallax: 55, rotate: 20, rotSpeed: 30, shading: 35, depthContrast: 100, depthSmooth: 3,  invertDepth: false },
-  pop:      { displace: 75, meshRes: 280, zoom: 110, wireframe: false, parallax: 70, rotate: 12, rotSpeed: 25, shading: 55, depthContrast: 140, depthSmooth: 2,  invertDepth: false },
-  wire:     { displace: 55, meshRes: 110, zoom: 100, wireframe: true,  parallax: 60, rotate: 28, rotSpeed: 35, shading: 0,  depthContrast: 120, depthSmooth: 4,  invertDepth: false },
-  orbit:    { displace: 45, meshRes: 240, zoom: 92,  wireframe: false, parallax: 0,  rotate: 70, rotSpeed: 45, shading: 40, depthContrast: 110, depthSmooth: 3,  invertDepth: false },
-  canyon:   { displace: 95, meshRes: 320, zoom: 120, wireframe: false, parallax: 45, rotate: 35, rotSpeed: 18, shading: 75, depthContrast: 180, depthSmooth: 6,  invertDepth: false },
-  hologram: { displace: 60, meshRes: 64,  zoom: 100, wireframe: true,  parallax: 80, rotate: 45, rotSpeed: 60, shading: 0,  depthContrast: 150, depthSmooth: 8,  invertDepth: true  },
+  relief:    { displace: 35, meshRes: 220, zoom: 100, renderMode: 'solid',  pointSize: 2, parallax: 55, rotate: 20, rotSpeed: 30, shading: 35, specular: 0,  rim: 0,  lightAngle: 50,  fog: 0,  depthContrast: 100, depthSmooth: 3, invertDepth: false, rimColor: '#99E0D2', fogColor: '#1A1818', bgColor: '#F8F5F0' },
+  pop:       { displace: 75, meshRes: 280, zoom: 110, renderMode: 'solid',  pointSize: 2, parallax: 70, rotate: 12, rotSpeed: 25, shading: 55, specular: 25, rim: 0,  lightAngle: 35,  fog: 0,  depthContrast: 140, depthSmooth: 2, invertDepth: false, rimColor: '#99E0D2', fogColor: '#1A1818', bgColor: '#F8F5F0' },
+  wire:      { displace: 55, meshRes: 110, zoom: 100, renderMode: 'wire',   pointSize: 2, parallax: 60, rotate: 28, rotSpeed: 35, shading: 0,  specular: 0,  rim: 0,  lightAngle: 50,  fog: 0,  depthContrast: 120, depthSmooth: 4, invertDepth: false, rimColor: '#99E0D2', fogColor: '#1A1818', bgColor: '#F8F5F0' },
+  orbit:     { displace: 45, meshRes: 240, zoom: 92,  renderMode: 'solid',  pointSize: 2, parallax: 0,  rotate: 70, rotSpeed: 45, shading: 40, specular: 20, rim: 15, lightAngle: 50,  fog: 12, depthContrast: 110, depthSmooth: 3, invertDepth: false, rimColor: '#99E0D2', fogColor: '#1A1818', bgColor: '#F8F5F0' },
+  canyon:    { displace: 95, meshRes: 320, zoom: 120, renderMode: 'solid',  pointSize: 2, parallax: 45, rotate: 35, rotSpeed: 18, shading: 75, specular: 30, rim: 20, lightAngle: 25,  fog: 40, depthContrast: 180, depthSmooth: 6, invertDepth: false, rimColor: '#D4A040', fogColor: '#123C36', bgColor: '#1A1818' },
+  hologram:  { displace: 60, meshRes: 64,  zoom: 100, renderMode: 'wire',   pointSize: 2, parallax: 80, rotate: 45, rotSpeed: 60, shading: 0,  specular: 0,  rim: 55, lightAngle: 50,  fog: 25, depthContrast: 150, depthSmooth: 8, invertDepth: true,  rimColor: '#99E0D2', fogColor: '#071210', bgColor: '#0A0F0E' },
+  particles: { displace: 70, meshRes: 170, zoom: 105, renderMode: 'points', pointSize: 2, parallax: 70, rotate: 30, rotSpeed: 30, shading: 0,  specular: 0,  rim: 60, lightAngle: 50,  fog: 30, depthContrast: 130, depthSmooth: 4, invertDepth: false, rimColor: '#99E0D2', fogColor: '#101C1A', bgColor: '#101413' },
+  neon:      { displace: 60, meshRes: 260, zoom: 105, renderMode: 'solid',  pointSize: 2, parallax: 60, rotate: 25, rotSpeed: 30, shading: 25, specular: 60, rim: 85, lightAngle: 210, fog: 45, depthContrast: 150, depthSmooth: 3, invertDepth: false, rimColor: '#D4A040', fogColor: '#0C0A08', bgColor: '#0C0A08' },
 };
 
 function applyPreset(name) {
   const p = PRESETS[name];
   if (!p) return;
-  ['displace', 'meshRes', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading', 'depthContrast', 'depthSmooth'].forEach(id => {
-    document.getElementById(id).value = p[id];
-  });
-  document.getElementById('wireframe').checked = p.wireframe;
+  PRESET_SLIDERS.forEach(id => { document.getElementById(id).value = p[id]; });
+  document.getElementById('renderMode').value = p.renderMode;
   document.getElementById('invertDepth').checked = p.invertDepth;
+  document.getElementById('rimColor').value = p.rimColor;
+  document.getElementById('fogColor').value = p.fogColor;
+  document.getElementById('bgColor').value = p.bgColor;
   updateLabels();
   depthDirty = true;
   rebuildMesh();
@@ -628,7 +712,7 @@ function applyPreset(name) {
 }
 
 function updateLabels() {
-  ['displace', 'meshRes', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading', 'depthContrast', 'depthSmooth'].forEach(id => {
+  PRESET_SLIDERS.forEach(id => {
     document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
   });
 }
@@ -636,7 +720,7 @@ function updateLabels() {
 // ============================================================
 // BINDINGS
 // ============================================================
-['displace', 'zoom', 'parallax', 'rotate', 'rotSpeed', 'shading'].forEach(id => {
+['displace', 'zoom', 'pointSize', 'parallax', 'rotate', 'rotSpeed', 'shading', 'specular', 'rim', 'lightAngle', 'fog'].forEach(id => {
   document.getElementById(id).addEventListener('input', updateLabels);
 });
 ['depthContrast', 'depthSmooth'].forEach(id => {
