@@ -94,6 +94,70 @@ const TipoHQ = {
     });
   },
 
+  /** 16.4 — áudio: decodifica a trilha do arquivo fonte e devolve
+   *  { buffer, rate, channels, codec } pronto pro encode, ou null
+   *  (sem trilha / codec sem suporte → exporta mudo, como antes). */
+  async _prepareAudio(video) {
+    try {
+      const src = video.currentSrc || video.src;
+      if (!src) return null;
+      const bytes = await (await fetch(src)).arrayBuffer();
+      const actx = new AudioContext();
+      let ab;
+      try {
+        ab = await actx.decodeAudioData(bytes);
+      } finally {
+        actx.close();
+      }
+      if (!ab || !ab.length) return null;
+      const channels = Math.min(2, ab.numberOfChannels);
+      const rate = ab.sampleRate;
+      for (const codec of ['mp4a.40.2', 'opus']) {
+        try {
+          const s = await AudioEncoder.isConfigSupported({
+            codec, sampleRate: rate, numberOfChannels: channels, bitrate: 128000,
+          });
+          if (s.supported) return { buffer: ab, rate, channels, codec };
+        } catch (e) { /* tenta o próximo */ }
+      }
+      return null;
+    } catch (e) {
+      return null; // fonte sem áudio (ou CORS) — segue mudo
+    }
+  },
+
+  /** Encoda o AudioBuffer inteiro em chunks pro muxer. */
+  async _encodeAudio(audio, muxer, onError) {
+    const { buffer: ab, rate, channels, codec } = audio;
+    const enc = new AudioEncoder({
+      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      error: e => onError(e),
+    });
+    enc.configure({ codec, sampleRate: rate, numberOfChannels: channels, bitrate: 128000 });
+    const FRAME = 1024;
+    const len = ab.length;
+    const chData = [];
+    for (let c = 0; c < channels; c++) chData.push(ab.getChannelData(c));
+    for (let off = 0; off < len; off += FRAME) {
+      const n = Math.min(FRAME, len - off);
+      const buf = new Float32Array(n * channels);
+      for (let c = 0; c < channels; c++) buf.set(chData[c].subarray(off, off + n), c * n);
+      const ad = new AudioData({
+        format: 'f32-planar',
+        sampleRate: rate,
+        numberOfFrames: n,
+        numberOfChannels: channels,
+        timestamp: Math.round(off / rate * 1e6),
+        data: buf,
+      });
+      enc.encode(ad);
+      ad.close();
+      if (enc.encodeQueueSize > 12) await new Promise(r => setTimeout(r, 2));
+    }
+    await enc.flush();
+    enc.close();
+  },
+
   _progressUI() {
     const overlay = document.getElementById('exportProgress');
     const title = document.getElementById('progressTitle');
@@ -153,9 +217,19 @@ const TipoHQ = {
     canvas.height = enc.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+    // 16.4 — remux da trilha do fonte (AAC; fallback Opus; sem trilha = mudo)
+    ui.open();
+    ui.set(0, 'Export HQ — preparando', 'lendo a trilha de áudio do fonte…');
+    const audio = typeof AudioEncoder !== 'undefined' ? await this._prepareAudio(video) : null;
+
     const muxer = new Mp4Muxer.Muxer({
       target: new Mp4Muxer.ArrayBufferTarget(),
       video: { codec: 'avc', width: enc.width, height: enc.height },
+      audio: audio ? {
+        codec: audio.codec === 'opus' ? 'opus' : 'aac',
+        sampleRate: audio.rate,
+        numberOfChannels: audio.channels,
+      } : undefined,
       fastStart: 'in-memory',
     });
     let encodeError = null;
@@ -198,11 +272,19 @@ const TipoHQ = {
       if (!this._cancel) {
         ui.set(1, 'Export HQ — finalizando', 'encodando os últimos frames...');
         await encoder.flush();
+        if (audio) {
+          ui.set(1, 'Export HQ — finalizando', 'remuxando o áudio do fonte…');
+          try {
+            await this._encodeAudio(audio, muxer, e => { throw e; });
+          } catch (e) {
+            console.warn('[TipoHQ] áudio falhou, exportando mudo:', e);
+          }
+        }
         muxer.finalize();
         const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
         const name = (cfg.filename ? cfg.filename() : 'tipo-HQ') + '.mp4';
         TipoUI._downloadBlob(blob, name);
-        TipoUI.showToast(`HQ pronto — ${enc.width}×${enc.height}, ${(blob.size / 1048576).toFixed(1)} MB`);
+        TipoUI.showToast(`HQ pronto — ${enc.width}×${enc.height}${audio ? ' + áudio' : ''}, ${(blob.size / 1048576).toFixed(1)} MB`);
       } else {
         TipoUI.showToast('Export HQ cancelado');
       }
