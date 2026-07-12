@@ -45,6 +45,8 @@ for (const [tool, src, expectW, expectH, expFrames] of [
   ['datamosh', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
   ['rastro', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
   ['dithering', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['reticula', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
+  ['glitch', '/tmp/hq-src-1080.mp4', 1920, 1080, 75],
 ]) {
   const page = await ctx.newPage();
   let errs = 0;

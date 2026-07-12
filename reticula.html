@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
 <script src="shared/ui.js?v=20260711-hq1"></script>
+<script src="shared/hq.js?v=20260712-hq3"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -132,6 +133,7 @@
 let font, recorder;
 let sourceImg = null;
 let sourceVideo = null;
+let hqK = 1; // Export HQ: multiplicador dos parâmetros em pixels
 let webcamStream = null;
 let mediaUrl = null; // object URL of current video file (revoked on replace)
 
@@ -284,7 +286,7 @@ function draw() {
   const maxS = val('maxSize') / 100;
   const ang = radians(val('angle'));
   const cont = val('contrast') / 100;
-  const gapPx = val('gap');
+  const gapPx = val('gap') * hqK;
   const shape = document.getElementById('shape').value;
   const charIn = document.getElementById('charInput').value || 'T';
 
@@ -472,6 +474,33 @@ function applyPreset(name) {
   if (event && event.target) event.target.classList.add('active');
   if (sourceType === 'image') redraw();
 }
+
+// ============================================================
+// EXPORT HQ (Fase 16): takeover p5 — noLoop + resizeCanvas(W,H)
+// + redraw() por frame roda o draw() REAL em resolução nativa.
+// A retícula (res = células na largura) fica IDÊNTICA, nítida.
+// ============================================================
+let hqPrev = null;
+TipoHQ.enable({
+  getVideo: () => (sourceType === 'video' && sourceVideo && sourceVideo.elt) ? sourceVideo.elt : null,
+  begin: (W, H) => {
+    hqPrev = { w: width, h: height };
+    hqK = W / width;
+    noLoop();
+    resizeCanvas(W, H);
+  },
+  render: (frame, tSec, ctx, W, H) => {
+    redraw();
+    ctx.drawImage(drawingContext.canvas, 0, 0, W, H);
+  },
+  end: () => {
+    hqK = 1;
+    if (hqPrev) resizeCanvas(hqPrev.w, hqPrev.h);
+    hqPrev = null;
+    loop();
+  },
+  filename: () => 'tipo-reticula-HQ',
+});
 </script>
 </body>
 </html>

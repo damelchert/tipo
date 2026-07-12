@@ -159,6 +159,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### SUÍTE HQ COMPLETA — reticula e glitch via takeover p5 (8/8)
+- **Padrão takeover p5** (mais elegante que espelhar o draw em Graphics): begin = noLoop() + resizeCanvas(W,H) — o noLoop JÁ pausa o loop ao vivo (nem precisa da flag global); render = redraw() (roda o draw() real síncrono em HQ) + drawImage(drawingContext.canvas); end = resizeCanvas de volta + loop().
+- **hqK** = W/previewW multiplica os parâmetros com semântica de PIXEL (glitch: chShift/sliceInt/scanGap/bleed/blockSz/blockShift/scanOff/interlace; reticula: gap) — senão o efeito sai relativamente mais fino em 4K. Params estruturais (res da retícula = células) não escalam: a arte fica idêntica.
+- test-hq.mjs **37/37** — as 8 (gradientmap, riso, pixelsort, datamosh, rastro, dithering, reticula, glitch) exportando na resolução da fonte, frame-perfect, decode limpo, 1440p nativo.
+- FASE 18 registrada (timeline didática) com as opções A-D pro Daniel decidir.
+
 ### Export HQ — polish pós-teste-real do Daniel
 - Falso alarme resolvido ("deu certo, sim, viajei"): o Export HQ funcionava; o modelo mental esperava que fosse um MODO do Record. Dois ajustes de UI pedidos: (1) **botão ao lado do Record** — GIF/Link eram injetados no boot DEPOIS do HQ e entravam no meio (Record|GIF|Link|HQ); inserção do HQ adiada pra pós-boot → Record|HQ|GIF|Link nas 6; (2) **destaque enquanto roda** — classe .running (borda/texto accent + pulso de box-shadow) e label "Renderizando…" durante a passada.
 - **Insight registrado como 16.5**: o caso real dele (performance de drops de keyframe ao vivo no datamosh) pede "performance capture" — logar eventos com timestamp do vídeo durante o Record e oferecer re-render HQ reaplicando nos tempos certos. Especificado no plano, não construído.

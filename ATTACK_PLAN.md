@@ -452,6 +452,15 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 
 
 
+
+### FASE 18 — TIMELINE DIDÁTICA (feedback do Daniel 12/07: "os keyframes são um mistério, parece maquiagem")
+Diagnóstico: o modelo "mover playhead + mexer slider = keyframe" (padrão Cavalry/AE) é INVISÍVEL pra quem não conhece esses apps. Play/REC "não fazem nada" sem ≥2 keyframes — os hints de 03/07 não bastaram.
+- [ ] Opção A: **demo autoexplicativo** — botão "exemplo" na barra que cria 2 keyframes num slider visível e dá play (o conceito se mostra em 3s)
+- [ ] Opção B: help "?" na barra com micro-tutorial ilustrado
+- [ ] Opção C: empty-state persistente na régua ("1. arraste o cursor · 2. mexa um slider = keyframe · 3. play")
+- [ ] Opção D (decisão do Daniel): remover das ferramentas onde não agrega
+- **Status:** [ ] Aguardando decisão de direção (A+C é a aposta)
+
 ### FASE 17 — MODERNIZAÇÃO DE FERRAMENTAS (pedido do Daniel 11/07)
 - [ ] **ASCII** — mais opções e ajustes mais finos (charsets extras? edge detection? cores por faixa? kerning/densidade fina)
 - [ ] **Overlays** — funções toscas (Super 8 e outras) — modernizar os patterns fracos, revisar um a um
@@ -475,7 +484,7 @@ Visão: as visual tools viram uma suíte de VFX pra montagem — o take entra em
 **Rollout**:
 - 16.1 Motor TipoHQ + 2 pilotos (gradientmap + riso) — ✅ (2026-07-11) **shared/hq.js**: seek-loop frame-exato → render full-res offscreen → VideoEncoder timestamps i×1e6/fps → mp4-muxer fastStart; codec ladder (High 5.1 pra >1080p, fallback 1440→1080 via isConfigSupported), bitrate 0.12 bits/px/frame cap 40Mbps, backpressure na fila, progresso com fps/ETA + cancelar, restaura estado do player. Botão "Export HQ" injetado ao lado do Record (só ativa com vídeo). Pilotos: gradientmap (renderFrameHQ com tempo VIRTUAL pro cycle — anda por segundos do take) e riso (renderRiso já parametrizado; currentOpts(mult) escala cell/misreg pra resolução alvo — halftone mantém o tamanho visual do preview em full-res). **test-hq.mjs 13/13: 1080p→1080p exato, 75/75 frames, duração 2.50s exata, decode limpo, e 1440p exporta NATIVO.** Frame extraído confirma o efeito em full-res.
 - **Ordem do rollout definida pelo Daniel**: Dithering, Reticula, Glitch, Datamosh, Rastro, Pixel Sort (+ os 2 pilotos prontos = as 8 mais úteis)
-- 16.2 Rollout frame-based — ✅ parcial (2026-07-12): **pixelsort** (renderFrameHQ auto-contido, drift em tempo virtual, os 3 caminhos de ângulo) e **dithering** (takeover: hqCellSize = W/cols — o grid da arte fica IDÊNTICO ao preview, células nítidas em full-res; gate no loop ao vivo). Pendentes: **reticula e glitch** (são p5 — precisam de refactor pra p5.Graphics como alvo; próximo turno).
+- 16.2 Rollout frame-based — ✅ parcial (2026-07-12): **pixelsort** (renderFrameHQ auto-contido, drift em tempo virtual, os 3 caminhos de ângulo) e **dithering** (takeover: hqCellSize = W/cols — o grid da arte fica IDÊNTICO ao preview, células nítidas em full-res; gate no loop ao vivo). **reticula e glitch** ✅ (2026-07-12) via **takeover p5**: noLoop() (pausa o loop ao vivo de graça) + resizeCanvas(W,H) + redraw() por frame roda o draw() REAL em resolução nativa; parâmetros em pixels escalam por hqK = W/previewW (glitch: 8 params; reticula: gap) — a ESTÉTICA fica idêntica ao preview, nítida. **SUÍTE COMPLETA: 8/8 ferramentas da lista do Daniel exportam em resolução de fonte, test-hq 37/37.**
 - 16.3 Temporais — ✅ (2026-07-12): **datamosh e rastro via "HQ takeover"** — hqSize força o pipeline REAL nas dimensões da fonte, begin() reseta buffers/keyframe, tempo virtual em ms, e flag global `__tipoHQactive` PAUSA o loop ao vivo (senão o estado temporal avançava dobrado). Sequencial garantido = mosh/echo mais corretos que o preview. Engine ganhou hooks begin/end e aceita recordBtn como âncora (dithering).
 - 16.4 Áudio remux + presets de entrega (ProRes? não — H.264 high bitrate + opção PNG sequence pra quem quer lossless)
 - 16.5 **Performance capture** (insight do teste do Daniel no datamosh): gravar os EVENTOS da performance ao vivo (drops de keyframe com timestamp do vídeo, automação de sliders) durante o Record MP4, e no stop oferecer "Re-render em HQ com sua performance" — a passada offline reaplica os eventos nos tempos certos. O melhor dos dois mundos: performance de VJ + arquivo master.
