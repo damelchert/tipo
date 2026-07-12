@@ -154,16 +154,21 @@ function chk(id) { return TipoUI.chk(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
 
 function buildTextBuf(txt, h) {
-  const g = createGraphics(2000, max(h, 10));
+  // power-of-two buffer: texture REPEAT (scroll wrap) requires POT in WebGL1 —
+  // with CLAMP, u>1 smeared the last column into a streak artifact
+  const g = createGraphics(2048, 64);
   g.background(0, 0);
   g.fill(255);
   g.noStroke();
   g.textFont(font);
-  g.textSize(h * 0.8);
+  g.textSize(64 * 0.8);
   g.textAlign(LEFT, CENTER);
   const w = g.textWidth(txt + '  ') || 1;
-  const reps = ceil(2000 / w) + 1;
-  for (let r = 0; r < reps; r++) g.text(txt + '  ', r * w, h / 2);
+  // integer number of periods across the buffer → the REPEAT seam lands
+  // exactly between repetitions instead of cutting a glyph in half
+  const reps = max(1, floor(2048 / w));
+  const step = 2048 / reps;
+  for (let r = 0; r < reps; r++) g.text(txt + '  ', r * step, 32);
   return g;
 }
 
@@ -271,8 +276,12 @@ function draw() {
     fill(stripC);
     noStroke();
     rect(-width, -sH / 2, width * 2, sH);
-    // Scrolling text
+    // Scrolling text — the buffer is baked white; tint it with the bg color
+    // so the strip reads as a knockout (bar = text color, text = bg color).
+    // Without this, light text color = white-on-white = blank band.
     textureMode(NORMAL);
+    textureWrap(REPEAT, CLAMP);
+    tint(bgC);
     texture(textBuf);
     const scrollX = doAnim ? (frameCount * spd * 5) % 1 : 0;
     beginShape();
@@ -281,6 +290,7 @@ function draw() {
     vertex(width / 2, sH / 2 - 2, 0.5, scrollX + 0.5, 1);
     vertex(-width / 2, sH / 2 - 2, 0.5, scrollX, 1);
     endShape(CLOSE);
+    noTint();
     pop();
   }
 
