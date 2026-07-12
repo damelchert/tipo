@@ -1103,17 +1103,26 @@ const TipoFont = {
   DEFAULT: 'assets/fonts/IBMPlexMono-Regular.ttf',
   DEFAULT_NAME: 'IBM Plex Mono',
   /** Curated built-in library (Fase 14). All open-licensed, self-hosted.
-   *  DEFAULT_BUILTIN is the site-wide display default for every tool. */
+   *  DEFAULT_BUILTIN is the site-wide display default for every tool.
+   *  14.2: `weights` = variantes por família; `file` segue sendo o peso
+   *  padrão (compat com quem lê BUILTINS direto). */
   BUILTINS: [
-    { name: 'Clash Display', file: 'assets/fonts/ClashDisplay-Semibold.otf' },
-    { name: 'General Sans', file: 'assets/fonts/GeneralSans-Semibold.otf' },
-    { name: 'Space Grotesk', file: 'assets/fonts/SpaceGrotesk-Bold.ttf' },
-    { name: 'Boska', file: 'assets/fonts/Boska-Bold.otf' },
-    { name: 'Fraunces', file: 'assets/fonts/Fraunces-Black.ttf' },
-    { name: 'IBM Plex Mono', file: 'assets/fonts/IBMPlexMono-Regular.ttf' },
+    { name: 'Clash Display', file: 'assets/fonts/ClashDisplay-Semibold.otf', def: 'Semibold',
+      weights: { Regular: 'assets/fonts/ClashDisplay-Regular.otf', Medium: 'assets/fonts/ClashDisplay-Medium.otf', Semibold: 'assets/fonts/ClashDisplay-Semibold.otf', Bold: 'assets/fonts/ClashDisplay-Bold.otf' } },
+    { name: 'General Sans', file: 'assets/fonts/GeneralSans-Semibold.otf', def: 'Semibold',
+      weights: { Regular: 'assets/fonts/GeneralSans-Regular.otf', Medium: 'assets/fonts/GeneralSans-Medium.otf', Semibold: 'assets/fonts/GeneralSans-Semibold.otf', Bold: 'assets/fonts/GeneralSans-Bold.otf' } },
+    { name: 'Space Grotesk', file: 'assets/fonts/SpaceGrotesk-Bold.ttf', def: 'Bold',
+      weights: { Bold: 'assets/fonts/SpaceGrotesk-Bold.ttf' } },
+    { name: 'Boska', file: 'assets/fonts/Boska-Bold.otf', def: 'Bold',
+      weights: { Regular: 'assets/fonts/Boska-Regular.otf', Bold: 'assets/fonts/Boska-Bold.otf', Black: 'assets/fonts/Boska-Black.otf' } },
+    { name: 'Fraunces', file: 'assets/fonts/Fraunces-Black.ttf', def: 'Black',
+      weights: { Black: 'assets/fonts/Fraunces-Black.ttf' } },
+    { name: 'IBM Plex Mono', file: 'assets/fonts/IBMPlexMono-Regular.ttf', def: 'Regular',
+      weights: { Regular: 'assets/fonts/IBMPlexMono-Regular.ttf', Bold: 'assets/fonts/IBMPlexMono-Bold.ttf' } },
   ],
   DEFAULT_BUILTIN: 'Clash Display',
   activeBuiltin: 'IBM Plex Mono',
+  activeWeight: 'Regular',
   custom: false,
   _url: null,
   _label: null,
@@ -1139,6 +1148,7 @@ const TipoFont = {
     row.id = 'tipoFontRow';
     row.innerHTML =
       '<select id="tipoFontSel" title="Fonte das ferramentas">' + opts + '</select>' +
+      '<select id="tipoFontW" title="Peso"></select>' +
       '<button type="button" id="tipoFontBtn" title="Use your own font (.ttf / .otf)">Aa</button>' +
       '<span id="tipoFontName" style="display:none;"></span>' +
       '<button type="button" id="tipoFontReset" title="Voltar pra fonte da biblioteca" style="display:none;">&#8634;</button>' +
@@ -1154,33 +1164,90 @@ const TipoFont = {
     });
     row.querySelector('#tipoFontReset').addEventListener('click', () => this.reset());
     const selEl = row.querySelector('#tipoFontSel');
-    selEl.addEventListener('change', () => this.setBuiltin(selEl.value));
+    const wSel = row.querySelector('#tipoFontW');
+    selEl.addEventListener('change', () => {
+      this._populateW();
+      this.setBuiltin(selEl.value, false, wSel.value);
+    });
+    wSel.addEventListener('change', () => this.setBuiltin(selEl.value, false, wSel.value));
+    // preview: as opções renderizam na própria fonte (lazy, no 1º toque)
+    const prev = () => this._initPreviews(selEl);
+    selEl.addEventListener('pointerdown', prev, { once: true });
+    selEl.addEventListener('focus', prev, { once: true });
 
     // apply the saved/site default; p5 globals only exist after window load
     const saved = localStorage.getItem('tipo-font') || this.DEFAULT_BUILTIN;
     selEl.value = this.BUILTINS.some(b => b.name === saved) ? saved : this.DEFAULT_BUILTIN;
-    if (selEl.value !== 'IBM Plex Mono') {
+    this._populateW();
+    if (selEl.value !== 'IBM Plex Mono' || this._weightOf(selEl.value) !== 'Regular') {
       const apply = () => this.setBuiltin(selEl.value, true);
       if (document.readyState === 'complete') setTimeout(apply, 120);
       else window.addEventListener('load', () => setTimeout(apply, 250));
     }
   },
 
+  /** Peso salvo por família (ou o padrão da família) */
+  _weightOf(name) {
+    const b = this.BUILTINS.find(x => x.name === name);
+    if (!b) return null;
+    const saved = localStorage.getItem('tipo-font-w-' + name);
+    return (saved && b.weights[saved]) ? saved : b.def;
+  },
+
+  /** Popular o select de peso com as variantes da família atual */
+  _populateW() {
+    const row = document.getElementById('tipoFontRow');
+    if (!row) return;
+    const selEl = row.querySelector('#tipoFontSel');
+    const wSel = row.querySelector('#tipoFontW');
+    if (!selEl || !wSel) return;
+    const b = this.BUILTINS.find(x => x.name === selEl.value);
+    const labels = b ? Object.keys(b.weights) : [];
+    wSel.innerHTML = labels.map(l => `<option value="${l}">${l}</option>`).join('');
+    wSel.value = this._weightOf(selEl.value);
+    wSel.style.display = (this.custom || labels.length < 2) ? 'none' : '';
+  },
+
+  /** Registra FontFaces de preview e aplica nas <option> (Chrome renderiza) */
+  _initPreviews(selEl) {
+    if (this._previews) return;
+    this._previews = true;
+    this._prevFam = {};
+    this.BUILTINS.forEach((b, i) => {
+      fetch(b.file).then(r => r.arrayBuffer()).then(buf => {
+        const ff = new FontFace('TipoPrev' + i, buf);
+        return ff.load().then(() => {
+          document.fonts.add(ff);
+          this._prevFam[b.name] = `"TipoPrev${i}", monospace`;
+          const opt = selEl.querySelector(`option[value="${b.name}"]`);
+          if (opt) { opt.style.fontFamily = this._prevFam[b.name]; opt.style.fontSize = '13px'; }
+          if (selEl.value === b.name) selEl.style.fontFamily = this._prevFam[b.name];
+        });
+      }).catch(() => {});
+    });
+  },
+
   /** Switch to a library font (persisted site-wide). quiet = no toast. */
-  setBuiltin(name, quiet) {
+  setBuiltin(name, quiet, weight) {
     const b = this.BUILTINS.find(x => x.name === name);
     if (!b) return;
+    const w = (weight && b.weights[weight]) ? weight : this._weightOf(name);
+    const fontFile = b.weights[w] || b.file;
     localStorage.setItem('tipo-font', name);
+    localStorage.setItem('tipo-font-w-' + name, w);
     const done = () => {
       this.activeBuiltin = name;
+      this.activeWeight = w;
       this.custom = false;
       this._label = null;
       window.dispatchEvent(new CustomEvent('tipofont', { detail: this._lastP5Font || null }));
       this._syncRow();
-      if (!quiet) this._toast('Fonte: ' + name);
+      const selEl = document.getElementById('tipoFontSel');
+      if (selEl && this._prevFam && this._prevFam[name]) selEl.style.fontFamily = this._prevFam[name];
+      if (!quiet) this._toast('Fonte: ' + name + (Object.keys(b.weights).length > 1 ? ' ' + w : ''));
     };
     if (typeof window.loadFont === 'function') {
-      window.loadFont(b.file, (font) => {
+      window.loadFont(fontFile, (font) => {
         this._lastP5Font = font;
         if (typeof window.textFont === 'function') {
           try { window.textFont(font); } catch (e) {}
@@ -1188,12 +1255,12 @@ const TipoFont = {
         done();
       }, () => { if (!quiet) this._toast('Fonte falhou — mantendo a atual'); });
     } else {
-      if (name === 'IBM Plex Mono') { // Plex is the page's CSS fallback, no FontFace needed
+      if (name === 'IBM Plex Mono' && w === 'Regular') { // Plex Regular é o fallback CSS da página
         if (this._bff) { document.fonts.delete(this._bff); this._bff = null; }
         done();
         return;
       }
-      fetch(b.file).then(r => r.arrayBuffer()).then(buf => {
+      fetch(fontFile).then(r => r.arrayBuffer()).then(buf => {
         const ff = new FontFace('TipoBuiltinFont', buf);
         return ff.load().then(() => {
           if (this._bff) document.fonts.delete(this._bff);
@@ -1212,6 +1279,7 @@ const TipoFont = {
     s.textContent = `
 #tipoFontRow { display:flex; align-items:center; gap:7px; margin-top:7px; }
 #tipoFontSel { flex:1; max-width:170px; background:var(--bg-2,#1e1e1e); color:var(--text-2,#ccc); border:1px solid var(--border-2,#3a3a3a); padding:4px 6px; font-size:10px; border-radius:4px; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
+#tipoFontW { max-width:92px; background:var(--bg-2,#1e1e1e); color:var(--text-2,#ccc); border:1px solid var(--border-2,#3a3a3a); padding:4px 6px; font-size:10px; border-radius:4px; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
 #tipoFontRow button { border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-4,#999); font-size:10px; padding:3px 8px; border-radius:4px; cursor:pointer; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
 #tipoFontRow button:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
 #tipoFontName { font-size:9px; color:var(--text-5,#777); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
@@ -1306,6 +1374,7 @@ const TipoFont = {
       selEl.style.display = this.custom ? 'none' : '';
       if (!this.custom) selEl.value = this.activeBuiltin;
     }
+    this._populateW();
     row.querySelector('#tipoFontReset').style.display = this.custom ? '' : 'none';
   },
 

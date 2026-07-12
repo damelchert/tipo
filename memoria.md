@@ -157,6 +157,18 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-13
+
+### Dia de fechamento — Fases 18, 16.4, 16.5, 19.1/19.2, 14.2 (tudo num dia)
+- **Fase 18 (timeline didática, A+C)**: botão **✨ demo** na barra — executa o fluxo REAL (seek 0 → slider → ◆ → seek meio → slider → 2º ◆ → play) com narração no hint e a linha do slider destacada; pulsa em gold enquanto não há keyframes. **Empty-state fantasma** na área de tracks ("move any slider → a ◆ lands here"). GOTCHA: _syncHint sobrescrevia a narração → guard `if (_demoRunning) return`.
+- **16.4 (áudio no HQ)**: fetch(video.currentSrc) → `decodeAudioData` (decodifica a trilha do container; rejeita se não houver = segue mudo) → `AudioEncoder` AAC 128k com fallback Opus (isConfigSupported) → `muxer.addAudioChunk`. AudioData **f32-planar** (canais concatenados por frame de 1024 samples), timestamps µs. Track de áudio só declarada no Muxer quando o audio existe. decodeAudioData RESAMPLEIA pro rate do AudioContext — usar esse rate no encoder/muxer.
+- **16.5 (performance capture)**: ui.js dispara `tipo-rec-start/stop` (CustomEvent) nos 2 caminhos de gravação (toggleRec + toggleVisualRec). TipoHQ loga input isTrusted de ranges + `TipoHQ.perfEvent(name)` (datamosh: dropKeyframe) com **video.currentTime** (funciona através de loops). Chip "✦ Performance (N ev) ON/OFF" ao lado do hqBtn. Replay: snapshot atual → aplica startState do take → eventos `ev.t <= t` por frame (sliders + cfg.perfEvent) → restaura no finally. Dithering fora (gravação própria, não passa pelo TipoUI).
+- **19.1/19.2 (segurança)**: varredura de segredos limpa (tree + histórico git). **vercel.json**: CSP (script-src self+jsdelivr com `wasm-unsafe-eval` pro ONNX; connect-src huggingface/*.hf.co pro modelo AI depth; frame-ancestors 'none'), HSTS preload, nosniff, Permissions-Policy. **SRI sha384** nos 4 CDN scripts nos 39 HTML (+crossorigin). Validação: Playwright fulfill com o header REAL → zero violações nas 4 páginas-tipo. GOTCHA: upgrade-insecure-requests quebra teste http local — remover só no teste.
+- **14.2 (pesos + preview)**: BUILTINS ganharam `weights{label:file}` + `def`; select de peso por família (persistido `tipo-font-w-<nome>`), oculto com 1 peso. Preview lazy: FontFace('TipoPrev'+i) por família aplicada nas `<option>` (Chrome renderiza, Safari ignora). Fontshare: zips oficiais em api.fontshare.com/v2/fonts/download/<slug> (OTFs completos). IBM Plex Bold: repo IBM/plex mudou de layout — pegar de google/fonts via jsDelivr gh.
+- **FASE 19 registrada** com reality-check: print/screen-record e cópia de fonte NÃO têm solução técnica na web aberta; blindagem real = segredos + headers + SRI (feito), deterrentes = ofuscação/watermark (19.3/19.4 pendentes).
+
+---
+
 ## 2026-07-12
 
 ### Depth modernizado (Fase 17.3) — material de verdade + Particles

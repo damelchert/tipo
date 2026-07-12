@@ -479,9 +479,9 @@ a animação dele ser fluida e profissional. Ordem de implementação: maior gan
 - [x] Fontes comerciais da referência (Söhne, Canela, Reckless, Obviously, Acne, Tobias, Fenul) NÃO entraram — sem licença pra self-host. Se Daniel comprar licenças, é só dropar o arquivo em assets/fonts/ e adicionar no BUILTINS.
 - UI do site continua IBM Plex Mono (voz da marca); a biblioteca muda o TYPE das ferramentas.
 
-#### 14.2 — Refinamentos pendentes
-- [ ] Pesos alternativos por fonte (hoje 1 peso curado por família)
-- [ ] Preview das fontes no próprio select (renderizar nome na própria fonte)
+#### 14.2 — Refinamentos pendentes — ✅ (2026-07-13)
+- ✅ **Pesos alternativos por fonte**: Clash Display (Regular/Medium/Semibold/Bold), General Sans (idem), Boska (Regular/Bold/Black), IBM Plex Mono (Regular/Bold) — baixados do Fontshare (zips oficiais) e google/fonts. Select de peso ao lado do de família (some quando a família tem 1 peso — Space Grotesk, Fraunces); peso persistido POR FAMÍLIA (`tipo-font-w-<nome>`), reaplicado no load. `BUILTINS[].file` continua sendo o peso padrão (compat).
+- ✅ **Preview no select**: FontFaces de preview registradas lazy (1º toque no select) e aplicadas nas `<option>` (Chrome renderiza; Safari degrada pra texto plano) + o próprio select renderiza na família ativa. Smoke 7/7.
 
 
 
