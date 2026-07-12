@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Morisawa</title>
-<link rel="stylesheet" href="shared/style.css?v=20260711-typ1">
+<link rel="stylesheet" href="shared/style.css?v=20260711-typ2">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260711-typ1"></script>
+<script src="shared/ui.js?v=20260711-typ2"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -149,10 +149,13 @@ function drawGlyphInBox(ch, x, y, boxW, boxH, strokeC, weight) {
 
   textSize(max(boxH * 0.88, 1));
   const measured = max(textWidth(ch), 1);
+  // proportional fonts: clamp against a reference so narrow glyphs (I) don't
+  // stretch into slabs — same fix as field/cylinder
+  const refN = max(measured, textWidth('N') * 0.62 || measured);
 
   push();
   translate(x, y);
-  scale(boxW / measured, 1);
+  scale(boxW / refN, 1);
   noFill();
   stroke(strokeC);
   strokeWeight(weight);
@@ -225,15 +228,12 @@ function draw() {
         const ch = txt.charAt(k);
         const xBase = k * typeX + k * track + i * runLen * typeX + i * runLen * track;
 
-        // Primary position
-        let x = xBase + scrollOffset;
+        // Marquee wrap by modulo — the old "+wrapW copy" landed on top of the
+        // NEXT repetition's glyphs and doubled every letter while scrolling
+        const period = totalW + track;
+        let x = ((xBase + scrollOffset) % period + period) % period;
         drawGlyphInBox(ch, x, yPos, typeX, typeY, rowColor, tW);
-
-        // Wrap-around copy
-        if (spd > 0) {
-          const wrapW = totalW / copies + track;
-          drawGlyphInBox(ch, x + wrapW, yPos, typeX, typeY, rowColor, tW);
-        }
+        if (x > period - typeX) drawGlyphInBox(ch, x - period, yPos, typeX, typeY, rowColor, tW);
       }
     }
 
@@ -261,14 +261,11 @@ function draw() {
         for (let p = 0; p < runLen; p++) {
           const ch = txt.charAt(p);
           const xBase = p * typeX + p * track + n * runLen * typeX + n * runLen * track;
-          let x = xBase + scrollOffset;
+          const period = totalW + track;
+          let x = ((xBase + scrollOffset) % period + period) % period;
 
           drawGlyphInBox(ch, x, yPosM, typeX, typeY, rowColor, tW);
-
-          if (spd > 0) {
-            const wrapW = totalW / copies + track;
-            drawGlyphInBox(ch, x + (isFlipSpeed ? -wrapW : wrapW), yPosM, typeX, typeY, rowColor, tW);
-          }
+          if (x > period - typeX) drawGlyphInBox(ch, x - period, yPosM, typeX, typeY, rowColor, tW);
         }
       }
     }

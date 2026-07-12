@@ -34,12 +34,12 @@ const check = (name, ok, extra = '') => {
   if (!ok) fails++;
 };
 
-// ---- p5 page (flag): default Clash auto-applied, switching rebuilds render ----
+// ---- p5 page (badge): default Clash auto-applied; flag opts out (vector engine) ----
 {
   const page = await ctx.newPage();
   let errs = 0;
-  page.on('pageerror', e => { errs++; console.log('[flag]', e.message); });
-  await page.goto('http://localhost/flag.html', { waitUntil: 'load' });
+  page.on('pageerror', e => { errs++; console.log('[badge]', e.message); });
+  await page.goto('http://localhost/badge.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof draw === 'function' && document.querySelector('canvas'), null, { timeout: 20000 });
   await page.waitForTimeout(1400); // auto-apply happens post-load
   const st = await page.evaluate(() => ({
@@ -49,27 +49,18 @@ const check = (name, ok, extra = '') => {
     active: TipoFont.activeBuiltin,
     saved: localStorage.getItem('tipo-font'),
   }));
-  check('flag: select with 6 builtins', st.sel && st.options === 6, JSON.stringify(st));
-  check('flag: Clash Display auto-applied as default', st.value === 'Clash Display' && st.active === 'Clash Display' && st.saved === 'Clash Display');
+  check('badge: select with 6 builtins', st.sel && st.options === 6, JSON.stringify(st));
+  check('badge: Clash Display auto-applied as default', st.value === 'Clash Display' && st.active === 'Clash Display' && st.saved === 'Clash Display');
+  await page.goto('http://localhost/flag.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof draw === 'function' && document.querySelector('canvas'), null, { timeout: 20000 });
+  await page.waitForTimeout(800);
+  const fl = await page.evaluate(() => ({
+    sel: !!document.getElementById('tipoFontSel'),
+    note: (document.getElementById('tipoFontRow') || {}).textContent || '',
+  }));
+  check('flag: opts out with vector-engine note', !fl.sel && /vetorial/.test(fl.note), JSON.stringify(fl));
 
-  // switching font changes the glyph rendering (flat proof canvas)
-  await page.evaluate(() => {
-    const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
-    set('rows', 1); set('typeWeight', 25);
-    set('waveX', 0); set('waveY', 0); set('waveZ', 0); set('speed', 0);
-    set('camX', 0); set('camY', 0); set('camZ', 0);
-    document.getElementById('textOnly').checked = true;
-  });
-  // NOTE: flag uses FlagFont vector glyphs — font change should NOT alter it.
-  const hash = () => page.evaluate(() => new Promise(res => setTimeout(() => {
-    const gl = document.querySelector('canvas').getContext('webgl') || document.querySelector('canvas').getContext('webgl2');
-    const buf = new Uint8Array(width * height * 4);
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-    let h = 0;
-    for (let i = 0; i < buf.length; i += 173) h = (h * 31 + buf[i]) >>> 0;
-    res(h);
-  }, 600)));
-  check('flag: zero errors after font swap', errs === 0, `(${errs})`);
+  check('badge+flag: zero errors', errs === 0, `(${errs})`);
   await page.close();
 }
 

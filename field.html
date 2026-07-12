@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Field</title>
-<link rel="stylesheet" href="shared/style.css?v=20260711-typ1">
+<link rel="stylesheet" href="shared/style.css?v=20260711-typ2">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
 <script src="shared/recorder.js?v=20260612-cap"></script>
-<script src="shared/ui.js?v=20260711-typ1"></script>
+<script src="shared/ui.js?v=20260711-typ2"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -317,7 +317,10 @@ function draw() {
     const fontSize = max(lh, 2);
     textSize(fontSize);
     const charW = textWidth(ch) || 1;
-    scale(lw / charW, 1, 1);
+    // proportional fonts: normalize against the text's AVERAGE glyph width,
+    // clamped — otherwise narrow glyphs (I, l, .) stretch into solid slabs
+    const refW = max(charW, (textWidth(txt) / txt.length) * 0.62 || charW);
+    scale(lw / refW, 1, 1);
     text(ch, 0, 0);
 
     pop();

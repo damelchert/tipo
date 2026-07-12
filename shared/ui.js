@@ -1118,6 +1118,15 @@ const TipoFont = {
   init() {
     const textInput = document.getElementById('textInput');
     if (!textInput || document.getElementById('tipoFontRow')) return;
+    // tools with their own vector type engine (Flag) opt out of the font system
+    if (textInput.dataset.tipoFont === 'off') {
+      const note = document.createElement('div');
+      note.id = 'tipoFontRow';
+      note.style.cssText = 'font-size:9px;color:var(--text-5,#777);margin-top:7px;letter-spacing:.4px;';
+      note.textContent = 'fonte vetorial própria da ferramenta';
+      textInput.insertAdjacentElement('afterend', note);
+      return;
+    }
     this._injectCSS();
 
     const opts = this.BUILTINS.map(b =>
