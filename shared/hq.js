@@ -23,6 +23,23 @@ const TipoHQ = {
     this._cfg = cfg;
     const rec = document.getElementById('recBtn') || document.getElementById('recordBtn');
     if (!rec || document.getElementById('hqBtn')) return;
+    if (!document.getElementById('tipoHQcss')) {
+      const s = document.createElement('style');
+      s.id = 'tipoHQcss';
+      s.textContent = `
+#hqBtn { flex: 1; white-space: nowrap; }
+#hqBtn.running {
+  border-color: var(--accent, #2A8A7A) !important;
+  color: var(--accent, #2A8A7A) !important;
+  opacity: 1 !important;
+  animation: hqPulse 1.4s ease-in-out infinite;
+}
+@keyframes hqPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(42, 138, 122, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(42, 138, 122, .25); }
+}`;
+      document.head.appendChild(s);
+    }
     const b = document.createElement('button');
     b.id = 'hqBtn';
     b.type = 'button';
@@ -30,7 +47,14 @@ const TipoHQ = {
     b.textContent = 'Export HQ';
     b.title = 'Render offline na resolução do vídeo fonte — frame-perfect pra montagem (leva mais tempo, não trava)';
     b.addEventListener('click', () => this.run());
-    rec.insertAdjacentElement('afterend', b);
+    // inserir DEPOIS do boot: GIF/Link são injetados após o recBtn no
+    // DOMContentLoaded e entrariam no meio — assim fica Record | HQ | GIF | Link
+    const place = () => rec.insertAdjacentElement('afterend', b);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => setTimeout(place, 0));
+    } else {
+      setTimeout(place, 0);
+    }
   },
 
   /** Codec ladder: tenta a resolução da fonte; se o encoder do hardware não
@@ -117,7 +141,7 @@ const TipoHQ = {
     window.__tipoHQactive = true; // ferramentas temporais pausam o loop ao vivo
     const ui = this._progressUI();
     const hqBtn = document.getElementById('hqBtn');
-    if (hqBtn) hqBtn.disabled = true;
+    if (hqBtn) { hqBtn.disabled = true; hqBtn.classList.add('running'); hqBtn.textContent = 'Renderizando…'; }
 
     // estado do player pra restaurar no fim
     const wasPaused = video.paused;
@@ -190,7 +214,7 @@ const TipoHQ = {
       if (cfg.end) { try { cfg.end(); } catch (e) {} }
       try { encoder.close(); } catch (e) {}
       ui.close();
-      if (hqBtn) hqBtn.disabled = false;
+      if (hqBtn) { hqBtn.disabled = false; hqBtn.classList.remove('running'); hqBtn.textContent = 'Export HQ'; }
       this._running = false;
       video.currentTime = wasTime;
       if (!wasPaused) video.play();

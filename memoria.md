@@ -159,6 +159,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-11
 
+### Export HQ — polish pós-teste-real do Daniel
+- Falso alarme resolvido ("deu certo, sim, viajei"): o Export HQ funcionava; o modelo mental esperava que fosse um MODO do Record. Dois ajustes de UI pedidos: (1) **botão ao lado do Record** — GIF/Link eram injetados no boot DEPOIS do HQ e entravam no meio (Record|GIF|Link|HQ); inserção do HQ adiada pra pós-boot → Record|HQ|GIF|Link nas 6; (2) **destaque enquanto roda** — classe .running (borda/texto accent + pulso de box-shadow) e label "Renderizando…" durante a passada.
+- **Insight registrado como 16.5**: o caso real dele (performance de drops de keyframe ao vivo no datamosh) pede "performance capture" — logar eventos com timestamp do vídeo durante o Record e oferecer re-render HQ reaplicando nos tempos certos. Especificado no plano, não construído.
+- test-hq 25/25 revalidado pós-mudanças.
+
 ### 16.2/16.3 — Export HQ em 6 ferramentas (pixelsort, dithering, datamosh, rastro + pilotos)
 - **test-hq.mjs ALL PASS nas 6**: cada uma exportando 1920×1080 EXATO, 75/75 frames, decode limpo; 1440p nativo.
 - **Padrão "HQ takeover"** pros complexos/temporais: em vez de duplicar pipeline, um override de tamanho (hqSize/hqCellSize) força o pipeline REAL nas dimensões da fonte, e a flag global `window.__tipoHQactive` (setada pelo motor) PAUSA o loop ao vivo da ferramenta — SENÃO o rAF da página avançava o estado temporal entre os frames do export e corrompia a sequência (bug que teria sido invisível sem entender a arquitetura).

@@ -478,6 +478,7 @@ Visão: as visual tools viram uma suíte de VFX pra montagem — o take entra em
 - 16.2 Rollout frame-based — ✅ parcial (2026-07-12): **pixelsort** (renderFrameHQ auto-contido, drift em tempo virtual, os 3 caminhos de ângulo) e **dithering** (takeover: hqCellSize = W/cols — o grid da arte fica IDÊNTICO ao preview, células nítidas em full-res; gate no loop ao vivo). Pendentes: **reticula e glitch** (são p5 — precisam de refactor pra p5.Graphics como alvo; próximo turno).
 - 16.3 Temporais — ✅ (2026-07-12): **datamosh e rastro via "HQ takeover"** — hqSize força o pipeline REAL nas dimensões da fonte, begin() reseta buffers/keyframe, tempo virtual em ms, e flag global `__tipoHQactive` PAUSA o loop ao vivo (senão o estado temporal avançava dobrado). Sequencial garantido = mosh/echo mais corretos que o preview. Engine ganhou hooks begin/end e aceita recordBtn como âncora (dithering).
 - 16.4 Áudio remux + presets de entrega (ProRes? não — H.264 high bitrate + opção PNG sequence pra quem quer lossless)
+- 16.5 **Performance capture** (insight do teste do Daniel no datamosh): gravar os EVENTOS da performance ao vivo (drops de keyframe com timestamp do vídeo, automação de sliders) durante o Record MP4, e no stop oferecer "Re-render em HQ com sua performance" — a passada offline reaplica os eventos nos tempos certos. O melhor dos dois mundos: performance de VJ + arquivo master.
 - **Status:** [ ] Especificado — aguardando "vai"
 
 ### FASE 15 — HERO SECTION (pedido do Daniel 11/07: "algo bem fodão com GSAP, imersivo, palinha do que vem a seguir")
