@@ -666,6 +666,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   .tipo-panel.sheet-drag, #controlPanel.sheet-drag { transition: none; }
   #canvasContainer:not([data-tipo-fmt]), #canvasWrap:not([data-tipo-fmt]) { width: 100vw !important; }
   .tipo-panel h1 { padding-left: 0; }
+  .tipo-eyebrow { padding-left: 0; }
 
   .tipo-sheet-grip {
     position: sticky;
@@ -764,3 +765,36 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
   50% { transform: scale(1.5); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .tipo-h1-dot { animation: none; } }
+
+/* ============================================================
+   Fase 20 — identidade da página da ferramenta
+   Eyebrow de categoria (contexto no topo esquerdo do painel)
+   + crédito discreto no rodapé da área de trabalho
+   ============================================================ */
+.tipo-eyebrow {
+  display: flex; align-items: baseline; gap: 7px;
+  font-family: var(--font-ui, 'IBM Plex Mono', monospace);
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-5); margin: 0 0 6px;
+  padding-left: 36px; /* alinha com o h1, livre do botão ← flutuante */
+}
+.tipo-eyebrow a { color: var(--text-5); text-decoration: none; transition: color 0.2s; }
+.tipo-eyebrow a:hover { color: var(--accent); }
+.tipo-eyebrow span { color: var(--text-6); }
+.tipo-eyebrow a.cat {
+  color: var(--accent);
+  font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
+}
+
+.tipo-made {
+  position: fixed; right: 16px; bottom: 12px; z-index: 40;
+  font-family: var(--font-ui, 'IBM Plex Mono', monospace);
+  font-size: 8px; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--text-5); text-decoration: none; opacity: 0.75;
+  transition: opacity 0.2s, color 0.2s;
+}
+.tipo-made b { font-weight: 700; color: var(--text-4); }
+.tipo-made:hover { opacity: 1; color: var(--accent); }
+.tipo-made:hover b { color: var(--accent); }
+/* não competir com o sheet mobile nem com o fullscreen */
+body.tipo-mobile .tipo-made, body.tipo-full .tipo-made { display: none; }

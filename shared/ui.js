@@ -345,6 +345,43 @@ const TipoUI = {
     this.initBackButton(hash);
   },
 
+  _CATEGORY_LABELS: { visual: 'Visual Tools', '3d': '3D', '2d': '2D', composition: 'Composition', animation: 'Animation' },
+
+  /** Fase 20 — identidade da página: eyebrow de categoria acima do título
+   *  (contexto: Home / Kinetic Type / 3D) + crédito fixo no rodapé. */
+  initPanelIdentity() {
+    const panel = document.querySelector('.tipo-panel') || document.getElementById('controlPanel');
+    const mode = this.modeName || location.pathname.split('/').pop().replace('.html', '');
+    const cat = this._backTargets[mode];
+    const label = this._CATEGORY_LABELS[cat];
+    const h1 = panel && panel.querySelector('h1');
+    if (h1 && label && !panel.querySelector('.tipo-eyebrow')) {
+      const eb = document.createElement('div');
+      eb.className = 'tipo-eyebrow';
+      const kinetic = cat !== 'visual';
+      eb.innerHTML = '<a href="index.html">Home</a><span>/</span>' +
+        (kinetic ? '<a href="index.html#kinetic">Kinetic Type</a><span>/</span>' : '') +
+        `<a class="cat" href="index.html#${cat}">${label}</a>`;
+      h1.insertAdjacentElement('beforebegin', eb);
+      // os links minúsculos do h1 viram redundantes com o eyebrow
+      // (querySelectorAll: o primeiro span pode ser o ponto dourado;
+      //  dithering usa span.nav-links com <a> sem classe)
+      h1.querySelectorAll('span').forEach(s => {
+        if (s.querySelector('a.back-link, a[href^="index.html"]')) s.remove();
+      });
+    }
+    // crédito discreto no rodapé da área de trabalho (desktop)
+    if (!document.querySelector('.tipo-made')) {
+      const a = document.createElement('a');
+      a.className = 'tipo-made';
+      a.href = 'https://www.danielmelchert.com.br';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.innerHTML = 'made by <b>Daniel Melchert</b>';
+      document.body.appendChild(a);
+    }
+  },
+
   _visRec: null,
 
   /** Shared Record MP4 flow for standalone visual tools. Handles the
@@ -2616,6 +2653,7 @@ if (typeof document !== 'undefined') {
       dot.className = 'tipo-h1-dot';
       h1.insertBefore(dot, h1.firstChild.nextSibling);
     }
+    TipoUI.initPanelIdentity();
     TipoMobile.init();
     TipoFormat.init();
     // MP4s go through TipoRecorder.download — route them through the

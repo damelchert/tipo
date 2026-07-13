@@ -159,6 +159,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-13
 
+### Auditoria de UI (lente Awwwards) + Fase 20.1 — header/identidade
+- Auditoria com 27 screenshots (Playwright, light/dark/mobile/hero): notas C8.5/D6.5/U7/C8. Sinais de "produtinho" mapeados: catálogo genérico, dark quebrado, inputs nativos, nav ilegível no header, idioma misto, FREE pill, dithering vazio/anatomia própria, badge entry. Registrado como Fase 20 com fila 20.2.
+- **20.1 implementado**: HeaderFX em ClashDisplay 600 (+ rebuild em fonts.ready — senão desenha com fallback); breadcrumb+stats movidos pra **subbar** sólida abaixo da linha (updateBreadcrumb não injeta mais stats); eyebrow de categoria via `TipoUI.initPanelIdentity()` no boot central (funciona pra .tipo-panel E #controlPanel do dithering; remove spans do h1 com `a.back-link` OU `a[href^="index.html"]` — o 1º span pode ser o ponto dourado); crédito: subbar (index) + .tipo-made fixa (ferramentas, oculta em .tipo-mobile/.tipo-full).
+- GOTCHA eyebrow: precisa de padding-left 36px (botão ← flutuante cobre o começo); zera no mobile junto com o h1.
+
 ### Dia de fechamento — Fases 18, 16.4, 16.5, 19.1/19.2, 14.2 (tudo num dia)
 - **Fase 18 (timeline didática, A+C)**: botão **✨ demo** na barra — executa o fluxo REAL (seek 0 → slider → ◆ → seek meio → slider → 2º ◆ → play) com narração no hint e a linha do slider destacada; pulsa em gold enquanto não há keyframes. **Empty-state fantasma** na área de tracks ("move any slider → a ◆ lands here"). GOTCHA: _syncHint sobrescrevia a narração → guard `if (_demoRunning) return`.
 - **16.4 (áudio no HQ)**: fetch(video.currentSrc) → `decodeAudioData` (decodifica a trilha do container; rejeita se não houver = segue mudo) → `AudioEncoder` AAC 128k com fallback Opus (isConfigSupported) → `muxer.addAudioChunk`. AudioData **f32-planar** (canais concatenados por frame de 1024 samples), timestamps µs. Track de áudio só declarada no Muxer quando o audio existe. decodeAudioData RESAMPLEIA pro rate do AudioContext — usar esse rate no encoder/muxer.

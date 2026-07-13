@@ -8,6 +8,23 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)
+**Veredito da auditoria** (27 capturas: hero, home light/dark, catálogo, 14 ferramentas, timeline, mobile): Creativity 8.5 / Design 6.5 / Usability 7 / Content 8 — "produto premium vestindo partes de produtinho". Premium: hero, entradas curadas (riso/depth/morisawa/overlay), sistema do painel, palette. Produtinho: catálogo de cards genérico, dark mode quebrado (canvas cream + faixa exposta no field, cinzas divergentes na home), controles nativos do browser, header com nav ilegível, idioma misturado (hero PT × site EN × pílulas PT), pill "FREE" ambígua, dithering abre vazio + anatomia divergente, badge entry bagunçada.
+
+#### 20.1 — Header + identidade da página (pedidos do Daniel 13/07) — ✅ (2026-07-13)
+- ✅ **Header imprime em Clash Display** (era Plex 900 — descolava da marca): font do HeaderFX → ClashDisplay 600, rebuild em document.fonts.ready.
+- ✅ **Subbar**: breadcrumb + stats saíram da faixa animada pra uma barra sólida de 36px logo abaixo da linha — legível nos 2 temas. "0 install" → "**zero install**".
+- ✅ **Eyebrow de categoria nas ferramentas**: "Home / Kinetic Type / **3D**" (categoria em accent, maior) acima do título, alinhado com o h1; links minúsculos do h1 removidos (inclusive o span.nav-links do dithering, que usa #controlPanel). Mapa de categoria já existia (_backTargets).
+- ✅ **Crédito**: subbar do index ("made by **Daniel Melchert**" → danielmelchert.com.br) + caption fixa discreta bottom-right nas 38 ferramentas (some no mobile/fullscreen). Preenche o rodapé vazio das páginas.
+- Verificado: Clash carregada, subbar fora do header, eyebrow certo em field/riso/badge/dithering, zero pageerrors.
+
+#### 20.2 — Fila da repaginada (aguardando direção do Daniel)
+- [ ] **Specimen Home**: catálogo com previews ANIMADOS grandes (os cenários pv-* existem nos cards) no lugar da lista cinza de thumbnail 64px
+- [ ] **Design system de inputs**: slider custom (thumb ◆ da marca), select e checkbox custom em shared/style.css — cobre as 38 de uma vez; maior alavanca de "cara premium"
+- [ ] **Dark mode de verdade**: canvas bg segue tema por default (field expõe faixa preta + canvas cream), cinzas da home dark divergem, letras do painel kinetic invisíveis
+- [ ] **Uma voz de idioma** (reco: UI 100% EN; decisão do Daniel)
+- [ ] Pill "FREE" → rótulo claro de formato; dithering com demo art de entrada + anatomia alinhada; badge entry composition curada
+
 ### FASE 19 — SEGURANÇA / BLINDAGEM (pedido do Daniel 12/07: "cibersegurança completa nível premium — blindar cópia de ferramentas, código-fonte, prints e gravações de tela; avisar quando alguém tentar; blindar meus dados e engenharia reversa")
 
 > **Reality check antes de tudo** (honestidade > vender ilusão): a Tipó é um app **100% client-side** (HTML/JS/CSS estático no Vercel, roda inteiro no browser do usuário). Isso impõe limites FÍSICOS que nenhuma técnica contorna:

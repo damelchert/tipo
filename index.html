@@ -87,15 +87,29 @@ body { overflow: hidden; }
 }
 .header-fx-label::before { content: '● '; }
 
+/* Subbar — navegação e stats abaixo da faixa animada */
+.tipo-subbar {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 36px; padding: 0 32px; flex: none;
+  background: var(--bg-0);
+  border-bottom: 1px solid var(--border-1, rgba(26, 24, 24, 0.08));
+  position: relative; z-index: 5;
+}
+.subbar-right {
+  display: flex; align-items: center; gap: 18px;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+}
+.subbar-right .header-stats { color: var(--accent-warm, #D4A040); opacity: 0.85; cursor: default; }
+.subbar-credit { color: var(--text-5); text-decoration: none; transition: color 0.2s; }
+.subbar-credit b { color: var(--text-2); font-weight: 700; }
+.subbar-credit:hover, .subbar-credit:hover b { color: var(--accent-brand, #2A8A7A); }
+
 /* Breadcrumb */
 .tipo-breadcrumb {
   display: flex; align-items: center; gap: 8px;
   font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5);
-  height: 100%; z-index: 2;
-}
-.tipo-breadcrumb .header-stats {
-  color: var(--accent-warm, #D4A040); cursor: default;
-  margin-right: 18px; opacity: 0.8; letter-spacing: 2px;
+  z-index: 2;
 }
 .tipo-breadcrumb span { cursor: pointer; transition: color 0.2s; }
 .tipo-breadcrumb span:hover { color: var(--accent-brand, #99E0D2); }
@@ -354,7 +368,8 @@ body { overflow: hidden; }
     text-align: center;
   }
   .split-ticker { bottom: 14px; }
-  .tipo-breadcrumb .header-stats { display: none; } /* crowds the logo on small screens */
+  .subbar-right .header-stats { display: none; } /* crowds the credit on small screens */
+  .tipo-subbar { padding: 0 16px; }
   #fxLabel { display: none; }
   .tipo-mode-list { padding: 16px; }
   .tipo-mode-card { padding: 14px 16px; gap: 14px; }
@@ -639,12 +654,19 @@ body { overflow: hidden; }
     <div class="tipo-header-logo" id="tipoLogo" onclick="goHome()">
       <span class="logo-char">T</span><span class="logo-char">I</span><span class="logo-char">P</span><span class="logo-char">Ó</span><span class="logo-accent" id="logoAccent"></span>
     </div>
-    <div class="tipo-breadcrumb" id="breadcrumb">
-      <span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>
-      <span class="current">Home</span>
-    </div>
     <div class="tipo-header-line"></div>
     <div class="header-line-comet" id="lineComet"></div>
+  </div>
+
+  <!-- SUBBAR — navegação e stats FORA da faixa animada (legibilidade) -->
+  <div class="tipo-subbar">
+    <div class="tipo-breadcrumb" id="breadcrumb">
+      <span class="current">Home</span>
+    </div>
+    <div class="subbar-right">
+      <span class="header-stats">38 tools &bull; zero install &bull; 100% browser</span>
+      <a class="subbar-credit" href="https://www.danielmelchert.com.br" target="_blank" rel="noopener">made by <b>Daniel Melchert</b></a>
+    </div>
   </div>
 
   <!-- MAIN -->
@@ -918,8 +940,7 @@ function showLevel(id) {
 
 function updateBreadcrumb(path) {
   const bc = document.getElementById('breadcrumb');
-  let html = '<span class="header-stats">38 tools &bull; 0 install &bull; 100% browser</span>' +
-    '<span onclick="goHome()">Home</span>';
+  let html = '<span onclick="goHome()">Home</span>';
   path.forEach((item, i) => {
     html += '<span class="sep">/</span>';
     if (i < path.length - 1) {
@@ -1106,7 +1127,7 @@ const HeaderFX = {
     fxCanvas.width = this.W;
     fxCanvas.height = this.H;
     const c = this.colors();
-    const font = `900 ${Math.round(this.H * 1.55)}px 'IBM Plex Mono', monospace`;
+    const font = `600 ${Math.round(this.H * 1.5)}px 'ClashDisplay', 'IBM Plex Mono', monospace`;
     const meas = document.createElement('canvas').getContext('2d');
     meas.font = font;
     const wordW = meas.measureText('TIPÓ').width + this.H * 0.9;
@@ -1390,6 +1411,8 @@ const HeaderFX = {
 };
 
 HeaderFX.build();
+// o wordmark do header imprime em Clash Display — rebuild quando a fonte carregar
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => HeaderFX.build());
 fxLabel.textContent = 'pass 01 · ' + HeaderFX.EFFECTS[0];
 window.addEventListener('resize', () => HeaderFX.build());
 new MutationObserver(() => HeaderFX.build())
