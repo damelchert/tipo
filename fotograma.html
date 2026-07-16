@@ -329,6 +329,7 @@ const PALETAS = [
   { id: 'neon',       label: 'Neon noturna',               phrase: 'neon night palette, magenta and cyan practicals against deep shadow' },
   { id: 'coldinst',   label: 'Fria institucional',         phrase: 'cool desaturated palette, clinical teal and grey accents' },
   { id: 'blocks',     label: 'Blocos de cor',              phrase: 'bold saturated color blocking, graphic color fields' },
+  { id: 'monocroma',  label: 'Monocromática',              phrase: 'monochromatic palette, one hue family across the whole frame' },
 ];
 
 // LUZ como clima esculpindo o sujeito, nunca como setup técnico
@@ -369,6 +370,14 @@ const LOOKS = [
     dna: 'brazilian street warmth, documentary energy with campaign polish, rich varied skin tones, joyful crowded life' },
   { id: 'pictorico', label: 'Surreal Pictórico', prog: 'cinecom', stock: 'ekta', luz: 'hard', paleta: 'blocks', lente: 'primo', ar: '4:5',
     dna: 'painterly surreal minimalism, a lone robed figure in a graphic color-field landscape, sculptural composition, gallery stillness' },
+  { id: 'acao', label: 'Ação Congelada', prog: 'cinecom', stock: 'ekta', luz: 'hard', paleta: 'tealorange', lente: 'master', ar: '16:9',
+    dna: 'frozen athletic moment mid-air, explosive motion held razor sharp, dynamic diagonal energy, sport glory' },
+  { id: 'tomsobretom', label: 'Tom-sobre-Tom', prog: 'commercial', stock: 'v50d', luz: 'softtop', paleta: 'monocroma', lente: 'cookes4', ar: '4:5',
+    dna: 'tone-on-tone styling, seamless studio backdrop color-matched to the wardrobe, serene minimal portrait' },
+  { id: 'arquivo70', label: 'Arquivo 70s', prog: 'cinema', stock: 'portra', luz: 'hard', paleta: 'muted', lente: 'primo', ar: '3:2',
+    dna: 'archival 1970s sports print, faded period grade, the crowd as texture, vintage press photo energy' },
+  { id: 'domingo', label: 'Domingo em Casa', prog: 'cinema', stock: 'portra', luz: 'window', paleta: 'monowarm', lente: 'cookes4', ar: '3:2',
+    dna: 'cozy domestic clutter, candid intimacy, lived-in warmth, quiet sunday morning energy' },
 ];
 
 const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
@@ -636,6 +645,12 @@ function moodClause() {
 /** montagem FINAL determinística — os seletores (enquadramento, luz,
  *  lente, stock, paleta, programa) entram SEMPRE por código, nos dois
  *  caminhos. A LLM nunca tem a palavra final sobre eles. */
+function exportName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `tipo_fotograma_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.png`;
+}
+
 function currentLook() { return LOOKS.find(l => l.id === state.look) || LOOKS[0]; }
 
 function buildFinalPrompt(sceneText) {
@@ -979,7 +994,7 @@ function renderGallery(selIdx = -1) {
     d.querySelector('[data-a="dl"]').addEventListener('click', () => {
       const a2 = document.createElement('a');
       a2.href = t.url;
-      a2.download = 'tipo-fotograma.png';
+      a2.download = exportName();
       a2.click();
     });
     d.querySelector('[data-a="reuse"]').addEventListener('click', () => {
@@ -1276,7 +1291,7 @@ $('dlBtn').addEventListener('click', () => {
   if (!state.lastBlob) return;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(state.lastBlob);
-  a.download = 'tipo-fotograma.png';
+  a.download = exportName();
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 });
