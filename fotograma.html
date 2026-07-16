@@ -400,8 +400,53 @@ async function gapiUrl(url, body) {
   return r.json();
 }
 
+/** Vertex express aceita variações de auth/versão — escada de compat.
+ *  O modo que funcionar fica memorizado pra sessão. */
+async function vertexCall(id, body) {
+  const clean = String(id).replace(/^models\//, '');
+  const modes = state._vxMode ? [state._vxMode] : [
+    { ver: 'v1', auth: 'header' },
+    { ver: 'v1beta1', auth: 'header' },
+    { ver: 'v1', auth: 'query' },
+    { ver: 'v1beta1', auth: 'query' },
+  ];
+  let last = null;
+  for (const m of modes) {
+    const base = `https://aiplatform.googleapis.com/${m.ver}/publishers/google/models/${clean}:generateContent`;
+    const url = m.auth === 'query' ? `${base}?key=${encodeURIComponent(key())}` : base;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(m.auth === 'header' ? { 'x-goog-api-key': key() } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        let detail = '';
+        try { detail = (await r.json()).error?.message || ''; } catch (e) {}
+        const err = new Error(sanitizeApiError(r.status, detail));
+        err.status = r.status;
+        err.detail = detail;
+        // 401/403/404 = pode ser o formato de auth/versão — tenta o próximo modo
+        if ([401, 403, 404].includes(r.status) && !state._vxMode) { last = err; continue; }
+        throw err;
+      }
+      state._vxMode = m; // memoriza o modo que funcionou
+      return r.json();
+    } catch (e) {
+      if (e instanceof TypeError) { last = e; continue; } // rede/CORS — tenta o próximo
+      if (e.status && [401, 403, 404].includes(e.status) && !state._vxMode) { last = e; continue; }
+      throw e;
+    }
+  }
+  throw last || new Error('Agent Platform não respondeu');
+}
+
 /** generateContent no modelo, no backend detectado da chave */
 function callModel(id, body) {
+  if (state.backend === 'vertex') return vertexCall(id, body);
   return gapiUrl(`${apiBase()}/${modelPath(id)}:generateContent`, body);
 }
 
