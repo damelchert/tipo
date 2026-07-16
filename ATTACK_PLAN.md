@@ -23,7 +23,9 @@ Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a
 - ✅ **SUGADOR DE MOOD 🧃** (a melhor feature do Cinematic, segundo o Daniel): sobe imagem de estilo → **arrasta uma região** no canvas pra sugar só ela (crop client-side) → Gemini vision descreve APENAS o físico transferível (pigmentos nomeados, caráter da luz, grain/halation/blacks, 1 palavra de registro emocional — nunca objetos/composição) → a imagem VAI no payload + cláusula "transfer ONLY palette/grain/light/texture". Hint: Nano 2 suga melhor.
 - ✅ **Referências de imagem** (até 4): downscale client-side 1024px JPEG, thumbs com remover, vão como inlineData antes do texto.
 - ✅ Regra clean reforçada ("no film borders or frame edges" — a Panchro desenhou borda Kodak). Smokes 12/12 + 12/12.
-- [ ] 21.2 — validação com chave real do Daniel no browser (fluxo AI Studio de ponta a ponta)
+#### 21.2 — Ajustes do teste real do Daniel (16/07) — ✅
+- ✅ "Sugador de mood" remetia ao Cinematic → rebatizado **EMULSÃO** (a camada química da película que segura cor/grain/textura — exatamente o que a feature transfere; linguagem de laboratório da casa). Seção enxugada: só título + botão Referência + canvas; explicações viraram tooltip.
+- ✅ Select de modelo com chave real listava variantes erradas → **whitelist estrita**: só Nano Banana Pro (pro-image) e Nano Banana 2 (flash-image, sem lite), canônico sem "preview" preferido. Testado contra modelos-ruído no mock.
 - [ ] 21.3 — idioma da UI (hoje PT — entra na decisão de voz única da 20.2)
 
 ### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)

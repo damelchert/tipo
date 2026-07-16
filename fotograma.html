@@ -134,26 +134,23 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Mood — sugador &#129380;</div>
+    <div class="section-title">Emuls&atilde;o</div>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()">Imagem de estilo</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()" title="Transfere a química da referência — paleta, grain, luz e textura; nunca o conteúdo. Arraste sobre a imagem pra usar só uma região. Nano Banana 2 revela melhor.">Refer&ecirc;ncia</button>
       <button class="btn btn-secondary" id="moodClear" style="display:none;">Tirar</button>
     </div>
     <input type="file" id="moodFile" accept="image/*" style="display:none">
     <div id="moodBox" style="display:none; margin-top:8px; position:relative;">
       <canvas id="moodCanvas" style="width:100%; border:1px solid var(--border-2); border-radius:4px; cursor:crosshair; display:block;"></canvas>
-      <div class="stock-hint" style="margin-top:4px;">arraste sobre a imagem pra sugar s&oacute; uma regi&atilde;o (opcional)</div>
       <div id="moodDesc" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.5; font-family:var(--font-ui);"></div>
     </div>
-    <div class="key-hint" style="margin-top:6px;">suga paleta, grain, luz e textura da imagem — nunca o conte&uacute;do. Nano Banana 2 costuma sugar melhor.</div>
   </div>
 
   <div class="section">
     <div class="section-title">Refer&ecirc;ncias</div>
-    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;">Adicionar refs (at&eacute; 4)</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;" title="Imagens de referência de cena/produto — vão junto pro modelo">Adicionar refs (at&eacute; 4)</button>
     <input type="file" id="refFiles" accept="image/*" multiple style="display:none">
     <div id="refThumbs" style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;"></div>
-    <div class="key-hint">imagens de refer&ecirc;ncia de cena/produto — v&atilde;o junto pro modelo</div>
   </div>
 
   <div class="section">
@@ -322,7 +319,7 @@ const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
 // modelos de imagem (fallback se a descoberta falhar)
 const FALLBACK_IMG_MODELS = [
   { name: 'models/gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
-  { name: 'models/gemini-2.5-flash-image', label: 'Nano Banana' },
+  { name: 'models/gemini-2.5-flash-image', label: 'Nano Banana 2' },
 ];
 const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
 
@@ -386,16 +383,20 @@ async function connect(silent) {
     const data = await gapi('models?pageSize=1000');
     const models = data.models || [];
     const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
-    // imagem: nano banana família
-    const imgs = gen.filter(m => /image/i.test(m.name) && !/embed|veo/i.test(m.name));
-    imgs.sort((a, b) => (/pro/i.test(b.name) ? 1 : 0) - (/pro/i.test(a.name) ? 1 : 0));
-    const list = imgs.length ? imgs.map(m => ({
-      name: m.name,
-      label: /pro-image/i.test(m.name) ? 'Nano Banana Pro' : /flash-image/i.test(m.name) ? 'Nano Banana' : m.displayName || m.name.replace('models/', ''),
-    })) : FALLBACK_IMG_MODELS;
-    // dedupe por label (previews duplicam)
-    const seen = new Set();
-    const opts = list.filter(m => !seen.has(m.label) && seen.add(m.label));
+    // SÓ as duas famílias Nano Banana — Pro e 2. Nada de lite/1/extras.
+    const pool = gen.map(m => m.name);
+    const pick = (re, bad) => {
+      const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
+      // canônico primeiro: sem "preview", nome mais curto
+      c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || a.length - b.length);
+      return c[0];
+    };
+    const pro = pick(/pro-image/i);
+    const nano2 = pick(/flash-image/i, /lite/i);
+    const opts = [];
+    if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
+    if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
+    if (!opts.length) opts.push(...FALLBACK_IMG_MODELS);
     $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
     // texto: flash pro Diretor
     const names = gen.map(m => m.name.replace('models/', ''));
@@ -464,13 +465,13 @@ Mood: pick ONE — ${P.moods}.
 RULES: describe what we SEE, effects not specs, one tag per category, never stack conflicting tags. Max 450 characters. English. One paragraph, no lists, no metadata, no quotes.${cleanRule() ? ' End with: No text, no logos, no watermarks, no film borders or frame edges.' : ''}`;
 }
 
-// ---- SUGADOR DE MOOD: análise da imagem de estilo (Gemini vision) ----
-const SUGADOR_SYSTEM = `You are a film colorist and archivist. Look at the image and describe ONLY its transferable physical mood: palette as 4-6 named pigments, light character (direction, hardness, warmth), film texture (grain size, halation, contrast curve, how the blacks sit), and ONE word for the emotional register. NEVER mention objects, people, places or composition. Max 300 characters, one paragraph, English.`;
+// ---- EMULSÃO: transfere a química da referência (Gemini vision) ----
+const EMULSAO_SYSTEM = `You are a film colorist and archivist. Look at the image and describe ONLY its transferable physical mood: palette as 4-6 named pigments, light character (direction, hardness, warmth), film texture (grain size, halation, contrast curve, how the blacks sit), and ONE word for the emotional register. NEVER mention objects, people, places or composition. Max 300 characters, one paragraph, English.`;
 
 async function analisarMood() {
   const src = state.mood.crop || state.mood.full;
   const data = await gapi(`models/${state.textModel}:generateContent`, {
-    systemInstruction: { parts: [{ text: SUGADOR_SYSTEM }] },
+    systemInstruction: { parts: [{ text: EMULSAO_SYSTEM }] },
     contents: [{ parts: [
       { inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } },
       { text: 'Describe the transferable mood of this image.' },
@@ -480,7 +481,7 @@ async function analisarMood() {
   const txt = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
   if (txt) {
     state.mood.desc = txt;
-    $('moodDesc').textContent = `🧃 ${txt}`;
+    $('moodDesc').textContent = `🧪 ${txt}`;
   }
 }
 
@@ -547,8 +548,8 @@ async function revelar() {
   try {
     // mood subiu antes da chave conectar? suga agora
     if (state.mood && !state.mood.desc) {
-      devMsg('sugando o mood da referência…');
-      try { await analisarMood(); } catch (e) { console.warn('[fotograma] sugador:', e.detail || e.message); }
+      devMsg('lendo a emulsão da referência…');
+      try { await analisarMood(); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
     }
     let prompt;
     if ($('diretor').checked) {
@@ -575,7 +576,7 @@ async function revelar() {
     state.lastBlob = blob;
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar}${state.mood ? ' · mood 🧃' : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar}${state.mood ? ' · emulsão 🧪' : ''}`;
     $('stillCaption').textContent = cap;
     $('dlBtn').disabled = false;
     addTake(url, cap, blob);
@@ -808,7 +809,7 @@ function cropMood() {
     cropMood();
     drawMoodCanvas();
     if (state.mood && state.connected) {
-      $('moodDesc').textContent = '🧃 sugando a região…';
+      $('moodDesc').textContent = '🧪 lendo a emulsão da região…';
       try { await analisarMood(); } catch (e) { $('moodDesc').textContent = ''; }
     }
   });
@@ -826,8 +827,8 @@ $('moodFile').addEventListener('change', async e => {
     $('moodClear').style.display = '';
     drawMoodCanvas();
     if (state.connected) {
-      $('moodDesc').textContent = '🧃 sugando o mood…';
-      try { await analisarMood(); } catch (err) { $('moodDesc').textContent = ''; console.warn('[fotograma] sugador:', err.detail || err.message); }
+      $('moodDesc').textContent = '🧪 lendo a emulsão…';
+      try { await analisarMood(); } catch (err) { $('moodDesc').textContent = ''; console.warn('[fotograma] emulsão:', err.detail || err.message); }
     }
   } catch (err) { TipoUI.showToast(err.message); }
 });
