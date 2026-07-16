@@ -107,6 +107,12 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Looks</div>
+    <div class="chip-grid" id="lookChips"></div>
+    <div class="stock-hint" id="lookHint"></div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Aspect Ratio</div>
     <div class="chip-grid" id="arChips"></div>
   </div>
@@ -321,6 +327,8 @@ const PALETAS = [
   { id: 'monowarm',   label: 'Monocromática quente',       phrase: 'monochromatic warm palette, amber through burnt umber' },
   { id: 'pastel',     label: 'Pastel daylight',            phrase: 'soft pastel daylight palette, chalky muted tones' },
   { id: 'neon',       label: 'Neon noturna',               phrase: 'neon night palette, magenta and cyan practicals against deep shadow' },
+  { id: 'coldinst',   label: 'Fria institucional',         phrase: 'cool desaturated palette, clinical teal and grey accents' },
+  { id: 'blocks',     label: 'Blocos de cor',              phrase: 'bold saturated color blocking, graphic color fields' },
 ];
 
 // LUZ como clima esculpindo o sujeito, nunca como setup técnico
@@ -340,6 +348,27 @@ const LUZES = [
   { id: 'backlit',   label: 'Backlit haze',       phrase: 'strong backlight, god rays through volumetric haze' },
   { id: 'bluehour',  label: 'Blue hour',          phrase: 'blue hour ambient dusk light' },
   { id: 'silhu',     label: 'Silhueta',           phrase: 'full silhouette against a bright opening' },
+  { id: 'softtop',   label: 'Top suave (Fraser)',  phrase: 'soft overhead light wrapping down over the face' },
+];
+
+// LOOKS — DNA destilado dos moodboards (frase = composição/atmosfera/assinatura;
+// o look também CONFIGURA os seletores — luz/cor entram por eles)
+const LOOKS = [
+  { id: 'none', label: 'Livre', dna: '' },
+  { id: 'hiddenlife', label: 'Vida no Campo', prog: 'cinema', stock: 'v250d', luz: 'backlit', paleta: 'muted', lente: 'superspeed', ar: '21:9',
+    dna: 'a small figure in a vast landscape, wide lens close and intimate, wind alive in the grass, spiritual stillness' },
+  { id: 'dune', label: 'Deserto Épico', prog: 'cinema', stock: 'v500t', luz: 'softtop', paleta: 'monowarm', lente: 'master', ar: '21:9',
+    dna: 'monolithic scale, massive negative space, dust haze on the horizon, silhouettes against a burnt sky, whispered contrast' },
+  { id: 'jardim', label: 'Jardim Editorial', prog: 'commercial', stock: 'portra', luz: 'overcast', paleta: 'pastel', lente: 'cookes4', ar: '4:5',
+    dna: 'a wildflower garden against a dusty pink wall, styled figures lounging among the flowers, romantic editorial stillness' },
+  { id: 'corporativo', label: 'Liminal Corporativo', prog: 'cinema', stock: 'ekta', luz: 'fluor', paleta: 'coldinst', lente: 'master', ar: '16:9',
+    dna: 'one-point perspective, institutional symmetry, a lone figure in sterile emptiness, liminal corporate space' },
+  { id: 'apetite', label: 'Apetite Noturno', prog: 'cinecom', stock: 'v500t', luz: 'practical', paleta: 'tealorange', lente: 'cookes4', ar: '16:9',
+    dna: 'a cozy lived-in interior at night, warm practicals against cool window spill, hero appetite energy' },
+  { id: 'brasa', label: 'Rua Brasileira', prog: 'cinecom', stock: 'portra', luz: 'golden', paleta: 'tealorange', lente: 'cookes4', ar: '16:9',
+    dna: 'brazilian street warmth, documentary energy with campaign polish, rich varied skin tones, joyful crowded life' },
+  { id: 'pictorico', label: 'Surreal Pictórico', prog: 'cinecom', stock: 'ekta', luz: 'hard', paleta: 'blocks', lente: 'primo', ar: '4:5',
+    dna: 'painterly surreal minimalism, a lone robed figure in a graphic color-field landscape, sculptural composition, gallery stillness' },
 ];
 
 const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
@@ -356,6 +385,7 @@ const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0
 let state = {
   prog: 'cinema',
   framing: 'eye',
+  look: 'none',
   ar: '16:9',
   connected: false,
   backend: 'studio',
@@ -606,11 +636,14 @@ function moodClause() {
 /** montagem FINAL determinística — os seletores (enquadramento, luz,
  *  lente, stock, paleta, programa) entram SEMPRE por código, nos dois
  *  caminhos. A LLM nunca tem a palavra final sobre eles. */
+function currentLook() { return LOOKS.find(l => l.id === state.look) || LOOKS[0]; }
+
 function buildFinalPrompt(sceneText) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
   const lens = currentLente();
   const bits = [
+    currentLook().dna,
     currentFraming().phrase,
     currentLuz().phrase,
     lens.phrase,
@@ -759,7 +792,7 @@ let busy = false;
 
 function snapshotParams() {
   return {
-    scene: $('scene').value.trim(), prog: state.prog, framing: state.framing,
+    scene: $('scene').value.trim(), prog: state.prog, framing: state.framing, look: state.look,
     ar: state.ar, stock: $('stock').value, paleta: $('paleta').value,
     luz: $('luz').value, lente: $('lente').value, clean: $('cleanImg').checked,
     diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
@@ -768,6 +801,8 @@ function snapshotParams() {
 
 function applyParams(pr) {
   $('scene').value = pr.scene;
+  state.look = pr.look || 'none';
+  document.querySelectorAll('#lookChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.look === state.look));
   setProg(pr.prog);
   state.framing = pr.framing;
   document.querySelectorAll('#framingChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.id === pr.framing));
@@ -852,7 +887,7 @@ async function revealJob(job) {
     state.lastBlob = blob;
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${state.look !== 'none' ? currentLook().label.toLowerCase() + ' · ' : ''}${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     $('dlBtn').disabled = false;
     addTake(url, cap, blob, job);
@@ -962,6 +997,34 @@ function renderGallery(selIdx = -1) {
 }
 
 // ---- UI boot ----
+function setLook(id) {
+  const L = LOOKS.find(x => x.id === id) || LOOKS[0];
+  state.look = L.id;
+  document.querySelectorAll('#lookChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.look === L.id));
+  $('lookHint').textContent = L.dna ? 'o look configura os níveis abaixo — ajusta o que quiser por cima' : '';
+  if (L.id !== 'none') {
+    setProg(L.prog);
+    $('stock').value = L.stock; syncStockHint();
+    $('luz').value = L.luz;
+    $('paleta').value = L.paleta;
+    $('lente').value = L.lente; syncLenteHint();
+    state.ar = L.ar;
+    document.querySelectorAll('#arChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === L.ar));
+  }
+}
+
+function buildLookChips() {
+  const lc = $('lookChips');
+  LOOKS.forEach(L => {
+    const c = document.createElement('span');
+    c.className = 'fchip' + (L.id === state.look ? ' on' : '');
+    c.textContent = L.label;
+    c.dataset.look = L.id;
+    c.addEventListener('click', () => setLook(L.id));
+    lc.appendChild(c);
+  });
+}
+
 function buildChips() {
   const fc = $('framingChips');
   FRAMINGS.forEach(f => {
@@ -1221,6 +1284,7 @@ $('dlBtn').addEventListener('click', () => {
 buildChips();
 buildSelects();
 buildProgRow();
+buildLookChips();
 setProg('cinema');
 
 // chave salva? reconecta em silêncio
