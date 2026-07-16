@@ -930,8 +930,18 @@ function db() {
     req.onerror = () => reject(req.error);
   });
 }
-async function idbPut(take) {
-  try { const d = await db(); d.transaction('takes', 'readwrite').objectStore('takes').put(take); } catch (e) {}
+async function idbPut(rec) {
+  try {
+    const d = await db();
+    // Safari/WebKit ABORTA ao guardar Blob no IDB — persiste ArrayBuffer + mime
+    const buf = rec.blob ? await rec.blob.arrayBuffer() : null;
+    const row = { id: rec.id, caption: rec.caption, params: rec.params, liked: rec.liked, ts: rec.ts, buf, mime: rec.blob ? rec.blob.type : 'image/png' };
+    await new Promise((res, rej) => {
+      const tx = d.transaction('takes', 'readwrite');
+      tx.objectStore('takes').put(row);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  } catch (e) { console.warn('[fotograma] idbPut:', e && e.message); }
 }
 async function idbDelete(id) {
   try { const d = await db(); d.transaction('takes', 'readwrite').objectStore('takes').delete(id); } catch (e) {}
@@ -949,10 +959,11 @@ async function idbAll() {
 async function loadGallery() {
   const rows = await idbAll();
   rows.sort((a, b) => b.ts - a.ts);
-  state.takes = rows.slice(0, 30).map(r => ({
-    id: r.id, caption: r.caption, params: r.params, liked: !!r.liked, ts: r.ts,
-    blob: r.blob, url: URL.createObjectURL(r.blob),
-  }));
+  state.takes = rows.slice(0, 30).map(r => {
+    // compat: linhas antigas podem ter .blob; novas têm .buf + .mime
+    const blob = r.blob || new Blob([r.buf], { type: r.mime || 'image/png' });
+    return { id: r.id, caption: r.caption, params: r.params, liked: !!r.liked, ts: r.ts, blob, url: URL.createObjectURL(blob) };
+  });
   renderGallery(-1);
 }
 
