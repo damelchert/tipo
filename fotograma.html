@@ -331,8 +331,9 @@ const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
 
 // modelos de imagem (ids puros — o backend monta o caminho)
 const FALLBACK_IMG_MODELS = [
-  { name: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
-  { name: 'gemini-2.5-flash-image', label: 'Nano Banana 2' },
+  { name: 'gemini-3-pro-image', label: 'Nano Banana Pro' },
+  { name: 'gemini-3.1-flash-image', label: 'Nano Banana 2' },
+  { name: 'gemini-3.1-flash-lite-image', label: 'Nano Banana 2 Lite' },
 ];
 const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
 
@@ -425,17 +426,20 @@ async function connect(silent) {
       const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
       // SÓ as duas famílias Nano Banana — Pro e 2. Nada de lite/1/extras.
       const pool = gen.map(m => m.name.replace(/^models\//, ''));
+      const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
       const pick = (re, bad) => {
         const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
-        // canônico primeiro: sem "preview", nome mais curto
-        c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || a.length - b.length);
+        // canônico primeiro: sem "preview", versão mais ALTA, nome mais curto
+        c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || (ver(b) - ver(a)) || a.length - b.length);
         return c[0];
       };
       const pro = pick(/pro-image/i);
       const nano2 = pick(/flash-image/i, /lite/i);
+      const lite = pick(/flash-lite-image/i);
       opts = [];
       if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
       if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
+      if (lite) opts.push({ name: lite, label: 'Nano Banana 2 Lite' });
       if (!opts.length) opts = FALLBACK_IMG_MODELS;
       // texto: flash pro Diretor
       state.textModel = TEXT_MODEL_PREFS.find(p => pool.includes(p)) || pool.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
@@ -444,7 +448,7 @@ async function connect(silent) {
     state.connected = true;
     if ($('keySave').checked) localStorage.setItem(KEY_LS, key());
     keyStatus(state.backend === 'vertex'
-      ? 'conectada — Agent Platform (Vertex) · Nano Pro + Nano 2'
+      ? 'conectada — Agent Platform (Vertex) · Nano Pro + 2 + 2 Lite'
       : `conectada — ${opts.length} modelo(s) de imagem`, 'ok');
     $('genBtn').disabled = false;
     syncResRow();
@@ -583,23 +587,27 @@ async function tryImageModel(model, prompt) {
 
 async function generateImage(prompt) {
   const chosen = $('model').value || FALLBACK_IMG_MODELS[0].name;
-  try {
-    return await tryImageModel(chosen, prompt);
-  } catch (e) {
-    // chave sem cota/permissão pro modelo escolhido (free tier não cobre o
-    // Pro) → cai automaticamente pro outro Nano Banana
-    const alts = [...$('model').options].map(o => o.value).filter(v => v && v !== chosen);
-    if (alts.length && [403, 404, 429].includes(e.status)) {
-      const altLabel = [...$('model').options].find(o => o.value === alts[0])?.textContent || 'outro modelo';
-      devMsg(`sem cota no modelo escolhido — revelando no ${altLabel.toLowerCase()}…`);
-      TipoUI.showToast(`Essa chave não cobre esse modelo — tentando ${altLabel}`);
-      const r = await tryImageModel(alts[0], prompt);
-      $('model').value = alts[0];
-      syncResRow();
+  // chave sem cota/permissão pro modelo escolhido → desce a cadeia
+  // (Pro → Nano 2 → Nano 2 Lite) até revelar
+  const order = [chosen, ...[...$('model').options].map(o => o.value).filter(v => v && v !== chosen)];
+  let lastErr = null;
+  for (let i = 0; i < order.length; i++) {
+    try {
+      const r = await tryImageModel(order[i], prompt);
+      if (order[i] !== chosen) { $('model').value = order[i]; syncResRow(); }
       return r;
+    } catch (e) {
+      lastErr = e;
+      if (![403, 404, 429].includes(e.status)) throw e;
+      const next = order[i + 1];
+      if (next) {
+        const lbl = [...$('model').options].find(o => o.value === next)?.textContent || next;
+        devMsg(`sem cota — revelando no ${lbl.toLowerCase()}…`);
+        TipoUI.showToast(`Modelo sem cota nessa chave — tentando ${lbl}`);
+      }
     }
-    throw e;
   }
+  throw lastErr;
 }
 
 async function revelar() {
