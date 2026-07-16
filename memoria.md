@@ -159,6 +159,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-16
 
+### FOTOGRAMA — a saga da chave + auditoria de geração (16/07)
+- **Chave Agent Platform (AQ.)**: endpoint é aiplatform.googleapis.com com caminho `v1/projects/-/locations/global/publishers/google/models/{id}:generateContent` (sem o projects/-/locations/global REJEITA e silenciosamente caía no free tier do Studio = "quota exceeded"). Contents exigem `role: 'user'` no Vertex. Chave criada nas Credenciais gerais nasce presa à "Gemini API" e o console NÃO deixa trocar (Save failed) — criar pelo Vertex AI Studio → Settings → API Keys.
+- **GOTCHA escada de modos**: memorizar a URL inteira do modo que funcionou = a URL do FLASH vazava pra chamada de imagem. Memorizar só a FORMA (path template) e remontar por modelo.
+- **Auditoria de adesão (TAGS.pdf é lei)**: prompt verboso perde pro formato combo — cena + 1 tag por categoria (~450 chars). Frase concreta só no FRAMING (worm's eye "shot from directly below looking straight up" obedece; tag solta o modelo suaviza). Nomes de lente FUNCIONAM como tag quando acompanhados do efeito ("Helios 44-2 swirly bokeh"). Escada de payload nunca pode derrubar o aspectRatio junto com o imageSize. Fallback de modelo tem que ser VISÍVEL (legenda mostra o modelo real).
+- **Arquitetura Diretor**: LLM só enriquece a CENA (veto a câmera/filme/cor no system dele) + saneExpansion descarta conversa/recusa; seletores entram SEMPRE por código no buildFinalPrompt. LLM nunca tem a palavra final.
+- Fila (1 por vez, 4 na espera) + galeria com ♥/⬇/↺(reusa params)/✕.
+
 ### FOTOGRAMA v2 (21.1) — lentes reais, sugador, refs, cine-com
 - **INSIGHT CENTRAL (por que a lente do Cinematic "não funciona")**: nome de lente o Nano ignora (vault v0-v2 confirmou). A tradução certa: UI mostra a lente real, prompt carrega a ASSINATURA PERCEPTUAL do catálogo de 27 lentes. Validado com 3 gerações da mesma cena — Helios/Anamórfica/Panchro visivelmente distintas (anamórfica com blue streaks horizontais).
 - Sugador de mood: fileToRef downscale → canvas com drag-região (crop 768px) → Gemini vision com system "film colorist: NEVER mention objects/composition, max 300 chars" → descriptor + imagem no payload com "transfer ONLY palette/grain/light/texture". Diretor decupa a cena e a cláusula do mood entra POR FORA do output dele.
