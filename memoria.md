@@ -6,7 +6,7 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 38 ferramentas (15 visual tools + 23 kinetic type modes)
+- **Total:** 39 ferramentas (16 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
@@ -156,6 +156,16 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - Aplicado em 2026-06-12: cascade, flag, stripes, ribbon, string (os demais já seguiam)
 
 ---
+
+## 2026-07-16
+
+### FOTOGRAMA (Fase 21) — ferramenta #39, still cinematográfico com IA
+- Base: system prompt v2.0 do vault `PROJETOS/nano banana testing` (framework do Marcos/HDLX: lente/posição/luz/sujeito/camadas/post modular/art direction; tags confirmadas do Nano: fine 35mm grain, lifted blacks, creamy bokeh, volumetric haze; 1 tag por categoria, effects not specs). Catálogos de `_knowledge/fotografia` viraram os selects (stocks, paletas).
+- Dois programas com FIXED/persona próprios (cinema × commercial); 12 framings com FRASES CONCRETAS (bateria provou: "worm's eye" abstrato o modelo suaviza, "shot from directly below looking straight up" obedece); regra "no text/logos" default (commercial inventa type de campanha sozinho).
+- Híbrido: template determinístico ou Diretor ✨ (Gemini Flash com systemInstruction; fallback pro template). BYO key: localStorage opcional, Esquecer, header x-goog-api-key (NUNCA query param — não vaza em URL/log), erros sanitizados. Descoberta de modelos via ListModels (labels Nano Banana Pro/Nano Banana), escada de payload (IMAGE → TEXT+IMAGE → sem imageConfig) pra variação entre gerações.
+- Bateria de validação: 8 stills reais via Higgsfield CLI nano_banana_2 (unlimited), 2k — look aprovado nos 2 programas. Demo embarcado assets/fotograma-demo.jpg (224KB).
+- Smoke mockado (Playwright fulfill em generativelanguage.googleapis.com): 12/12 — conexão, template, diretor, P&B trava paleta, chave só no header, forget limpa tudo.
+- GOTCHA sips: `-s format jpeg -s formatOptions 72` pra comprimir PNG 9MB → JPG 224KB.
 
 ## 2026-07-15
 

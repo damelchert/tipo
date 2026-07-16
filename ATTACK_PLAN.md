@@ -8,6 +8,17 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 21 — FOTOGRAMA: still cinematográfico com IA (pedido do Daniel 15/07) — ✅ v1 (2026-07-16)
+Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a pegada Tipó: prompt simples → **motor de direção** → Nano Banana revela o still em linguagem de película.
+- **System prompt**: evolução do v2.0 do vault `nano banana testing` (tags que o Nano reconhece, 1 por categoria, effects not specs, máx 420 chars) com **dois programas**: CINEMA (grain 35mm vivo, lifted blacks, naturalismo) e COMMERCIAL (grain ultra-fino, key light esculpida, energia de campanha) — cada um com persona, FIXED e universo de mood próprios.
+- **12 enquadramentos** como chips (worm's eye, dutch, bird's eye, crane, knee-level, through glass, wide negativo…) + 🎲 surpreenda — frases CONCRETAS ("shot from directly below looking straight up"), aprendizado da bateria: frase abstrata o modelo suaviza. **9 film stocks** (Vision3 500T/250D/50D, CineStill 800T halation, Portra, Ektachrome, HP5/Delta3200 P&B, Polaroid) e **6 paletas narrativas** dos catálogos `_knowledge/fotografia`. Regra "no text/logos" default (a bateria mostrou o commercial inventando type de campanha).
+- **Híbrido**: template determinístico (1 chamada) OU Diretor ✨ (Gemini Flash decupa em FG/MG/BG com o system prompt, mesma chave). Fallback: Diretor falhou → template.
+- **BYO key blindada** (decisão do Daniel): Google AI Studio key colada pelo usuário, salva opcionalmente no localStorage, botão Esquecer, input mascarado; viaja SÓ pro Google **via header x-goog-api-key** (nunca em URL), erros sanitizados (corpo cru nunca ecoa na UI). CSP: connect-src ganhou generativelanguage.googleapis.com.
+- **Modelos por descoberta**: ListModels da chave → Nano Banana Pro (default, com select de resolução 1K/2K/4K) e Nano Banana; fallback hardcoded. Escada de compatibilidade no payload (responseModalities/imageConfig variam por geração).
+- **Validação**: bateria de 8 imagens reais via Higgsfield CLI (Nano Banana Pro unlimited) — 4 cenas × 2 programas com framings não-convencionais; look confirmado (halation CineStill, knee-level com criança na altura da lente, bird's eye com grid, campanha top-down). Demo still da bailarina embarcado (224KB). Smoke mockado 12/12.
+- [ ] 21.1 — validação com chave real do Daniel no browser (fluxo AI Studio de ponta a ponta)
+- [ ] 21.2 — idioma da UI (hoje PT — entra na decisão de voz única da 20.2)
+
 ### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)
 **Veredito da auditoria** (27 capturas: hero, home light/dark, catálogo, 14 ferramentas, timeline, mobile): Creativity 8.5 / Design 6.5 / Usability 7 / Content 8 — "produto premium vestindo partes de produtinho". Premium: hero, entradas curadas (riso/depth/morisawa/overlay), sistema do painel, palette. Produtinho: catálogo de cards genérico, dark mode quebrado (canvas cream + faixa exposta no field, cinzas divergentes na home), controles nativos do browser, header com nav ilegível, idioma misturado (hero PT × site EN × pílulas PT), pill "FREE" ambígua, dithering abre vazio + anatomia divergente, badge entry bagunçada.
 

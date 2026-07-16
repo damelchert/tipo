@@ -305,6 +305,7 @@ const TipoUI = {
   /** Category map: mode name → index.html hash */
   _backTargets: {
     // Visual tools
+    fotograma: 'visual',
     dithering: 'visual', reticula: 'visual', glitch: 'visual',
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
     depth: 'visual', gradientmap: 'visual', riso: 'visual',

@@ -491,6 +491,18 @@ body { overflow: hidden; }
   animation: pvShaper calc(2.6s * var(--pvs)) ease-in-out infinite alternate; }
 @keyframes pvShaper { from { transform: scale(1); } to { transform: scale(1.3); } }
 
+/* Fotograma — still de película: letterbox + pôr-do-sol + grain vivo */
+.pv-fotograma { background: #141210; overflow: hidden; }
+.pv-fotograma::before { content: ''; position: absolute; left: 0; right: 0; top: 14%; bottom: 14%;
+  background: linear-gradient(180deg, #D4A040 0%, #b2683a 34%, #1B5A4E 78%, #10201c 100%);
+  animation: pvFotoFlicker calc(.9s * var(--pvs)) step-end infinite; }
+.pv-fotograma::after { content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(248,245,240,.5) .6px, transparent 1px),
+    radial-gradient(rgba(26,24,24,.65) .6px, transparent 1px);
+  background-size: 4px 6px, 6px 4px;
+  animation: pvGrain calc(.5s * var(--pvs)) step-end infinite; }
+@keyframes pvFotoFlicker { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.06); } 75% { filter: brightness(.97); } }
+
 .pv-overlay { background: linear-gradient(160deg, #1B5A4E, #2b8a7c); }
 .pv-overlay::before { content: ''; position: absolute; inset: 0;
   background-image: radial-gradient(rgba(248,245,240,.85) .8px, transparent 1.1px),
@@ -641,7 +653,7 @@ body { overflow: hidden; }
   <div class="hero-dot" id="heroDot"></div>
   <div class="hero-log" id="heroLog">ensaio 00 · aquecendo as máquinas</div>
   <div class="hero-cta" id="heroCta">
-    <button type="button" id="heroEnter">explorar as 38 ferramentas</button>
+    <button type="button" id="heroEnter">explorar as 39 ferramentas</button>
     <span class="hero-hint">role pra entrar ↓</span>
   </div>
 </div>
@@ -664,7 +676,7 @@ body { overflow: hidden; }
       <span class="current">Home</span>
     </div>
     <div class="subbar-right">
-      <span class="header-stats">38 tools &bull; zero install &bull; 100% browser</span>
+      <span class="header-stats">39 tools &bull; zero install &bull; 100% browser</span>
       <a class="subbar-credit" href="https://www.danielmelchert.com.br" target="_blank" rel="noopener">made by <b>Daniel Melchert</b></a>
     </div>
   </div>
@@ -681,7 +693,7 @@ body { overflow: hidden; }
           </div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
-          <div class="split-ticker"><div class="split-ticker-track">Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
+          <div class="split-ticker"><div class="split-ticker-track">Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -699,6 +711,14 @@ body { overflow: hidden; }
     <!-- LEVEL 1a: Visual Tools list -->
     <div class="tipo-level" id="levelVisual">
       <div class="tipo-mode-list">
+        <a href="fotograma.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview pv-fotograma"></div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Fotograma <span style="font-size:8px;letter-spacing:1.5px;color:var(--accent-warm,#D4A040);vertical-align:middle;">NOVO &middot; AI</span></div>
+            <div class="tipo-mode-card-desc">Cinematic AI stills on real film language — two programs (cinema / commercial), unconventional framings, swappable film stocks. Bring your own Google key.</div>
+            <div class="tipo-mode-card-meta">nano banana &bull; 12 framings &bull; 9 film stocks &bull; diretor &#10024; &bull; byo key</div>
+          </div>
+        </a>
         <a href="dithering.html" class="tipo-mode-card">
           <div class="tipo-mode-card-preview pv-dither"></div>
           <div class="tipo-mode-card-info">
@@ -2155,7 +2175,7 @@ goKineticType = function() {
         scale: 0.62, duration: 0.5, ease: 'power2.inOut',
       });
     }, '-=0.2')
-    .add(setLog('38 ferramentas · type em movimento · 100% browser'))
+    .add(setLog('39 ferramentas · type em movimento · 100% browser'))
     .to('#heroCta', { opacity: 1, duration: 0.6 })
     .add(() => hero.classList.add('parked'));
   } // buildIntro

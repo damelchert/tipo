@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Fotograma. Cinematic AI stills on film: two programs (cinema / commercial), unconventional framings, swappable film stocks. Bring your own Google AI Studio key.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Fotograma</title>
+<link rel="stylesheet" href="shared/style.css?v=20260713-id1">
+<script src="shared/ui.js?v=20260716-ft1"></script>
+<style>
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-0); }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+
+  /* resultado */
+  #stillFrame { position: relative; max-width: calc(100% - 80px); max-height: calc(100% - 130px); display: flex; align-items: center; justify-content: center; }
+  #stillImg { max-width: 100%; max-height: 100%; display: block; box-shadow: 0 12px 60px rgba(0,0,0,.4); background: #111; }
+  #stillCaption { margin-top: 10px; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); text-align: center; }
+  #gallery { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; max-width: 80%; overflow-x: auto; padding: 4px; }
+  #gallery img { height: 52px; border: 1px solid var(--border-2); border-radius: 3px; cursor: pointer; opacity: .75; transition: opacity .2s, border-color .2s; }
+  #gallery img:hover, #gallery img.sel { opacity: 1; border-color: var(--accent); }
+
+  /* chave */
+  #apiKey { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
+  .key-row { display: flex; gap: 6px; align-items: center; }
+  .key-row button { flex: none; }
+  #keyStatus { font-size: 10px; margin-top: 6px; min-height: 13px; letter-spacing: .5px; color: var(--text-5); }
+  #keyStatus.ok { color: var(--accent); }
+  #keyStatus.err { color: var(--red, #CC4840); }
+  .key-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
+  .key-hint a { color: var(--accent); }
+
+  /* cena */
+  #scene { width: 100%; min-height: 64px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 4px; resize: vertical; }
+
+  /* chips */
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fchip { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 5px 9px; border: 1px solid var(--border-2); border-radius: 20px; cursor: pointer; color: var(--text-4); transition: all .15s; user-select: none; font-family: var(--font-ui); }
+  .fchip:hover { border-color: var(--accent); color: var(--accent); }
+  .fchip.on { background: var(--accent); border-color: var(--accent); color: var(--bg-0); }
+  .fchip.dice { border-style: dashed; }
+
+  /* programa */
+  .prog-row { display: flex; gap: 8px; }
+  .prog-btn { flex: 1; padding: 10px 6px; border: 1px solid var(--border-2); border-radius: 6px; background: transparent; cursor: pointer; text-align: center; font-family: var(--font-ui); transition: all .15s; }
+  .prog-btn .p-name { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-2); font-weight: 700; }
+  .prog-btn .p-sub { font-size: 8px; letter-spacing: 1px; color: var(--text-5); margin-top: 3px; text-transform: uppercase; }
+  .prog-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .prog-btn.on .p-name { color: var(--accent); }
+
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
+  .stock-hint { font-size: 9px; color: var(--text-5); margin-top: 4px; min-height: 12px; }
+
+  #genBtn { width: 100%; padding: 12px; font-size: 12px; letter-spacing: 2px; }
+  #genBtn:disabled { opacity: .45; cursor: default; }
+
+  #promptOut { margin-top: 8px; }
+  #promptOut summary { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-5); cursor: pointer; }
+  #promptOut pre { white-space: pre-wrap; font-size: 10px; color: var(--text-3); background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 4px; padding: 8px; margin-top: 6px; line-height: 1.5; font-family: var(--font-ui); }
+
+  .toggle-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-3); cursor: pointer; margin-top: 8px; }
+
+  /* revelação */
+  #devOverlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--bg-0) 82%, transparent); z-index: 30; backdrop-filter: blur(3px); }
+  #devOverlay.open { display: flex; }
+  .dev-frame { width: 74px; height: 54px; border: 2px solid var(--accent); border-radius: 4px; position: relative; overflow: hidden; }
+  .dev-frame::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 45%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
+  @keyframes devSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  #devMsg { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-3); font-family: var(--font-ui); }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Fotograma <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Chave — Google AI Studio</div>
+    <div class="key-row">
+      <input type="password" id="apiKey" placeholder="cole sua chave (AIza…)" autocomplete="off" spellcheck="false">
+      <button class="btn btn-secondary" id="keyEye" title="mostrar/ocultar" style="padding:7px 10px;">&#128065;</button>
+    </div>
+    <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="keySave" checked> lembrar neste navegador</label>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn" id="keyConnect">Conectar</button>
+      <button class="btn btn-secondary" id="keyForget">Esquecer chave</button>
+    </div>
+    <div id="keyStatus"></div>
+    <div class="key-hint">A chave fica <b>só no seu navegador</b> e é enviada apenas pra API do Google — nunca pra Tipó. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave grátis &rarr;</a></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Cena</div>
+    <textarea id="scene" placeholder="descreva simples: “padaria antiga lotada de manhã” — o Fotograma dirige o resto" spellcheck="false"></textarea>
+    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(Gemini decupa a cena em camadas — usa a mesma chave)</span></label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Programa</div>
+    <div class="prog-row">
+      <button type="button" class="prog-btn on" id="progCinema" data-prog="cinema">
+        <div class="p-name">Cinema</div>
+        <div class="p-sub">película viva &middot; naturalismo</div>
+      </button>
+      <button type="button" class="prog-btn" id="progCommercial" data-prog="commercial">
+        <div class="p-name">Commercial</div>
+        <div class="p-sub">campanha &middot; editorial polido</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Enquadramento</div>
+    <div class="chip-grid" id="framingChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Film Stock</div>
+    <select id="stock"></select>
+    <div class="stock-hint" id="stockHint"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Paleta</div>
+    <select id="paleta"></select>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Luz</div>
+    <select id="luz"></select>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Formato</div>
+    <div class="chip-grid" id="arChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Modelo</div>
+    <select id="model"><option value="">conecte a chave primeiro</option></select>
+    <div class="range-row" id="resRow" style="margin-top:6px;">
+      <span class="range-label">Resolução</span>
+      <select id="imgSize" style="flex:1;">
+        <option value="1K">1K</option>
+        <option value="2K" selected>2K</option>
+        <option value="4K">4K</option>
+      </select>
+    </div>
+    <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="cleanImg" checked> sem texto / logos / marca d'água</label>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Gerar</div>
+    <button class="btn" id="genBtn" disabled>Revelar Fotograma</button>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-secondary" id="dlBtn" disabled>Baixar PNG</button>
+      <button class="btn btn-secondary" id="copyPromptBtn" disabled>Copiar prompt</button>
+    </div>
+    <details id="promptOut" style="display:none;">
+      <summary>prompt final</summary>
+      <pre id="promptText"></pre>
+    </details>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div id="stillFrame">
+    <img id="stillImg" src="assets/fotograma-demo.jpg" alt="Fotograma">
+  </div>
+  <div id="stillCaption">demo &middot; cinema &middot; cinestill 800t &middot; worm's eye &mdash; cole sua chave e revele o seu</div>
+  <div id="gallery"></div>
+  <div id="devOverlay">
+    <div class="dev-frame"></div>
+    <div id="devMsg">revelando…</div>
+  </div>
+</div>
+<div class="tipo-toast" id="toast"></div>
+
+<script>
+// ============================================================
+// TIPÓ — FOTOGRAMA (still cinematográfico em película, via IA)
+// Prompt simples → motor de direção (template determinístico ou
+// Diretor ✨ com Gemini Flash) → Nano Banana gera o still.
+// BYO key do Google AI Studio: fica no browser, vai SÓ pro Google
+// (header x-goog-api-key — nunca em URL, nunca em logs/erros).
+// System prompt: evolução do v2.0 (vault nano banana) — tags que
+// o Nano reconhece, 1 por categoria, effects not specs.
+// ============================================================
+
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+const KEY_LS = 'tipo-gemini-key';
+
+// ---- motor de direção: dados ----
+const PROGRAMAS = {
+  cinema: {
+    fixed: 'Fine 35mm grain visible across everything like sand printed on celluloid — heavier in shadows, present in highlights. Lifted blacks, warm shadows with grain alive inside, never dead black. Creamy bokeh, soft highlight roll-off.',
+    mood: 'Naturalistic, honest',
+    moods: 'slow cinema, naturalistic, cinéma vérité, gritty realism',
+    persona: 'You are a cinematic DP.',
+    scene: 'Layer the scene: foreground / midground / background. Materials lived-in with dirt and patina, one imperfection always, one atmosphere layer (haze, dust, steam) if it deepens the frame. If people appear: skin with pores, oil, fine hairs, uneven tone — no smoothing.',
+  },
+  commercial: {
+    fixed: 'Ultra-fine film grain, subtle but alive. Sculpted key light with intentional shadow. Rich true blacks, controlled highlights with soft roll-off. Surfaces immaculate but real materials, honest reflections.',
+    mood: 'Polished editorial energy',
+    moods: 'polished editorial, campaign still, tabletop precision',
+    persona: 'You are a top commercial still photographer shooting on film.',
+    scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed.',
+  },
+};
+
+const FRAMINGS = [
+  { id: 'eye',     label: 'Eye-level',     phrase: 'shot at honest eye level with natural 50mm perspective' },
+  { id: 'lowhero', label: 'Low Hero',      phrase: 'low angle hero shot, camera near the ground looking up, the subject towering' },
+  { id: 'worms',   label: "Worm's Eye",    phrase: "worm's eye view shot from directly below looking straight up" },
+  { id: 'dutch',   label: 'Dutch',         phrase: 'dutch angle with the horizon tilted hard' },
+  { id: 'birds',   label: "Bird's Eye",    phrase: "overhead bird's eye view, a flat top-down grid" },
+  { id: 'crane',   label: 'Crane',         phrase: 'high crane shot from above, the subject small inside bold geometry' },
+  { id: 'knee',    label: 'Knee-level',    phrase: 'shot from knee level moving through the scene' },
+  { id: 'xcu',     label: 'Extreme Close', phrase: 'extreme close-up with features filling the frame' },
+  { id: 'macro',   label: 'Macro',         phrase: 'macro close-up, razor-thin focus plane' },
+  { id: 'ots',     label: 'Over Shoulder', phrase: 'over-the-shoulder framing, the foreground shoulder soft' },
+  { id: 'glass',   label: 'Through Glass', phrase: 'shot through glass, reflections layering over the subject' },
+  { id: 'widens',  label: 'Wide Negativo', phrase: 'extreme wide shot, the subject tiny, negative space everywhere' },
+];
+
+const STOCKS = [
+  { id: 'v500t',   label: 'Kodak Vision3 500T', phrase: 'Kodak Vision3 500T', hint: 'o padrão do cinema moderno — quente, versátil', prog: 'cinema' },
+  { id: 'v250d',   label: 'Kodak Vision3 250D', phrase: 'Kodak Vision3 250D', hint: 'daylight cinematográfico, cores vibrantes' },
+  { id: 'v50d',    label: 'Kodak Vision3 50D',  phrase: 'Kodak Vision3 50D, ultra-fine grain', hint: 'o grain mais fino do mundo — luz plena', prog: 'commercial' },
+  { id: 'cine800', label: 'CineStill 800T',     phrase: 'CineStill 800T, halation glowing on every light source', hint: 'noite, neon, halation vermelha nas luzes' },
+  { id: 'portra',  label: 'Kodak Portra 400',   phrase: 'Kodak Portra 400', hint: 'pele pastel, retrato analógico clássico' },
+  { id: 'ekta',    label: 'Ektachrome E100',    phrase: 'Ektachrome E100 slide film crispness', hint: 'slide limpo, cor fiel, contraste elegante' },
+  { id: 'hp5',     label: 'Ilford HP5 — P&B',   phrase: 'Ilford HP5 black and white, classic grain', hint: 'P&B clássico de fotojornalismo', bw: true },
+  { id: 'd3200',   label: 'Delta 3200 — P&B',   phrase: 'Ilford Delta 3200 black and white, heavy expressive grain', hint: 'P&B noturno, grain pesado', bw: true },
+  { id: 'pola',    label: 'Polaroid 600',       phrase: 'Polaroid 600 instant film, dreamy soft flare and color drift', hint: 'aberração dramática, instantâneo sonhado' },
+];
+
+const PALETAS = [
+  { id: 'muted',      label: 'Muted — padrão do programa', phrase: 'desaturated muted palette' },
+  { id: 'tealorange', label: 'Teal & Orange',              phrase: 'teal and orange complementary tension, warm skin tones against cool shadows' },
+  { id: 'inverted',   label: 'Invertida (frio no quente)', phrase: 'inverted color temperature, cool subject against warm amber environment' },
+  { id: 'monowarm',   label: 'Monocromática quente',       phrase: 'monochromatic warm palette, amber through burnt umber' },
+  { id: 'pastel',     label: 'Pastel daylight',            phrase: 'soft pastel daylight palette, chalky muted tones' },
+  { id: 'neon',       label: 'Neon noturna',               phrase: 'neon night palette, magenta and cyan practicals against deep shadow' },
+];
+
+const LUZES = [
+  { id: 'golden',    label: 'Golden hour',    phrase: 'late golden hour light raking low and warm' },
+  { id: 'window',    label: 'Janela lateral', phrase: 'one window side light sculpting the subject, shadow side fading' },
+  { id: 'overcast',  label: 'Overcast',       phrase: 'bright overcast daylight wrapping soft around everything' },
+  { id: 'hard',      label: 'Sol duro',       phrase: 'hard direct sunlight carving deep sharp shadows' },
+  { id: 'practical', label: 'Practical',      phrase: 'one tungsten practical glowing warm inside the dark' },
+  { id: 'neonmix',   label: 'Neon mista',     phrase: 'mixed neon spill washing the scene from the street' },
+  { id: 'backlit',   label: 'Backlit haze',   phrase: 'strong backlight cutting through volumetric haze' },
+];
+
+const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
+
+// modelos de imagem (fallback se a descoberta falhar)
+const FALLBACK_IMG_MODELS = [
+  { name: 'models/gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
+  { name: 'models/gemini-2.5-flash-image', label: 'Nano Banana' },
+];
+const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+
+// ---- estado ----
+let state = {
+  prog: 'cinema',
+  framing: 'eye',
+  ar: '16:9',
+  connected: false,
+  textModel: null,
+  lastBlob: null,
+  lastPrompt: '',
+  takes: [], // { url, caption }
+};
+
+const $ = (id) => document.getElementById(id);
+const key = () => $('apiKey').value.trim();
+
+// ---- chave: guarda SÓ no browser, viaja SÓ pro Google ----
+function keyStatus(msg, cls) {
+  const el = $('keyStatus');
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
+function sanitizeApiError(status, text) {
+  // nunca ecoar o corpo cru (pode citar a request) — mapear pro usuário
+  if (status === 400 || status === 401 || status === 403) return 'Chave inválida ou sem permissão pra esse modelo';
+  if (status === 429) return 'Cota excedida — espere um pouco ou confira o plano da chave';
+  if (status === 404) return 'Modelo indisponível pra essa chave';
+  if (status >= 500) return 'API do Google instável — tente de novo';
+  return `Erro da API (${status})`;
+}
+
+async function gapi(path, body) {
+  const r = await fetch(`${API}/${path}`, {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      'x-goog-api-key': key(),
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!r.ok) {
+    let detail = '';
+    try { detail = (await r.json()).error?.message || ''; } catch (e) {}
+    const err = new Error(sanitizeApiError(r.status, detail));
+    err.status = r.status;
+    err.detail = detail; // só console, nunca UI
+    throw err;
+  }
+  return r.json();
+}
+
+async function connect(silent) {
+  if (!key()) { if (!silent) keyStatus('cole a chave primeiro', 'err'); return; }
+  keyStatus('conectando…');
+  try {
+    const data = await gapi('models?pageSize=1000');
+    const models = data.models || [];
+    const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
+    // imagem: nano banana família
+    const imgs = gen.filter(m => /image/i.test(m.name) && !/embed|veo/i.test(m.name));
+    imgs.sort((a, b) => (/pro/i.test(b.name) ? 1 : 0) - (/pro/i.test(a.name) ? 1 : 0));
+    const list = imgs.length ? imgs.map(m => ({
+      name: m.name,
+      label: /pro-image/i.test(m.name) ? 'Nano Banana Pro' : /flash-image/i.test(m.name) ? 'Nano Banana' : m.displayName || m.name.replace('models/', ''),
+    })) : FALLBACK_IMG_MODELS;
+    // dedupe por label (previews duplicam)
+    const seen = new Set();
+    const opts = list.filter(m => !seen.has(m.label) && seen.add(m.label));
+    $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
+    // texto: flash pro Diretor
+    const names = gen.map(m => m.name.replace('models/', ''));
+    state.textModel = TEXT_MODEL_PREFS.find(p => names.includes(p)) || names.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
+    state.connected = true;
+    if ($('keySave').checked) localStorage.setItem(KEY_LS, key());
+    keyStatus(`conectada — ${opts.length} modelo(s) de imagem`, 'ok');
+    $('genBtn').disabled = false;
+    syncResRow();
+  } catch (e) {
+    console.warn('[fotograma] connect:', e.detail || e.message);
+    state.connected = false;
+    $('genBtn').disabled = true;
+    keyStatus(e.message, 'err');
+  }
+}
+
+function forgetKey() {
+  localStorage.removeItem(KEY_LS);
+  $('apiKey').value = '';
+  state.connected = false;
+  $('genBtn').disabled = true;
+  $('model').innerHTML = '<option value="">conecte a chave primeiro</option>';
+  keyStatus('chave esquecida — nada ficou salvo', '');
+}
+
+// ---- motor de direção ----
+function currentFraming() { return FRAMINGS.find(f => f.id === state.framing) || FRAMINGS[0]; }
+function currentStock() { return STOCKS.find(s => s.id === $('stock').value) || STOCKS[0]; }
+function currentPaleta() { return PALETAS.find(p => p.id === $('paleta').value) || PALETAS[0]; }
+function currentLuz() { return LUZES.find(l => l.id === $('luz').value) || LUZES[0]; }
+
+function cleanRule() {
+  return $('cleanImg').checked ? ' No text, no logos, no watermarks.' : '';
+}
+
+/** template determinístico — 1 chamada, controle total */
+function buildTemplatePrompt(subject) {
+  const P = PROGRAMAS[state.prog];
+  const stock = currentStock();
+  const pal = stock.bw ? { phrase: 'black and white' } : currentPaleta();
+  return `${subject}, ${currentFraming().phrase}. ${currentLuz().phrase}. ${P.fixed} ${stock.phrase}. ${pal.phrase}. ${P.mood}.${cleanRule()}`;
+}
+
+/** system prompt do Diretor ✨ — evolução do v2.0 com módulos injetados */
+function buildDiretorSystem() {
+  const P = PROGRAMAS[state.prog];
+  const stock = currentStock();
+  const pal = stock.bw ? { phrase: 'black and white' } : currentPaleta();
+  return `${P.persona} Expand the scene into ONE short visual prompt for an image model.
+FIXED LOOK: ${P.fixed}
+USE EXACTLY: framing — ${currentFraming().phrase}; light — ${currentLuz().phrase}; palette — ${pal.phrase}; film stock — ${stock.phrase}.
+${P.scene}
+Mood: pick ONE — ${P.moods}.
+RULES: describe what we SEE, effects not specs, one tag per category, never stack conflicting tags. Max 420 characters. English. One paragraph, no lists, no metadata, no quotes.${cleanRule() ? ' End with: No text, no logos, no watermarks.' : ''}`;
+}
+
+async function diretor(subject) {
+  const data = await gapi(`models/${state.textModel}:generateContent`, {
+    systemInstruction: { parts: [{ text: buildDiretorSystem() }] },
+    contents: [{ parts: [{ text: subject }] }],
+    generationConfig: { temperature: 0.9, maxOutputTokens: 400 },
+  });
+  const txt = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
+  if (!txt) throw new Error('O Diretor não devolveu a cena — tente de novo');
+  return txt.replace(/^["'\s]+|["'\s]+$/g, '');
+}
+
+// ---- geração ----
+function devMsg(m) { $('devMsg').textContent = m; }
+
+async function generateImage(prompt) {
+  const model = $('model').value || FALLBACK_IMG_MODELS[0].name;
+  const isPro = /pro/i.test(model);
+  const mk = (modalities, withCfg) => ({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseModalities: modalities,
+      ...(withCfg ? {
+        imageConfig: {
+          aspectRatio: state.ar,
+          ...(isPro ? { imageSize: $('imgSize').value } : {}),
+        },
+      } : {}),
+    },
+  });
+  // escada de compatibilidade: variações de payload entre gerações do modelo
+  const attempts = [mk(['IMAGE'], true), mk(['TEXT', 'IMAGE'], true), mk(['TEXT', 'IMAGE'], false)];
+  let lastErr = null;
+  for (const body of attempts) {
+    try {
+      const data = await gapi(`${model.startsWith('models/') ? model : 'models/' + model}:generateContent`, body);
+      const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+      if (part) return part.inlineData;
+      lastErr = new Error('O modelo não devolveu imagem (pode ter recusado o prompt)');
+    } catch (e) {
+      lastErr = e;
+      if (e.status !== 400) break; // 400 = tenta o próximo formato; resto desiste
+    }
+  }
+  throw lastErr;
+}
+
+async function revelar() {
+  const subject = $('scene').value.trim();
+  if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
+  if (!state.connected) { TipoUI.showToast('Conecte sua chave primeiro'); return; }
+  $('genBtn').disabled = true;
+  $('devOverlay').classList.add('open');
+  try {
+    let prompt;
+    if ($('diretor').checked) {
+      devMsg('diretor decupando a cena…');
+      try {
+        prompt = await diretor(subject);
+      } catch (e) {
+        console.warn('[fotograma] diretor:', e.detail || e.message);
+        TipoUI.showToast('Diretor falhou — seguindo com o template');
+        prompt = buildTemplatePrompt(subject);
+      }
+    } else {
+      prompt = buildTemplatePrompt(subject);
+    }
+    state.lastPrompt = prompt;
+    $('promptText').textContent = prompt;
+    $('promptOut').style.display = '';
+    $('copyPromptBtn').disabled = false;
+
+    devMsg('revelando o fotograma…');
+    const img = await generateImage(prompt);
+    const blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
+    state.lastBlob = blob;
+    const url = URL.createObjectURL(blob);
+    $('stillImg').src = url;
+    const cap = `${state.prog} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar}`;
+    $('stillCaption').textContent = cap;
+    $('dlBtn').disabled = false;
+    addTake(url, cap, blob);
+    TipoUI.showToast('Fotograma revelado');
+  } catch (e) {
+    console.error('[fotograma]', e.detail || e.message);
+    TipoUI.showToast(e.message || 'Falhou — tente de novo');
+  } finally {
+    $('devOverlay').classList.remove('open');
+    $('genBtn').disabled = !state.connected;
+  }
+}
+
+// ---- galeria da sessão ----
+function addTake(url, caption, blob) {
+  state.takes.unshift({ url, caption, blob });
+  if (state.takes.length > 12) {
+    const dead = state.takes.pop();
+    URL.revokeObjectURL(dead.url);
+  }
+  const g = $('gallery');
+  g.innerHTML = '';
+  state.takes.forEach((t, i) => {
+    const im = document.createElement('img');
+    im.src = t.url;
+    im.className = i === 0 ? 'sel' : '';
+    im.title = t.caption;
+    im.addEventListener('click', () => {
+      $('stillImg').src = t.url;
+      $('stillCaption').textContent = t.caption;
+      state.lastBlob = t.blob;
+      $('dlBtn').disabled = false;
+      g.querySelectorAll('img').forEach(x => x.classList.remove('sel'));
+      im.classList.add('sel');
+    });
+    g.appendChild(im);
+  });
+}
+
+// ---- UI boot ----
+function buildChips() {
+  const fc = $('framingChips');
+  FRAMINGS.forEach(f => {
+    const c = document.createElement('span');
+    c.className = 'fchip' + (f.id === state.framing ? ' on' : '');
+    c.textContent = f.label;
+    c.dataset.id = f.id;
+    c.addEventListener('click', () => {
+      state.framing = f.id;
+      fc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === f.id));
+    });
+    fc.appendChild(c);
+  });
+  const dice = document.createElement('span');
+  dice.className = 'fchip dice';
+  dice.textContent = '🎲 surpreenda';
+  dice.title = 'sorteia um enquadramento não-óbvio';
+  dice.addEventListener('click', () => {
+    const bold = FRAMINGS.filter(f => !['eye', 'xcu'].includes(f.id));
+    const pick = bold[Math.floor(Math.random() * bold.length)];
+    state.framing = pick.id;
+    fc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === pick.id));
+    TipoUI.showToast(`Enquadramento: ${pick.label}`);
+  });
+  fc.appendChild(dice);
+
+  const ac = $('arChips');
+  ARS.forEach(ar => {
+    const c = document.createElement('span');
+    c.className = 'fchip' + (ar === state.ar ? ' on' : '');
+    c.textContent = ar;
+    c.dataset.ar = ar;
+    c.addEventListener('click', () => {
+      state.ar = ar;
+      ac.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === ar));
+    });
+    ac.appendChild(c);
+  });
+}
+
+function buildSelects() {
+  $('stock').innerHTML = STOCKS.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+  $('paleta').innerHTML = PALETAS.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
+  $('luz').innerHTML = LUZES.map(l => `<option value="${l.id}">${l.label}</option>`).join('');
+  $('stock').addEventListener('change', syncStockHint);
+  syncStockHint();
+}
+
+function syncStockHint() {
+  const s = currentStock();
+  $('stockHint').textContent = s.hint || (s.bw ? 'preto e branco' : '');
+  $('paleta').disabled = !!s.bw;
+}
+
+function setProg(p) {
+  state.prog = p;
+  $('progCinema').classList.toggle('on', p === 'cinema');
+  $('progCommercial').classList.toggle('on', p === 'commercial');
+  // stock default do programa
+  const def = STOCKS.find(s => s.prog === p);
+  if (def) { $('stock').value = def.id; syncStockHint(); }
+}
+
+function syncResRow() {
+  const isPro = /pro/i.test($('model').value || '');
+  $('resRow').style.display = isPro ? '' : 'none';
+}
+
+// bindings
+$('keyConnect').addEventListener('click', () => connect(false));
+$('keyForget').addEventListener('click', forgetKey);
+$('keyEye').addEventListener('click', () => {
+  const k = $('apiKey');
+  k.type = k.type === 'password' ? 'text' : 'password';
+});
+$('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') connect(false); });
+$('progCinema').addEventListener('click', () => setProg('cinema'));
+$('progCommercial').addEventListener('click', () => setProg('commercial'));
+$('model').addEventListener('change', syncResRow);
+$('genBtn').addEventListener('click', revelar);
+$('dlBtn').addEventListener('click', () => {
+  if (!state.lastBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(state.lastBlob);
+  a.download = 'tipo-fotograma.png';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+});
+$('copyPromptBtn').addEventListener('click', () => {
+  if (!state.lastPrompt) return;
+  navigator.clipboard.writeText(state.lastPrompt).then(() => TipoUI.showToast('Prompt copiado'));
+});
+
+buildChips();
+buildSelects();
+setProg('cinema');
+
+// chave salva? reconecta em silêncio
+const saved = localStorage.getItem(KEY_LS);
+if (saved) {
+  $('apiKey').value = saved;
+  connect(true);
+}
+
+TipoUI.initChrome('visual');
+</script>
+</body>
+</html>
