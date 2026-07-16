@@ -397,6 +397,7 @@ const TipoUI = {
     const rec = this._visRec;
     const btn = document.getElementById('recBtn');
     if (!rec.isRecording) {
+      if (window.__tipoHQactive) { this.showToast('Aguarde o render HQ terminar'); return rec; }
       await rec.start(opts.bitrate || 8000000);
       if (btn) {
         btn.textContent = 'Stop Recording';
@@ -409,9 +410,24 @@ const TipoUI = {
       if (prog) prog.classList.add('open');
       if (btn) btn.disabled = true;
       try {
-        const result = await rec.stop();
-        TipoRecorder.download(result.blob, result.filename);
-        this.showToast(`MP4 exported (${result.sizeMB} MB)`);
+        let result;
+        try {
+          result = await rec.stop();
+        } finally {
+          // fecha a captura de performance ANTES da entrega (16.5/16.6)
+          document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
+        }
+        // 16.6 — com fonte de vídeo, o arquivo final sai da passada HQ
+        let handled = false;
+        if (typeof TipoHQ !== 'undefined' && TipoHQ.deliverRecording) {
+          if (prog) prog.classList.remove('open'); // o HQ tem overlay próprio
+          if (btn) { btn.disabled = false; btn.textContent = 'Record MP4'; btn.style.borderColor = ''; }
+          handled = await TipoHQ.deliverRecording(result);
+        }
+        if (!handled) {
+          TipoRecorder.download(result.blob, result.filename);
+          this.showToast(`MP4 exported (${result.sizeMB} MB)`);
+        }
       } catch (e) {
         console.error(e);
         this.showToast('Export failed');
@@ -422,7 +438,6 @@ const TipoUI = {
           btn.textContent = 'Record MP4';
           btn.style.borderColor = '';
         }
-        document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
         if (opts.onStop) opts.onStop();
       }
     }
@@ -763,6 +778,7 @@ const TipoUI = {
     if (!this.recorder) return;
     const btn = document.getElementById('recBtn');
     if (!this.recorder.isRecording) {
+      if (window.__tipoHQactive) { this.showToast('Aguarde o render HQ terminar'); return; }
       try {
         await this.recorder.start(8000000);
         btn.textContent = 'Stop Recording';
@@ -778,11 +794,26 @@ const TipoUI = {
       btn.textContent = 'Finalizing...';
       btn.disabled = true;
       try {
-        const result = await this.recorder.stop();
+        let result;
+        try {
+          result = await this.recorder.stop();
+        } finally {
+          // fecha a captura de performance ANTES da entrega (16.5/16.6)
+          document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
+        }
         if (!result || !result.blob || result.blob.size === 0) throw new Error('Empty recording');
-        TipoRecorder.download(result.blob, result.filename);
-        const ext = result.filename.endsWith('.mp4') ? 'MP4' : 'WebM';
-        this.showToast(`${ext} exported (${result.sizeMB} MB)`);
+        // 16.6 — com fonte de vídeo, o arquivo final sai da passada HQ
+        let handled = false;
+        if (typeof TipoHQ !== 'undefined' && TipoHQ.deliverRecording) {
+          if (prog) prog.classList.remove('open'); // o HQ tem overlay próprio
+          btn.disabled = false; btn.textContent = 'Record MP4'; btn.style.borderColor = '';
+          handled = await TipoHQ.deliverRecording(result);
+        }
+        if (!handled) {
+          TipoRecorder.download(result.blob, result.filename);
+          const ext = result.filename.endsWith('.mp4') ? 'MP4' : 'WebM';
+          this.showToast(`${ext} exported (${result.sizeMB} MB)`);
+        }
       } catch (err) {
         console.error(err);
         this.showToast('Export failed');
@@ -791,7 +822,6 @@ const TipoUI = {
         btn.disabled = false;
         btn.textContent = 'Record MP4';
         btn.style.borderColor = '';
-        document.dispatchEvent(new CustomEvent('tipo-rec-stop'));
       }
     }
   },
@@ -1909,7 +1939,14 @@ const TipoTimeline = {
     this.pause();
     this._recording = false;
     if (this._bar) this._bar.querySelector('#tlRec').classList.remove('armed');
-    await this._recToggle(); // stop + download
+    // REC da timeline entrega o arquivo ao vivo (duração/automação próprias —
+    // a entrega Record→HQ do 16.6 pula quando esta flag está de pé)
+    this._tlPass = true;
+    try {
+      await this._recToggle(); // stop + download
+    } finally {
+      this._tlPass = false;
+    }
     this.seek(0);
   },
 };

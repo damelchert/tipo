@@ -272,22 +272,49 @@ const TipoHQ = {
     };
   },
 
-  async run() {
-    if (this._running) return;
+  /** 16.6 — Record → HQ como default: gravou ao vivo com fonte de vídeo?
+   *  A entrega final é a passada HQ com a performance reaplicada. A
+   *  gravação ao vivo vira fallback (cancelou/falhou = baixa ela).
+   *  Retorna true quando assumiu a entrega; false = o chamador baixa o live. */
+  async deliverRecording(liveResult) {
+    const cfg = this._cfg;
+    const video = cfg && cfg.getVideo ? cfg.getVideo() : null;
+    if (!video || !video.videoWidth || !isFinite(video.duration) || video.duration <= 0) return false;
+    if (typeof VideoEncoder === 'undefined' || typeof Mp4Muxer === 'undefined') return false;
+    if (this._running) return false;
+    // REC da timeline tem duração/automação próprias — segue no fluxo ao vivo
+    if (typeof TipoTimeline !== 'undefined' && TipoTimeline._tlPass) return false;
+    // performance capturada é o default do render
+    if (this._perf && this._perf.events.length) { this._perf.use = true; this._syncPerfChip(); }
+    const n = (this._perf && this._perf.use) ? this._perf.events.length : 0;
+    TipoUI.showToast(n
+      ? `Take gravada — renderizando em HQ com sua performance (${n} eventos)…`
+      : 'Take gravada — renderizando em HQ…');
+    const ok = await this.run({ title: 'Render HQ da sua take', fromRecording: true });
+    if (!ok && liveResult && liveResult.blob) {
+      TipoRecorder.download(liveResult.blob, liveResult.filename);
+      TipoUI.showToast(`Ficou a gravação ao vivo (${liveResult.sizeMB} MB)`);
+    }
+    return true;
+  },
+
+  async run(opts = {}) {
+    if (this._running) return false;
+    const TITLE = opts.title || 'Export HQ';
     const cfg = this._cfg;
     const video = cfg && cfg.getVideo ? cfg.getVideo() : null;
     if (!video || !video.videoWidth || !isFinite(video.duration) || video.duration <= 0) {
       TipoUI.showToast('Export HQ precisa de um VÍDEO carregado (upload)');
-      return;
+      return false;
     }
     if (typeof VideoEncoder === 'undefined' || typeof Mp4Muxer === 'undefined') {
       TipoUI.showToast('Precisa de WebCodecs — use Chrome ou Edge');
-      return;
+      return false;
     }
 
     const fps = 30;
     const enc = await this._pickConfig(video.videoWidth, video.videoHeight, fps);
-    if (!enc) { TipoUI.showToast('Encoder não suporta essa resolução'); return; }
+    if (!enc) { TipoUI.showToast('Encoder não suporta essa resolução'); return false; }
 
     this._running = true;
     this._cancel = false;
@@ -308,7 +335,7 @@ const TipoHQ = {
 
     // 16.4 — remux da trilha do fonte (AAC; fallback Opus; sem trilha = mudo)
     ui.open();
-    ui.set(0, 'Export HQ — preparando', 'lendo a trilha de áudio do fonte…');
+    ui.set(0, `${TITLE} — preparando`, 'lendo a trilha de áudio do fonte…');
     const audio = typeof AudioEncoder !== 'undefined' ? await this._prepareAudio(video) : null;
 
     const muxer = new Mp4Muxer.Muxer({
@@ -343,9 +370,10 @@ const TipoHQ = {
       perf.startState.forEach(s => this._applySlider(s.id, s.v));
     }
 
+    let delivered = false;
     try {
       ui.open();
-      ui.set(0, 'Export HQ — renderizando', `${enc.width}×${enc.height} · frame 0/${total}${perf ? ' · ✦ performance' : ''}`);
+      ui.set(0, `${TITLE} — renderizando`, `${enc.width}×${enc.height} · frame 0/${total}${perf ? ' · ✦ performance' : ''}`);
       // temporais (datamosh/rastro) resetam buffers no tamanho HQ antes da passada
       if (cfg.begin) await cfg.begin(enc.width, enc.height);
       for (let i = 0; i < total; i++) {
@@ -370,16 +398,16 @@ const TipoHQ = {
           const elapsed = (performance.now() - t0) / 1000;
           const rate = (i + 1) / elapsed;
           const eta = Math.max(0, Math.round((total - i - 1) / rate));
-          ui.set((i + 1) / total, 'Export HQ — renderizando',
+          ui.set((i + 1) / total, `${TITLE} — renderizando`,
             `${enc.width}×${enc.height} · frame ${i + 1}/${total} · ${rate.toFixed(1)} fps · ~${eta}s restantes`);
           await new Promise(r => setTimeout(r, 0)); // deixa a UI respirar
         }
       }
       if (!this._cancel) {
-        ui.set(1, 'Export HQ — finalizando', 'encodando os últimos frames...');
+        ui.set(1, `${TITLE} — finalizando`, 'encodando os últimos frames...');
         await encoder.flush();
         if (audio) {
-          ui.set(1, 'Export HQ — finalizando', 'remuxando o áudio do fonte…');
+          ui.set(1, `${TITLE} — finalizando`, 'remuxando o áudio do fonte…');
           try {
             await this._encodeAudio(audio, muxer, e => { throw e; });
           } catch (e) {
@@ -391,8 +419,11 @@ const TipoHQ = {
         const name = (cfg.filename ? cfg.filename() : 'tipo-HQ') + '.mp4';
         TipoUI._downloadBlob(blob, name);
         TipoUI.showToast(`HQ pronto — ${enc.width}×${enc.height}${audio ? ' + áudio' : ''}, ${(blob.size / 1048576).toFixed(1)} MB`);
+        delivered = true;
       } else {
-        TipoUI.showToast('Export HQ cancelado');
+        TipoUI.showToast(opts.fromRecording
+          ? 'Render HQ cancelado — mantendo a gravação ao vivo'
+          : 'Export HQ cancelado');
       }
     } catch (e) {
       console.error('[TipoHQ]', e);
@@ -408,6 +439,7 @@ const TipoHQ = {
       video.currentTime = wasTime;
       if (!wasPaused) video.play();
     }
+    return delivered;
   },
 };
 

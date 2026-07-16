@@ -157,6 +157,14 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-15
+
+### 16.6 — Record → HQ como default (unificação pedida pelo Daniel)
+- Diagnóstico dele: Record ao vivo sai baixa-res e o Export HQ não pegava a performance → dois botões desconectados. Fix: **stop da gravação com fonte de vídeo dispara `TipoHQ.deliverRecording(liveResult)`** — liga perf.use, roda o run() com título "Render HQ da sua take" e o download final é o -HQ com a performance. Live capture = fallback (cancel/falha → baixa com toast "mantendo a gravação ao vivo").
+- run() agora retorna boolean (delivered) e aceita opts {title, fromRecording}. O `tipo-rec-stop` dispara num finally IMEDIATAMENTE após rec.stop() (antes da entrega — senão a captura de perf não fecha e os eventos não viram default).
+- Exceções: sem getVideo() (kinetic/webcam/imagem) → fluxo antigo; **REC da timeline** → flag `TipoTimeline._tlPass` de pé durante o _recToggle faz deliverRecording recusar (timeline tem duração própria ≠ duração do vídeo; automação é sintética e não mapearia). Guard `__tipoHQactive` bloqueia iniciar Record durante render.
+- e2e: datamosh (grava + drag + drop no canvas → stop → auto-download tipo-datamosh-HQ.mp4 1920×1080), field intacto, timeline REC intacto.
+
 ## 2026-07-13
 
 ### Auditoria de UI (lente Awwwards) + Fase 20.1 — header/identidade
