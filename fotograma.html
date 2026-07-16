@@ -81,9 +81,9 @@
   <h1>Fotograma <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
-    <div class="section-title">Chave — Google AI Studio</div>
+    <div class="section-title">Chave — Google</div>
     <div class="key-row">
-      <input type="password" id="apiKey" placeholder="cole sua chave (AIza…)" autocomplete="off" spellcheck="false">
+      <input type="password" id="apiKey" placeholder="cole sua chave (AIza… ou AQ…)" autocomplete="off" spellcheck="false">
       <button class="btn btn-secondary" id="keyEye" title="mostrar/ocultar" style="padding:7px 10px;">&#128065;</button>
     </div>
     <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="keySave" checked> lembrar neste navegador</label>
@@ -92,7 +92,7 @@
       <button class="btn btn-secondary" id="keyForget">Esquecer chave</button>
     </div>
     <div id="keyStatus"></div>
-    <div class="key-hint">A chave fica <b>só no seu navegador</b> e é enviada apenas pra API do Google — nunca pra Tipó. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave grátis &rarr;</a></div>
+    <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza…, free tier) ou da <b>Agent Platform / Vertex</b> (AQ…, créditos do trial). Fica só no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave grátis &rarr;</a></div>
   </div>
 
   <div class="section">
@@ -212,8 +212,20 @@
 // o Nano reconhece, 1 por categoria, effects not specs.
 // ============================================================
 
-const API = 'https://generativelanguage.googleapis.com/v1beta';
+// dois backends do Google, detectados pelo prefixo da chave:
+//   AIza… → AI Studio (generativelanguage) — free tier, sem billing
+//   AQ.…  → Agent Platform / Vertex (aiplatform) — créditos do trial/billing
 const KEY_LS = 'tipo-gemini-key';
+function keyBackend(k) { return /^AQ[.\w]/.test(k) ? 'vertex' : 'studio'; }
+function apiBase() {
+  return state.backend === 'vertex'
+    ? 'https://aiplatform.googleapis.com/v1'
+    : 'https://generativelanguage.googleapis.com/v1beta';
+}
+function modelPath(id) {
+  const clean = String(id).replace(/^models\//, '');
+  return state.backend === 'vertex' ? `publishers/google/models/${clean}` : `models/${clean}`;
+}
 
 // ---- motor de direção: dados ----
 const PROGRAMAS = {
@@ -317,10 +329,10 @@ const LUZES = [
 
 const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
 
-// modelos de imagem (fallback se a descoberta falhar)
+// modelos de imagem (ids puros — o backend monta o caminho)
 const FALLBACK_IMG_MODELS = [
-  { name: 'models/gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
-  { name: 'models/gemini-2.5-flash-image', label: 'Nano Banana 2' },
+  { name: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
+  { name: 'gemini-2.5-flash-image', label: 'Nano Banana 2' },
 ];
 const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
 
@@ -330,6 +342,7 @@ let state = {
   framing: 'eye',
   ar: '16:9',
   connected: false,
+  backend: 'studio',
   textModel: null,
   lastBlob: null,
   lastPrompt: '',
@@ -360,11 +373,14 @@ function sanitizeApiError(status, text) {
 /** detalhe do Google seguro pra exibir: nunca deixa uma chave passar */
 function safeDetail(e) {
   const d = (e && e.detail) ? String(e.detail) : '';
-  return d.replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza•••').slice(0, 240);
+  return d
+    .replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza•••')
+    .replace(/AQ\.[0-9A-Za-z_\-.]{8,}/g, 'AQ.•••')
+    .slice(0, 240);
 }
 
-async function gapi(path, body) {
-  const r = await fetch(`${API}/${path}`, {
+async function gapiUrl(url, body) {
+  const r = await fetch(url, {
     method: body ? 'POST' : 'GET',
     headers: {
       'x-goog-api-key': key(),
@@ -377,40 +393,59 @@ async function gapi(path, body) {
     try { detail = (await r.json()).error?.message || ''; } catch (e) {}
     const err = new Error(sanitizeApiError(r.status, detail));
     err.status = r.status;
-    err.detail = detail; // só console, nunca UI
+    err.detail = detail; // só console/genStatus (mascarado), nunca cru
     throw err;
   }
   return r.json();
 }
 
+/** generateContent no modelo, no backend detectado da chave */
+function callModel(id, body) {
+  return gapiUrl(`${apiBase()}/${modelPath(id)}:generateContent`, body);
+}
+
 async function connect(silent) {
   if (!key()) { if (!silent) keyStatus('cole a chave primeiro', 'err'); return; }
-  keyStatus('conectando…');
+  state.backend = keyBackend(key());
+  keyStatus(state.backend === 'vertex' ? 'conectando à Agent Platform…' : 'conectando…');
   try {
-    const data = await gapi('models?pageSize=1000');
-    const models = data.models || [];
-    const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
-    // SÓ as duas famílias Nano Banana — Pro e 2. Nada de lite/1/extras.
-    const pool = gen.map(m => m.name);
-    const pick = (re, bad) => {
-      const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
-      // canônico primeiro: sem "preview", nome mais curto
-      c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || a.length - b.length);
-      return c[0];
-    };
-    const pro = pick(/pro-image/i);
-    const nano2 = pick(/flash-image/i, /lite/i);
-    const opts = [];
-    if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
-    if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
-    if (!opts.length) opts.push(...FALLBACK_IMG_MODELS);
+    let opts;
+    if (state.backend === 'vertex') {
+      // Vertex express não expõe ListModels — valida com um ping mínimo
+      // no flash (centavos de token) e usa a dupla Nano fixa
+      state.textModel = 'gemini-2.5-flash';
+      await callModel(state.textModel, {
+        contents: [{ parts: [{ text: 'ping' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      });
+      opts = FALLBACK_IMG_MODELS;
+    } else {
+      const data = await gapiUrl(`${apiBase()}/models?pageSize=1000`);
+      const models = data.models || [];
+      const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
+      // SÓ as duas famílias Nano Banana — Pro e 2. Nada de lite/1/extras.
+      const pool = gen.map(m => m.name.replace(/^models\//, ''));
+      const pick = (re, bad) => {
+        const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
+        // canônico primeiro: sem "preview", nome mais curto
+        c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || a.length - b.length);
+        return c[0];
+      };
+      const pro = pick(/pro-image/i);
+      const nano2 = pick(/flash-image/i, /lite/i);
+      opts = [];
+      if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
+      if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
+      if (!opts.length) opts = FALLBACK_IMG_MODELS;
+      // texto: flash pro Diretor
+      state.textModel = TEXT_MODEL_PREFS.find(p => pool.includes(p)) || pool.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
+    }
     $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
-    // texto: flash pro Diretor
-    const names = gen.map(m => m.name.replace('models/', ''));
-    state.textModel = TEXT_MODEL_PREFS.find(p => names.includes(p)) || names.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
     state.connected = true;
     if ($('keySave').checked) localStorage.setItem(KEY_LS, key());
-    keyStatus(`conectada — ${opts.length} modelo(s) de imagem`, 'ok');
+    keyStatus(state.backend === 'vertex'
+      ? 'conectada — Agent Platform (Vertex) · Nano Pro + Nano 2'
+      : `conectada — ${opts.length} modelo(s) de imagem`, 'ok');
     $('genBtn').disabled = false;
     syncResRow();
   } catch (e) {
@@ -478,7 +513,7 @@ const EMULSAO_SYSTEM = `You are a film colorist and archivist. Look at the image
 
 async function analisarMood() {
   const src = state.mood.crop || state.mood.full;
-  const data = await gapi(`models/${state.textModel}:generateContent`, {
+  const data = await callModel(state.textModel, {
     systemInstruction: { parts: [{ text: EMULSAO_SYSTEM }] },
     contents: [{ parts: [
       { inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } },
@@ -494,7 +529,7 @@ async function analisarMood() {
 }
 
 async function diretor(subject) {
-  const data = await gapi(`models/${state.textModel}:generateContent`, {
+  const data = await callModel(state.textModel, {
     systemInstruction: { parts: [{ text: buildDiretorSystem() }] },
     contents: [{ parts: [{ text: subject }] }],
     generationConfig: { temperature: 0.9, maxOutputTokens: 400 },
@@ -534,7 +569,7 @@ async function tryImageModel(model, prompt) {
   let lastErr = null;
   for (const body of attempts) {
     try {
-      const data = await gapi(`${model.startsWith('models/') ? model : 'models/' + model}:generateContent`, body);
+      const data = await callModel(model, body);
       const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
       if (part) return part.inlineData;
       lastErr = new Error('O modelo não devolveu imagem (pode ter recusado o prompt)');
