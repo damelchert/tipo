@@ -595,6 +595,7 @@ function buildFinalPrompt(sceneText) {
 function buildDiretorSystem() {
   const P = PROGRAMAS[state.prog];
   return `${P.persona} Expand the user's scene idea into a rich, concrete visual description in English.
+PRESERVE EVERY element the user names — every subject, animal, object, action and energy level (chaos stays chaos). Translate to English but never drop, soften or replace what was asked.
 Describe ONLY: the subject in action, then foreground / midground / background, real materials and textures, one atmosphere layer (haze, dust, steam) if it deepens the scene. ${P.scene}
 FORBIDDEN: any mention of camera, lens, framing, angle, shot type, film stock, grain, color palette, grading or mood tags — the system adds those separately. Never refuse, never chat, never ask questions.
 Max 280 characters. One paragraph. No quotes, no lists, no preamble. Output ONLY the scene description.`;
@@ -797,7 +798,9 @@ async function revealJob(job) {
       devMsg('diretor decupando a cena…');
       try {
         const expanded = saneExpansion(await diretor(job.scene));
-        if (expanded) scene = expanded;
+        // eco do pedido cru: a expansão enriquece, mas as palavras do usuário
+        // SEMPRE chegam no modelo de imagem (pomba pedida = pomba na tela)
+        if (expanded) scene = `${expanded} Must include: ${job.scene}.`;
         else console.warn('[fotograma] diretor devolveu expansão inválida — usando a cena crua');
       } catch (e) {
         console.warn('[fotograma] diretor:', e.detail || e.message);
