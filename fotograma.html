@@ -400,19 +400,24 @@ async function gapiUrl(url, body) {
   return r.json();
 }
 
-/** Vertex express aceita variações de auth/versão — escada de compat.
- *  O modo que funcionar fica memorizado pra sessão. */
+/** Vertex/Agent Platform: o endpoint global exige o caminho completo
+ *  projects/-/locations/global. Escada de compat pra variações de
+ *  versão/host/auth; o modo que funcionar fica memorizado pra sessão. */
 async function vertexCall(id, body) {
   const clean = String(id).replace(/^models\//, '');
+  const suffix = `publishers/google/models/${clean}:generateContent`;
+  // cada MODO é só a FORMA (path template + auth); a URL é remontada por
+  // modelo — memorizar a url baked-in do flash quebraria a chamada de imagem
   const modes = state._vxMode ? [state._vxMode] : [
-    { ver: 'v1', auth: 'header' },
-    { ver: 'v1beta1', auth: 'header' },
-    { ver: 'v1', auth: 'query' },
-    { ver: 'v1beta1', auth: 'query' },
+    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'header' },
+    { path: `/v1beta1/projects/-/locations/global/${suffix}`, auth: 'header' },
+    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'query' },
+    { path: `/v1/${suffix}`, auth: 'header' }, // forma curta (alguns projetos)
   ];
   let last = null;
   for (const m of modes) {
-    const base = `https://aiplatform.googleapis.com/${m.ver}/publishers/google/models/${clean}:generateContent`;
+    const path = m.path.replace(/publishers\/google\/models\/[^:]+:generateContent/, suffix);
+    const base = `https://aiplatform.googleapis.com${path}`;
     const url = m.auth === 'query' ? `${base}?key=${encodeURIComponent(key())}` : base;
     try {
       const r = await fetch(url, {
@@ -429,15 +434,15 @@ async function vertexCall(id, body) {
         const err = new Error(sanitizeApiError(r.status, detail));
         err.status = r.status;
         err.detail = detail;
-        // 401/403/404 = pode ser o formato de auth/versão — tenta o próximo modo
-        if ([401, 403, 404].includes(r.status) && !state._vxMode) { last = err; continue; }
+        // 400/401/403/404 = pode ser formato de rota/auth — tenta o próximo modo
+        if ([400, 401, 403, 404].includes(r.status) && !state._vxMode) { last = err; continue; }
         throw err;
       }
       state._vxMode = m; // memoriza o modo que funcionou
       return r.json();
     } catch (e) {
       if (e instanceof TypeError) { last = e; continue; } // rede/CORS — tenta o próximo
-      if (e.status && [401, 403, 404].includes(e.status) && !state._vxMode) { last = e; continue; }
+      if (e.status && [400, 401, 403, 404].includes(e.status) && !state._vxMode) { last = e; continue; }
       throw e;
     }
   }
@@ -491,11 +496,13 @@ async function tryConnectBackend(backend) {
 async function connect(silent) {
   if (!key()) { if (!silent) keyStatus('cole a chave primeiro', 'err'); return; }
   const primary = keyBackend(key());
-  // a chave pode estar RESTRITA a uma das APIs — tenta a natural primeiro,
-  // e se o Google bloquear, tenta a outra antes de desistir
+  // só troca de backend quando o natural está BLOQUEADO por restrição de API
+  // (403 blocked / 404). Cota (429) é problema real da conta — NÃO mascarar
+  // caindo no free tier do outro backend.
   const order = primary === 'vertex' ? ['vertex', 'studio'] : ['studio', 'vertex'];
   let lastErr = null;
-  for (const backend of order) {
+  for (let i = 0; i < order.length; i++) {
+    const backend = order[i];
     keyStatus(backend === 'vertex' ? 'conectando à Agent Platform…' : 'conectando ao AI Studio…');
     try {
       const opts = await tryConnectBackend(backend);
@@ -511,6 +518,9 @@ async function connect(silent) {
     } catch (e) {
       console.warn(`[fotograma] connect ${backend}:`, e.detail || e.message);
       lastErr = e;
+      const blocked = e.status === 404 || (e.status === 403 && /blocked|not.*enabled|SERVICE_DISABLED/i.test(safeDetail(e)));
+      // só cai pro próximo backend se este está bloqueado por restrição/API off
+      if (!blocked && i < order.length - 1) break;
     }
   }
   state.connected = false;
@@ -518,7 +528,9 @@ async function connect(silent) {
   const d = safeDetail(lastErr);
   let hint = '';
   if (/blocked/i.test(d)) {
-    hint = ' → a chave tem RESTRIÇÃO DE API: no console do Google Cloud, vá em APIs e serviços → Credenciais → sua chave → Restrições de API, e libere a "Vertex AI API" (ou escolha "Não restringir").';
+    hint = ' → a chave tem RESTRIÇÃO DE API: no console do Google, abra a chave e em Restrições de API libere a "Agent Platform / Vertex AI API" (ou "Não restringir").';
+  } else if (lastErr && lastErr.status === 429) {
+    hint = ' → sem cota nessa chave. Se ela é AQ (Agent Platform) e mostra "AI Studio" acima, o caminho Vertex falhou — me manda este print. Se billing/trial está ativo, aguarde a cota propagar (~1 min).';
   }
   keyStatus((lastErr ? lastErr.message : 'falhou') + (d ? ` — ${d}` : '') + hint, 'err');
 }
