@@ -175,6 +175,7 @@
   <div class="section section-divider">
     <div class="section-title">Gerar</div>
     <button class="btn" id="genBtn" disabled>Revelar Fotograma</button>
+    <div id="genStatus" style="font-size:9px; color:var(--red,#CC4840); margin-top:6px; line-height:1.5; font-family:var(--font-ui); min-height:0;"></div>
     <div class="btn-row" style="margin-top:8px;">
       <button class="btn btn-secondary" id="dlBtn" disabled>Baixar PNG</button>
       <button class="btn btn-secondary" id="copyPromptBtn" disabled>Copiar prompt</button>
@@ -348,12 +349,18 @@ function keyStatus(msg, cls) {
 }
 
 function sanitizeApiError(status, text) {
-  // nunca ecoar o corpo cru (pode citar a request) — mapear pro usuário
-  if (status === 400 || status === 401 || status === 403) return 'Chave inválida ou sem permissão pra esse modelo';
-  if (status === 429) return 'Cota excedida — espere um pouco ou confira o plano da chave';
+  if (status === 401 || status === 403) return 'Chave inválida ou sem permissão pra esse modelo';
+  if (status === 400) return 'Pedido recusado pelo modelo';
+  if (status === 429) return 'Sem cota pra esse modelo nessa chave (o Pro exige billing — o Nano Banana 2 tem faixa grátis)';
   if (status === 404) return 'Modelo indisponível pra essa chave';
   if (status >= 500) return 'API do Google instável — tente de novo';
   return `Erro da API (${status})`;
+}
+
+/** detalhe do Google seguro pra exibir: nunca deixa uma chave passar */
+function safeDetail(e) {
+  const d = (e && e.detail) ? String(e.detail) : '';
+  return d.replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza•••').slice(0, 240);
 }
 
 async function gapi(path, body) {
@@ -410,7 +417,8 @@ async function connect(silent) {
     console.warn('[fotograma] connect:', e.detail || e.message);
     state.connected = false;
     $('genBtn').disabled = true;
-    keyStatus(e.message, 'err');
+    const d = safeDetail(e);
+    keyStatus(e.message + (d ? ` — ${d}` : ''), 'err');
   }
 }
 
@@ -499,10 +507,9 @@ async function diretor(subject) {
 // ---- geração ----
 function devMsg(m) { $('devMsg').textContent = m; }
 
-async function generateImage(prompt) {
-  const model = $('model').value || FALLBACK_IMG_MODELS[0].name;
+async function tryImageModel(model, prompt) {
   const isPro = /pro/i.test(model);
-  // partes multimodais: style ref do sugador + refs de cena + texto
+  // partes multimodais: emulsão + refs de cena + texto
   const parts = [];
   if (state.mood) {
     const src = state.mood.crop || state.mood.full;
@@ -539,11 +546,33 @@ async function generateImage(prompt) {
   throw lastErr;
 }
 
+async function generateImage(prompt) {
+  const chosen = $('model').value || FALLBACK_IMG_MODELS[0].name;
+  try {
+    return await tryImageModel(chosen, prompt);
+  } catch (e) {
+    // chave sem cota/permissão pro modelo escolhido (free tier não cobre o
+    // Pro) → cai automaticamente pro outro Nano Banana
+    const alts = [...$('model').options].map(o => o.value).filter(v => v && v !== chosen);
+    if (alts.length && [403, 404, 429].includes(e.status)) {
+      const altLabel = [...$('model').options].find(o => o.value === alts[0])?.textContent || 'outro modelo';
+      devMsg(`sem cota no modelo escolhido — revelando no ${altLabel.toLowerCase()}…`);
+      TipoUI.showToast(`Essa chave não cobre esse modelo — tentando ${altLabel}`);
+      const r = await tryImageModel(alts[0], prompt);
+      $('model').value = alts[0];
+      syncResRow();
+      return r;
+    }
+    throw e;
+  }
+}
+
 async function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   if (!state.connected) { TipoUI.showToast('Conecte sua chave primeiro'); return; }
   $('genBtn').disabled = true;
+  $('genStatus').textContent = '';
   $('devOverlay').classList.add('open');
   try {
     // mood subiu antes da chave conectar? suga agora
@@ -584,6 +613,9 @@ async function revelar() {
   } catch (e) {
     console.error('[fotograma]', e.detail || e.message);
     TipoUI.showToast(e.message || 'Falhou — tente de novo');
+    // motivo real do Google (chave nunca aparece — safeDetail garante)
+    const d = safeDetail(e);
+    $('genStatus').textContent = d ? `Google: ${d}` : (e.message || '');
   } finally {
     $('devOverlay').classList.remove('open');
     $('genBtn').disabled = !state.connected;
