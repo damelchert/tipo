@@ -38,7 +38,13 @@ Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a
 - ✅ Escada preserva o AR até a penúltima tentativa e AVISA se cair pro default; legenda mostra o MODELO REAL que gerou + notas (fallback, config recusada).
 - ✅ **Fila de revelação** (1 por vez, até 4 aguardando, botão mostra posição) e **galeria com ações** no hover: ♥ curtir, ⬇ baixar, ↺ reusar TODOS os parâmetros do take, ✕ excluir. Cap 12 takes em memória.
 - ✅ Provas reais (Nano Banana Pro): padaria brasileira P&B worm's eye 100% aderente (pombas, caos, HP5 mono, placa e fiação BR) e noturna CineStill com halation viva nos practicals. Dutch reforçado ("camera rolled sideways") — é o framing mais teimoso do modelo.
-- [ ] 21.6 — idioma da UI (hoje PT — entra na decisão de voz única da 20.2)
+#### 21.6 — Lapidação com testes reais do Daniel (16/07, ~10 commits) — ✅
+- ✅ Hierarquia limpa: Cena → Emulsão/Refs (com drag & drop, abaixo do prompt) → ESTÉTICA (Cinema/Publicidade/Publicidade Cinemática) → níveis; LOOKS removido (puxava seletores); DNA dos 7 moodboards embutido nas estéticas como repertório do Diretor.
+- ✅ Arbitragem "texto do usuário é lei" (cena com enquadramento/luz cala o seletor + toast); refs com cláusula de fidelidade de conteúdo (produto exato entra na cena — provado com o óculos hexagonal); Diretor traduz tudo pro EN e preserva a direção escrita.
+- ✅ Segurança: prompt final fora da UI, anti-jailbreak na entrada + cláusula SECURITY no Diretor; chave sempre persistida até Esquecer (🔑 popover).
+- ✅ UX: geração não-bloqueante (tile na galeria), fila ≤4, galeria 1/3 com ações grandes + lightbox + export tipo_fotograma_data-hora; galeria persistente em IndexedDB (fix Safari: ArrayBuffer, não Blob).
+- **Estado consolidado na memoria.md (seção "FOTOGRAMA — ESTADO FINAL CONSOLIDADO").**
+- [ ] 21.7 — idioma da UI (hoje PT — entra na decisão de voz única da 20.2)
 
 ### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)
 **Veredito da auditoria** (27 capturas: hero, home light/dark, catálogo, 14 ferramentas, timeline, mobile): Creativity 8.5 / Design 6.5 / Usability 7 / Content 8 — "produto premium vestindo partes de produtinho". Premium: hero, entradas curadas (riso/depth/morisawa/overlay), sistema do painel, palette. Produtinho: catálogo de cards genérico, dark mode quebrado (canvas cream + faixa exposta no field, cinzas divergentes na home), controles nativos do browser, header com nav ilegível, idioma misturado (hero PT × site EN × pílulas PT), pill "FREE" ambígua, dithering abre vazio + anatomia divergente, badge entry bagunçada.

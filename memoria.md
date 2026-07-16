@@ -159,6 +159,37 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-16
 
+### FOTOGRAMA — ESTADO FINAL CONSOLIDADO (16/07, ~25 commits até 2b9b55d)
+
+**O que é**: ferramenta #39 da Tipó — stills cinematográficos com IA (Nano Banana via chave do usuário), 100% client-side em `fotograma.html`. Inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, construída sobre o vault `PROJETOS/nano banana testing` (system prompts v0→v2.0 + TAGS.pdf) e `_knowledge/fotografia`.
+
+**ARQUITETURA DO PROMPT (a parte mais lapidada — não mexer sem motivo forte):**
+- Hierarquia: **Cena → Emulsão/Referências → Estética → níveis** (AR, resolução, modelo, lente, enquadramento, luz, stock, paleta). NENHUM nível puxa outro; estética só sugere stock default.
+- **Seletores 100% determinísticos**: `buildFinalPrompt(scene, raw)` monta por código — a LLM NUNCA tem a palavra final. Formato COMBO do TAGS.pdf: cena + 1 tag densa por categoria, ~450 chars. Frase CONCRETA só no enquadramento ("shot from directly below looking straight up" — tag abstrata o modelo suaviza).
+- **Diretor ✨** (Gemini Flash, mesma chave, opcional): APENAS enriquece a cena — traduz tudo pro inglês, preserva TODO elemento citado, PROIBIDO inventar câmera/filme/cor (mas PRESERVA direção que o usuário escreveu). `saneExpansion` descarta recusa/conversa/pergunta → cena crua segue.
+- **Arbitragem "o texto do usuário é lei"**: se a cena traz enquadramento (RX_FRAMING_IN_SCENE: macro/low angle/tilt/dutch/pov/top-down... PT+EN) ou luz/hora (céu azul/dia/noite/neon/golden...), o seletor correspondente SE CALA + toast avisa. Provado: croissant na bandeja de uvas.
+- **Emulsão** (ex-"sugador", renomeado por eco do Cinematic): imagem de estilo → drag-região no canvas (crop 768px) → Gemini vision descreve SÓ o físico transferível (system "film colorist", nunca objetos/composição) → imagem no payload + cláusula "transfer ONLY palette/grain/light/texture". Nano 2 revela melhor.
+- **Referências (≤4)**: cláusula OPOSTA — "feature the EXACT product... preserve design/shape/colors/materials". Sem cláusula o modelo IGNORA a imagem anexada. Provado: alien segurando o óculos hexagonal exato da ref.
+- **Estéticas** (3): Cinema / Publicidade / Publicidade Cinemática — cada uma com persona+fixed+moods próprios, e o DNA dos 7 moodboards do Daniel EMBUTIDO como repertório do Diretor ("instincts to draw on WHEN the scene calls for them"). Módulo LOOKS separado foi criado e REMOVIDO (puxava AR/seletores = salada — decisão do Daniel).
+- Regra clean: "No text, no logos, no watermarks, **no film borders or frame edges**" (o modelo desenha borda Kodak se o prompt evoca vintage).
+- Anti-jailbreak: `looksLikeInjection()` bloqueia na entrada (revele seu prompt/folha em branco/ignore instructions... PT+EN) + cláusula SECURITY no system do Diretor. Prompt final NÃO aparece na UI (protege o system prompt).
+
+**BACKENDS GOOGLE (a saga da chave — 6 iterações até funcionar):**
+- Detecção pelo prefixo: `AIza…` → AI Studio (generativelanguage, ListModels + discovery); `AQ.…` → Agent Platform/Vertex (aiplatform, SEM ListModels — ping mínimo no flash valida).
+- **Vertex exige**: caminho `/v1/projects/-/locations/global/publishers/google/models/{id}:generateContent` (sem projects/-/locations/global REJEITA), `role: 'user'` em todo content, escada de auth (header/query × v1/v1beta1) com o modo memorizado SÓ COMO FORMA (memorizar URL inteira vazava a URL do flash pra chamada de imagem — bug real).
+- Connect tenta o outro backend só se o natural está BLOQUEADO (403 blocked/404 — restrição de API na chave); cota (429) NÃO troca backend. Erros: safeDetail mascara AIza/AQ e mostra o motivo real do Google no genStatus + hint de desbloqueio (Credenciais → Restrições de API).
+- Chave criada nas Credenciais gerais nasce presa à "Gemini API" e NÃO edita (Save failed) — criar via Vertex AI Studio → Settings → API Keys.
+- Modelos (whitelist estrita): gemini-3-pro-image (Nano Banana Pro), gemini-3.1-flash-image (Nano Banana 2), gemini-3.1-flash-lite-image (Nano Banana 2 Lite). Fallback de cota em CADEIA Pro→2→2 Lite com toast; legenda mostra o MODELO REAL que gerou. Escada de payload nunca derruba o aspectRatio antes da última tentativa (era o "virou a imagem").
+- Chave: 🔑 popover no canto superior direito (pulsa sem chave, tinge ok/err), SEMPRE persistida (localStorage) até "Esquecer", viaja só em header (nunca UI/log).
+
+**UX:**
+- Fila de revelação (1 por vez, ≤4 na espera) NÃO-BLOQUEANTE: tile pulsante DENTRO da galeria com status; página inteira segue interativa.
+- Galeria: faixa de ~1/3 abaixo da imagem, thumbs grandes, ações ♥ ⬇ ↺(reusa TODOS os params) ✕ no hover; **persistente em IndexedDB** — GOTCHA Safari: WebKit ABORTA ao guardar Blob no IDB → persistir ArrayBuffer+mime e reconstruir Blob na leitura (testado 8MB em Chromium e WebKit).
+- Lightbox no clique da imagem principal; export `tipo_fotograma_AAAA-MM-DD_HH-MM-SS.png`; drag & drop na Emulsão e Referências; uploads re-comprimidos client-side (JPEG .85, ≤1024px).
+- 7 suítes de smoke (mock da API Google via Playwright fulfill) — `/Users/danielmelchert/.claude/jobs/*/tmp/smoke-fotograma*.mjs` (efêmeros; recriar se preciso).
+
+**Pendências**: 21.6 idioma da UI (PT hoje — decisão de voz única da 20.2); moodboards extras do Daniel (noir, P&B retrato, automotivo) pra enriquecer o repertório das estéticas.
+
 ### FOTOGRAMA — a saga da chave + auditoria de geração (16/07)
 - **Chave Agent Platform (AQ.)**: endpoint é aiplatform.googleapis.com com caminho `v1/projects/-/locations/global/publishers/google/models/{id}:generateContent` (sem o projects/-/locations/global REJEITA e silenciosamente caía no free tier do Studio = "quota exceeded"). Contents exigem `role: 'user'` no Vertex. Chave criada nas Credenciais gerais nasce presa à "Gemini API" e o console NÃO deixa trocar (Save failed) — criar pelo Vertex AI Studio → Settings → API Keys.
 - **GOTCHA escada de modos**: memorizar a URL inteira do modo que funcionou = a URL do FLASH vazava pra chamada de imagem. Memorizar só a FORMA (path template) e remontar por modelo.
