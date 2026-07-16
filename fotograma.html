@@ -41,7 +41,7 @@
   .key-hint a { color: var(--accent); }
 
   /* cena */
-  #scene { width: 100%; min-height: 64px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 4px; resize: vertical; }
+  #scene { width: 100%; min-height: 130px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 4px; resize: vertical; }
 
   /* chips */
   .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -74,6 +74,16 @@
 
   .toggle-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-3); cursor: pointer; margin-top: 8px; }
 
+  /* chave no canto superior direito */
+  #keyBtn { position: fixed; top: 62px; right: 14px; z-index: 60; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-2); background: var(--bg-1); cursor: pointer; font-size: 15px; line-height: 1; box-shadow: 0 2px 10px rgba(0,0,0,.2); transition: border-color .2s; }
+  #keyBtn:hover { border-color: var(--accent); }
+  #keyBtn.ok { border-color: var(--accent); }
+  #keyBtn.err { border-color: var(--red, #CC4840); }
+  #keyBtn.pulse { animation: keyPulse 1.6s ease-in-out infinite; }
+  @keyframes keyPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,160,64,0); } 50% { box-shadow: 0 0 0 4px rgba(212,160,64,.3); } }
+  #keyPop { position: fixed; top: 106px; right: 14px; z-index: 61; width: 320px; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
+  #keyPop.open { display: block; }
+
   /* revelação */
   #devOverlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--bg-0) 82%, transparent); z-index: 30; backdrop-filter: blur(3px); }
   #devOverlay.open { display: flex; }
@@ -89,24 +99,9 @@
   <h1>Fotograma <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
   <div class="section">
-    <div class="section-title">Chave — Google</div>
-    <div class="key-row">
-      <input type="password" id="apiKey" placeholder="cole sua chave (AIza… ou AQ…)" autocomplete="off" spellcheck="false">
-      <button class="btn btn-secondary" id="keyEye" title="mostrar/ocultar" style="padding:7px 10px;">&#128065;</button>
-    </div>
-    <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="keySave" checked> lembrar neste navegador</label>
-    <div class="btn-row" style="margin-top:6px;">
-      <button class="btn" id="keyConnect">Conectar</button>
-      <button class="btn btn-secondary" id="keyForget">Esquecer chave</button>
-    </div>
-    <div id="keyStatus"></div>
-    <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza…, free tier) ou da <b>Agent Platform / Vertex</b> (AQ…, créditos do trial). Fica só no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave grátis &rarr;</a></div>
-  </div>
-
-  <div class="section">
     <div class="section-title">Cena</div>
-    <textarea id="scene" placeholder="descreva simples: “padaria antiga lotada de manhã” — o Fotograma dirige o resto" spellcheck="false"></textarea>
-    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(reescreve tua cena em inglês rico de cinema — camadas, matéria, atmosfera. Os seletores entram SEMPRE, com ou sem ele)</span></label>
+    <textarea id="scene" placeholder="descreva simples: &ldquo;padaria antiga lotada de manh&atilde;&rdquo; &mdash; o Fotograma dirige o resto" spellcheck="false"></textarea>
+    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(reescreve tua cena em ingl&ecirc;s rico de cinema &mdash; os seletores entram SEMPRE, com ou sem ele)</span></label>
   </div>
 
   <div class="section">
@@ -115,14 +110,38 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Enquadramento</div>
-    <div class="chip-grid" id="framingChips"></div>
+    <div class="section-title">Aspect Ratio</div>
+    <div class="chip-grid" id="arChips"></div>
+  </div>
+
+  <div class="section" id="resSection">
+    <div class="section-title">Resolu&ccedil;&atilde;o</div>
+    <select id="imgSize">
+      <option value="1K">1K</option>
+      <option value="2K" selected>2K</option>
+      <option value="4K">4K</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Modelo</div>
+    <select id="model"><option value="">conecte a chave &mdash; &#128273; no canto superior direito</option></select>
   </div>
 
   <div class="section">
     <div class="section-title">Lente</div>
     <select id="lente"></select>
     <div class="stock-hint" id="lenteHint"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Enquadramento</div>
+    <div class="chip-grid" id="framingChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Luz</div>
+    <select id="luz"></select>
   </div>
 
   <div class="section">
@@ -137,14 +156,9 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Luz</div>
-    <select id="luz"></select>
-  </div>
-
-  <div class="section">
     <div class="section-title">Emuls&atilde;o</div>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()" title="Transfere a química da referência — paleta, grain, luz e textura; nunca o conteúdo. Arraste sobre a imagem pra usar só uma região. Nano Banana 2 revela melhor.">Refer&ecirc;ncia</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()" title="Transfere a qu&iacute;mica da refer&ecirc;ncia &mdash; paleta, grain, luz e textura; nunca o conte&uacute;do. Arraste sobre a imagem pra usar s&oacute; uma regi&atilde;o. Nano Banana 2 revela melhor.">Refer&ecirc;ncia</button>
       <button class="btn btn-secondary" id="moodClear" style="display:none;">Tirar</button>
     </div>
     <input type="file" id="moodFile" accept="image/*" style="display:none">
@@ -156,28 +170,9 @@
 
   <div class="section">
     <div class="section-title">Refer&ecirc;ncias</div>
-    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;" title="Imagens de referência de cena/produto — vão junto pro modelo">Adicionar refs (at&eacute; 4)</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;" title="Imagens de refer&ecirc;ncia de cena/produto &mdash; v&atilde;o junto pro modelo">Adicionar refs (at&eacute; 4)</button>
     <input type="file" id="refFiles" accept="image/*" multiple style="display:none">
     <div id="refThumbs" style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Formato</div>
-    <div class="chip-grid" id="arChips"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Modelo</div>
-    <select id="model"><option value="">conecte a chave primeiro</option></select>
-    <div class="range-row" id="resRow" style="margin-top:6px;">
-      <span class="range-label">Resolução</span>
-      <select id="imgSize" style="flex:1;">
-        <option value="1K">1K</option>
-        <option value="2K" selected>2K</option>
-        <option value="4K">4K</option>
-      </select>
-    </div>
-    <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="cleanImg" checked> sem texto / logos / marca d'água</label>
   </div>
 
   <div class="section section-divider">
@@ -188,12 +183,33 @@
       <button class="btn btn-secondary" id="dlBtn" disabled>Baixar PNG</button>
       <button class="btn btn-secondary" id="copyPromptBtn" disabled>Copiar prompt</button>
     </div>
+    <label class="checkbox-label" style="margin-top:8px;"><input type="checkbox" id="cleanImg" checked> sem texto / logos / marca d'&aacute;gua</label>
     <details id="promptOut" style="display:none;">
       <summary>prompt final</summary>
       <pre id="promptText"></pre>
     </details>
   </div>
   <div style="height:40px;"></div>
+</div>
+
+<!-- CHAVE: &iacute;cone no canto superior direito + popover -->
+<button id="keyBtn" title="Conectar chave Google">&#128273;</button>
+<div id="keyPop">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+    <span style="font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:700;">Chave &mdash; Google</span>
+    <button id="keyClose" style="border:none; background:transparent; color:var(--text-4); font-size:14px; cursor:pointer;">&times;</button>
+  </div>
+  <div class="key-row">
+    <input type="password" id="apiKey" placeholder="cole sua chave (AIza&hellip; ou AQ&hellip;)" autocomplete="off" spellcheck="false">
+    <button class="btn btn-secondary" id="keyEye" title="mostrar/ocultar" style="padding:7px 10px;">&#128065;</button>
+  </div>
+  <label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" id="keySave" checked> lembrar neste navegador</label>
+  <div class="btn-row" style="margin-top:6px;">
+    <button class="btn" id="keyConnect">Conectar</button>
+    <button class="btn btn-secondary" id="keyForget">Esquecer chave</button>
+  </div>
+  <div id="keyStatus"></div>
+  <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza&hellip;, free tier) ou da <b>Agent Platform / Vertex</b> (AQ&hellip;, cr&eacute;ditos do trial). Fica s&oacute; no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave gr&aacute;tis &rarr;</a></div>
 </div>
 
 <div id="canvasWrap">
@@ -368,6 +384,13 @@ function keyStatus(msg, cls) {
   const el = $('keyStatus');
   el.textContent = msg;
   el.className = cls || '';
+  const kb = $('keyBtn');
+  if (kb) {
+    kb.classList.toggle('ok', cls === 'ok');
+    kb.classList.toggle('err', cls === 'err');
+    kb.classList.toggle('pulse', cls !== 'ok');
+    if (cls === 'ok') setTimeout(() => $('keyPop').classList.remove('open'), 900);
+  }
 }
 
 function sanitizeApiError(status, text) {
@@ -761,7 +784,7 @@ function syncQueueUI() {
 function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
-  if (!state.connected) { TipoUI.showToast('Conecte sua chave primeiro'); return; }
+  if (!state.connected) { TipoUI.showToast('Conecte sua chave — 🔑 no canto superior direito'); $('keyPop').classList.add('open'); return; }
   if (busy && queue.length >= QUEUE_MAX) { TipoUI.showToast(`Fila cheia (${QUEUE_MAX}) — espera uma revelar`); return; }
   queue.push(snapshotParams());
   if (busy) TipoUI.showToast(`Na fila — posição ${queue.length}`);
@@ -1116,10 +1139,18 @@ $('moodClear').addEventListener('click', () => {
 
 function syncResRow() {
   const isPro = /pro/i.test($('model').value || '');
-  $('resRow').style.display = isPro ? '' : 'none';
+  $('resSection').style.display = isPro ? '' : 'none';
 }
 
-// bindings
+// bindings — chave no popover 🔑
+$('keyBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('keyPop').classList.toggle('open');
+});
+$('keyClose').addEventListener('click', () => $('keyPop').classList.remove('open'));
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#keyPop') && !e.target.closest('#keyBtn')) $('keyPop').classList.remove('open');
+});
 $('keyConnect').addEventListener('click', () => connect(false));
 $('keyForget').addEventListener('click', forgetKey);
 $('keyEye').addEventListener('click', () => {
@@ -1152,6 +1183,9 @@ const saved = localStorage.getItem(KEY_LS);
 if (saved) {
   $('apiKey').value = saved;
   connect(true);
+} else {
+  $('keyBtn').classList.add('pulse');
+  $('keyPop').classList.add('open'); // onboarding: mostra onde conectar
 }
 
 TipoUI.initChrome('visual');
