@@ -102,14 +102,8 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Programa</div>
+    <div class="section-title">Est&eacute;tica</div>
     <div class="prog-row" id="progRow"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Looks</div>
-    <div class="chip-grid" id="lookChips"></div>
-    <div class="stock-hint" id="lookHint"></div>
   </div>
 
   <div class="section">
@@ -256,23 +250,23 @@ const PROGRAMAS = {
     mood: 'naturalistic',
     moods: 'slow cinema, naturalistic, cinéma vérité, gritty realism',
     persona: 'You are a cinematic DP.',
-    scene: 'Layer the scene: foreground / midground / background. Materials lived-in with dirt and patina, one imperfection always, one atmosphere layer (haze, dust, steam) if it deepens the frame. If people appear: skin with pores, oil, fine hairs, uneven tone — no smoothing.',
+    scene: 'Layer the scene: foreground / midground / background. Materials lived-in with dirt and patina, one imperfection always, one atmosphere layer (haze, dust, steam) if it deepens the frame. If people appear: skin with pores, oil, fine hairs, uneven tone — no smoothing. Cinematic instincts to draw on WHEN the scene calls for them: a small figure in a vast landscape, monolithic scale with massive negative space, wind alive in the frame, institutional one-point symmetry for liminal spaces, cozy domestic clutter for intimacy.',
+  },
+  commercial: {
+    nome: 'Publicidade', sub: 'campanha · estúdio polido',
+    fixed: 'ultra-fine film grain, sculpted studio key light, rich true blacks, controlled specular highlights, campaign image',
+    mood: 'commercial polish',
+    moods: 'commercial polish, campaign still, tabletop precision',
+    persona: 'You are a top commercial still photographer shooting on film.',
+    scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed. Campaign instincts to draw on WHEN they fit: tone-on-tone styling against a seamless backdrop, wildflower-garden romance against a colored wall, frozen athletic energy, hero product clarity.',
   },
   cinecom: {
-    nome: 'Cine-Com', sub: 'campanha com alma de filme',
+    nome: 'Publicidade Cinemática', sub: 'campanha com alma de filme',
     fixed: 'fine 35mm grain, sculpted key light, hero clarity on the subject, real textures with patina, soft highlight roll-off',
     mood: 'cinematic commercial',
     moods: 'elevated campaign, cinematic commercial, editorial with grit',
     persona: 'You are a director of photography shooting a high-end commercial on film.',
-    scene: 'Hero the subject with campaign confidence, but let the world around it live: real materials, one honest imperfection, one atmosphere layer. Foreground / midground / background all working.',
-  },
-  commercial: {
-    nome: 'Commercial', sub: 'campanha · editorial polido',
-    fixed: 'ultra-fine film grain, sculpted studio key light, rich true blacks, controlled specular highlights, campaign image',
-    mood: 'commercial polish',
-    moods: 'polished editorial, campaign still, tabletop precision',
-    persona: 'You are a top commercial still photographer shooting on film.',
-    scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed.',
+    scene: 'Hero the subject with campaign confidence, but let the world around it live: real materials, one honest imperfection, one atmosphere layer. Instincts to draw on WHEN they fit: warm practicals against cool window spill, street warmth with documentary energy, rich varied skin tones, candid lived-in intimacy.',
   },
 };
 
@@ -352,34 +346,6 @@ const LUZES = [
   { id: 'softtop',   label: 'Top suave (Fraser)',  phrase: 'soft overhead light wrapping down over the face' },
 ];
 
-// LOOKS — DNA destilado dos moodboards (frase = composição/atmosfera/assinatura;
-// o look também CONFIGURA os seletores — luz/cor entram por eles)
-const LOOKS = [
-  { id: 'none', label: 'Livre', dna: '' },
-  { id: 'hiddenlife', label: 'Vida no Campo', prog: 'cinema', stock: 'v250d', luz: 'backlit', paleta: 'muted', lente: 'superspeed', ar: '21:9',
-    dna: 'a small figure in a vast landscape, wide lens close and intimate, wind alive in the grass, spiritual stillness' },
-  { id: 'dune', label: 'Deserto Épico', prog: 'cinema', stock: 'v500t', luz: 'softtop', paleta: 'monowarm', lente: 'master', ar: '21:9',
-    dna: 'monolithic scale, massive negative space, dust haze on the horizon, silhouettes against a burnt sky, whispered contrast' },
-  { id: 'jardim', label: 'Jardim Editorial', prog: 'commercial', stock: 'portra', luz: 'overcast', paleta: 'pastel', lente: 'cookes4', ar: '4:5',
-    dna: 'a wildflower garden against a dusty pink wall, styled figures lounging among the flowers, romantic editorial stillness' },
-  { id: 'corporativo', label: 'Liminal Corporativo', prog: 'cinema', stock: 'ekta', luz: 'fluor', paleta: 'coldinst', lente: 'master', ar: '16:9',
-    dna: 'one-point perspective, institutional symmetry, a lone figure in sterile emptiness, liminal corporate space' },
-  { id: 'apetite', label: 'Apetite Noturno', prog: 'cinecom', stock: 'v500t', luz: 'practical', paleta: 'tealorange', lente: 'cookes4', ar: '16:9',
-    dna: 'a cozy lived-in interior at night, warm practicals against cool window spill, hero appetite energy' },
-  { id: 'brasa', label: 'Rua Brasileira', prog: 'cinecom', stock: 'portra', luz: 'golden', paleta: 'tealorange', lente: 'cookes4', ar: '16:9',
-    dna: 'brazilian street warmth, documentary energy with campaign polish, rich varied skin tones, joyful crowded life' },
-  { id: 'pictorico', label: 'Surreal Pictórico', prog: 'cinecom', stock: 'ekta', luz: 'hard', paleta: 'blocks', lente: 'primo', ar: '4:5',
-    dna: 'painterly surreal minimalism, a lone robed figure in a graphic color-field landscape, sculptural composition, gallery stillness' },
-  { id: 'acao', label: 'Ação Congelada', prog: 'cinecom', stock: 'ekta', luz: 'hard', paleta: 'tealorange', lente: 'master', ar: '16:9',
-    dna: 'frozen athletic moment mid-air, explosive motion held razor sharp, dynamic diagonal energy, sport glory' },
-  { id: 'tomsobretom', label: 'Tom-sobre-Tom', prog: 'commercial', stock: 'v50d', luz: 'softtop', paleta: 'monocroma', lente: 'cookes4', ar: '4:5',
-    dna: 'tone-on-tone styling, seamless studio backdrop color-matched to the wardrobe, serene minimal portrait' },
-  { id: 'arquivo70', label: 'Arquivo 70s', prog: 'cinema', stock: 'portra', luz: 'hard', paleta: 'muted', lente: 'primo', ar: '3:2',
-    dna: 'archival 1970s sports print, faded period grade, the crowd as texture, vintage press photo energy' },
-  { id: 'domingo', label: 'Domingo em Casa', prog: 'cinema', stock: 'portra', luz: 'window', paleta: 'monowarm', lente: 'cookes4', ar: '3:2',
-    dna: 'cozy domestic clutter, candid intimacy, lived-in warmth, quiet sunday morning energy' },
-];
-
 const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
 
 // modelos de imagem (ids puros — o backend monta o caminho)
@@ -394,7 +360,6 @@ const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0
 let state = {
   prog: 'cinema',
   framing: 'eye',
-  look: 'none',
   ar: '16:9',
   connected: false,
   backend: 'studio',
@@ -651,14 +616,11 @@ function exportName() {
   return `tipo_fotograma_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.png`;
 }
 
-function currentLook() { return LOOKS.find(l => l.id === state.look) || LOOKS[0]; }
-
 function buildFinalPrompt(sceneText) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
   const lens = currentLente();
   const bits = [
-    currentLook().dna,
     currentFraming().phrase,
     currentLuz().phrase,
     lens.phrase,
@@ -807,7 +769,7 @@ let busy = false;
 
 function snapshotParams() {
   return {
-    scene: $('scene').value.trim(), prog: state.prog, framing: state.framing, look: state.look,
+    scene: $('scene').value.trim(), prog: state.prog, framing: state.framing,
     ar: state.ar, stock: $('stock').value, paleta: $('paleta').value,
     luz: $('luz').value, lente: $('lente').value, clean: $('cleanImg').checked,
     diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
@@ -816,8 +778,6 @@ function snapshotParams() {
 
 function applyParams(pr) {
   $('scene').value = pr.scene;
-  state.look = pr.look || 'none';
-  document.querySelectorAll('#lookChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.look === state.look));
   setProg(pr.prog);
   state.framing = pr.framing;
   document.querySelectorAll('#framingChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.id === pr.framing));
@@ -902,7 +862,7 @@ async function revealJob(job) {
     state.lastBlob = blob;
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${state.look !== 'none' ? currentLook().label.toLowerCase() + ' · ' : ''}${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     $('dlBtn').disabled = false;
     addTake(url, cap, blob, job);
@@ -1023,34 +983,6 @@ function renderGallery(selIdx = -1) {
 }
 
 // ---- UI boot ----
-function setLook(id) {
-  const L = LOOKS.find(x => x.id === id) || LOOKS[0];
-  state.look = L.id;
-  document.querySelectorAll('#lookChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.look === L.id));
-  $('lookHint').textContent = L.dna ? 'o look configura os níveis abaixo — ajusta o que quiser por cima' : '';
-  if (L.id !== 'none') {
-    setProg(L.prog);
-    $('stock').value = L.stock; syncStockHint();
-    $('luz').value = L.luz;
-    $('paleta').value = L.paleta;
-    $('lente').value = L.lente; syncLenteHint();
-    state.ar = L.ar;
-    document.querySelectorAll('#arChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === L.ar));
-  }
-}
-
-function buildLookChips() {
-  const lc = $('lookChips');
-  LOOKS.forEach(L => {
-    const c = document.createElement('span');
-    c.className = 'fchip' + (L.id === state.look ? ' on' : '');
-    c.textContent = L.label;
-    c.dataset.look = L.id;
-    c.addEventListener('click', () => setLook(L.id));
-    lc.appendChild(c);
-  });
-}
-
 function buildChips() {
   const fc = $('framingChips');
   FRAMINGS.forEach(f => {
@@ -1129,7 +1061,7 @@ function buildProgRow() {
 function setProg(p) {
   state.prog = p;
   document.querySelectorAll('.prog-btn').forEach(b => b.classList.toggle('on', b.dataset.prog === p));
-  // stock default do programa (cinecom herda o do cinema)
+  // stock SUGERIDO pela estética (só um default — o usuário manda)
   const def = STOCKS.find(s => s.prog === (p === 'cinecom' ? 'cinema' : p));
   if (def) { $('stock').value = def.id; syncStockHint(); }
 }
@@ -1310,7 +1242,6 @@ $('dlBtn').addEventListener('click', () => {
 buildChips();
 buildSelects();
 buildProgRow();
-buildLookChips();
 setProg('cinema');
 
 // chave salva? reconecta em silêncio
