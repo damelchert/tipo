@@ -562,28 +562,37 @@ function moodClause() {
   return ` Apply the mood of the attached STYLE reference image — transfer ONLY its palette, grain, light character and texture; never its objects, people or composition.${d}`;
 }
 
-/** template determinístico — 1 chamada, controle total */
-function buildTemplatePrompt(subject) {
+/** montagem FINAL determinística — os seletores (enquadramento, luz,
+ *  lente, stock, paleta, programa) entram SEMPRE por código, nos dois
+ *  caminhos. A LLM nunca tem a palavra final sobre eles. */
+function buildFinalPrompt(sceneText) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
-  const pal = stock.bw ? { phrase: 'black and white' } : currentPaleta();
+  const pal = stock.bw ? { phrase: 'black and white, no color anywhere' } : currentPaleta();
   const lens = currentLente();
   const lensPart = lens.phrase ? ` ${lens.phrase.charAt(0).toUpperCase() + lens.phrase.slice(1)}.` : '';
-  return `${subject}, ${currentFraming().phrase}. ${currentLuz().phrase}.${lensPart} ${P.fixed} ${stock.phrase}. ${pal.phrase}. ${P.mood}.${moodClause()}${cleanRule()}`;
+  return `${sceneText}, ${currentFraming().phrase}. ${currentLuz().phrase}.${lensPart} ${P.fixed} ${stock.phrase}. ${pal.phrase}. ${P.mood}.${moodClause()}${cleanRule()}`;
 }
 
-/** system prompt do Diretor ✨ — evolução do v2.0 com módulos injetados */
+/** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
+ *  camadas, matéria, atmosfera). Câmera/filme/cor são vetados: entram
+ *  deterministicamente pela montagem final. */
 function buildDiretorSystem() {
   const P = PROGRAMAS[state.prog];
-  const stock = currentStock();
-  const pal = stock.bw ? { phrase: 'black and white' } : currentPaleta();
-  const lens = currentLente();
-  return `${P.persona} Expand the scene into ONE short visual prompt for an image model.
-FIXED LOOK: ${P.fixed}
-USE EXACTLY: framing — ${currentFraming().phrase}; light — ${currentLuz().phrase}; palette — ${pal.phrase}; film stock — ${stock.phrase}${lens.phrase ? `; lens character — ${lens.phrase}` : ''}.
-${P.scene}
-Mood: pick ONE — ${P.moods}.
-RULES: describe what we SEE, effects not specs, one tag per category, never stack conflicting tags. Max 450 characters. English. One paragraph, no lists, no metadata, no quotes.${cleanRule() ? ' End with: No text, no logos, no watermarks, no film borders or frame edges.' : ''}`;
+  return `${P.persona} Expand the user's scene idea into a rich, concrete visual description in English.
+Describe ONLY: the subject in action, then foreground / midground / background, real materials and textures, one atmosphere layer (haze, dust, steam) if it deepens the scene. ${P.scene}
+FORBIDDEN: any mention of camera, lens, framing, angle, shot type, film stock, grain, color palette, grading or mood tags — the system adds those separately. Never refuse, never chat, never ask questions.
+Max 280 characters. One paragraph. No quotes, no lists, no preamble. Output ONLY the scene description.`;
+}
+
+/** sanidade da expansão: se a LLM devolveu conversa/recusa/nada, ignora */
+function saneExpansion(txt) {
+  if (!txt) return null;
+  const t = String(txt).replace(/^["'\s]+|["'\s]+$/g, '');
+  if (t.length < 20 || t.length > 700) return null;
+  if (/\b(I can't|I cannot|I'm sorry|as an AI|não posso|desculp|aqui está|here is|here's)\b/i.test(t)) return null;
+  if (t.includes('?')) return null; // fez pergunta = conversou
+  return t;
 }
 
 // ---- EMULSÃO: transfere a química da referência (Gemini vision) ----
@@ -697,23 +706,24 @@ async function revelar() {
       devMsg('lendo a emulsão da referência…');
       try { await analisarMood(); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
     }
-    let prompt;
+    // a LLM (se ligada) enriquece a CENA; os seletores entram sempre por código
+    let scene = subject;
     if ($('diretor').checked) {
       devMsg('diretor decupando a cena…');
       try {
-        // o Diretor decupa a cena; a cláusula do sugador entra por fora
-        prompt = (await diretor(subject)) + moodClause();
+        const expanded = saneExpansion(await diretor(subject));
+        if (expanded) scene = expanded;
+        else console.warn('[fotograma] diretor devolveu expansão inválida — usando a cena crua');
       } catch (e) {
         console.warn('[fotograma] diretor:', e.detail || e.message);
-        TipoUI.showToast('Diretor falhou — seguindo com o template');
-        prompt = buildTemplatePrompt(subject);
+        TipoUI.showToast('Diretor falhou — seguindo com a cena crua');
       }
-    } else {
-      prompt = buildTemplatePrompt(subject);
     }
+    const prompt = buildFinalPrompt(scene);
     state.lastPrompt = prompt;
     $('promptText').textContent = prompt;
     $('promptOut').style.display = '';
+    $('promptOut').open = true; // aberto: o que foi pro modelo fica à vista
     $('copyPromptBtn').disabled = false;
 
     devMsg('revelando o fotograma…');
