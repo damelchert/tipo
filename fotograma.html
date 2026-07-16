@@ -21,6 +21,14 @@
   #gallery { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; max-width: 80%; overflow-x: auto; padding: 4px; }
   #gallery img { height: 52px; border: 1px solid var(--border-2); border-radius: 3px; cursor: pointer; opacity: .75; transition: opacity .2s, border-color .2s; }
   #gallery img:hover, #gallery img.sel { opacity: 1; border-color: var(--accent); }
+  #gallery .take { position: relative; flex: none; }
+  #gallery .take img { height: 56px; border: 1px solid var(--border-2); border-radius: 3px; cursor: pointer; opacity: .8; transition: opacity .2s, border-color .2s; display: block; }
+  #gallery .take:hover img, #gallery .take.sel img { opacity: 1; border-color: var(--accent); }
+  #gallery .take.liked img { border-color: var(--accent-warm, #D4A040); }
+  .take-acts { position: absolute; inset: auto 0 0 0; display: none; justify-content: center; gap: 2px; padding: 2px; background: rgba(10,10,10,.72); border-radius: 0 0 3px 3px; }
+  #gallery .take:hover .take-acts { display: flex; }
+  .take-acts button { border: none; background: transparent; color: #f2efe6; font-size: 10px; cursor: pointer; padding: 1px 4px; line-height: 1.3; }
+  .take-acts button:hover { color: var(--accent-warm, #D4A040); }
 
   /* chave */
   #apiKey { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
@@ -98,7 +106,7 @@
   <div class="section">
     <div class="section-title">Cena</div>
     <textarea id="scene" placeholder="descreva simples: “padaria antiga lotada de manhã” — o Fotograma dirige o resto" spellcheck="false"></textarea>
-    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(Gemini decupa a cena em camadas — usa a mesma chave)</span></label>
+    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(reescreve tua cena em inglês rico de cinema — camadas, matéria, atmosfera. Os seletores entram SEMPRE, com ou sem ele)</span></label>
   </div>
 
   <div class="section">
@@ -231,24 +239,24 @@ function modelPath(id) {
 const PROGRAMAS = {
   cinema: {
     nome: 'Cinema', sub: 'película viva · naturalismo',
-    fixed: 'Fine 35mm grain visible across everything like sand printed on celluloid — heavier in shadows, present in highlights. Lifted blacks, warm shadows with grain alive inside, never dead black. Creamy bokeh, soft highlight roll-off.',
-    mood: 'Naturalistic, honest',
+    fixed: 'fine 35mm grain, lifted blacks milky shadows, warm shadows, creamy bokeh, soft highlight roll-off, honest cinema, no smoothing',
+    mood: 'naturalistic',
     moods: 'slow cinema, naturalistic, cinéma vérité, gritty realism',
     persona: 'You are a cinematic DP.',
     scene: 'Layer the scene: foreground / midground / background. Materials lived-in with dirt and patina, one imperfection always, one atmosphere layer (haze, dust, steam) if it deepens the frame. If people appear: skin with pores, oil, fine hairs, uneven tone — no smoothing.',
   },
   cinecom: {
     nome: 'Cine-Com', sub: 'campanha com alma de filme',
-    fixed: 'Fine film grain present and alive, printed like celluloid. Sculpted key light with intentional shadow, soft highlight roll-off. Deep but breathing blacks. Hero clarity on the subject; set dressing with real patina and lived-in texture around it.',
-    mood: 'Elevated campaign with film soul',
+    fixed: 'fine 35mm grain, sculpted key light, hero clarity on the subject, real textures with patina, soft highlight roll-off',
+    mood: 'cinematic commercial',
     moods: 'elevated campaign, cinematic commercial, editorial with grit',
     persona: 'You are a director of photography shooting a high-end commercial on film.',
     scene: 'Hero the subject with campaign confidence, but let the world around it live: real materials, one honest imperfection, one atmosphere layer. Foreground / midground / background all working.',
   },
   commercial: {
     nome: 'Commercial', sub: 'campanha · editorial polido',
-    fixed: 'Ultra-fine film grain, subtle but alive. Sculpted key light with intentional shadow. Rich true blacks, controlled highlights with soft roll-off. Surfaces immaculate but real materials, honest reflections.',
-    mood: 'Polished editorial energy',
+    fixed: 'ultra-fine film grain, sculpted studio key light, rich true blacks, controlled specular highlights, campaign image',
+    mood: 'commercial polish',
     moods: 'polished editorial, campaign still, tabletop precision',
     persona: 'You are a top commercial still photographer shooting on film.',
     scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed.',
@@ -259,24 +267,24 @@ const PROGRAMAS = {
 // ignora — confirmado no vault v0-v2; o que funciona é descrever o que se VÊ)
 const LENTES = [
   { id: 'auto',    label: 'Programa decide',            phrase: '', hint: 'a ótica fica por conta do programa' },
-  { id: 'cookes4', label: 'Cooke S4/i',                 phrase: 'gentle sharpness with organic warmth, silky skin rendering, round smooth out-of-focus areas', hint: '"the Cooke look" — nitidez com calor humano' },
-  { id: 'panchro', label: 'Cooke Speed Panchro (vintage)', phrase: 'painterly vintage softness, low contrast, warm halation blooming around highlights', hint: 'romance clássico, anos dourados' },
-  { id: 'superspeed', label: 'Zeiss Super Speed (vintage)', phrase: 'dreamy wide-open glow, edges melting gently, soft halation, vintage soul', hint: 'aberta e sonhadora, alma setentista' },
-  { id: 'master',  label: 'Zeiss Master Prime',         phrase: 'clinically sharp corner to corner, neutral and precise, zero glow, surgical clarity', hint: 'precisão cirúrgica, moderna' },
-  { id: 'primo',   label: 'Panavision Primo',           phrase: 'high contrast and crisp resolution, confident classic Hollywood rendering', hint: 'o gold standard do cinema americano' },
-  { id: 'k35',     label: 'Canon K35 (vintage)',        phrase: 'gentle bloom on highlights, warm soft flares, lowered vintage contrast', hint: 'bloom quente, favorita dos DPs vintage' },
-  { id: 'helios',  label: 'Helios 44 (swirl)',          phrase: 'swirly busy bokeh spinning around the subject, sharp center, vintage character everywhere', hint: 'bokeh que gira — retrato com vertigem' },
-  { id: 'cookeana', label: 'Cooke Anamorphic/i',        phrase: 'oval stretched bokeh, subtle horizontal blue flare streaks, gentle edge falloff, widescreen breathing', hint: 'anamórfica elegante, flare contido' },
-  { id: 'kowa',    label: 'Kowa Anamorphic (vintage)',  phrase: 'dramatic horizontal flare streaks, strongly oval bokeh, lo-fi anamorphic romance, soft edges', hint: 'anamórfica suja e romântica' },
-  { id: 'tilt',    label: 'Tilt-shift',                 phrase: 'a tilted plane of focus, one selective slice of sharpness, dreamlike smear across the rest', hint: 'fatia de foco, resto derrete' },
-  { id: 'macro100', label: 'Macro 100mm',               phrase: 'true macro rendering, razor-thin focus, textures huge and tactile, background dissolved to color fields', hint: 'textura gigante, fundo vira cor' },
+  { id: 'cookes4', label: 'Cooke S4/i',                 phrase: 'Cooke S4 lens, silky warm sharpness', hint: '"the Cooke look" — nitidez com calor humano' },
+  { id: 'panchro', label: 'Cooke Speed Panchro (vintage)', phrase: 'Cooke Speed Panchro, painterly low contrast, warm halation', hint: 'romance clássico, anos dourados' },
+  { id: 'superspeed', label: 'Zeiss Super Speed (vintage)', phrase: 'Zeiss Super Speed wide open, dreamy vintage glow', hint: 'aberta e sonhadora, alma setentista' },
+  { id: 'master',  label: 'Zeiss Master Prime',         phrase: 'Zeiss Master Prime, surgically sharp and neutral', hint: 'precisão cirúrgica, moderna' },
+  { id: 'primo',   label: 'Panavision Primo',           phrase: 'Panavision Primo, high contrast classic Hollywood rendering', hint: 'o gold standard do cinema americano' },
+  { id: 'k35',     label: 'Canon K35 (vintage)',        phrase: 'Canon K35 vintage glass, warm bloom on highlights', hint: 'bloom quente, favorita dos DPs vintage' },
+  { id: 'helios',  label: 'Helios 44-2 (swirl)',        phrase: 'Helios 44-2 swirly bokeh spinning around the subject', hint: 'bokeh que gira — retrato com vertigem' },
+  { id: 'cookeana', label: 'Cooke Anamorphic/i',        phrase: 'Cooke Anamorphic, oval anamorphic bokeh, subtle blue streak flare', hint: 'anamórfica elegante, flare contido' },
+  { id: 'kowa',    label: 'Kowa Anamorphic (vintage)',  phrase: 'vintage Kowa anamorphic, dramatic streak flare, strongly oval bokeh', hint: 'anamórfica suja e romântica' },
+  { id: 'tilt',    label: 'Tilt-shift',                 phrase: 'tilt-shift, one selective slice of focus, dreamlike smear', hint: 'fatia de foco, resto derrete' },
+  { id: 'macro100', label: 'Macro 100mm',               phrase: 'macro 100mm, razor-thin focus, huge tactile texture', hint: 'textura gigante, fundo vira cor' },
 ];
 
 const FRAMINGS = [
   { id: 'eye',     label: 'Eye-level',     phrase: 'shot at honest eye level with natural 50mm perspective' },
   { id: 'lowhero', label: 'Low Hero',      phrase: 'low angle hero shot, camera near the ground looking up, the subject towering' },
   { id: 'worms',   label: "Worm's Eye",    phrase: "worm's eye view shot from directly below looking straight up" },
-  { id: 'dutch',   label: 'Dutch',         phrase: 'dutch angle with the horizon tilted hard' },
+  { id: 'dutch',   label: 'Dutch',         phrase: 'dutch tilt, camera rolled sideways, strong diagonal horizon' },
   { id: 'birds',   label: "Bird's Eye",    phrase: "overhead bird's eye view, a flat top-down grid" },
   { id: 'crane',   label: 'Crane',         phrase: 'high crane shot from above, the subject small inside bold geometry' },
   { id: 'knee',    label: 'Knee-level',    phrase: 'shot from knee level moving through the scene' },
@@ -311,20 +319,20 @@ const PALETAS = [
 // LUZ como clima esculpindo o sujeito, nunca como setup técnico
 // (princípio v0: "light as weather" — base Alton/Brown do _knowledge)
 const LUZES = [
-  { id: 'golden',    label: 'Golden hour',        phrase: 'late golden hour light raking low and warm, long shadows stretching' },
-  { id: 'window',    label: 'Janela lateral',     phrase: 'one window side light sculpting the subject, bright side carved, shadow side fading into warm dark' },
-  { id: 'rembrandt', label: 'Rembrandt',          phrase: 'one high side light leaving a small triangle of light on the shadow cheek, everything else falling to darkness' },
-  { id: 'chiaro',    label: 'Chiaroscuro',        phrase: 'a single hard source cutting the subject out of near-total darkness, shadows swallowing most of the frame' },
-  { id: 'toplight',  label: 'Top light noir',     phrase: 'hard light from directly above pooling shadows in the eye sockets and under every edge' },
-  { id: 'overcast',  label: 'Overcast',           phrase: 'bright overcast daylight wrapping soft around everything, shadows barely whispering' },
-  { id: 'hard',      label: 'Sol duro',           phrase: 'hard direct sunlight carving deep sharp shadows with knife edges' },
-  { id: 'practical', label: 'Practical tungsten', phrase: 'one tungsten practical glowing warm inside the dark, light falling off fast around it' },
-  { id: 'fire',      label: 'Fogo / vela',        phrase: 'flickering firelight from below, warm orange dancing on faces against deep shadow' },
-  { id: 'neonmix',   label: 'Neon mista',         phrase: 'mixed neon spill washing the scene from the street, two colors fighting on every surface' },
-  { id: 'fluor',     label: 'Fluorescente fria',  phrase: 'cold institutional fluorescent tubes humming above, flat greenish light, honest and unflattering' },
-  { id: 'backlit',   label: 'Backlit haze',       phrase: 'strong backlight cutting through volumetric haze, the subject rimmed in light' },
-  { id: 'bluehour',  label: 'Blue hour',          phrase: 'deep blue ambient dusk light, the last cold glow of the sky against warm windows' },
-  { id: 'silhu',     label: 'Silhueta',           phrase: 'the subject in full silhouette against a bright opening, detail surrendered to shape' },
+  { id: 'golden',    label: 'Golden hour',        phrase: 'golden hour, low warm raking light' },
+  { id: 'window',    label: 'Janela lateral',     phrase: 'natural window light sculpting one side' },
+  { id: 'rembrandt', label: 'Rembrandt',          phrase: 'Rembrandt lighting, triangle of light on the shadow cheek' },
+  { id: 'chiaro',    label: 'Chiaroscuro',        phrase: 'chiaroscuro, low-key lighting, single hard source' },
+  { id: 'toplight',  label: 'Top light noir',     phrase: 'hard top-light pooling shadows in the eyes' },
+  { id: 'overcast',  label: 'Overcast',           phrase: 'overcast soft light wrapping everything' },
+  { id: 'hard',      label: 'Sol duro',           phrase: 'hard direct sunlight, knife-edge shadows' },
+  { id: 'practical', label: 'Practical tungsten', phrase: 'tungsten practical glowing in the dark' },
+  { id: 'fire',      label: 'Fogo / vela',        phrase: 'firelight flickering warm from below' },
+  { id: 'neonmix',   label: 'Neon mista',         phrase: 'neon signage glow, mixed color spill' },
+  { id: 'fluor',     label: 'Fluorescente fria',  phrase: 'fluorescent overhead, cold institutional light' },
+  { id: 'backlit',   label: 'Backlit haze',       phrase: 'strong backlight, god rays through volumetric haze' },
+  { id: 'bluehour',  label: 'Blue hour',          phrase: 'blue hour ambient dusk light' },
+  { id: 'silhu',     label: 'Silhueta',           phrase: 'full silhouette against a bright opening' },
 ];
 
 const ARS = ['21:9', '16:9', '3:2', '4:5', '1:1', '9:16'];
@@ -568,10 +576,17 @@ function moodClause() {
 function buildFinalPrompt(sceneText) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
-  const pal = stock.bw ? { phrase: 'black and white, no color anywhere' } : currentPaleta();
   const lens = currentLente();
-  const lensPart = lens.phrase ? ` ${lens.phrase.charAt(0).toUpperCase() + lens.phrase.slice(1)}.` : '';
-  return `${sceneText}, ${currentFraming().phrase}. ${currentLuz().phrase}.${lensPart} ${P.fixed} ${stock.phrase}. ${pal.phrase}. ${P.mood}.${moodClause()}${cleanRule()}`;
+  const bits = [
+    currentFraming().phrase,
+    currentLuz().phrase,
+    lens.phrase,
+    stock.phrase,
+    stock.bw ? 'black and white photography, monochromatic palette, no color anywhere' : currentPaleta().phrase,
+    P.fixed,
+    P.mood,
+  ].filter(Boolean);
+  return `${sceneText}. ${bits.join(', ')}.${moodClause()}${cleanRule()}`;
 }
 
 /** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
@@ -639,30 +654,36 @@ async function tryImageModel(model, prompt) {
   }
   state.refs.forEach(r => parts.push({ inlineData: { mimeType: r.mime, data: r.dataUrl.split(',')[1] } }));
   parts.push({ text: prompt });
-  const mk = (modalities, withCfg) => ({
+  const mk = (modalities, cfg) => ({
     contents: [{ role: 'user', parts }],
     generationConfig: {
       responseModalities: modalities,
-      ...(withCfg ? {
+      ...(cfg === 'none' ? {} : {
         imageConfig: {
           aspectRatio: state.ar,
-          ...(isPro ? { imageSize: $('imgSize').value } : {}),
+          ...(cfg === 'full' && isPro ? { imageSize: $('imgSize').value } : {}),
         },
-      } : {}),
+      }),
     },
   });
-  // escada de compatibilidade: variações de payload entre gerações do modelo
-  const attempts = [mk(['IMAGE'], true), mk(['TEXT', 'IMAGE'], true), mk(['TEXT', 'IMAGE'], false)];
+  // escada: NUNCA derruba o aspect ratio antes da última tentativa —
+  // e se cair na última, avisa (era o "virou a imagem")
+  const attempts = [
+    { body: mk(['IMAGE'], 'full'), note: '' },
+    { body: mk(['TEXT', 'IMAGE'], 'full'), note: '' },
+    { body: mk(['TEXT', 'IMAGE'], 'ar'), note: '' },
+    { body: mk(['TEXT', 'IMAGE'], 'none'), note: 'formato caiu pro default do modelo' },
+  ];
   let lastErr = null;
-  for (const body of attempts) {
+  for (const at of attempts) {
     try {
-      const data = await callModel(model, body);
+      const data = await callModel(model, at.body);
       const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      if (part) return part.inlineData;
+      if (part) { state.lastCfgNote = at.note; return part.inlineData; }
       lastErr = new Error('O modelo não devolveu imagem (pode ter recusado o prompt)');
     } catch (e) {
       lastErr = e;
-      if (e.status !== 400) break; // 400 = tenta o próximo formato; resto desiste
+      if (e.status !== 400) break; // 400 = formato; resto (cota etc.) desiste da escada
     }
   }
   throw lastErr;
@@ -670,48 +691,112 @@ async function tryImageModel(model, prompt) {
 
 async function generateImage(prompt) {
   const chosen = $('model').value || FALLBACK_IMG_MODELS[0].name;
-  // chave sem cota/permissão pro modelo escolhido → desce a cadeia
-  // (Pro → Nano 2 → Nano 2 Lite) até revelar
+  const labelOf = v => [...$('model').options].find(o => o.value === v)?.textContent || v;
   const order = [chosen, ...[...$('model').options].map(o => o.value).filter(v => v && v !== chosen)];
   let lastErr = null;
   for (let i = 0; i < order.length; i++) {
     try {
       const r = await tryImageModel(order[i], prompt);
-      if (order[i] !== chosen) { $('model').value = order[i]; syncResRow(); }
+      state.lastModelLabel = labelOf(order[i]);
+      if (order[i] !== chosen) {
+        $('model').value = order[i];
+        syncResRow();
+        state.lastCfgNote = [state.lastCfgNote, `caiu do ${labelOf(chosen)} (sem cota) pro ${state.lastModelLabel}`].filter(Boolean).join(' · ');
+      }
       return r;
     } catch (e) {
       lastErr = e;
       if (![403, 404, 429].includes(e.status)) throw e;
       const next = order[i + 1];
       if (next) {
-        const lbl = [...$('model').options].find(o => o.value === next)?.textContent || next;
-        devMsg(`sem cota — revelando no ${lbl.toLowerCase()}…`);
-        TipoUI.showToast(`Modelo sem cota nessa chave — tentando ${lbl}`);
+        devMsg(`sem cota — revelando no ${labelOf(next).toLowerCase()}…`);
+        TipoUI.showToast(`Modelo sem cota nessa chave — tentando ${labelOf(next)}`);
       }
     }
   }
   throw lastErr;
 }
 
-async function revelar() {
+// ---- FILA DE REVELAÇÃO: até 4 aguardando, processa 1 por vez ----
+const QUEUE_MAX = 4;
+let queue = [];
+let busy = false;
+
+function snapshotParams() {
+  return {
+    scene: $('scene').value.trim(), prog: state.prog, framing: state.framing,
+    ar: state.ar, stock: $('stock').value, paleta: $('paleta').value,
+    luz: $('luz').value, lente: $('lente').value, clean: $('cleanImg').checked,
+    diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
+  };
+}
+
+function applyParams(pr) {
+  $('scene').value = pr.scene;
+  setProg(pr.prog);
+  state.framing = pr.framing;
+  document.querySelectorAll('#framingChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.id === pr.framing));
+  state.ar = pr.ar;
+  document.querySelectorAll('#arChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === pr.ar));
+  $('stock').value = pr.stock; syncStockHint();
+  $('paleta').value = pr.paleta;
+  $('luz').value = pr.luz;
+  $('lente').value = pr.lente; syncLenteHint();
+  $('cleanImg').checked = pr.clean;
+  $('diretor').checked = pr.diretor;
+  if ([...$('model').options].some(o => o.value === pr.model)) $('model').value = pr.model;
+  $('imgSize').value = pr.imgSize;
+  syncResRow();
+}
+
+function syncQueueUI() {
+  const n = queue.length;
+  $('genBtn').textContent = busy
+    ? (n ? `Revelando… (${n} na fila)` : 'Revelando…')
+    : 'Revelar Fotograma';
+  $('genBtn').disabled = !state.connected || (busy && n >= QUEUE_MAX);
+}
+
+function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   if (!state.connected) { TipoUI.showToast('Conecte sua chave primeiro'); return; }
-  $('genBtn').disabled = true;
+  if (busy && queue.length >= QUEUE_MAX) { TipoUI.showToast(`Fila cheia (${QUEUE_MAX}) — espera uma revelar`); return; }
+  queue.push(snapshotParams());
+  if (busy) TipoUI.showToast(`Na fila — posição ${queue.length}`);
+  syncQueueUI();
+  pump();
+}
+
+async function pump() {
+  if (busy) return;
+  const job = queue.shift();
+  if (!job) { syncQueueUI(); return; }
+  busy = true;
+  syncQueueUI();
+  try {
+    await revealJob(job);
+  } finally {
+    busy = false;
+    pump();
+  }
+}
+
+async function revealJob(job) {
+  applyParams(job); // a UI mostra os parâmetros do job em revelação
   $('genStatus').textContent = '';
   $('devOverlay').classList.add('open');
   try {
-    // mood subiu antes da chave conectar? suga agora
     if (state.mood && !state.mood.desc) {
       devMsg('lendo a emulsão da referência…');
       try { await analisarMood(); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
     }
     // a LLM (se ligada) enriquece a CENA; os seletores entram sempre por código
-    let scene = subject;
-    if ($('diretor').checked) {
+    let scene = job.scene;
+    if (job.diretor) {
       devMsg('diretor decupando a cena…');
       try {
-        const expanded = saneExpansion(await diretor(subject));
+        const expanded = saneExpansion(await diretor(job.scene));
         if (expanded) scene = expanded;
         else console.warn('[fotograma] diretor devolveu expansão inválida — usando a cena crua');
       } catch (e) {
@@ -723,55 +808,81 @@ async function revelar() {
     state.lastPrompt = prompt;
     $('promptText').textContent = prompt;
     $('promptOut').style.display = '';
-    $('promptOut').open = true; // aberto: o que foi pro modelo fica à vista
+    $('promptOut').open = true;
     $('copyPromptBtn').disabled = false;
 
     devMsg('revelando o fotograma…');
+    state.lastCfgNote = '';
     const img = await generateImage(prompt);
     const blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
     state.lastBlob = blob;
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar}${state.mood ? ' · emulsão 🧪' : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     $('dlBtn').disabled = false;
-    addTake(url, cap, blob);
+    addTake(url, cap, blob, job, prompt);
     TipoUI.showToast('Fotograma revelado');
   } catch (e) {
     console.error('[fotograma]', e.detail || e.message);
     TipoUI.showToast(e.message || 'Falhou — tente de novo');
-    // motivo real do Google (chave nunca aparece — safeDetail garante)
     const d = safeDetail(e);
     $('genStatus').textContent = d ? `Google: ${d}` : (e.message || '');
   } finally {
     $('devOverlay').classList.remove('open');
-    $('genBtn').disabled = !state.connected;
+    syncQueueUI();
   }
 }
 
-// ---- galeria da sessão ----
-function addTake(url, caption, blob) {
-  state.takes.unshift({ url, caption, blob });
+// ---- galeria da sessão: like, download, reusar parâmetros, excluir ----
+function addTake(url, caption, blob, params, prompt) {
+  state.takes.unshift({ url, caption, blob, params, prompt, liked: false });
   if (state.takes.length > 12) {
     const dead = state.takes.pop();
     URL.revokeObjectURL(dead.url);
   }
+  renderGallery(0);
+}
+
+function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
   state.takes.forEach((t, i) => {
-    const im = document.createElement('img');
-    im.src = t.url;
-    im.className = i === 0 ? 'sel' : '';
-    im.title = t.caption;
-    im.addEventListener('click', () => {
+    const d = document.createElement('div');
+    d.className = 'take' + (i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
+    d.innerHTML = `<img src="${t.url}" title="${t.caption}">
+      <div class="take-acts">
+        <button data-a="like" title="curtir">${t.liked ? '♥' : '♡'}</button>
+        <button data-a="dl" title="baixar">⬇</button>
+        <button data-a="reuse" title="reusar estes parâmetros">↺</button>
+        <button data-a="del" title="excluir">✕</button>
+      </div>`;
+    d.querySelector('img').addEventListener('click', () => {
       $('stillImg').src = t.url;
       $('stillCaption').textContent = t.caption;
       state.lastBlob = t.blob;
+      state.lastPrompt = t.prompt;
+      $('promptText').textContent = t.prompt;
       $('dlBtn').disabled = false;
-      g.querySelectorAll('img').forEach(x => x.classList.remove('sel'));
-      im.classList.add('sel');
+      renderGallery(i);
     });
-    g.appendChild(im);
+    d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; renderGallery(selIdx); });
+    d.querySelector('[data-a="dl"]').addEventListener('click', () => {
+      const a2 = document.createElement('a');
+      a2.href = t.url;
+      a2.download = 'tipo-fotograma.png';
+      a2.click();
+    });
+    d.querySelector('[data-a="reuse"]').addEventListener('click', () => {
+      applyParams(t.params);
+      TipoUI.showToast('Parâmetros do take restaurados — ajusta e revela');
+    });
+    d.querySelector('[data-a="del"]').addEventListener('click', () => {
+      URL.revokeObjectURL(t.url);
+      state.takes.splice(i, 1);
+      renderGallery(-1);
+    });
+    g.appendChild(d);
   });
 }
 
