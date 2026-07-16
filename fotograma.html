@@ -603,6 +603,15 @@ function cleanRule() {
   return $('cleanImg').checked ? ' No text, no logos, no watermarks, no film borders or frame edges.' : '';
 }
 
+/** cláusula das referências: o produto/sujeito anexado entra FIEL na cena */
+function refsClause() {
+  if (!state.refs.length) return '';
+  const n = state.refs.length;
+  return n > 1
+    ? ` Feature the exact products/subjects shown in the ${n} attached product reference images — preserve their design, shape, colors, materials and details faithfully inside the scene.`
+    : ' Feature the exact product/subject shown in the attached product reference image — preserve its design, shape, colors, materials and details faithfully inside the scene.';
+}
+
 /** cláusula do sugador: transfere o FÍSICO da referência, nunca o conteúdo */
 function moodClause() {
   if (!state.mood) return '';
@@ -643,7 +652,7 @@ function buildFinalPrompt(sceneText, rawScene) {
     P.fixed,
     P.mood,
   ].filter(Boolean);
-  return `${sceneText}. ${bits.join(', ')}.${moodClause()}${cleanRule()}`;
+  return `${sceneText}. ${bits.join(', ')}.${moodClause()}${refsClause()}${cleanRule()}`;
 }
 
 /** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
