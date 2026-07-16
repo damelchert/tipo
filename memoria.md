@@ -159,6 +159,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-16
 
+### FOTOGRAMA v2 (21.1) — lentes reais, sugador, refs, cine-com
+- **INSIGHT CENTRAL (por que a lente do Cinematic "não funciona")**: nome de lente o Nano ignora (vault v0-v2 confirmou). A tradução certa: UI mostra a lente real, prompt carrega a ASSINATURA PERCEPTUAL do catálogo de 27 lentes. Validado com 3 gerações da mesma cena — Helios/Anamórfica/Panchro visivelmente distintas (anamórfica com blue streaks horizontais).
+- Sugador de mood: fileToRef downscale → canvas com drag-região (crop 768px) → Gemini vision com system "film colorist: NEVER mention objects/composition, max 300 chars" → descriptor + imagem no payload com "transfer ONLY palette/grain/light/texture". Diretor decupa a cena e a cláusula do mood entra POR FORA do output dele.
+- GOTCHA: "no text" não impede o modelo de desenhar BORDA DE PELÍCULA (Kodak edge markings) quando o prompt evoca vintage — regra precisa citar "no film borders or frame edges" explicitamente.
+- Payload multimodal: parts = [styleRef?, ...refs(≤4), text]; tudo re-comprimido client-side (JPEG 0.85, ≤1024px) pra não estourar o limite da request.
+
 ### FOTOGRAMA (Fase 21) — ferramenta #39, still cinematográfico com IA
 - Base: system prompt v2.0 do vault `PROJETOS/nano banana testing` (framework do Marcos/HDLX: lente/posição/luz/sujeito/camadas/post modular/art direction; tags confirmadas do Nano: fine 35mm grain, lifted blacks, creamy bokeh, volumetric haze; 1 tag por categoria, effects not specs). Catálogos de `_knowledge/fotografia` viraram os selects (stocks, paletas).
 - Dois programas com FIXED/persona próprios (cinema × commercial); 12 framings com FRASES CONCRETAS (bateria provou: "worm's eye" abstrato o modelo suaviza, "shot from directly below looking straight up" obedece); regra "no text/logos" default (commercial inventa type de campanha sozinho).
