@@ -69,6 +69,8 @@
   #genBtn:disabled { opacity: .45; cursor: default; }
 
 
+  .section.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; border-radius: 6px; }
+
   .toggle-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-3); cursor: pointer; margin-top: 8px; }
 
   /* chave no canto superior direito */
@@ -81,13 +83,11 @@
   #keyPop { position: fixed; top: 106px; right: 14px; z-index: 61; width: 320px; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
   #keyPop.open { display: block; }
 
-  /* revelação */
-  #devOverlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--bg-0) 82%, transparent); z-index: 30; backdrop-filter: blur(3px); }
-  #devOverlay.open { display: flex; }
-  .dev-frame { width: 74px; height: 54px; border: 2px solid var(--accent); border-radius: 4px; position: relative; overflow: hidden; }
-  .dev-frame::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 45%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
+  /* revelação: tile pendente NA GALERIA — nada bloqueia a página */
+  .take.pending { width: 86px; height: 56px; border: 1.5px dashed var(--accent); border-radius: 3px; position: relative; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: var(--bg-2); flex: none; }
+  .take.pending::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 40%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
   @keyframes devSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  #devMsg { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-3); font-family: var(--font-ui); }
+  .pending-msg { position: relative; font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-4); font-family: var(--font-ui); padding: 3px 2px; text-align: center; line-height: 1.3; }
 </style>
 </head>
 <body>
@@ -99,6 +99,28 @@
     <div class="section-title">Cena</div>
     <textarea id="scene" placeholder="descreva simples: &ldquo;padaria antiga lotada de manh&atilde;&rdquo; &mdash; o Fotograma dirige o resto" spellcheck="false"></textarea>
     <label class="toggle-label"><input type="checkbox" id="diretor" checked> Diretor &#10024; <span style="font-size:9px;color:var(--text-5);">(reescreve tua cena em ingl&ecirc;s rico de cinema &mdash; os seletores entram SEMPRE, com ou sem ele)</span></label>
+  </div>
+
+  <div class="section" id="emulsaoSection">
+    <div class="section-title">Emuls&atilde;o</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()" title="Transfere a qu&iacute;mica da refer&ecirc;ncia &mdash; paleta, grain, luz e textura; nunca o conte&uacute;do. Arraste sobre a imagem pra usar s&oacute; uma regi&atilde;o. Nano Banana 2 revela melhor.">Refer&ecirc;ncia</button>
+      <button class="btn btn-secondary" id="moodClear" style="display:none;">Tirar</button>
+    </div>
+    <div class="stock-hint">ou arrasta a imagem aqui</div>
+    <input type="file" id="moodFile" accept="image/*" style="display:none">
+    <div id="moodBox" style="display:none; margin-top:8px; position:relative;">
+      <canvas id="moodCanvas" style="width:100%; border:1px solid var(--border-2); border-radius:4px; cursor:crosshair; display:block;"></canvas>
+      <div id="moodDesc" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.5; font-family:var(--font-ui);"></div>
+    </div>
+  </div>
+
+  <div class="section" id="refsSection">
+    <div class="section-title">Refer&ecirc;ncias</div>
+    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;" title="Imagens de refer&ecirc;ncia de cena/produto &mdash; v&atilde;o junto pro modelo">Adicionar refs (at&eacute; 4)</button>
+    <input type="file" id="refFiles" accept="image/*" multiple style="display:none">
+    <div id="refThumbs" style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;"></div>
+    <div class="stock-hint">ou arrasta as imagens aqui</div>
   </div>
 
   <div class="section">
@@ -152,26 +174,6 @@
     <select id="paleta"></select>
   </div>
 
-  <div class="section">
-    <div class="section-title">Emuls&atilde;o</div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="document.getElementById('moodFile').click()" title="Transfere a qu&iacute;mica da refer&ecirc;ncia &mdash; paleta, grain, luz e textura; nunca o conte&uacute;do. Arraste sobre a imagem pra usar s&oacute; uma regi&atilde;o. Nano Banana 2 revela melhor.">Refer&ecirc;ncia</button>
-      <button class="btn btn-secondary" id="moodClear" style="display:none;">Tirar</button>
-    </div>
-    <input type="file" id="moodFile" accept="image/*" style="display:none">
-    <div id="moodBox" style="display:none; margin-top:8px; position:relative;">
-      <canvas id="moodCanvas" style="width:100%; border:1px solid var(--border-2); border-radius:4px; cursor:crosshair; display:block;"></canvas>
-      <div id="moodDesc" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.5; font-family:var(--font-ui);"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Refer&ecirc;ncias</div>
-    <button class="btn btn-secondary" onclick="document.getElementById('refFiles').click()" style="width:100%;" title="Imagens de refer&ecirc;ncia de cena/produto &mdash; v&atilde;o junto pro modelo">Adicionar refs (at&eacute; 4)</button>
-    <input type="file" id="refFiles" accept="image/*" multiple style="display:none">
-    <div id="refThumbs" style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;"></div>
-  </div>
-
   <div class="section section-divider">
     <div class="section-title">Gerar</div>
     <button class="btn" id="genBtn" disabled>Revelar Fotograma</button>
@@ -209,10 +211,6 @@
   </div>
   <div id="stillCaption">demo &middot; cinema &middot; cinestill 800t &middot; worm's eye &mdash; cole sua chave e revele o seu</div>
   <div id="gallery"></div>
-  <div id="devOverlay">
-    <div class="dev-frame"></div>
-    <div id="devMsg">revelando…</div>
-  </div>
 </div>
 <div class="tipo-toast" id="toast"></div>
 
@@ -367,6 +365,7 @@ let state = {
   lastBlob: null,
   lastPrompt: '',
   takes: [], // { url, caption }
+  pending: [], // { id, msg } — tiles de revelação na galeria
   refs: [],  // { dataUrl, mime } — referências de cena (máx 4)
   mood: null, // { full: {dataUrl,mime}, crop: {dataUrl,mime}|null, desc: string|null, img: Image }
 };
@@ -698,7 +697,10 @@ async function diretor(subject) {
 }
 
 // ---- geração ----
-function devMsg(m) { $('devMsg').textContent = m; }
+function devMsg(m) {
+  const el = document.querySelector(`.take.pending[data-pid="${currentPendingId}"] .pending-msg`);
+  if (el) el.textContent = m;
+}
 
 async function tryImageModel(model, prompt) {
   const isPro = /pro/i.test(model);
@@ -777,6 +779,7 @@ async function generateImage(prompt) {
 const QUEUE_MAX = 4;
 let queue = [];
 let busy = false;
+let currentPendingId = null;
 
 function snapshotParams() {
   return {
@@ -842,7 +845,10 @@ async function pump() {
 async function revealJob(job) {
   applyParams(job); // a UI mostra os parâmetros do job em revelação
   $('genStatus').textContent = '';
-  $('devOverlay').classList.add('open');
+  const pid = 'p' + Date.now() + '-' + Math.round(performance.now());
+  currentPendingId = pid;
+  state.pending.unshift({ id: pid, msg: 'revelando…' });
+  renderGallery(-1);
   try {
     if (state.mood && !state.mood.desc) {
       devMsg('lendo a emulsão da referência…');
@@ -888,7 +894,9 @@ async function revealJob(job) {
     const d = safeDetail(e);
     $('genStatus').textContent = d ? `Google: ${d}` : (e.message || '');
   } finally {
-    $('devOverlay').classList.remove('open');
+    state.pending = state.pending.filter(x => x.id !== pid);
+    currentPendingId = null;
+    renderGallery(state.pending.length ? -1 : 0);
     syncQueueUI();
   }
 }
@@ -959,6 +967,13 @@ function addTake(url, caption, blob, params) {
 function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
+  state.pending.forEach(pn => {
+    const d = document.createElement('div');
+    d.className = 'take pending';
+    d.dataset.pid = pn.id;
+    d.innerHTML = `<div class="pending-msg">${pn.msg}</div>`;
+    g.appendChild(d);
+  });
   state.takes.forEach((t, i) => {
     const d = document.createElement('div');
     d.className = 'take' + (i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
@@ -1113,14 +1128,32 @@ function renderRefs() {
   });
 }
 
-$('refFiles').addEventListener('change', async e => {
-  for (const f of Array.from(e.target.files).slice(0, 4 - state.refs.length)) {
+async function addRefFiles(files) {
+  for (const f of files.slice(0, 4 - state.refs.length)) {
     try { state.refs.push(await fileToRef(f)); } catch (err) { TipoUI.showToast(err.message); }
   }
-  e.target.value = '';
   renderRefs();
   if (state.refs.length >= 4) TipoUI.showToast('Máximo de 4 referências');
+}
+
+$('refFiles').addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  addRefFiles(files);
 });
+
+// drag & drop nas duas seções
+function bindDrop(el, fn) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dropping'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dropping'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('dropping');
+    fn(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+  });
+}
+bindDrop($('emulsaoSection'), files => { if (files[0]) setMoodFile(files[0]); });
+bindDrop($('refsSection'), files => addRefFiles(files));
 
 // ---- mood: imagem de estilo + região arrastável ----
 let moodSel = null; // {x0,y0,x1,y1} em coords do canvas
@@ -1196,9 +1229,7 @@ function cropMood() {
   });
 })();
 
-$('moodFile').addEventListener('change', async e => {
-  const f = e.target.files[0];
-  e.target.value = '';
+async function setMoodFile(f) {
   if (!f) return;
   try {
     const ref = await fileToRef(f, 1280);
@@ -1212,6 +1243,12 @@ $('moodFile').addEventListener('change', async e => {
       try { await analisarMood(); } catch (err) { $('moodDesc').textContent = ''; console.warn('[fotograma] emulsão:', err.detail || err.message); }
     }
   } catch (err) { TipoUI.showToast(err.message); }
+}
+
+$('moodFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  setMoodFile(f);
 });
 
 $('moodClear').addEventListener('click', () => {
