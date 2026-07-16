@@ -450,60 +450,77 @@ function callModel(id, body) {
   return gapiUrl(`${apiBase()}/${modelPath(id)}:generateContent`, body);
 }
 
+/** conecta num backend específico; devolve as opções de modelo */
+async function tryConnectBackend(backend) {
+  state.backend = backend;
+  state._vxMode = null;
+  if (backend === 'vertex') {
+    // Vertex express não expõe ListModels — valida com um ping mínimo
+    // no flash (centavos de token) e usa o trio Nano fixo
+    state.textModel = 'gemini-2.5-flash';
+    await callModel(state.textModel, {
+      contents: [{ parts: [{ text: 'ping' }] }],
+      generationConfig: { maxOutputTokens: 1 },
+    });
+    return FALLBACK_IMG_MODELS;
+  }
+  const data = await gapiUrl(`${apiBase()}/models?pageSize=1000`);
+  const models = data.models || [];
+  const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
+  // SÓ as famílias Nano Banana — Pro, 2 e 2 Lite. Nada de extras.
+  const pool = gen.map(m => m.name.replace(/^models\//, ''));
+  const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  const pick = (re, bad) => {
+    const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
+    // canônico primeiro: sem "preview", versão mais ALTA, nome mais curto
+    c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || (ver(b) - ver(a)) || a.length - b.length);
+    return c[0];
+  };
+  const pro = pick(/pro-image/i);
+  const nano2 = pick(/flash-image/i, /lite/i);
+  const lite = pick(/flash-lite-image/i);
+  const opts = [];
+  if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
+  if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
+  if (lite) opts.push({ name: lite, label: 'Nano Banana 2 Lite' });
+  // texto: flash pro Diretor
+  state.textModel = TEXT_MODEL_PREFS.find(x => pool.includes(x)) || pool.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
+  return opts.length ? opts : FALLBACK_IMG_MODELS;
+}
+
 async function connect(silent) {
   if (!key()) { if (!silent) keyStatus('cole a chave primeiro', 'err'); return; }
-  state.backend = keyBackend(key());
-  keyStatus(state.backend === 'vertex' ? 'conectando à Agent Platform…' : 'conectando…');
-  try {
-    let opts;
-    if (state.backend === 'vertex') {
-      // Vertex express não expõe ListModels — valida com um ping mínimo
-      // no flash (centavos de token) e usa a dupla Nano fixa
-      state.textModel = 'gemini-2.5-flash';
-      await callModel(state.textModel, {
-        contents: [{ parts: [{ text: 'ping' }] }],
-        generationConfig: { maxOutputTokens: 1 },
-      });
-      opts = FALLBACK_IMG_MODELS;
-    } else {
-      const data = await gapiUrl(`${apiBase()}/models?pageSize=1000`);
-      const models = data.models || [];
-      const gen = models.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
-      // SÓ as duas famílias Nano Banana — Pro e 2. Nada de lite/1/extras.
-      const pool = gen.map(m => m.name.replace(/^models\//, ''));
-      const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
-      const pick = (re, bad) => {
-        const c = pool.filter(n => re.test(n) && !(bad && bad.test(n)));
-        // canônico primeiro: sem "preview", versão mais ALTA, nome mais curto
-        c.sort((a, b) => ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || (ver(b) - ver(a)) || a.length - b.length);
-        return c[0];
-      };
-      const pro = pick(/pro-image/i);
-      const nano2 = pick(/flash-image/i, /lite/i);
-      const lite = pick(/flash-lite-image/i);
-      opts = [];
-      if (pro) opts.push({ name: pro, label: 'Nano Banana Pro' });
-      if (nano2) opts.push({ name: nano2, label: 'Nano Banana 2' });
-      if (lite) opts.push({ name: lite, label: 'Nano Banana 2 Lite' });
-      if (!opts.length) opts = FALLBACK_IMG_MODELS;
-      // texto: flash pro Diretor
-      state.textModel = TEXT_MODEL_PREFS.find(p => pool.includes(p)) || pool.find(n => /flash/.test(n) && !/image|live|tts|lite/.test(n)) || TEXT_MODEL_PREFS[0];
+  const primary = keyBackend(key());
+  // a chave pode estar RESTRITA a uma das APIs — tenta a natural primeiro,
+  // e se o Google bloquear, tenta a outra antes de desistir
+  const order = primary === 'vertex' ? ['vertex', 'studio'] : ['studio', 'vertex'];
+  let lastErr = null;
+  for (const backend of order) {
+    keyStatus(backend === 'vertex' ? 'conectando à Agent Platform…' : 'conectando ao AI Studio…');
+    try {
+      const opts = await tryConnectBackend(backend);
+      $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
+      state.connected = true;
+      if ($('keySave').checked) localStorage.setItem(KEY_LS, key());
+      keyStatus(backend === 'vertex'
+        ? 'conectada — Agent Platform (Vertex) · Nano Pro + 2 + 2 Lite'
+        : `conectada — AI Studio · ${opts.length} modelo(s)`, 'ok');
+      $('genBtn').disabled = false;
+      syncResRow();
+      return;
+    } catch (e) {
+      console.warn(`[fotograma] connect ${backend}:`, e.detail || e.message);
+      lastErr = e;
     }
-    $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
-    state.connected = true;
-    if ($('keySave').checked) localStorage.setItem(KEY_LS, key());
-    keyStatus(state.backend === 'vertex'
-      ? 'conectada — Agent Platform (Vertex) · Nano Pro + 2 + 2 Lite'
-      : `conectada — ${opts.length} modelo(s) de imagem`, 'ok');
-    $('genBtn').disabled = false;
-    syncResRow();
-  } catch (e) {
-    console.warn('[fotograma] connect:', e.detail || e.message);
-    state.connected = false;
-    $('genBtn').disabled = true;
-    const d = safeDetail(e);
-    keyStatus(e.message + (d ? ` — ${d}` : ''), 'err');
   }
+  state.connected = false;
+  $('genBtn').disabled = true;
+  const d = safeDetail(lastErr);
+  let hint = '';
+  if (/blocked/i.test(d)) {
+    hint = ' → a chave tem RESTRIÇÃO DE API: no console do Google Cloud, vá em APIs e serviços → Credenciais → sua chave → Restrições de API, e libere a "Vertex AI API" (ou escolha "Não restringir").';
+  }
+  keyStatus((lastErr ? lastErr.message : 'falhou') + (d ? ` — ${d}` : '') + hint, 'err');
 }
 
 function forgetKey() {
