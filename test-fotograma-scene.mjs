@@ -85,6 +85,16 @@ check('expansão longa fiel aceita (não descartada)', p.includes('five separate
 
 // 6) texture override: stock colorido carrega a cláusula luminance-only; P&B não
 check('texture override presente (stock cor)', p.includes('applied to luminance only'));
+check('escala real sempre presente', p.includes('true real-world scale and proportions'));
+check('clean rule permite rótulo de produto', p.includes('branding may appear only where it naturally lives'));
+
+// 6b) crane novo (auditoria): frase aérea concreta, sem "bold geometry"
+await page.evaluate(() => { document.getElementById('diretor').checked = false; state.framing = 'crane'; });
+await page.fill('#scene', 'um croissant sobre uma bandeja de uvas');
+p = await gen();
+check('crane = aérea concreta validada', p.includes('aerial high-angle view from several stories above'));
+check('bold geometry morreu', !p.includes('bold geometry'));
+await page.evaluate(() => { state.framing = 'eye'; });
 await page.evaluate(() => { document.getElementById('diretor').checked = false; document.getElementById('stock').value = 'hp5'; });
 await page.fill('#scene', 'um croissant sobre uma bandeja de uvas');
 p = await gen();

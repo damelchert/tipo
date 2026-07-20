@@ -184,7 +184,7 @@
     <div class="btn-row" style="margin-top:8px;">
       <button class="btn btn-secondary" id="dlBtn" disabled>Baixar PNG</button>
     </div>
-    <label class="checkbox-label" style="margin-top:8px;"><input type="checkbox" id="cleanImg" checked> sem texto / logos / marca d'&aacute;gua</label>
+    <label class="checkbox-label" style="margin-top:8px;"><input type="checkbox" id="cleanImg" checked> sem texto solto / marca d'&aacute;gua (r&oacute;tulo de produto pode)</label>
   </div>
   <div style="height:40px;"></div>
 </div>
@@ -256,7 +256,7 @@ const PROGRAMAS = {
   },
   commercial: {
     nome: 'Publicidade', sub: 'campanha · estúdio polido',
-    fixed: 'ultra-fine film grain, sculpted studio key light, rich true blacks, controlled specular highlights, campaign image',
+    fixed: 'ultra-fine film grain, sculpted key light, rich true blacks, controlled specular highlights, campaign image',
     mood: 'commercial polish',
     moods: 'commercial polish, campaign still, tabletop precision',
     persona: 'You are a top commercial still photographer shooting on film.',
@@ -282,7 +282,7 @@ const LENTES = [
   { id: 'master',  label: 'Zeiss Master Prime',         phrase: 'Zeiss Master Prime, surgically sharp and neutral', hint: 'precisão cirúrgica, moderna' },
   { id: 'primo',   label: 'Panavision Primo',           phrase: 'Panavision Primo, high contrast classic Hollywood rendering', hint: 'o gold standard do cinema americano' },
   { id: 'k35',     label: 'Canon K35 (vintage)',        phrase: 'Canon K35 vintage glass, warm bloom on highlights', hint: 'bloom quente, favorita dos DPs vintage' },
-  { id: 'helios',  label: 'Helios 44-2 (swirl)',        phrase: 'Helios 44-2 swirly bokeh spinning around the subject', hint: 'bokeh que gira — retrato com vertigem' },
+  { id: 'helios',  label: 'Helios 44-2 (swirl)',        phrase: 'Helios 44-2, subtle swirly bokeh circling the out-of-focus background', hint: 'bokeh que gira — retrato com vertigem' },
   { id: 'cookeana', label: 'Cooke Anamorphic/i',        phrase: 'Cooke Anamorphic, oval anamorphic bokeh, subtle blue streak flare', hint: 'anamórfica elegante, flare contido' },
   { id: 'kowa',    label: 'Kowa Anamorphic (vintage)',  phrase: 'vintage Kowa anamorphic, dramatic streak flare, strongly oval bokeh', hint: 'anamórfica suja e romântica' },
   { id: 'tilt',    label: 'Tilt-shift',                 phrase: 'tilt-shift, one selective slice of focus, dreamlike smear', hint: 'fatia de foco, resto derrete' },
@@ -294,9 +294,9 @@ const FRAMINGS = [
   { id: 'lowhero', label: 'Low Hero',      phrase: 'low angle hero shot, camera near the ground looking up, the subject towering' },
   { id: 'worms',   label: "Worm's Eye",    phrase: "worm's eye view shot from directly below looking straight up" },
   { id: 'dutch',   label: 'Dutch',         phrase: 'dutch tilt, camera rolled sideways, strong diagonal horizon' },
-  { id: 'birds',   label: "Bird's Eye",    phrase: "overhead bird's eye view, a flat top-down grid" },
-  { id: 'crane',   label: 'Crane',         phrase: 'high crane shot from above, the subject small inside bold geometry' },
-  { id: 'knee',    label: 'Knee-level',    phrase: 'shot from knee level moving through the scene' },
+  { id: 'birds',   label: "Bird's Eye",    phrase: "overhead bird's eye view directly above the subject, flat top-down perspective" },
+  { id: 'crane',   label: 'Crane',         phrase: 'aerial high-angle view from several stories above, looking steeply down at the subject' },
+  { id: 'knee',    label: 'Knee-level',    phrase: 'shot from knee height, a low vantage point close to the ground' },
   { id: 'xcu',     label: 'Extreme Close', phrase: 'extreme close-up with features filling the frame' },
   { id: 'macro',   label: 'Macro',         phrase: 'macro close-up, razor-thin focus plane' },
   { id: 'ots',     label: 'Over Shoulder', phrase: 'over-the-shoulder framing, the foreground shoulder soft' },
@@ -600,22 +600,22 @@ function currentLuz() { return LUZES.find(l => l.id === $('luz').value) || LUZES
 function currentLente() { return LENTES.find(l => l.id === $('lente').value) || LENTES[0]; }
 
 function cleanRule() {
-  return $('cleanImg').checked ? ' No text, no logos, no watermarks, no film borders or frame edges.' : '';
+  return $('cleanImg').checked ? ' No overlaid text or graphics, no watermarks, no film borders or frame edges; branding may appear only where it naturally lives on products in the scene.' : '';
 }
 
 /** cláusula das referências: o produto/sujeito anexado entra FIEL na cena */
-function refsClause() {
-  if (!state.refs.length) return '';
-  const n = state.refs.length;
+function refsClause(refs) {
+  if (!refs || !refs.length) return '';
+  const n = refs.length;
   return n > 1
     ? ` Feature the exact products/subjects shown in the ${n} attached product reference images — preserve their design, shape, colors, materials and details faithfully inside the scene.`
     : ' Feature the exact product/subject shown in the attached product reference image — preserve its design, shape, colors, materials and details faithfully inside the scene.';
 }
 
 /** cláusula do sugador: transfere o FÍSICO da referência, nunca o conteúdo */
-function moodClause() {
-  if (!state.mood) return '';
-  const d = state.mood.desc ? ` Its physical mood: ${state.mood.desc}` : '';
+function moodClause(mood) {
+  if (!mood) return '';
+  const d = mood.desc ? ` Its physical mood: ${mood.desc}` : '';
   return ` Apply the mood of the attached STYLE reference image — transfer ONLY its palette, grain, light character and texture; never its objects, people or composition.${d}`;
 }
 
@@ -644,7 +644,7 @@ function exportName() {
   return `tipo_fotograma_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.png`;
 }
 
-function buildFinalPrompt(sceneText, rawScene) {
+function buildFinalPrompt(sceneText, rawScene, job) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
   const lens = currentLente();
@@ -661,8 +661,11 @@ function buildFinalPrompt(sceneText, rawScene) {
     stock.bw ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
     P.fixed,
     P.mood,
+    'true real-world scale and proportions',
   ].filter(Boolean);
-  return `${sceneText}. ${bits.join(', ')}.${moodClause()}${refsClause()}${cleanRule()}`;
+  const mood = job ? job.mood : state.mood;
+  const refs = job ? job.refs : state.refs;
+  return `${sceneText}. ${bits.join(', ')}.${moodClause(mood)}${refsClause(refs)}${cleanRule()}`;
 }
 
 /** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
@@ -695,8 +698,9 @@ function saneExpansion(txt) {
 // ---- EMULSÃO: transfere a química da referência (Gemini vision) ----
 const EMULSAO_SYSTEM = `You are a film colorist and archivist. Look at the image and describe ONLY its transferable physical mood: palette as 4-6 named pigments, light character (direction, hardness, warmth), film texture (grain size, halation, contrast curve, how the blacks sit), and ONE word for the emotional register. NEVER mention objects, people, places or composition. Max 300 characters, one paragraph, English.`;
 
-async function analisarMood() {
-  const src = state.mood.crop || state.mood.full;
+async function analisarMood(mood) {
+  mood = mood || state.mood;
+  const src = mood.crop || mood.full;
   const data = await callModel(state.textModel, {
     systemInstruction: { parts: [{ text: EMULSAO_SYSTEM }] },
     contents: [{ role: 'user', parts: [
@@ -707,7 +711,7 @@ async function analisarMood() {
   });
   const txt = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
   if (txt) {
-    state.mood.desc = txt;
+    mood.desc = txt;
     $('moodDesc').textContent = `🧪 ${txt}`;
   }
 }
@@ -729,15 +733,18 @@ function devMsg(m) {
   if (el) el.textContent = m;
 }
 
-async function tryImageModel(model, prompt) {
+async function tryImageModel(model, prompt, job) {
   const isPro = /pro/i.test(model);
-  // partes multimodais: emulsão + refs de cena + texto
+  // partes multimodais: emulsão + refs de cena + texto — do JOB (snapshot do
+  // clique), não do estado vivo: mudar refs com fila andando não contamina
+  const mood = job ? job.mood : state.mood;
+  const refs = (job ? job.refs : state.refs) || [];
   const parts = [];
-  if (state.mood) {
-    const src = state.mood.crop || state.mood.full;
+  if (mood) {
+    const src = mood.crop || mood.full;
     parts.push({ inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } });
   }
-  state.refs.forEach(r => parts.push({ inlineData: { mimeType: r.mime, data: r.dataUrl.split(',')[1] } }));
+  refs.forEach(r => parts.push({ inlineData: { mimeType: r.mime, data: r.dataUrl.split(',')[1] } }));
   parts.push({ text: prompt });
   const mk = (modalities, cfg) => ({
     contents: [{ role: 'user', parts }],
@@ -774,14 +781,14 @@ async function tryImageModel(model, prompt) {
   throw lastErr;
 }
 
-async function generateImage(prompt) {
+async function generateImage(prompt, job) {
   const chosen = $('model').value || FALLBACK_IMG_MODELS[0].name;
   const labelOf = v => [...$('model').options].find(o => o.value === v)?.textContent || v;
   const order = [chosen, ...[...$('model').options].map(o => o.value).filter(v => v && v !== chosen)];
   let lastErr = null;
   for (let i = 0; i < order.length; i++) {
     try {
-      const r = await tryImageModel(order[i], prompt);
+      const r = await tryImageModel(order[i], prompt, job);
       state.lastModelLabel = labelOf(order[i]);
       if (order[i] !== chosen) {
         $('model').value = order[i];
@@ -814,6 +821,9 @@ function snapshotParams() {
     ar: state.ar, stock: $('stock').value, paleta: $('paleta').value,
     luz: $('luz').value, lente: $('lente').value, clean: $('cleanImg').checked,
     diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
+    // snapshot das imagens do CLIQUE — job na fila não muda se o usuário
+    // trocar refs/emulsão enquanto espera (não persiste no IDB: ver addTake)
+    refs: state.refs.slice(), mood: state.mood,
   };
 }
 
@@ -877,9 +887,9 @@ async function revealJob(job) {
   state.pending.unshift({ id: pid, msg: 'revelando…' });
   renderGallery(-1);
   try {
-    if (state.mood && !state.mood.desc) {
+    if (job.mood && !job.mood.desc) {
       devMsg('lendo a emulsão da referência…');
-      try { await analisarMood(); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
+      try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
     }
     // a LLM (se ligada) enriquece a CENA; os seletores entram sempre por código
     let scene = job.scene;
@@ -896,7 +906,7 @@ async function revealJob(job) {
         TipoUI.showToast('Diretor falhou — seguindo com a cena crua');
       }
     }
-    const prompt = buildFinalPrompt(scene, job.scene);
+    const prompt = buildFinalPrompt(scene, job.scene, job);
     if (state.sceneOverrides.framing || state.sceneOverrides.light) {
       const o = [state.sceneOverrides.framing ? 'enquadramento' : '', state.sceneOverrides.light ? 'luz' : ''].filter(Boolean).join(' e ');
       TipoUI.showToast(`Teu texto assumiu ${o} — seletor em espera`);
@@ -905,15 +915,17 @@ async function revealJob(job) {
 
     devMsg('revelando o fotograma…');
     state.lastCfgNote = '';
-    const img = await generateImage(prompt);
+    const img = await generateImage(prompt, job);
     const blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
     state.lastBlob = blob;
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${state.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     $('dlBtn').disabled = false;
-    addTake(url, cap, blob, job);
+    // params enxutos pro take/IDB: sem os dataURLs de refs/emulsão (peso)
+    const slim = { ...job }; delete slim.refs; delete slim.mood;
+    addTake(url, cap, blob, slim);
     TipoUI.showToast('Fotograma revelado');
   } catch (e) {
     console.error('[fotograma]', e.detail || e.message);
