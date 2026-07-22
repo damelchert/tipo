@@ -212,6 +212,10 @@
     <img id="stillImg" src="assets/fotograma-demo.jpg" alt="Fotograma">
   </div>
   <div id="stillCaption">demo &middot; cinema &middot; cinestill 800t &middot; worm's eye &mdash; cole sua chave e revele o seu</div>
+  <div id="stillPrompt" style="display:none; flex:none; margin:0 auto 6px; max-width:min(760px, 92%); align-items:flex-start; gap:8px;">
+    <span id="stillPromptTxt" style="flex:1; font-size:10px; line-height:1.5; color:var(--text-4); font-family:var(--font-ui); white-space:pre-wrap; word-break:break-word;"></span>
+    <button id="promptCopy" class="btn btn-secondary" style="flex:none; font-size:9px; padding:4px 10px; letter-spacing:1px;">copiar</button>
+  </div>
   <div id="gallery"></div>
 </div>
 <div id="lightbox"><img id="lightboxImg" alt=""></div>
@@ -958,6 +962,7 @@ async function revealJob(job) {
     $('stillImg').src = url;
     const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
+    showPrompt(job.scene);
     $('dlBtn').disabled = false;
     // params enxutos pro take/IDB: sem os dataURLs de refs/emulsão (peso)
     const slim = { ...job }; delete slim.refs; delete slim.mood;
@@ -1039,6 +1044,31 @@ function addTake(url, caption, blob, params) {
   renderGallery(0);
 }
 
+/** faixa do prompt: a CENA que o usuário digitou (não o prompt final —
+ *  esse é blindado). Copiar = clipboard + toast. */
+function showPrompt(scene) {
+  const box = $('stillPrompt');
+  if (!scene) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  $('stillPromptTxt').textContent = scene;
+  box.dataset.scene = scene;
+}
+$('promptCopy').addEventListener('click', async () => {
+  const t = $('stillPrompt').dataset.scene || '';
+  try {
+    await navigator.clipboard.writeText(t);
+    TipoUI.showToast('Prompt copiado');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    TipoUI.showToast('Prompt copiado');
+  }
+});
+
 function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
@@ -1064,6 +1094,7 @@ function renderGallery(selIdx = -1) {
       $('stillCaption').textContent = t.caption;
       state.lastBlob = t.blob;
       $('dlBtn').disabled = false;
+      showPrompt(t.params && t.params.scene);
       renderGallery(i);
     });
     d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; idbPut({ id: t.id, caption: t.caption, params: t.params, liked: t.liked, ts: t.ts, blob: t.blob }); renderGallery(selIdx); });
