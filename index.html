@@ -638,32 +638,62 @@ body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   #tipoHero.parked .hw, #tipoHero.parked .hero-dot, .hero-hint { animation: none !important; }
 }
+/* Spaces — preview líquido animado no painel da home */
+.spaces-preview {
+  position: absolute; inset: 0; opacity: 0.34; filter: blur(14px) contrast(1.5) saturate(1.15);
+  background:
+    radial-gradient(ellipse 55% 70% at 25% 35%, #2A8A7A 0%, transparent 60%),
+    radial-gradient(ellipse 65% 45% at 72% 55%, #D4A040 0%, transparent 58%),
+    radial-gradient(ellipse 50% 65% at 50% 82%, #99E0D2 0%, transparent 52%),
+    radial-gradient(ellipse 70% 55% at 82% 18%, #1B5A4E 0%, transparent 62%);
+  background-size: 160% 160%;
+  animation: spacesFlow 11s ease-in-out infinite alternate;
+}
+@keyframes spacesFlow {
+  0% { background-position: 0% 0%, 100% 100%, 50% 0%, 0% 100%; }
+  100% { background-position: 100% 100%, 0% 0%, 50% 100%, 100% 0%; }
+}
+@media (prefers-reduced-motion: reduce) { .spaces-preview { animation: none; } }
+
+/* Fase 15 v2 — liquid hero */
+#heroLiquid { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-doors { display: flex; gap: 14px; justify-content: center; }
+.hero-doors button {
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+  background: rgba(20, 19, 19, 0.6); border: 1px solid rgba(248, 245, 240, 0.25);
+  border-radius: 12px; padding: 16px 22px; cursor: pointer; text-align: left;
+  font-family: var(--font-mono, monospace); backdrop-filter: blur(8px);
+  transition: border-color .2s, transform .2s;
+}
+.hero-doors button:hover { border-color: #99E0D2; transform: translateY(-3px); }
+.hero-doors button b { font-size: 15px; letter-spacing: 3px; color: #F8F5F0; font-weight: 600; }
+.hero-doors button span { font-size: 9px; letter-spacing: 1.2px; color: rgba(248, 245, 240, 0.55); text-transform: uppercase; }
+.hero-doors #heroSpaces b { color: #99E0D2; }
 @media (max-width: 768px) {
   .hero-log { left: 16px; bottom: 18px; }
   .hero-tag { left: 16px; top: 18px; }
-  .hero-cta { bottom: 44px; width: max-content; }
-  .hero-cta button { font-size: 11px; letter-spacing: 2px; padding: 13px 22px; white-space: nowrap; }
+  .hero-cta { bottom: 44px; width: max-content; max-width: calc(100vw - 24px); }
+  .hero-doors { flex-direction: column; gap: 10px; }
+  .hero-doors button { padding: 13px 18px; }
 }
 </style>
 </head>
 <body>
 
 
-<!-- HERO — O Ensaio (Fase 15): toca 1x por sessão; deep links e reduced-motion pulam -->
+<!-- HERO — A Revelação Líquida (Fase 15 v2): o wordmark nasce derretido em
+     liquid flow (WebGL domain warp) e cristaliza em TIPÓ; termina nas DUAS
+     PORTAS (Spaces × Ferramentas). 1x por sessão; deep links e reduced-motion pulam -->
 <div id="tipoHero" style="display:none;">
-  <canvas id="heroBands"></canvas>
-  <div class="hero-tag" id="heroTag">tipó · <b>kinetic type studio</b></div>
+  <canvas id="heroLiquid"></canvas>
+  <div class="hero-tag" id="heroTag">tipó · <b>type in motion studio</b></div>
   <button class="hero-skip" id="heroSkip" type="button">pular →</button>
-  <div class="hero-word" id="heroWord"
-    ><span class="hw" id="hwT">T</span
-    ><span class="hw" id="hwI">I</span
-    ><span class="hw" id="hwP">P</span
-    ><span class="hw hw-o" id="hwO">Ó<i class="hero-ring" id="heroRing"></i></span
-  ></div>
-  <div class="hero-dot" id="heroDot"></div>
-  <div class="hero-log" id="heroLog">ensaio 00 · aquecendo as máquinas</div>
+  <div class="hero-log" id="heroLog">revelando · liquid flow</div>
   <div class="hero-cta" id="heroCta">
-    <button type="button" id="heroEnter">explorar as 40 ferramentas</button>
+    <div class="hero-doors">
+      <button type="button" id="heroSpaces"><b>SPACES</b><span>canvas infinito &middot; nodes &middot; &aacute;udio-reativo</span></button>
+      <button type="button" id="heroEnter"><b>FERRAMENTAS</b><span>40 modos &middot; visual &amp; kinetic</span></button>
+    </div>
     <span class="hero-hint">role pra entrar ↓</span>
   </div>
 </div>
@@ -694,9 +724,17 @@ body { overflow: hidden; }
   <!-- MAIN -->
   <div class="tipo-main">
 
-    <!-- LEVEL 0: Visual Tools | Kinetic Type -->
+    <!-- LEVEL 0: Spaces | Visual Tools | Kinetic Type -->
     <div class="tipo-level active" id="level0">
       <div class="tipo-split">
+        <div class="tipo-split-panel" onclick="location.href='studio.html'">
+          <div class="tipo-preview-bg">
+            <div class="spaces-preview"></div>
+          </div>
+          <div class="tipo-split-label split-text" data-text="Spaces">Spaces</div>
+          <div class="tipo-split-sub split-sub">canvas infinito &bull; nodes &bull; multi-frame &bull; &aacute;udio-reativo</div>
+          <div class="split-ticker"><div class="split-ticker-track">Halftone · Dither · Pixelate · Gradient Map · Posterize · Glitch · Wave · Liquid Flow · Mosh · Echo Trails · Droste · Fractal Julia · ASCII · Duotone · Blur · Kaleido · Aberration · Adjust · Grain&nbsp;·&nbsp;<!--dup-->Halftone · Dither · Pixelate · Gradient Map · Posterize · Glitch · Wave · Liquid Flow · Mosh · Echo Trails · Droste · Fractal Julia · ASCII · Duotone · Blur · Kaleido · Aberration · Adjust · Grain&nbsp;·&nbsp;</div></div>
+        </div>
         <div class="tipo-split-panel" onclick="goVisualTools()">
           <div class="tipo-preview-bg">
             <div class="dither-preview" id="ditherGrid"></div>
@@ -2086,117 +2124,131 @@ goKineticType = function() {
   if (sessionStorage.getItem('tipo-hero') || location.hash || reduced) return;
 
   hero.style.display = 'flex';
-  const dot = document.getElementById('heroDot');
   const log = document.getElementById('heroLog');
-  const word = document.getElementById('heroWord');
-  const letters = ['hwT', 'hwI', 'hwP', 'hwO'].map(id => document.getElementById(id));
+  const cvs = document.getElementById('heroLiquid');
+  const gl = cvs.getContext('webgl2', { antialias: false });
+  if (!gl) { hero.style.display = 'none'; return; }
 
-  // ---- Shaper aura: anéis de retângulo arredondado emanando da palavra ----
-  const bands = document.getElementById('heroBands');
-  const bctx = bands.getContext('2d');
-  let bandsRunning = true, bandsLast = 0;
-  const BAND_COLORS = ['rgba(42,138,122,ALPHA)', 'rgba(212,160,64,ALPHA)', 'rgba(153,224,210,ALPHA)'];
-  function drawBands(now) {
-    if (!bandsRunning) return;
-    requestAnimationFrame(drawBands);
-    if (now - bandsLast < 33) return;
-    bandsLast = now;
+  // ---- fonte: o wordmark TIPÓ em blocos brand (desenhado 1x, o liquid anima por cima) ----
+  const word = document.createElement('canvas');
+  function drawWord() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const W = window.innerWidth, H = window.innerHeight;
-    if (bands.width !== W * dpr) { bands.width = W * dpr; bands.height = H * dpr; }
-    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    bctx.clearRect(0, 0, W, H);
-    const r = word.getBoundingClientRect();
-    const spacing = Math.max(34, Math.min(W, H) * 0.05);
-    const t = (now * 0.014) % spacing;
-    const maxD = Math.hypot(W, H) * 0.6;
-    bctx.lineWidth = 1.5;
-    for (let i = 0; i < 42; i++) {
-      const d = i * spacing + t + spacing * 0.4;
-      if (d > maxD) break;
-      const a = Math.max(0, 0.16 * (1 - d / maxD));
-      bctx.strokeStyle = BAND_COLORS[i % 3].replace('ALPHA', a.toFixed(3));
-      bctx.beginPath();
-      bctx.roundRect(r.left - d, r.top - d, r.width + d * 2, r.height + d * 2, 24 + d * 0.6);
-      bctx.stroke();
+    const W = Math.round(window.innerWidth * dpr), H = Math.round(window.innerHeight * dpr);
+    word.width = W; word.height = H;
+    cvs.width = W; cvs.height = H;
+    const x = word.getContext('2d');
+    x.fillStyle = '#1A1818';
+    x.fillRect(0, 0, W, H);
+    const cols = ['#2A8A7A', '#D4A040', '#F8F5F0', '#99E0D2'];
+    const ink = ['#F8F5F0', '#1A1818', '#1A1818', '#1A1818'];
+    const chars = ['T', 'I', 'P', 'Ó'];
+    const cw = Math.min(W * 0.155, H * 0.28);
+    const gap = cw * 0.18;
+    const total = cw * 4 + gap * 3;
+    const x0 = (W - total) / 2, cy = H / 2;
+    for (let i = 0; i < 4; i++) {
+      const cx = x0 + i * (cw + gap) + cw / 2;
+      x.save();
+      x.translate(cx, cy);
+      x.rotate((i % 2 ? -1 : 1) * 0.02);
+      x.fillStyle = cols[i];
+      x.fillRect(-cw / 2, -cw / 2, cw, cw);
+      x.fillStyle = ink[i];
+      x.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillText(chars[i], 0, cw * 0.04);
+      x.restore();
     }
   }
-  requestAnimationFrame(drawBands);
 
-  // ---- Coreografia ----
-  const center = () => ({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-  const setLog = txt => () => { log.textContent = txt; };
+  // ---- shader: o MESMO domain warp duplo do Liquid Flow do Studio ----
+  const VS = `#version 300 es
+out vec2 vUv;
+void main(){ vec2 p = vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); vUv = vec2(p.x, 1.0-p.y); gl_Position = vec4(p*2.0-1.0,0.0,1.0); }`;
+  const FS = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime; uniform float uAmt; uniform float uScale; uniform vec2 uMouse;
+in vec2 vUv; out vec4 outC;
+float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(hash2(i),hash2(i+vec2(1,0)),f.x), mix(hash2(i+vec2(0,1)),hash2(i+vec2(1,1)),f.x), f.y); }
+float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
+void main(){
+  float asp = uRes.x/uRes.y;
+  vec2 p = vUv*vec2(asp,1.0)*uScale + (uMouse-0.5)*0.6;
+  vec2 q = vec2(fbm(p+vec2(uTime,0.0)), fbm(p+vec2(5.2,1.3)-uTime*0.7));
+  vec2 w = vec2(fbm(p+2.4*q+vec2(1.7,9.2)), fbm(p+2.4*q+vec2(8.3,2.8)));
+  vec2 uv = vUv + (w-0.5)*uAmt/100.0*0.45;
+  outC = texture(uTex, clamp(uv,0.0,1.0));
+}`;
+  function sh(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const U = {};
+  ['uTex', 'uRes', 'uTime', 'uAmt', 'uScale', 'uMouse'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  // ---- estado animado por GSAP: derretido → cristal ----
+  const S = { amt: 160, scale: 7.5, speed: 1.0 };
+  const mouse = { x: 0.5, y: 0.5 };
+  window.addEventListener('pointermove', e => {
+    mouse.x += (e.clientX / window.innerWidth - mouse.x) * 0.12;
+    mouse.y += (e.clientY / window.innerHeight - mouse.y) * 0.12;
+  }, { passive: true });
+
+  let running = true, t0 = performance.now(), tAcc = 0, last = 0;
+  function frame(now) {
+    if (!running) return;
+    requestAnimationFrame(frame);
+    if (now - last < 30) return;
+    const dt = last ? (now - last) / 1000 : 0.03;
+    last = now;
+    tAcc += dt * S.speed; // o fluxo DESACELERA junto com a cristalização
+    gl.viewport(0, 0, cvs.width, cvs.height);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // o flip já acontece no vertex shader
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, word);
+    gl.uniform1i(U.uTex, 0);
+    gl.uniform2f(U.uRes, cvs.width, cvs.height);
+    gl.uniform1f(U.uTime, tAcc * 0.4);
+    gl.uniform1f(U.uAmt, S.amt);
+    gl.uniform1f(U.uScale, S.scale);
+    gl.uniform2f(U.uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
   let tl = null;
-
-  // Os alvos do ponto vêm dos rects EM REPOUSO: medir depois da Clash carregar
-  // e ANTES de aplicar os transforms iniciais (o Ó começa a -120vh).
-  document.fonts.ready.then(() => requestAnimationFrame(buildIntro));
-
-  function buildIntro() {
-  const rests = letters.map(l => l.getBoundingClientRect());
-  const dotTo = idx => {
-    const r = rests[idx], c = center();
-    return { x: r.left + r.width / 2 - c.x, y: r.top - c.y - r.height * 0.12 };
-  };
-
-  gsap.set(dot, { xPercent: -50, yPercent: -50, scale: 0 });
-  gsap.set(letters, { opacity: 0 });
-  gsap.set(letters[0], { scale: 0.2, y: 50 });
-  gsap.set(letters[2], { rotation: -420, scale: 0.2, transformOrigin: '50% 70%' });
-  gsap.set(letters[3], { y: '-120vh' });
-
-  tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-  window.__heroTl = tl;
-
-  // Ato 0 — o maestro entra
-  tl.to('#heroTag,#heroLog', { opacity: 1, duration: 0.5 }, 0.15)
-    .to(dot, { scale: 1, duration: 0.4, ease: 'back.out(2)' }, 0.2)
-    .to(dot, { scale: 1.35, duration: 0.28, yoyo: true, repeat: 1, ease: 'sine.inOut' });
-
-  // T — dither: flicker de impressão + snap
-  tl.add(setLog('ensaio 01 · dither'))
-    .to(dot, { ...dotTo(0), duration: 0.22, ease: 'power2.inOut' })
-    .to(letters[0], { opacity: 1, duration: 0.3, ease: 'steps(5)' }, '<0.05')
-    .to(letters[0], { scale: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, '<');
-
-  // I — glitch: fringes RGB + jitter em steps
-  tl.add(setLog('ensaio 02 · glitch'))
-    .to(dot, { ...dotTo(1), duration: 0.18, ease: 'power2.inOut' }, '-=0.1')
-    .set(letters[1], { opacity: 1, textShadow: '3px 0 #99E0D2, -3px 0 #D4A040' })
-    .to(letters[1], { keyframes: { x: [-14, 10, -6, 3, 0] }, duration: 0.36, ease: 'steps(4)' })
-    .set(letters[1], { textShadow: 'none' });
-
-  // P — coil: rola girando
-  tl.add(setLog('ensaio 03 · coil'))
-    .to(dot, { ...dotTo(2), duration: 0.18, ease: 'power2.inOut' }, '-=0.08')
-    .to(letters[2], { opacity: 1, duration: 0.12 }, '<0.05')
-    .to(letters[2], { rotation: 0, scale: 1, duration: 0.6, ease: 'back.out(1.5)' }, '<');
-
-  // Ó — crash: despenca, quica, e o anel de badge orbita
-  tl.add(setLog('ensaio 04 · crash'))
-    .to(dot, { ...dotTo(3), duration: 0.18, ease: 'power2.inOut' }, '-=0.2')
-    .to(letters[3], { opacity: 1, duration: 0.05 }, '<')
-    .to(letters[3], { y: 0, duration: 0.62, ease: 'bounce.out' }, '<')
-    .to(letters[3], { scaleY: 0.86, duration: 0.09, yoyo: true, repeat: 1, transformOrigin: '50% 100%' })
-    .to('#heroRing', { opacity: 1, scale: 1.12, duration: 0.3, ease: 'back.out(2)' }, '-=0.1')
-    .to('#heroRing', { opacity: 0, scale: 1.55, duration: 0.45, ease: 'power2.out' });
-
-  // Ato final — onda do field, aura do shaper, o ponto vira assinatura
-  tl.add(setLog('ensaio 05 · field wave'))
-    .to('.hw', { yPercent: -10, stagger: 0.07, duration: 0.3, yoyo: true, repeat: 1, ease: 'sine.inOut' })
-    .to('#heroBands', { opacity: 1, duration: 1.1, ease: 'power1.inOut' }, '<')
-    .add(() => {
-      const o = letters[3].getBoundingClientRect(), c = center();
-      gsap.to(dot, {
-        x: o.right - c.x + o.width * 0.13,
-        y: o.bottom - c.y - o.height * 0.1,
-        scale: 0.62, duration: 0.5, ease: 'power2.inOut',
-      });
-    }, '-=0.2')
-    .add(setLog('40 ferramentas · type em movimento · 100% browser'))
-    .to('#heroCta', { opacity: 1, duration: 0.6 })
-    .add(() => hero.classList.add('parked'));
-  } // buildIntro
+  document.fonts.ready.then(() => {
+    drawWord();
+    requestAnimationFrame(frame);
+    const setLog = txt => () => { log.textContent = txt; };
+    tl = gsap.timeline({ defaults: { ease: 'sine.inOut' } });
+    window.__heroTl = tl;
+    tl.to('#heroTag,#heroLog', { opacity: 1, duration: 0.5 }, 0.1)
+      // ato 1 — matéria líquida pura (irreconhecível, fluindo)
+      .to(S, { amt: 85, scale: 5.2, duration: 2.2, ease: 'sine.inOut' }, 0)
+      .add(setLog('revelando · tipó'), 1.6)
+      // ato 2 — cristalização: o warp morre, o fluxo congela, TIPÓ aparece
+      .to(S, { amt: 0, speed: 0.06, duration: 2.1, ease: 'power4.inOut' }, 2.2)
+      .add(setLog('40 ferramentas · spaces · 100% browser'), 3.6)
+      // ato 3 — as duas portas
+      .to('#heroCta', { opacity: 1, duration: 0.6 }, 3.9)
+      .add(() => hero.classList.add('parked'));
+  });
+  window.addEventListener('resize', () => { if (running) drawWord(); });
 
   // ---- Saída ----
   let exiting = false;
@@ -2206,17 +2258,22 @@ goKineticType = function() {
     sessionStorage.setItem('tipo-hero', '1');
     if (tl) tl.kill();
     const out = gsap.timeline({
-      onComplete: () => { hero.style.display = 'none'; bandsRunning = false; },
+      onComplete: () => { hero.style.display = 'none'; running = false; },
     });
     if (fast) {
       out.to(hero, { autoAlpha: 0, duration: 0.25 });
       return;
     }
-    out.to('.hw', { yPercent: -160, opacity: 0, stagger: 0.05, duration: 0.5, ease: 'power3.in' })
-      .to('#heroDot,#heroCta,#heroLog,#heroTag,#heroBands', { opacity: 0, duration: 0.3 }, 0)
-      .to(hero, { yPercent: -100, duration: 0.6, ease: 'power4.inOut' }, '-=0.2');
+    // derrete de volta ao sair — a matéria volta pro líquido
+    out.to(S, { amt: 120, duration: 0.55, ease: 'power2.in' }, 0)
+      .to('#heroCta,#heroLog,#heroTag', { opacity: 0, duration: 0.3 }, 0)
+      .to(hero, { yPercent: -100, duration: 0.6, ease: 'power4.inOut' }, 0.25);
   }
   document.getElementById('heroEnter').addEventListener('click', () => heroExit(false));
+  document.getElementById('heroSpaces').addEventListener('click', () => {
+    sessionStorage.setItem('tipo-hero', '1');
+    location.href = 'studio.html';
+  });
   document.getElementById('heroSkip').addEventListener('click', () => heroExit(true));
   window.addEventListener('wheel', e => { if (!exiting && hero.style.display !== 'none' && e.deltaY > 6) heroExit(false); }, { passive: true });
   let touchY = null;
