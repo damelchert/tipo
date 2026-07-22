@@ -173,6 +173,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3f — STUDIO: Liquid Flow + Tiny Planet (16 efeitos — pedido pós-Kaleido: "algo semelhante mas diferente, que transforma a imagem completamente")
+- **Liquid Flow** (anim): domain warp DUPLO com fbm de value noise (o ruído desloca o ruído — mármore líquido), octaves controláveis (Detail 1-5 via break no loop), Scale com correção de aspect, Speed animado. O complemento orgânico do Kaleido cristalino. Flow+GradMap no demo = continentes vivos.
+- **Tiny Planet** (anim): remapeamento retangular→polar com 3 modos — Planeta (base da imagem no centro), Túnel infinito (y = fract(k/r)), Poço (invertido) — + Zoom/Rotate/Spin animado. Ângulo com fract() wrap (emenda esquerda-direita é inerente ao efeito).
+- Candidato registrado pra depois: **Droste** (espiral recursiva log-polar). test-studio ALL PASS (16/16 no modal, fx loop cobre os novos de graça).
+
 ### 22.3e — STUDIO: PERSISTÊNCIA DO ESPAÇO (reload não perde mais nada)
 - **Auto-save com debounce 800ms** em IndexedDB `tipo-studio` (stores space+media): frames (posição/nome/fonte/stack/params/node selecionado), view (pan/zoom) e frame ativo. Triggers: syncStackUI, applyView, layoutWorld (drag) e listener DELEGADO de input/change no #paramsHost (panes são dinâmicos).
 - **Mídia como ArrayBuffer+mime** (GOTCHA Safari da galeria do Fotograma — Blob no IDB aborta no WebKit); frames duplicados COMPARTILHAM o mediaKey; GC de mídia órfã a cada save; falha de quota → toast e o setup salva sem a mídia. Webcam não persiste (volta como demo, stack preservado).

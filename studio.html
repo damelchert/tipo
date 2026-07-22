@@ -160,6 +160,8 @@
   .tt-aberration { background: #141313; position: relative; }
   .tt-aberration::before { content: 'AB'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; color: #F8F5F0; text-shadow: -3px 0 0 rgba(255,40,40,.7), 3px 0 0 rgba(40,80,255,.7); }
   .tt-adjust { background: linear-gradient(90deg, #1A1818, #6a6a6a 35%, #F8F5F0 70%, #2A8A7A 70%, #D4A040); }
+  .tt-flow { background: radial-gradient(ellipse 60% 90% at 30% 40%, #2A8A7A 0%, transparent 60%), radial-gradient(ellipse 80% 50% at 70% 60%, #D4A040 0%, transparent 55%), radial-gradient(ellipse 70% 80% at 50% 80%, #99E0D2 0%, transparent 50%), #1A1818; filter: blur(3px) contrast(1.4); }
+  .tt-polar { background: conic-gradient(from 0deg, #2A8A7A, #D4A040, #99E0D2, #1A1818, #2A8A7A); border-radius: 50%; margin: 0 auto; width: 52px !important; }
 
   /* ============ mobile ============ */
   @media (max-width: 768px) {
@@ -569,6 +571,65 @@ void main(){
   a = abs(a - seg * 0.5);
   vec2 uv = vec2(cos(a), sin(a)) * r / vec2(asp, 1.0) + c0;
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
+}`,
+  },
+  flow: {
+    name: 'Liquid Flow', ico: '#2A6A8A', sym: 'Lf', anim: true,
+    params: [
+      { k: 'amt', label: 'Amount', min: 0, max: 100, val: 45, u: 'uAmt' },
+      { k: 'scale', label: 'Scale', min: 2, max: 30, val: 8, u: 'uScale' },
+      { k: 'speed', label: 'Speed', min: 0, max: 100, val: 25, u: 'uFSpeed' },
+      { k: 'detail', label: 'Detail', min: 1, max: 5, val: 3, u: 'uDetail' },
+    ],
+    frag: `uniform float uAmt; uniform float uScale; uniform float uFSpeed; uniform float uDetail;
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash2(i), b = hash2(i + vec2(1.0, 0.0));
+  float c = hash2(i + vec2(0.0, 1.0)), d = hash2(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float fbm(vec2 p){
+  float v = 0.0, amp = 0.5;
+  for (int i = 0; i < 5; i++) {
+    if (float(i) >= uDetail) break;
+    v += amp * vnoise(p);
+    p *= 2.03;
+    amp *= 0.5;
+  }
+  return v;
+}
+void main(){
+  float t = uTime * uFSpeed / 60.0;
+  float asp = uRes.x / uRes.y;
+  vec2 p = vUv * vec2(asp, 1.0) * uScale;
+  // domain warp duplo: o ruído desloca o ruído — mármore líquido
+  vec2 q = vec2(fbm(p + vec2(t, 0.0)), fbm(p + vec2(5.2, 1.3) - t * 0.7));
+  vec2 w = vec2(fbm(p + 2.4 * q + vec2(1.7, 9.2)), fbm(p + 2.4 * q + vec2(8.3, 2.8)));
+  vec2 uv = vUv + (w - 0.5) * uAmt / 100.0 * 0.45;
+  outC = texture(uTex, clamp(uv, 0.0, 1.0));
+}`,
+  },
+  polar: {
+    name: 'Tiny Planet', ico: '#6A4A9A', sym: 'Tp', anim: true,
+    params: [
+      { k: 'mode', label: 'Mode', type: 'select', val: 0, u: 'uPMode', options: ['Planeta', 'Túnel', 'Poço (invertido)'] },
+      { k: 'zoom', label: 'Zoom', min: 40, max: 250, val: 100, u: 'uPZoom' },
+      { k: 'rot', label: 'Rotate', min: 0, max: 360, val: 0, u: 'uPRot' },
+      { k: 'spin', label: 'Spin', min: 0, max: 100, val: 0, u: 'uPSpin' },
+    ],
+    frag: `uniform float uPMode; uniform float uPZoom; uniform float uPRot; uniform float uPSpin;
+void main(){
+  float asp = uRes.x / uRes.y;
+  vec2 d = (vUv - 0.5) * vec2(asp, 1.0);
+  float r = length(d) * (100.0 / uPZoom);
+  float a = atan(d.y, d.x) + radians(uPRot) + uTime * uPSpin / 100.0 * 1.2;
+  float x = fract(a / 6.2831853 + 0.5);
+  float y;
+  if (uPMode < 0.5)      y = clamp(1.0 - r * 1.15, 0.0, 1.0);  // planeta: base da imagem no centro
+  else if (uPMode < 1.5) y = fract(0.28 / max(r, 0.02));        // túnel infinito
+  else                   y = clamp(r * 1.15, 0.0, 1.0);         // poço: topo no centro
+  outC = texture(uTex, vec2(x, y));
 }`,
   },
   aberration: {
