@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3h — STUDIO: engine ganhou FEEDBACK → Mosh + Echo Trails (19 efeitos; resposta ao "por que o datamosh não tá aqui?")
+- **Por quê não tinha**: mosh/rastro são TEMPORAIS (dependem do acumulado do frame anterior) e o chain era stateless. **Infra nova**: FX com `feedback:true` ganham textura persistente POR NODE (`node.fbTex`, realoca no resize) exposta como `uPrev` (TEXTURE2); após o pass, `copyTexSubImage2D` do target pro fbTex (o output vira o passado do próximo tick). Cleanup em removeFx/clearStack/removeFrame; feedback conta como dinâmico no gate do loop.
+- **Mosh** (DNA do datamosh.html): o acumulador é PUXADO por deriva de bloco + steering pelo gradiente de luminância da fonte (Edge Flow — flui pelas arestas), Melt = peso do passado (0.985 máx), Auto Key periódico re-injeta a imagem real. Params: Melt/Drift/Block Size/Edge Flow/Auto Key(s). O datamosh.html continua sendo a versão PROFUNDA (block matching real, cross-mosh, keyframe manual VJ).
+- **Echo Trails** (DNA do rastro.html): o passado re-entra levemente escalado/girado (Zoom/frame, Rotate/frame → rastro em túnel), Decay, blend Mix (motion blur) ou Lighten (light trails).
+- Suite ALL PASS (19/19 no modal). Echo Decay no ♪ kick = rastro que pulsa com a batida.
+
 ### 22.3g — STUDIO: Tiny Planet REMOVIDO ("tá muito meme") → Droste + Fractal Julia (17 efeitos)
 - **Droste** (anim): tiling log-polar — `l = mod(log(r) - t·speed, log(ratio))` = **zoom infinito** em log-espaço, `a += twist·l` = acoplamento espiral (Escher). Ratio/Twist/Zoom Speed/Rotate. Demo: células TIPÓ aninhando em espiral recursiva.
 - **Fractal (Julia)** (anim, "vários parâmetros" como pedido): iteração z²+c com **orbit trap de imagem** — o z final vira coordenada de amostragem da FONTE (espelhada com fract/abs, sem streaks) → o fractal COME a imagem, rendado barroco com as letras tilando na borda. C Real/C Imag/Iterations/Zoom/**Morph** (c orbita animado — o fractal respira)/Variant Julia|Burning Ship. Julia default clássico (-0.396, 0.605).

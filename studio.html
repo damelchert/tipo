@@ -162,6 +162,9 @@
   .tt-adjust { background: linear-gradient(90deg, #1A1818, #6a6a6a 35%, #F8F5F0 70%, #2A8A7A 70%, #D4A040); }
   .tt-flow { background: radial-gradient(ellipse 60% 90% at 30% 40%, #2A8A7A 0%, transparent 60%), radial-gradient(ellipse 80% 50% at 70% 60%, #D4A040 0%, transparent 55%), radial-gradient(ellipse 70% 80% at 50% 80%, #99E0D2 0%, transparent 50%), #1A1818; filter: blur(3px) contrast(1.4); }
   .tt-droste { background: repeating-radial-gradient(circle at 50% 50%, #2A8A7A 0 6px, #D4A040 6px 10px, #1A1818 10px 15px, #99E0D2 15px 18px); }
+  .tt-mosh { background: linear-gradient(90deg, #2A8A7A 0 18%, #35917f 18% 30%, #D4A040 30% 34%, #c79a45 34% 55%, #1A1818 55% 62%, #2f2b28 62% 78%, #99E0D2 78%); filter: blur(1px); }
+  .tt-echo { background: #141313; position: relative; }
+  .tt-echo::before { content: 'T'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 26px; color: #99E0D2; text-shadow: 6px 2px 0 rgba(153,224,210,.5), 12px 4px 0 rgba(153,224,210,.28), 18px 6px 0 rgba(153,224,210,.14); }
   .tt-fractal { background: radial-gradient(circle at 35% 60%, #99E0D2 0 4px, transparent 4px), radial-gradient(circle at 62% 38%, #D4A040 0 7px, transparent 7px), radial-gradient(ellipse 70% 40% at 50% 50%, #2A8A7A 0%, #1B5A4E 45%, #1A1818 80%); }
 
   /* ============ mobile ============ */
@@ -611,6 +614,57 @@ void main(){
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
+  mosh: {
+    name: 'Mosh', ico: '#8A3A2A', sym: 'Ms', anim: true, feedback: true,
+    params: [
+      { k: 'melt', label: 'Melt', min: 0, max: 100, val: 72, u: 'uMelt' },
+      { k: 'drift', label: 'Drift', min: 0, max: 100, val: 30, u: 'uDrift' },
+      { k: 'block', label: 'Block Size', min: 4, max: 64, val: 16, u: 'uBlock' },
+      { k: 'flow', label: 'Edge Flow', min: 0, max: 100, val: 50, u: 'uFlow' },
+      { k: 'key', label: 'Auto Key (s)', min: 1, max: 12, val: 5, u: 'uKeyS' },
+    ],
+    frag: `uniform sampler2D uPrev; uniform float uMelt; uniform float uDrift; uniform float uBlock; uniform float uFlow; uniform float uKeyS;
+void main(){
+  vec3 cur = texture(uTex, vUv).rgb;
+  // deriva por bloco (o acumulador é PUXADO, DNA do datamosh.html) +
+  // steering pelo gradiente de luminância da fonte (flui pelas arestas)
+  vec2 b = floor(gl_FragCoord.xy / max(uBlock, 2.0));
+  vec2 rnd = vec2(hash2(b + 3.1), hash2(b + 7.7)) - 0.5;
+  vec2 px = 1.0 / uRes;
+  float gx = lum(texture(uTex, vUv + vec2(px.x, 0.0)).rgb) - lum(texture(uTex, vUv - vec2(px.x, 0.0)).rgb);
+  float gy = lum(texture(uTex, vUv + vec2(0.0, px.y)).rgb) - lum(texture(uTex, vUv - vec2(0.0, px.y)).rgb);
+  vec2 dirv = rnd + vec2(gy, -gx) * uFlow / 100.0 * 9.0;
+  vec2 puv = clamp(vUv + dirv * uDrift / 100.0 * 3.5 * px, 0.0, 1.0);
+  vec3 prev = texture(uPrev, puv).rgb;
+  // keyframe periódico: a imagem real re-entra e volta a derreter
+  float key = step(fract(uTime / uKeyS), 0.05);
+  float m = uMelt / 100.0 * 0.985 * (1.0 - key);
+  outC = vec4(mix(cur, prev, m), 1.0);
+}`,
+  },
+  echo: {
+    name: 'Echo Trails', ico: '#4A8A6A', sym: 'Ec', anim: true, feedback: true,
+    params: [
+      { k: 'decay', label: 'Decay', min: 10, max: 98, val: 88, u: 'uDecay' },
+      { k: 'zoom', label: 'Zoom/frame', min: -50, max: 50, val: 8, u: 'uEZoom' },
+      { k: 'rot', label: 'Rotate/frame', min: -50, max: 50, val: 0, u: 'uERot' },
+      { k: 'mode', label: 'Blend', type: 'select', val: 1, u: 'uEMode', options: ['Mix (motion blur)', 'Lighten (light trails)'] },
+    ],
+    frag: `uniform sampler2D uPrev; uniform float uDecay; uniform float uEZoom; uniform float uERot; uniform float uEMode;
+void main(){
+  // o passado re-entra levemente escalado/girado — rastro em túnel (DNA do rastro.html)
+  float ang = uERot / 100.0 * 0.06;
+  float sc = 1.0 - uEZoom / 100.0 * 0.03;
+  vec2 c = vUv - 0.5;
+  vec2 pc = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * c * sc;
+  vec3 prev = texture(uPrev, clamp(pc + 0.5, 0.0, 1.0)).rgb;
+  vec3 cur = texture(uTex, vUv).rgb;
+  vec3 outc = uEMode < 0.5
+    ? mix(cur, prev, uDecay / 100.0)
+    : max(cur, prev * (uDecay / 100.0));
+  outC = vec4(outc, 1.0);
+}`,
+  },
   droste: {
     name: 'Droste', ico: '#6A4A9A', sym: 'Dr', anim: true,
     params: [
@@ -780,6 +834,7 @@ function getProgram(fxId) {
     uTime: gl.getUniformLocation(prog, 'uTime'),
     uFlipY: gl.getUniformLocation(prog, 'uFlipY'),
     uAtlas: gl.getUniformLocation(prog, 'uAtlas'),
+    uPrev: gl.getUniformLocation(prog, 'uPrev'),
   };
   def.params.forEach(p => { loc[p.u] = gl.getUniformLocation(prog, p.u); });
   programs[fxId] = { prog, loc };
@@ -930,6 +985,7 @@ function removeFrame(id) {
   freeTarget(f.chainB);
   gl.deleteTexture(f.texSrc);
   f.stack.forEach(n => {
+    if (n.fbTex) gl.deleteTexture(n.fbTex);
     const pane = document.querySelector(`.fx-pane[data-uid="${n.uid}"]`);
     if (pane) pane.remove();
   });
@@ -1118,7 +1174,7 @@ function uploadSource(frame, tMs) {
   } catch (e) { /* frame de vídeo ainda não pronto */ }
 }
 
-function runPass(fxId, inputTex, targetFb, w, h, tSec, params) {
+function runPass(fxId, inputTex, targetFb, w, h, tSec, params, prevTex) {
   const { prog, loc } = getProgram(fxId);
   gl.bindFramebuffer(gl.FRAMEBUFFER, targetFb);
   gl.viewport(0, 0, w, h);
@@ -1126,6 +1182,12 @@ function runPass(fxId, inputTex, targetFb, w, h, tSec, params) {
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, inputTex);
   gl.uniform1i(loc.uTex, 0);
+  if (loc.uPrev && prevTex) {
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    gl.uniform1i(loc.uPrev, 2);
+    gl.activeTexture(gl.TEXTURE0);
+  }
   if (loc.uAtlas) {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, asciiAtlas());
@@ -1158,7 +1220,24 @@ function renderFrame(frame, tMs) {
   for (const node of frame.stack) {
     if (!node.on) continue;
     const target = (i % 2 === 0) ? frame.chainA : frame.chainB;
-    runPass(node.fx, cur, target.fb, w, h, tSec, node.params);
+    const fb = FX[node.fx].feedback;
+    if (fb) {
+      // textura persistente do node (o passado dele) — nasce/realoca no tamanho do frame
+      if (!node.fbTex || node.fbW !== w || node.fbH !== h) {
+        if (node.fbTex) gl.deleteTexture(node.fbTex);
+        node.fbTex = makeTex();
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        node.fbW = w; node.fbH = h;
+      }
+    }
+    runPass(node.fx, cur, target.fb, w, h, tSec, node.params, fb ? node.fbTex : null);
+    if (fb) {
+      // o output vira o "prev" do próximo tick
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb);
+      gl.bindTexture(gl.TEXTURE_2D, node.fbTex);
+      gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
     cur = target.tex;
     i++;
   }
@@ -1170,7 +1249,7 @@ function renderFrame(frame, tMs) {
 
 function frameDynamic(frame) {
   return !frame.sourceType || frame.sourceType === 'video' || frame.sourceType === 'webcam' ||
-    frame.stack.some(n => n.on && FX[n.fx].anim) ||
+    frame.stack.some(n => n.on && (FX[n.fx].anim || FX[n.fx].feedback)) ||
     (recorder && recorder.isRecording && frame.id === recFrameId);
 }
 
@@ -1332,6 +1411,7 @@ function removeFx(uid) {
   const f = frames.find(fr => fr.stack.some(n => n.uid === uid));
   if (!f) return;
   const i = f.stack.findIndex(n => n.uid === uid);
+  if (f.stack[i].fbTex) gl.deleteTexture(f.stack[i].fbTex);
   f.stack.splice(i, 1);
   const pane = document.querySelector(`.fx-pane[data-uid="${uid}"]`);
   if (pane) pane.remove();
@@ -1481,6 +1561,7 @@ function clearStack() {
   const f = F();
   if (!f) return;
   f.stack.forEach(n => {
+    if (n.fbTex) gl.deleteTexture(n.fbTex);
     const pane = document.querySelector(`.fx-pane[data-uid="${n.uid}"]`);
     if (pane) pane.remove();
   });
