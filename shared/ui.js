@@ -305,6 +305,7 @@ const TipoUI = {
   /** Category map: mode name → index.html hash */
   _backTargets: {
     // Visual tools
+    studio: 'visual',
     fotograma: 'visual',
     dithering: 'visual', reticula: 'visual', glitch: 'visual',
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
@@ -2378,6 +2379,11 @@ const TipoGIF = {
 
 const TipoHelp = {
   TEXTS: {
+    studio: {
+      'Source': 'Upload de imagem/vídeo, webcam ao vivo ou o demo animado. Tudo passa pelo stack de efeitos em tempo real.',
+      'Stack': 'Cada efeito lê a SAÍDA do anterior (cadeia WebGL). ▲▼ reordenam — a ordem muda tudo (halftone→gradient ≠ gradient→halftone). Bolinha liga/desliga sem perder os ajustes; × remove.',
+      'Effect Controls': 'Parâmetros do efeito selecionado no stack. O "~" de cada slider anima (osciladores ou ♪ áudio-reativo — carrega uma música e o efeito dança).',
+    },
     coil: {
       'Type': 'X/Y-Scale esticam o texto na horizontal/vertical (Y também dita a altura da fita). Weight engrossa o traço.',
       'Ribbon': 'Count = quantos segmentos de fita na espiral (cada um repete o texto). Size engorda a fita além do texto — negativo afina. Hide deixa só as letras; Flat caps = pontas retas.',

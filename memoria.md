@@ -6,14 +6,15 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 39 ferramentas (16 visual tools + 23 kinetic type modes)
+- **Total:** 40 ferramentas (17 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
 /tipo/
   index.html                   — landing page (navegação progressiva com hash routing)
   
-  # VISUAL TOOLS (12)
+  # VISUAL TOOLS
+  studio.html                  — stack de efeitos em chain WebGL2 (8 fx shader, presets de receita) (FUNCIONAL)
   dithering.html               — SVG dithering tool (FUNCIONAL — gold standard)
   reticula.html                — halftone grid, 11 shapes, video+webcam+MP4 (FUNCIONAL)
   glitch.html                  — RGB shift, pixel sort, slicing, video+webcam+MP4 (FUNCIONAL)
@@ -158,6 +159,15 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 ---
 
 ## 2026-07-21
+
+### 22.2 TIPÓ STUDIO construído (studio.html — ferramenta #40, 17ª visual tool) — o "modo Sketch" da casa
+- **Engine**: WebGL2 puro (canvas GL escondido), ping-pong chainA/chainB (`makeTarget`), cada efeito = fragment shader com `uTex` da etapa anterior + `uRes`/`uTime`; fullscreen triangle via gl_VertexID (zero buffers); pass final `_copy` com uFlipY pro default framebuffer; **blit em canvas 2D visível** → TipoUI.toggleVisualRec/PNG/formatos funcionam pelo caminho padrão sem tocar no recorder. Loop rAF ~30fps on-demand (`isDynamic()` = demo/vídeo/webcam/fx animado/rec).
+- **8 efeitos** (registry FX declarativo: params {k,label,min,max,val,u} + frag): pixelate, bayer 4×4 (const array + threshold -0.5..0.5), halftone (grid rotado, sample no centro da célula, ink select source/preto/teal sobre paper cream), gradmap 4 stops smoothstep (Athos default), posterize+contrast, glitch (slices por hash de banda com uTime steppado 10fps + rgb shift + scanlines), wave (uv displace 2 eixos), grain (hash steppado 18fps + vignette).
+- **Stack**: cards com ▲▼/bypass(dot)/×/seleção, máx 8; **panes de params TODOS no DOM** (display:none nos não-selecionados) — CRÍTICO: rebuild mataria os behaviors (TipoBehavior mata slider desconectado); sliders em .range-row → **TipoBehavior + TipoAudio de graça** (o MutationObserver do behavior escaneia os panes novos sozinho). Halftone Cell no ♪ kick = o pitch do Studio.
+- **Presets de receita** (STACK_PRESETS montam o stack + params): Riso (default/Reset), Print, VHS, Poster, Zine, Dream. Demo fonte = células TIPÓ flutuando (DNA rastro) com dots de material.
+- Integração: card NOVO no topo das visual tools (pv-studio: 3 faixas de efeito animadas), contagens 39→40 no index (hero/stats/log), _backTargets.studio, TipoHelp (Source/Stack/Effect Controls). Cache-bust `?v=20260721-std1` nas 40.
+- **test-studio.mjs 20/20** (permanente): boot Riso, 8 fx mudam hash, REORDENAR muda resultado, bypass restaura, slider re-renderiza, behaviors nos panes, 6 presets distintos, PNG 836KB, MP4 3MB decode limpo com preset trocado no meio, zero pageerrors. Smoke: index com card ok, studio mobile (390px) boot limpo com sheet.
+- **Backlog v2** (no plano): composição generativa entre nodes (chroma-key do Sketch), quality tiers, error-diffusion/pixel-sort como pass CPU, canvas infinito pan/zoom.
 
 ### 22.1 TipoAudio — TODAS as ferramentas viraram áudio-reativas (quick win da eng. reversa, aprovado pelo Daniel: "segue sua recomendação")
 - **TipoAudio em shared/ui.js**: 2 AnalyserNodes na mesma fonte — suavizado (FFT 2048, smoothing .8) pra `level` (RMS×2.2) + bandas `bass` 60-250/`mid` 250-2k/`treble` 2-8k; cru (smoothing 0) pra `kick`/`snare`/`hihat` por **spectral flux** (onset = delta positivo × gain, envelope release exp(-dt/tau), taus .10/.11/.07 do Sketch). Fontes: arquivo (`createMediaElementSource` singleton — só pode nascer 1x por elemento —, loop, audível), mic (`createMediaStreamSource`, SEM destination = sem feedback), `connectNode()` como hook de teste/integração.

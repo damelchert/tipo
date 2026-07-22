@@ -522,6 +522,16 @@ body { overflow: hidden; }
   .pv-audio i { animation: none !important; }
 }
 
+/* Studio: 3 camadas de efeito deslizando em stack */
+.pv-studio { background: #1A1818; overflow: hidden; }
+.pv-studio i { position: absolute; left: 10px; right: 10px; height: 13px; border-radius: 3px; border: 1px solid rgba(248,245,240,.25); }
+.pv-studio i:nth-child(1) { top: 10px; background: repeating-radial-gradient(circle at 4px 6px, #2A8A7A 0 2px, transparent 2px 7px), #F8F5F0; animation: pvStudio calc(2.8s * var(--pvs)) ease-in-out infinite; }
+.pv-studio i:nth-child(2) { top: 28px; background: linear-gradient(90deg, #1A1818, #2A8A7A 40%, #D4A040 75%, #F8F5F0); animation: pvStudio calc(2.8s * var(--pvs)) ease-in-out calc(-0.9s * var(--pvs)) infinite; }
+.pv-studio i:nth-child(3) { top: 46px; background: repeating-linear-gradient(90deg, #99E0D2 0 4px, #1A1818 4px 6px, #D4A040 6px 9px, #1A1818 9px 11px); animation: pvStudio calc(2.8s * var(--pvs)) ease-in-out calc(-1.8s * var(--pvs)) infinite; }
+@keyframes pvStudio {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); } }
+
 .pv-mockup { background: linear-gradient(180deg, #E8E2D8 62%, #c9bfae 62%); }
 .pv-mockup::before { content: ''; position: absolute; left: 14px; top: 12px; width: 30px; height: 38px;
   background: linear-gradient(135deg, #F8F5F0 30%, #99E0D2 30% 55%, #2A8A7A 55% 80%, #D4A040 80%);
@@ -653,7 +663,7 @@ body { overflow: hidden; }
   <div class="hero-dot" id="heroDot"></div>
   <div class="hero-log" id="heroLog">ensaio 00 · aquecendo as máquinas</div>
   <div class="hero-cta" id="heroCta">
-    <button type="button" id="heroEnter">explorar as 39 ferramentas</button>
+    <button type="button" id="heroEnter">explorar as 40 ferramentas</button>
     <span class="hero-hint">role pra entrar ↓</span>
   </div>
 </div>
@@ -676,7 +686,7 @@ body { overflow: hidden; }
       <span class="current">Home</span>
     </div>
     <div class="subbar-right">
-      <span class="header-stats">39 tools &bull; zero install &bull; 100% browser</span>
+      <span class="header-stats">40 tools &bull; zero install &bull; 100% browser</span>
       <a class="subbar-credit" href="https://www.danielmelchert.com.br" target="_blank" rel="noopener">made by <b>Daniel Melchert</b></a>
     </div>
   </div>
@@ -711,6 +721,14 @@ body { overflow: hidden; }
     <!-- LEVEL 1a: Visual Tools list -->
     <div class="tipo-level" id="levelVisual">
       <div class="tipo-mode-list">
+        <a href="studio.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview pv-studio"><i></i><i></i><i></i></div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Studio <span style="font-size:8px;letter-spacing:1.5px;color:var(--accent-warm,#D4A040);vertical-align:middle;">NOVO</span></div>
+            <div class="tipo-mode-card-desc">Stack effects like nodes — halftone, dither, gradient map, glitch, wave &amp; grain chained live in one WebGL pipeline. Reorder the stack, everything changes.</div>
+            <div class="tipo-mode-card-meta">8 effects &bull; webgl chain &bull; audio-reactive &bull; image/video/webcam &bull; mp4</div>
+          </div>
+        </a>
         <a href="fotograma.html" class="tipo-mode-card">
           <div class="tipo-mode-card-preview pv-fotograma"></div>
           <div class="tipo-mode-card-info">
@@ -2175,7 +2193,7 @@ goKineticType = function() {
         scale: 0.62, duration: 0.5, ease: 'power2.inOut',
       });
     }, '-=0.2')
-    .add(setLog('39 ferramentas · type em movimento · 100% browser'))
+    .add(setLog('40 ferramentas · type em movimento · 100% browser'))
     .to('#heroCta', { opacity: 1, duration: 0.6 })
     .add(() => hero.classList.add('parked'));
   } // buildIntro

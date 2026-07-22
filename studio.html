@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Studio. Stack visual effects like nodes: halftone, dither, gradient map, glitch, wave, grain — chained in real time on image, video or webcam.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Studio</title>
+<link rel="stylesheet" href="shared/style.css?v=20260713-id1">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
+<script src="shared/recorder.js?v=20260612-cap"></script>
+<script src="shared/ui.js?v=20260721-std1"></script>
+<style>
+  @font-face { font-family: 'Clash Display'; src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight: 600 900; font-display: swap; }
+  body { display: flex; height: 100vh; }
+  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
+  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
+  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  .back-link:hover { color: var(--accent); }
+  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
+  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+
+  /* ---- stack de efeitos ---- */
+  #stackList { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .stk-card { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 6px; cursor: pointer; user-select: none; }
+  .stk-card.sel { border-color: var(--accent); }
+  .stk-card.off { opacity: 0.45; }
+  .stk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 1px solid var(--accent); cursor: pointer; }
+  .stk-card.off .stk-dot { background: transparent; border-color: var(--text-5); }
+  .stk-name { flex: 1; font-size: 11px; letter-spacing: 0.5px; color: var(--text-1); }
+  .stk-card.sel .stk-name { color: var(--accent); }
+  .stk-btns { display: flex; gap: 3px; }
+  .stk-btns button { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-2); border-radius: 4px; background: transparent; color: var(--text-4); font-size: 11px; cursor: pointer; font-family: var(--font-mono); line-height: 1; }
+  .stk-btns button:hover { border-color: var(--accent); color: var(--accent); }
+  .stk-btns button.stk-x:hover { border-color: var(--red); color: var(--red); }
+  #stackEmpty { font-size: 10px; color: var(--text-5); letter-spacing: 0.4px; padding: 10px 4px; border: 1px dashed var(--border-2); border-radius: 6px; text-align: center; margin-top: 8px; }
+  .stk-add-row { display: flex; gap: 6px; margin-top: 8px; }
+  .stk-add-row select { flex: 1; }
+  .fx-pane { display: none; }
+  .fx-pane.sel { display: block; }
+  .fx-pane .color-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .fx-pane .color-row label { font-size: 10px; color: var(--text-4); min-width: 52px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .fx-pane input[type="color"] { width: 38px; height: 24px; border: 1px solid var(--border-2); background: var(--bg-2); padding: 0; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="tipo-panel" id="panel">
+  <h1>Studio <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
+      <button class="btn btn-secondary" onclick="useDemo()">Demo</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip" onclick="applyStackPreset('riso')">Riso</span>
+      <span class="preset-chip" onclick="applyStackPreset('print')">Print</span>
+      <span class="preset-chip" onclick="applyStackPreset('vhs')">VHS</span>
+      <span class="preset-chip" onclick="applyStackPreset('poster')">Poster</span>
+      <span class="preset-chip" onclick="applyStackPreset('zine')">Zine</span>
+      <span class="preset-chip" onclick="applyStackPreset('dream')">Dream</span>
+      <span class="preset-chip reset-chip" onclick="resetAll()">Reset</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Stack</div>
+    <div class="stk-add-row">
+      <select id="fxAdd">
+        <option value="halftone">Halftone</option>
+        <option value="bayer">Dither (Bayer)</option>
+        <option value="pixelate">Pixelate</option>
+        <option value="gradmap">Gradient Map</option>
+        <option value="posterize">Posterize</option>
+        <option value="glitch">Glitch</option>
+        <option value="wave">Wave</option>
+        <option value="grain">Film Grain</option>
+      </select>
+      <button class="btn" style="flex:none;" onclick="addFx(document.getElementById('fxAdd').value)">+ Add</button>
+    </div>
+    <div id="stackList"></div>
+    <div id="stackEmpty" style="display:none;">stack vazio — a fonte passa direto.<br>+ Add empilha efeitos; a ordem muda tudo.</div>
+  </div>
+
+  <div class="section" id="paramsSection">
+    <div class="section-title">Effect Controls</div>
+    <div id="paramsHost"></div>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportPNG()">PNG</button>
+    </div>
+    <div class="btn-col" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
+    </div>
+    <div class="record-timer" id="recTimer"></div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<div id="canvasWrap">
+  <div class="drop-hint" id="dropHint">Drop image or video &bull; demo mode</div>
+  <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TIPÓ — STUDIO (22.2)
+// Stack de efeitos como nodes, arquitetura validada na engenharia
+// reversa do Sketch Tools: WebGL2 puro, ping-pong de 2 framebuffers,
+// cada efeito = fragment shader que lê uTex (saída do anterior),
+// UM rAF síncrono roda a cadeia. Blit final num canvas 2D visível
+// (recorder/PNG/formatos funcionam pelo caminho padrão da casa).
+// Sliders usam .range-row → TipoBehavior/TipoAudio de graça.
+// ============================================================
+
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+const glCanvas = document.createElement('canvas');
+const gl = glCanvas.getContext('webgl2', { antialias: false, preserveDrawingBuffer: true });
+let recorder = null;
+
+// ---- fonte ----
+let sourceType = null;       // null=demo | 'image' | 'video' | 'webcam'
+let srcImage = null, srcVideo = null, webcamStream = null;
+let mediaUrl = null;
+let PW = 960, PH = 720;      // resolução de processamento (fit da fonte)
+const MAX_SHORT = 900, MAX_LONG = 1440;
+
+// demo animado brand (células TIPÓ flutuando — DNA do rastro/pixelsort)
+const demoCanvas = document.createElement('canvas');
+const demoCtx = demoCanvas.getContext('2d');
+function drawDemo(tMs) {
+  const w = demoCanvas.width, h = demoCanvas.height, t = tMs / 1000;
+  demoCtx.fillStyle = '#F8F5F0';
+  demoCtx.fillRect(0, 0, w, h);
+  const cols = ['#2A8A7A', '#D4A040', '#1A1818', '#99E0D2'];
+  const chars = ['T', 'I', 'P', 'Ó'];
+  const cw = w * 0.19;
+  for (let i = 0; i < 4; i++) {
+    const cx = w * (0.16 + i * 0.225) + Math.sin(t * 0.7 + i * 1.7) * w * 0.012;
+    const cy = h * 0.5 + Math.sin(t * 0.9 + i * 2.3) * h * 0.05;
+    demoCtx.save();
+    demoCtx.translate(cx, cy);
+    demoCtx.rotate(Math.sin(t * 0.5 + i) * 0.05);
+    demoCtx.fillStyle = cols[i];
+    demoCtx.fillRect(-cw / 2, -cw / 2, cw, cw);
+    demoCtx.fillStyle = i === 2 ? '#F8F5F0' : '#1A1818';
+    if (i === 0) demoCtx.fillStyle = '#F8F5F0';
+    demoCtx.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
+    demoCtx.textAlign = 'center';
+    demoCtx.textBaseline = 'middle';
+    demoCtx.fillText(chars[i], 0, cw * 0.03);
+    demoCtx.restore();
+  }
+  // dots que dão material pro halftone/dither respirar
+  for (let i = 0; i < 5; i++) {
+    const dx = w * (0.1 + i * 0.2) + Math.sin(t * 1.3 + i * 3.1) * w * 0.03;
+    const dy = h * (i % 2 ? 0.16 : 0.85) + Math.cos(t + i) * h * 0.02;
+    demoCtx.fillStyle = cols[i % 4] + '55';
+    demoCtx.beginPath();
+    demoCtx.arc(dx, dy, w * 0.028, 0, Math.PI * 2);
+    demoCtx.fill();
+  }
+}
+
+// ============================================================
+// FX REGISTRY — cada efeito: params declarativos + fragment shader
+// ============================================================
+const FRAG_HEAD = `#version 300 es
+precision highp float;
+uniform sampler2D uTex;
+uniform vec2 uRes;
+uniform float uTime;
+in vec2 vUv;
+out vec4 outC;
+float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+`;
+
+const FX = {
+  pixelate: {
+    name: 'Pixelate', anim: false,
+    params: [{ k: 'size', label: 'Cell', min: 2, max: 120, val: 16, u: 'uSize' }],
+    frag: `uniform float uSize;
+void main(){
+  vec2 cell = vec2(max(uSize,1.0)) / uRes;
+  vec2 uv = (floor(vUv / cell) + 0.5) * cell;
+  outC = texture(uTex, uv);
+}`,
+  },
+  bayer: {
+    name: 'Dither (Bayer)', anim: false,
+    params: [
+      { k: 'levels', label: 'Levels', min: 2, max: 8, val: 3, u: 'uLevels' },
+      { k: 'scale', label: 'Scale', min: 1, max: 10, val: 2, u: 'uScale' },
+    ],
+    frag: `uniform float uLevels; uniform float uScale;
+const float B[16] = float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
+void main(){
+  vec2 px = floor(gl_FragCoord.xy / max(uScale,1.0));
+  int idx = int(mod(px.x,4.0)) + int(mod(px.y,4.0)) * 4;
+  float th = (B[idx] + 0.5) / 16.0 - 0.5;
+  vec3 c = texture(uTex, vUv).rgb;
+  float L = max(uLevels - 1.0, 1.0);
+  outC = vec4(clamp(floor(c * L + 0.5 + th) / L, 0.0, 1.0), 1.0);
+}`,
+  },
+  halftone: {
+    name: 'Halftone', anim: false,
+    params: [
+      { k: 'cell', label: 'Cell', min: 4, max: 42, val: 11, u: 'uCell' },
+      { k: 'angle', label: 'Angle', min: 0, max: 90, val: 15, u: 'uAngle' },
+      { k: 'gain', label: 'Ink Gain', min: 50, max: 160, val: 100, u: 'uGain' },
+      { k: 'ink', label: 'Ink', type: 'select', val: 2, u: 'uInkMode', options: ['Source color', 'Ink (preto)', 'Teal'] },
+    ],
+    frag: `uniform float uCell; uniform float uAngle; uniform float uGain; uniform float uInkMode;
+void main(){
+  float a = radians(uAngle);
+  mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
+  mat2 Ri = mat2(cos(a), sin(a), -sin(a), cos(a));
+  vec2 p = R * (vUv * uRes);
+  vec2 cellO = floor(p / uCell) * uCell + uCell * 0.5;
+  vec2 center = (Ri * cellO) / uRes;
+  vec3 src = texture(uTex, clamp(center, 0.0, 1.0)).rgb;
+  float L = lum(src);
+  float r = (1.0 - L) * uCell * 0.72 * (uGain / 100.0);
+  float d = length(p - cellO);
+  float m = smoothstep(r, r - 1.5, d);
+  vec3 paper = vec3(0.973, 0.961, 0.941);
+  vec3 ink = uInkMode < 0.5 ? src : (uInkMode < 1.5 ? vec3(0.102, 0.094, 0.094) : vec3(0.165, 0.541, 0.478));
+  outC = vec4(mix(paper, ink, m), 1.0);
+}`,
+  },
+  gradmap: {
+    name: 'Gradient Map', anim: false,
+    params: [
+      { k: 'mix', label: 'Mix', min: 0, max: 100, val: 100, u: 'uMixAmt' },
+      { k: 'c0', label: 'Shadow', type: 'color', val: '#1A1818', u: 'uC0' },
+      { k: 'c1', label: 'Low', type: 'color', val: '#2A8A7A', u: 'uC1' },
+      { k: 'c2', label: 'High', type: 'color', val: '#D4A040', u: 'uC2' },
+      { k: 'c3', label: 'Light', type: 'color', val: '#F8F5F0', u: 'uC3' },
+    ],
+    frag: `uniform float uMixAmt; uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
+void main(){
+  vec3 src = texture(uTex, vUv).rgb;
+  float L = lum(src);
+  vec3 g = mix(uC0, uC1, smoothstep(0.0, 0.38, L));
+  g = mix(g, uC2, smoothstep(0.38, 0.72, L));
+  g = mix(g, uC3, smoothstep(0.72, 1.0, L));
+  outC = vec4(mix(src, g, uMixAmt / 100.0), 1.0);
+}`,
+  },
+  posterize: {
+    name: 'Posterize', anim: false,
+    params: [
+      { k: 'levels', label: 'Levels', min: 2, max: 10, val: 4, u: 'uLevels' },
+      { k: 'contrast', label: 'Contrast', min: -100, max: 100, val: 15, u: 'uContrast' },
+    ],
+    frag: `uniform float uLevels; uniform float uContrast;
+void main(){
+  vec3 c = texture(uTex, vUv).rgb;
+  float k = 1.0 + uContrast / 100.0 * 1.6;
+  c = clamp((c - 0.5) * k + 0.5, 0.0, 1.0);
+  float L = max(uLevels - 1.0, 1.0);
+  outC = vec4(floor(c * L + 0.5) / L, 1.0);
+}`,
+  },
+  glitch: {
+    name: 'Glitch', anim: true,
+    params: [
+      { k: 'shift', label: 'RGB Shift', min: 0, max: 40, val: 6, u: 'uShift' },
+      { k: 'slices', label: 'Slices', min: 0, max: 100, val: 30, u: 'uSlices' },
+      { k: 'scan', label: 'Scanlines', min: 0, max: 100, val: 20, u: 'uScan' },
+    ],
+    frag: `uniform float uShift; uniform float uSlices; uniform float uScan;
+void main(){
+  float t = floor(uTime * 10.0);
+  vec2 uv = vUv;
+  float band = floor(uv.y * 24.0);
+  float h = hash2(vec2(band, t));
+  if (h < uSlices / 100.0 * 0.4) {
+    uv.x += (hash2(vec2(band, t + 7.0)) - 0.5) * 0.12 * (uSlices / 100.0 + 0.3);
+  }
+  vec2 sh = vec2(uShift / uRes.x, 0.0);
+  float r = texture(uTex, clamp(uv + sh, 0.0, 1.0)).r;
+  float g = texture(uTex, uv).g;
+  float b = texture(uTex, clamp(uv - sh, 0.0, 1.0)).b;
+  vec3 c = vec3(r, g, b);
+  float s = uScan / 100.0 * 0.28 * (0.5 + 0.5 * sin(uv.y * uRes.y * 3.14159));
+  outC = vec4(c * (1.0 - s), 1.0);
+}`,
+  },
+  wave: {
+    name: 'Wave', anim: true,
+    params: [
+      { k: 'amp', label: 'Amount', min: 0, max: 80, val: 18, u: 'uAmp' },
+      { k: 'freq', label: 'Frequency', min: 1, max: 30, val: 6, u: 'uFreq' },
+      { k: 'speed', label: 'Speed', min: 0, max: 100, val: 35, u: 'uSpeed' },
+    ],
+    frag: `uniform float uAmp; uniform float uFreq; uniform float uSpeed;
+void main(){
+  float ph = uTime * uSpeed / 18.0;
+  vec2 uv = vUv;
+  uv.x += sin(uv.y * uFreq * 6.2832 + ph) * uAmp / uRes.x;
+  uv.y += cos(uv.x * uFreq * 4.2 + ph * 0.7) * uAmp * 0.4 / uRes.y;
+  outC = texture(uTex, clamp(uv, 0.0, 1.0));
+}`,
+  },
+  grain: {
+    name: 'Film Grain', anim: true,
+    params: [
+      { k: 'amt', label: 'Grain', min: 0, max: 100, val: 35, u: 'uAmt' },
+      { k: 'vig', label: 'Vignette', min: 0, max: 100, val: 30, u: 'uVig' },
+    ],
+    frag: `uniform float uAmt; uniform float uVig;
+void main(){
+  vec3 c = texture(uTex, vUv).rgb;
+  float step18 = floor(uTime * 18.0);
+  float n = hash2(gl_FragCoord.xy + vec2(step18 * 977.0, step18 * 131.0));
+  c += (n - 0.5) * uAmt / 100.0 * 0.55;
+  float d = distance(vUv, vec2(0.5));
+  c *= 1.0 - uVig / 100.0 * smoothstep(0.35, 0.85, d);
+  outC = vec4(clamp(c, 0.0, 1.0), 1.0);
+}`,
+  },
+};
+
+// ============================================================
+// GL ENGINE — programas, ping-pong, passes
+// ============================================================
+const VERT = `#version 300 es
+out vec2 vUv;
+uniform float uFlipY;
+void main(){
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  vUv = mix(p, vec2(p.x, 1.0 - p.y), uFlipY);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const programs = {}; // fxId -> {prog, loc:{}}
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    throw new Error('shader: ' + gl.getShaderInfoLog(s));
+  }
+  return s;
+}
+function getProgram(fxId) {
+  if (programs[fxId]) return programs[fxId];
+  const def = fxId === '_copy'
+    ? { params: [], frag: 'void main(){ outC = texture(uTex, vUv); }' }
+    : FX[fxId];
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG_HEAD + def.frag));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    throw new Error('link: ' + gl.getProgramInfoLog(prog));
+  }
+  const loc = {
+    uTex: gl.getUniformLocation(prog, 'uTex'),
+    uRes: gl.getUniformLocation(prog, 'uRes'),
+    uTime: gl.getUniformLocation(prog, 'uTime'),
+    uFlipY: gl.getUniformLocation(prog, 'uFlipY'),
+  };
+  def.params.forEach(p => { loc[p.u] = gl.getUniformLocation(prog, p.u); });
+  programs[fxId] = { prog, loc };
+  return programs[fxId];
+}
+
+let texSrc = null, chainA = null, chainB = null;
+function makeTarget(w, h) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return { tex, fb };
+}
+
+function setProcSize(sw, sh) {
+  let w = sw, h = sh;
+  const short = Math.min(w, h), long = Math.max(w, h);
+  const k = Math.min(1, MAX_SHORT / short, MAX_LONG / long);
+  w = Math.round(w * k); h = Math.round(h * k);
+  if (w === PW && h === PH && texSrc) return;
+  PW = w; PH = h;
+  glCanvas.width = w; glCanvas.height = h;
+  mainCanvas.width = w; mainCanvas.height = h;
+  if (!texSrc) {
+    texSrc = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texSrc);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+  chainA = makeTarget(w, h);
+  chainB = makeTarget(w, h);
+  demoCanvas.width = w; demoCanvas.height = h;
+}
+
+function currentSourceEl() {
+  if (sourceType === 'video' || sourceType === 'webcam') return srcVideo;
+  if (sourceType === 'image') return srcImage;
+  return demoCanvas;
+}
+
+function uploadSource(tMs) {
+  if (!sourceType) drawDemo(tMs);
+  const el = currentSourceEl();
+  gl.bindTexture(gl.TEXTURE_2D, texSrc);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  try {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el);
+  } catch (e) { /* frame de vídeo ainda não pronto */ }
+}
+
+function runPass(fxId, inputTex, targetFb, tSec, params) {
+  const { prog, loc } = getProgram(fxId);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, targetFb);
+  gl.viewport(0, 0, PW, PH);
+  gl.useProgram(prog);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, inputTex);
+  gl.uniform1i(loc.uTex, 0);
+  gl.uniform2f(loc.uRes, PW, PH);
+  gl.uniform1f(loc.uTime, tSec);
+  gl.uniform1f(loc.uFlipY, targetFb === null ? 1 : 0);
+  if (params) {
+    FX[fxId].params.forEach(p => {
+      const v = params[p.k];
+      if (p.type === 'color') {
+        const n = parseInt(String(v).slice(1), 16);
+        gl.uniform3f(loc[p.u], ((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+      } else {
+        gl.uniform1f(loc[p.u], Number(v));
+      }
+    });
+  }
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function renderChain(tMs) {
+  const tSec = tMs / 1000;
+  uploadSource(tMs);
+  let cur = texSrc;
+  let i = 0;
+  for (const node of stack) {
+    if (!node.on) continue;
+    const target = (i % 2 === 0) ? chainA : chainB;
+    runPass(node.fx, cur, target.fb, tSec, node.params);
+    cur = target.tex;
+    i++;
+  }
+  runPass('_copy', cur, null, tSec, null); // default framebuffer + flip
+  mainCtx.drawImage(glCanvas, 0, 0);
+  if (recorder && recorder.isRecording) recorder.captureFrame();
+}
+
+// ---- loop on-demand (padrão da casa) ----
+let needsRender = true;
+let rafId = null, lastFrame = 0;
+function isDynamic() {
+  return !sourceType /* demo anima */ || sourceType === 'video' || sourceType === 'webcam' ||
+    stack.some(n => n.on && FX[n.fx].anim) || (recorder && recorder.isRecording);
+}
+function tick(now) {
+  rafId = requestAnimationFrame(tick);
+  if (!isDynamic() && !needsRender) return;
+  if (now - lastFrame < 31) return;
+  lastFrame = now;
+  needsRender = false;
+  renderChain(now);
+}
+function requestRender() { needsRender = true; }
+
+// ============================================================
+// STACK — modelo + UI
+// ============================================================
+let stack = [];   // [{uid, fx, on, params}]
+let selUid = null;
+let uidSeq = 0;
+
+function addFx(fxId, silent) {
+  const def = FX[fxId];
+  if (!def || stack.length >= 8) { if (stack.length >= 8) TipoUI.showToast('Stack cheio (8)'); return; }
+  const uid = 'n' + (++uidSeq);
+  const params = {};
+  def.params.forEach(p => { params[p.k] = p.val; });
+  stack.push({ uid, fx: fxId, on: true, params });
+  selUid = uid;
+  buildPane(uid);
+  syncStackUI();
+  requestRender();
+  if (!silent) TipoUI.showToast(def.name + ' no stack');
+}
+
+function removeFx(uid) {
+  const i = stack.findIndex(n => n.uid === uid);
+  if (i < 0) return;
+  stack.splice(i, 1);
+  const pane = document.querySelector(`.fx-pane[data-uid="${uid}"]`);
+  if (pane) pane.remove();
+  if (selUid === uid) selUid = stack.length ? stack[Math.min(i, stack.length - 1)].uid : null;
+  syncStackUI();
+  requestRender();
+}
+
+function moveFx(uid, dir) {
+  const i = stack.findIndex(n => n.uid === uid);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= stack.length) return;
+  [stack[i], stack[j]] = [stack[j], stack[i]];
+  syncStackUI();
+  requestRender();
+}
+
+function toggleFx(uid) {
+  const n = stack.find(x => x.uid === uid);
+  if (!n) return;
+  n.on = !n.on;
+  syncStackUI();
+  requestRender();
+}
+
+function selectFx(uid) {
+  selUid = uid;
+  syncStackUI();
+}
+
+function syncStackUI() {
+  const list = document.getElementById('stackList');
+  list.innerHTML = '';
+  stack.forEach((n, i) => {
+    const card = document.createElement('div');
+    card.className = 'stk-card' + (n.uid === selUid ? ' sel' : '') + (n.on ? '' : ' off');
+    card.dataset.uid = n.uid;
+    card.innerHTML =
+      `<span class="stk-dot" title="on/off"></span>` +
+      `<span class="stk-name">${i + 1}. ${FX[n.fx].name}</span>` +
+      `<span class="stk-btns">` +
+      `<button type="button" class="stk-up" title="sobe">&#9650;</button>` +
+      `<button type="button" class="stk-dn" title="desce">&#9660;</button>` +
+      `<button type="button" class="stk-x" title="remove">&times;</button></span>`;
+    card.addEventListener('click', () => selectFx(n.uid));
+    card.querySelector('.stk-dot').addEventListener('click', e => { e.stopPropagation(); toggleFx(n.uid); });
+    card.querySelector('.stk-up').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, -1); });
+    card.querySelector('.stk-dn').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, 1); });
+    card.querySelector('.stk-x').addEventListener('click', e => { e.stopPropagation(); removeFx(n.uid); });
+    list.appendChild(card);
+  });
+  document.getElementById('stackEmpty').style.display = stack.length ? 'none' : '';
+  document.querySelectorAll('.fx-pane').forEach(p => p.classList.toggle('sel', p.dataset.uid === selUid));
+  document.getElementById('paramsSection').style.display = stack.length ? '' : 'none';
+}
+
+/** painel de params de UM node — todos ficam no DOM (display:none nos não
+ *  selecionados) pra behaviors/áudio continuarem vivos ao trocar de card */
+function buildPane(uid) {
+  const n = stack.find(x => x.uid === uid);
+  const def = FX[n.fx];
+  const pane = document.createElement('div');
+  pane.className = 'fx-pane';
+  pane.dataset.uid = uid;
+  def.params.forEach(p => {
+    const id = `st_${uid}_${p.k}`;
+    if (p.type === 'color') {
+      const row = document.createElement('div');
+      row.className = 'color-row';
+      row.innerHTML = `<label>${p.label}</label><input type="color" id="${id}" value="${p.val}">`;
+      row.querySelector('input').addEventListener('input', e => { n.params[p.k] = e.target.value; requestRender(); });
+      pane.appendChild(row);
+    } else if (p.type === 'select') {
+      const row = document.createElement('div');
+      row.className = 'color-row';
+      row.innerHTML = `<label>${p.label}</label>`;
+      const sel = document.createElement('select');
+      sel.id = id;
+      sel.style.flex = '1';
+      p.options.forEach((o, i) => {
+        const op = document.createElement('option');
+        op.value = i; op.textContent = o;
+        sel.appendChild(op);
+      });
+      sel.value = p.val;
+      sel.addEventListener('change', e => { n.params[p.k] = Number(e.target.value); requestRender(); });
+      row.appendChild(sel);
+      pane.appendChild(row);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'range-row';
+      row.innerHTML =
+        `<span class="range-label">${p.label}</span>` +
+        `<input type="range" id="${id}" min="${p.min}" max="${p.max}" step="1" value="${p.val}">` +
+        `<span class="range-value" id="${id}Val">${p.val}</span>`;
+      const inp = row.querySelector('input');
+      inp.addEventListener('input', () => {
+        n.params[p.k] = Number(inp.value);
+        document.getElementById(id + 'Val').textContent = inp.value;
+        requestRender();
+      });
+      pane.appendChild(row);
+    }
+  });
+  document.getElementById('paramsHost').appendChild(pane);
+}
+
+function clearStack() {
+  stack = [];
+  selUid = null;
+  document.getElementById('paramsHost').innerHTML = '';
+  syncStackUI();
+  requestRender();
+}
+
+// ============================================================
+// PRESETS de stack (receitas brand)
+// ============================================================
+const STACK_PRESETS = {
+  riso:   [{ fx: 'halftone', params: { cell: 11, angle: 15, gain: 108, ink: 2 } },
+           { fx: 'grain', params: { amt: 28, vig: 22 } }],
+  print:  [{ fx: 'bayer', params: { levels: 3, scale: 2 } },
+           { fx: 'gradmap', params: {} }],
+  vhs:    [{ fx: 'wave', params: { amp: 10, freq: 9, speed: 45 } },
+           { fx: 'glitch', params: { shift: 9, slices: 45, scan: 45 } },
+           { fx: 'grain', params: { amt: 42, vig: 38 } }],
+  poster: [{ fx: 'posterize', params: { levels: 4, contrast: 30 } },
+           { fx: 'gradmap', params: {} }],
+  zine:   [{ fx: 'pixelate', params: { size: 5 } },
+           { fx: 'bayer', params: { levels: 2, scale: 3 } },
+           { fx: 'grain', params: { amt: 30, vig: 15 } }],
+  dream:  [{ fx: 'wave', params: { amp: 26, freq: 4, speed: 18 } },
+           { fx: 'gradmap', params: { c0: '#1B5A4E', c1: '#2A8A7A', c2: '#99E0D2', c3: '#F8F5F0' } },
+           { fx: 'grain', params: { amt: 20, vig: 34 } }],
+};
+
+function applyStackPreset(name) {
+  const recipe = STACK_PRESETS[name];
+  if (!recipe) return;
+  clearStack();
+  recipe.forEach(r => {
+    addFx(r.fx, true);
+    const node = stack[stack.length - 1];
+    Object.assign(node.params, r.params);
+    // sincroniza os inputs do pane com os params do preset
+    FX[r.fx].params.forEach(p => {
+      const el = document.getElementById(`st_${node.uid}_${p.k}`);
+      if (!el) return;
+      el.value = node.params[p.k];
+      const val = document.getElementById(`st_${node.uid}_${p.k}Val`);
+      if (val) val.textContent = node.params[p.k];
+    });
+  });
+  selUid = stack.length ? stack[0].uid : null;
+  syncStackUI();
+  requestRender();
+}
+
+function resetAll() {
+  applyStackPreset('riso');
+  TipoUI.showToast('Reset — stack Riso');
+}
+
+// ============================================================
+// FONTE — upload, webcam, demo, drag&drop
+// ============================================================
+function releaseSource() {
+  if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+  if (srcVideo) { srcVideo.pause(); srcVideo = null; }
+  if (mediaUrl) { URL.revokeObjectURL(mediaUrl); mediaUrl = null; }
+  document.getElementById('webcamBtn').classList.remove('rec-on');
+}
+
+function useDemo() {
+  releaseSource();
+  sourceType = null;
+  setProcSize(960, 720);
+  document.getElementById('dropHint').style.display = '';
+  requestRender();
+}
+
+function loadFile(file) {
+  releaseSource();
+  mediaUrl = URL.createObjectURL(file);
+  document.getElementById('dropHint').style.display = 'none';
+  if (file.type.startsWith('video/')) {
+    const v = document.createElement('video');
+    v.src = mediaUrl;
+    v.loop = true; v.muted = true; v.playsInline = true;
+    v.addEventListener('loadedmetadata', () => {
+      sourceType = 'video';
+      srcVideo = v;
+      setProcSize(v.videoWidth, v.videoHeight);
+      v.play();
+      requestRender();
+    });
+  } else {
+    const img = new Image();
+    img.onload = () => {
+      sourceType = 'image';
+      srcImage = img;
+      setProcSize(img.naturalWidth, img.naturalHeight);
+      requestRender();
+    };
+    img.src = mediaUrl;
+  }
+}
+
+async function toggleWebcam() {
+  if (sourceType === 'webcam') { useDemo(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    releaseSource();
+    webcamStream = stream;
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    v.muted = true; v.playsInline = true;
+    v.addEventListener('loadedmetadata', () => {
+      sourceType = 'webcam';
+      srcVideo = v;
+      setProcSize(v.videoWidth, v.videoHeight);
+      v.play();
+      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('webcamBtn').classList.add('rec-on');
+      requestRender();
+    });
+  } catch (e) {
+    TipoUI.showToast('Webcam negada');
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+  e.target.value = '';
+});
+const wrap = document.getElementById('canvasWrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportPNG() {
+  renderChain(performance.now());
+  mainCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tipo-studio.png';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }, 'image/png');
+}
+
+async function toggleRec() {
+  recorder = await TipoUI.toggleVisualRec(mainCanvas);
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+TipoUI.initChrome('visual');
+setProcSize(960, 720);
+useDemo();
+applyStackPreset('riso');
+tick(performance.now());
+</script>
+</body>
+</html>
