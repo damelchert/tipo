@@ -173,6 +173,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### FOTOGRAMA: CAUSA-RAIZ do bug de resolução com emulsão descoberta ("por que o Cinematic sai 2K e o nosso não?")
+- **Smoking gun**: o 07.png do Daniel tinha 768 de ALTURA = exatamente o tamanho do crop da emulsão. **Imagem anexada no payload ANCORA a resolução de saída no tamanho da entrada** e o imageSize é ignorado. O sugador do Cinematic (Marcos) é SÓ TEXTO — a vision descreve, apenas a descrição gera ("prompt inteligente") — por isso lá sempre sai 2K.
+- **Fix estrutural**: **Pro = modo Cinematic** (emulsão vira só descrição — cláusula nova "Grade the image with this exact physical mood: …", imagem NÃO viaja, 2K/4K plenos; legenda mostra "emulsão 🧪 desc"); **Nano 2/Lite = imagem anexada** (sem imageSize mesmo, fidelidade máxima, legenda "emulsão 🧪"). Decisão automática pelo modelo, sem UI nova.
+- **Refs de produto** (que EXIGEM a imagem): re-compress subiu de 1024→**2048px** — se a âncora segue o input, agora ancora em classe 2K.
+- Edge conhecido: fallback de cota Pro→Nano2 no meio da geração anexa a imagem com a cláusula de descrição (inconsistência textual leve, sem quebra).
+- test-fotograma-res.mjs estendido: Pro sem inlineData no payload + cláusula desc + legenda; Nano 2 com inlineData. ALL PASS + scene suite.
+
 ### FOTOGRAMA: 1K morreu, 2K é o piso — AUTO-RETRY até vir full-res (pedido do Daniel: "o padrão tinha que ser 2K e nunca vir abaixo disso")
 - Select de resolução só **2K (default) / 4K**; takes antigos salvos com 1K re-aplicam como 2K.
 - **Auto-retry no revealJob**: gera → `createImageBitmap` confere → se veio <90% do pedido, REPUXA sozinho (até 3 tentativas, devMsg "saiu WxH — repuxando em 2K (2/3)…"); só avisa na legenda se as 3 vierem baixas ("saiu WxH após 3 tentativas"). Se o fallback de cota derrubou pra modelo sem imageSize, não insiste (break).
