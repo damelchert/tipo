@@ -157,6 +157,16 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-21
+
+### Engenharia reversa: Sketch Tools (tools.sketchdesign.club) — referência de UX que o Daniel quer pra Tipó
+Daniel achou a plataforma ("controles mais simples, canvas em nodes é muito legal — mudar ou implementar algo assim na Tipó, especialmente visual tools"). Bundle público dissecado (Vite 2.5MB + 28 chunks) com 4 agentes paralelos. **Doc completo: `tipo_vault/knowledge/sketchtools_reverse_engineering.md`**. Essência:
+- **Pipeline**: WebGL2 puro, cada tool = fragment shader com `uInputTexture`; ping-pong chainA/chainB (zero cópia); composição entre nodes = chroma-key por distância euclidiana + smoothstep da cor de fundo declarada (`uMaskBg`/`uMaskThreshold`/`uPipelineMode`); 1 rAF síncrono pra cadeia; quality tiers (low 512px/24fps → ultra 4096px/60fps, múltiplos de 32); three.js SÓ no 3D Maker.
+- **Áudio-reatividade**: 3 AnalyserNodes (FFT256 smoothing .8 = dB; FFT2048 = bandas kick 60-100/snare 180-260+2.5-3.5k/hihat 10-16k; FFT2048 smoothing 0 = spectral flux/beat); preset = {param, reactTo, sensitivity, valueRange, inverted, attack/decay, bpmBarRate, automationNodes, automationLfo}; export re-toca áudio em realtime.
+- **Schema**: 19 tools (5 inputs/9 generative/5 filters), Context+useState por tool, aba Effects = rack GLOBAL de 6 pós-efeitos (Adjustments/Aberration/Glow/Waves/EdgeBlur/Grain, 0-100).
+- **Infra**: canvas infinito = transform CSS + pointer events + radial-gradient dots 18.5px; Supabase (projects+manifest, export_credits, publish DIRETO no Instagram via edge function+Graph API); export WebCodecs H.264+AAC/mp4-muxer com MediaRecorder fallback (mesma dupla nossa); freemium por créditos de export.
+- **Leitura estratégica**: eles ganham em modelo mental (stack) + áudio + polish; Tipó ganha em profundidade por ferramenta (kinetic 23 modos vs 1 Type Shape raso, dithering deles nem existe), export HQ offline frame-perfect (eles só realtime) e zero login. **Adoção recomendada em ordem**: (1) TipoAudio site-wide — áudio como FONTE do TipoBehavior, todos os tools ganham de graça pelo contrato de input sintético; (2) Studio: página nova com chain WebGL2 dos NOSSOS efeitos shaderizáveis (halftone/bayer/gradientmap/glitch/pixelate/grain; error-diffusion e pixel-sort ficam fora do chain GPU); (3) rack de pós-efeitos nasce grátis no Studio; (4) canvas infinito é cosmético. AGUARDANDO decisão do Daniel sobre qual fase atacar.
+
 ## 2026-07-20
 
 ### FOTOGRAMA — "o texto do usuário é lei" v2 (prompt autoral atropelado pelos presets)
