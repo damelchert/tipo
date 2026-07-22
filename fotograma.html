@@ -114,6 +114,11 @@
     <input type="file" id="moodFile" accept="image/*" style="display:none">
     <div id="moodBox" style="display:none; margin-top:8px; position:relative;">
       <canvas id="moodCanvas" style="width:100%; border:1px solid var(--border-2); border-radius:4px; cursor:crosshair; display:block;"></canvas>
+      <div class="range-row" style="margin-top:8px;">
+        <span class="range-label">Pot&ecirc;ncia</span>
+        <input type="range" id="moodStrength" min="0" max="100" step="1" value="100" data-nobhv>
+        <span class="range-value" id="moodStrengthVal">100</span>
+      </div>
       <div id="moodDesc" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.5; font-family:var(--font-ui);"></div>
     </div>
   </div>
@@ -373,6 +378,7 @@ let state = {
   lastPrompt: '',
   takes: [], // { url, caption }
   pending: [], // { id, msg } — tiles de revelação na galeria
+  moodStrength: 100, // potência da emulsão (0-100; ≥50 anula os seletores)
   refs: [],  // { dataUrl, mime } — referências de cena (máx 4)
   mood: null, // { full: {dataUrl,mime}, crop: {dataUrl,mime}|null, desc: string|null, img: Image }
 };
@@ -627,16 +633,28 @@ function refsClause(refs) {
  *  a resolução de saída no tamanho dela (o 07.png do Daniel saiu 768 de
  *  altura = o crop da emulsão) e o imageSize é ignorado. Modo Cinematic:
  *  só a descrição, resolução plena. */
-function moodClause(mood, attached) {
-  if (!mood) return '';
+function moodClause(mood, attached, strength = 100) {
+  if (!mood || strength <= 0) return '';
   const d = mood.desc ? ` Its physical mood: ${mood.desc}` : '';
   const OVERRIDE = ' This reference mood OVERRIDES any other color, film or lighting direction — the final grade must match the stated palette and its proportions boldly and unmistakably.';
-  if (attached === false) {
-    return mood.desc
-      ? ` Grade the ENTIRE image with this exact physical mood — reproduce the color palette WITH its stated proportions, the temperature, the light character and the texture faithfully; never copy objects, people or composition:${d}${OVERRIDE}`
-      : '';
+  // ≥85: fidelidade total (texto original). 50-84: domina com respiro.
+  // <50: tempero sobre a base dos seletores (que voltam a falar).
+  if (strength >= 85) {
+    if (attached === false) {
+      return mood.desc
+        ? ` Grade the ENTIRE image with this exact physical mood — reproduce the color palette WITH its stated proportions, the temperature, the light character and the texture faithfully; never copy objects, people or composition:${d}${OVERRIDE}`
+        : '';
+    }
+    return ` Apply the mood of the attached STYLE reference image — reproduce its color palette WITH the same proportions, temperature, light character and texture; never its objects, people or composition.${d}${OVERRIDE}`;
   }
-  return ` Apply the mood of the attached STYLE reference image — reproduce its color palette WITH the same proportions, temperature, light character and texture; never its objects, people or composition.${d}${OVERRIDE}`;
+  const core = attached === false
+    ? (mood.desc ? ` Grade the image toward this physical mood reference (never copy its objects, people or composition):${d}` : '')
+    : ` Use the mood of the attached STYLE reference image (never its objects, people or composition).${d}`;
+  if (!core) return '';
+  if (strength >= 50) {
+    return core + ` Apply it at strong ~${strength}% intensity — the reference palette and light clearly dominate the grade, with a breath of the scene's natural tones underneath.`;
+  }
+  return core + ` Apply it as a subtle wash at ~${strength}% intensity — gently tint the grade toward the reference palette without overpowering the scene's own look.`;
 }
 
 /** montagem FINAL determinística — os seletores (enquadramento, luz,
@@ -668,7 +686,9 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
   const lens = currentLente();
-  const mood = job ? job.mood : state.mood;
+  const moodP = job ? (job.moodStrength ?? 100) : (state.moodStrength ?? 100);
+  const moodRaw = job ? job.mood : state.mood;
+  const mood = (moodRaw && moodP >= 50) ? moodRaw : null; // <50: seletores voltam
   const dir = sceneDirections(rawScene || sceneText, sceneText);
   state.sceneOverrides = dir;
   // EMULSÃO ATIVA = ELA É A ÚNICA VOZ TONAL: luz, film stock, paleta e o
@@ -689,7 +709,7 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   ].filter(Boolean);
   const refs = job ? job.refs : state.refs;
   const moodAttached = !/pro/i.test($('model').value || ''); // Pro = só descrição (resolução plena)
-  return `${sceneText}.${moodClause(mood, moodAttached)} ${bits.join(', ')}.${refsClause(refs)}${cleanRule()}`;
+  return `${sceneText}.${moodClause(moodRaw, moodAttached, moodP)} ${bits.join(', ')}.${refsClause(refs)}${cleanRule()}`;
 }
 
 /** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
@@ -797,7 +817,8 @@ async function tryImageModel(model, prompt, job) {
   // saída no tamanho dela e o imageSize morre — modo Cinematic garante 2K).
   // Nano 2/Lite: sem imageSize mesmo — imagem vai junto (fidelidade máxima).
   state.lastMoodAttached = false;
-  if (mood && !isPro) {
+  const moodP2 = job ? (job.moodStrength ?? 100) : (state.moodStrength ?? 100);
+  if (mood && moodP2 > 0 && !isPro) {
     const src = mood.crop || mood.full;
     parts.push({ inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } });
     state.lastMoodAttached = true;
@@ -885,7 +906,7 @@ function snapshotParams() {
     diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
     // snapshot das imagens do CLIQUE — job na fila não muda se o usuário
     // trocar refs/emulsão enquanto espera (não persiste no IDB: ver addTake)
-    refs: state.refs.slice(), mood: state.mood,
+    refs: state.refs.slice(), mood: state.mood, moodStrength: state.moodStrength,
   };
 }
 
@@ -901,6 +922,9 @@ function applyParams(pr) {
   $('luz').value = pr.luz;
   $('lente').value = pr.lente; syncLenteHint();
   $('cleanImg').checked = pr.clean;
+  state.moodStrength = pr.moodStrength ?? 100;
+  $('moodStrength').value = state.moodStrength;
+  $('moodStrengthVal').textContent = state.moodStrength;
   $('diretor').checked = pr.diretor;
   if ([...$('model').options].some(o => o.value === pr.model)) $('model').value = pr.model;
   $('imgSize').value = pr.imgSize === '1K' ? '2K' : pr.imgSize;
@@ -1005,7 +1029,7 @@ async function revealJob(job) {
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${job.mood ? 'grade da referência' : currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     showPrompt(job.scene);
     $('dlBtn').disabled = false;
@@ -1226,7 +1250,7 @@ function buildSelects() {
 function syncStockHint() {
   const s = currentStock();
   $('stockHint').textContent = s.hint || (s.bw ? 'preto e branco' : '');
-  $('paleta').disabled = !!s.bw || !!state.mood; // P&B OU emulsão travam a paleta
+  $('paleta').disabled = !!s.bw || (!!state.mood && (state.moodStrength ?? 100) >= 50); // P&B ou emulsão mandando
 }
 
 function syncLenteHint() {
@@ -1411,9 +1435,16 @@ $('moodFile').addEventListener('change', e => {
   setMoodFile(f);
 });
 
-/** emulsão ativa desativa os seletores que ela anula (luz/stock/paleta) */
+$('moodStrength').addEventListener('input', () => {
+  state.moodStrength = Number($('moodStrength').value);
+  $('moodStrengthVal').textContent = state.moodStrength;
+  syncMoodUI();
+});
+
+/** emulsão MANDANDO (potência ≥50) desativa os seletores que ela anula;
+ *  abaixo disso ela é tempero sobre a base escolhida (seletores voltam) */
 function syncMoodUI() {
-  const on = !!state.mood;
+  const on = !!state.mood && (state.moodStrength ?? 100) >= 50;
   ['luz', 'stock', 'paleta'].forEach(id => {
     const el = $(id);
     el.disabled = on;

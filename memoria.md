@@ -173,6 +173,15 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### FOTOGRAMA: EMULSÃO v3.1 — seletor de POTÊNCIA 0-100 (pedido pós-"ficou show")
+- **Slider Potência** no moodBox (default 100, data-nobhv). Contrato em camadas:
+  - **≥85**: fidelidade total — texto v3 intacto (proporções + OVERRIDE bold), seletores anulados;
+  - **50-84**: "strong ~N% intensity — reference clearly dominates, with a breath of the scene's natural tones", seletores ainda anulados;
+  - **<50**: TEMPERO — "subtle wash at ~N%", **seletores VOLTAM a falar** (stock/paleta/luz re-entram no prompt e re-habilitam na UI; a base é a escolha do usuário, o mood tinge);
+  - **0**: emulsão muda (sem cláusula, sem anexo nem no Nano 2).
+- Legenda mostra a potência quando ≠100 ("emulsão 🧪 desc 30%") e o stock volta ao nome real quando <50. Potência viaja no job (fila não contamina) e no snapshot/apply do ↺.
+- res +4 checks (cláusula suave com %, Kodak volta, paleta re-habilitada, legenda 30%) ALL PASS.
+
 ### FOTOGRAMA: EMULSÃO v3 — anulação TOTAL (pedido do Daniel: "emulsão precisa anular luz/film stock/paleta")
 - Com emulsão ativa, agora SE CALAM: **luz do seletor, film stock inteiro (era 'Kodak Vision3 500T' no prompt), paleta, texture-override e o grading da estética** (P.fixed tinha 'warm shadows' brigando com mood frio + P.mood) — substituídos por 'honest photographic texture, no digital smoothing'. **Lente FICA** (ótica/bokeh, não cor). A spec da referência é a única voz tonal.
 - Cláusula ganhou reforço final: "This reference mood OVERRIDES any other color, film or lighting direction — the final grade must match the stated palette and its proportions boldly and unmistakably."

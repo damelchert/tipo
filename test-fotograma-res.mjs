@@ -87,6 +87,25 @@ const selDis = await page.evaluate(() => ['luz','stock','paleta'].every(id => do
 check('seletores anulados na UI (disabled)', selDis, '');
 const capMood = await page.evaluate(() => document.getElementById('stillCaption').textContent);
 check('legenda mostra emulsão desc', capMood.includes('emulsão 🧪 desc'), `(${capMood.slice(0,90)})`);
+// ---- POTÊNCIA: 30 = tempero (seletores voltam, cláusula suave) ----
+await page.evaluate(() => {
+  document.getElementById('moodStrength').value = 30;
+  document.getElementById('moodStrength').dispatchEvent(new Event('input', { bubbles: true }));
+});
+await page.click('#genBtn');
+await page.waitForTimeout(2500);
+const lowParts = lastImgBody && lastImgBody.contents[0].parts;
+const lowPrompt = lowParts && (lowParts.find(x => x.text) || {}).text || '';
+check('potência 30: cláusula suave com %', lowPrompt.includes('subtle wash at ~30%'), '');
+check('potência 30: seletores VOLTAM (Kodak no prompt)', lowPrompt.includes('Kodak'), '');
+const selBack = await page.evaluate(() => !document.getElementById('paleta').disabled);
+check('potência 30: paleta re-habilitada', selBack, '');
+const capLow = await page.evaluate(() => document.getElementById('stillCaption').textContent);
+check('legenda mostra 30%', capLow.includes('30%'), `(${capLow.slice(0,110)})`);
+await page.evaluate(() => {
+  document.getElementById('moodStrength').value = 100;
+  document.getElementById('moodStrength').dispatchEvent(new Event('input', { bubbles: true }));
+});
 // Nano 2 (sem imageSize): imagem VAI no payload
 await page.evaluate(() => {
   const sel = document.getElementById('model');
