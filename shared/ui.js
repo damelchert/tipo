@@ -401,6 +401,7 @@ const TipoUI = {
     if (!rec.isRecording) {
       if (window.__tipoHQactive) { this.showToast('Aguarde o render HQ terminar'); return rec; }
       await rec.start(opts.bitrate || 8000000);
+      if (rec.hasAudio) this.showToast('♪ gravando com a trilha de áudio');
       if (btn) {
         btn.textContent = 'Stop Recording';
         btn.style.borderColor = 'var(--red)';
@@ -957,6 +958,13 @@ const TipoAudio = {
     this._flux.smoothingTimeConstant = 0; // cru — essencial pro flux/beat
     this._sBuf = new Uint8Array(this._smooth.frequencyBinCount);
     this._fBuf = new Uint8Array(this._flux.frequencyBinCount);
+    // bus único: fontes plugam aqui; analisadores, monitor e o TAP da
+    // gravação (áudio dentro do MP4) leem do bus
+    this._bus = this.ctx.createGain();
+    this._bus.connect(this._smooth);
+    this._bus.connect(this._flux);
+    this._monitor = this.ctx.createGain(); // audível só pra fonte de arquivo
+    this._bus.connect(this._monitor);
   },
 
   _disconnectSource() {
@@ -971,9 +979,9 @@ const TipoAudio = {
   },
 
   _wire(node, audible) {
-    node.connect(this._smooth);
-    node.connect(this._flux);
-    if (audible) node.connect(this.ctx.destination);
+    node.connect(this._bus);
+    try { this._monitor.disconnect(this.ctx.destination); } catch (e) {}
+    if (audible) this._monitor.connect(this.ctx.destination);
     this.running = true;
     this._env = { kick: 0, snare: 0, hihat: 0 };
     this._prev = { kick: 0, snare: 0, hihat: 0 };
@@ -1173,6 +1181,11 @@ const TipoAudio = {
     if (m) m.style.width = Math.round(this.features.level * 100) + '%';
   },
 
+  /** tap pro recorder: com fonte tocando, a gravação leva a trilha junto */
+  tap() {
+    return (this.running && this.ctx && this._bus) ? { ctx: this.ctx, node: this._bus } : null;
+  },
+
   /** 1º behavior de áudio sem fonte: mostra o botão + dica (1x) */
   nudge() {
     this.showUI();
@@ -1182,6 +1195,11 @@ const TipoAudio = {
     if (typeof TipoUI !== 'undefined') TipoUI.showToast('Carrega um áudio ou liga o mic no ♪');
   },
 };
+
+// gravações levam a trilha do TipoAudio junto (recorder.js consulta o tap)
+if (typeof TipoRecorder !== 'undefined') {
+  TipoRecorder.audioTap = () => TipoAudio.tap();
+}
 
 const TipoBehavior = {
   TYPES: ['sine', 'noise', 'loop', 'pingpong', 'step'],

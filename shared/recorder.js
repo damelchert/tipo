@@ -56,6 +56,14 @@ class TipoRecorder {
 
     this._resetSession();
 
+    // ÁUDIO AO VIVO NA GRAVAÇÃO: se a página expõe um tap (TipoAudio com
+    // fonte tocando), o MP4/WebM sai com a trilha que dirige os efeitos.
+    this._tap = null;
+    this.hasAudio = false;
+    try {
+      if (typeof TipoRecorder.audioTap === 'function') this._tap = TipoRecorder.audioTap() || null;
+    } catch (e) { this._tap = null; }
+
     // WebCodecs MP4 works for both 2D and WEBGL canvases: frames are copied
     // via drawImage into a 2D record canvas (p5 WEBGL keeps
     // preserveDrawingBuffer=true, and captureFrame() runs inside draw()).
@@ -77,6 +85,8 @@ class TipoRecorder {
       }, 1000 / this.fps);
     }
     this.startTime = performance.now();
+    // relógio do áudio nasce junto com o do vídeo (timestamps por amostra)
+    if (this.audioEncoder) this._startAudioCapture();
     this._startTimer();
     this.onStatusChange('recording');
   }
@@ -120,13 +130,41 @@ class TipoRecorder {
     this.encH = encH;
     this._lastKeyTsUs = -1;
 
+    // trilha de áudio: resolve o codec ANTES do muxer (o track é declarado
+    // na construção). AAC com fallback Opus — padrão validado no hq.js.
+    let audioCfg = null;
+    if (this._tap && typeof AudioEncoder !== 'undefined') {
+      const rate = this._tap.ctx.sampleRate;
+      for (const codec of ['mp4a.40.2', 'opus']) {
+        try {
+          const s = await AudioEncoder.isConfigSupported({ codec, sampleRate: rate, numberOfChannels: 2, bitrate: 128000 });
+          if (s && s.supported) { audioCfg = { codec, rate, channels: 2 }; break; }
+        } catch (e) { /* tenta o próximo */ }
+      }
+    }
+
     const target = new Mp4Muxer.ArrayBufferTarget();
     this.muxer = new Mp4Muxer.Muxer({
       target,
       video: { codec: 'avc', width: this.encW, height: this.encH },
+      ...(audioCfg ? { audio: {
+        codec: audioCfg.codec === 'opus' ? 'opus' : 'aac',
+        sampleRate: audioCfg.rate,
+        numberOfChannels: audioCfg.channels,
+      } } : {}),
       fastStart: 'in-memory',
       firstTimestampBehavior: 'offset',
     });
+
+    if (audioCfg) {
+      this.audioEncoder = new AudioEncoder({
+        output: (chunk, meta) => { if (this.muxer) this.muxer.addAudioChunk(chunk, meta); },
+        error: (e) => console.error('AudioEncoder error:', e),
+      });
+      this.audioEncoder.configure({ codec: audioCfg.codec, sampleRate: audioCfg.rate, numberOfChannels: audioCfg.channels, bitrate: 128000 });
+      this._audioCfg = audioCfg;
+      this.hasAudio = true;
+    }
 
     this.encoder = new VideoEncoder({
       output: (chunk, meta) => {
@@ -175,6 +213,52 @@ class TipoRecorder {
     return true;
   }
 
+  /** PCM ao vivo → AudioData f32-planar → AudioEncoder. ScriptProcessor por
+   *  compatibilidade universal; sink com gain 0 pra não duplicar o som. */
+  _startAudioCapture() {
+    const { ctx } = this._tap;
+    const rate = this._audioCfg.rate;
+    this._audioSamples = 0;
+    const sp = ctx.createScriptProcessor(4096, 2, 2);
+    const sink = ctx.createGain();
+    sink.gain.value = 0;
+    this._tap.node.connect(sp);
+    sp.connect(sink);
+    sink.connect(ctx.destination);
+    this._audioSp = sp;
+    this._audioSink = sink;
+    sp.onaudioprocess = (e) => {
+      if (!this.isRecording || !this.audioEncoder || this.audioEncoder.state !== 'configured') return;
+      const n = e.inputBuffer.length;
+      const data = new Float32Array(n * 2);
+      data.set(e.inputBuffer.getChannelData(0), 0);
+      data.set(e.inputBuffer.getChannelData(e.inputBuffer.numberOfChannels > 1 ? 1 : 0), n);
+      try {
+        const ad = new AudioData({
+          format: 'f32-planar',
+          sampleRate: rate,
+          numberOfFrames: n,
+          numberOfChannels: 2,
+          timestamp: Math.round(this._audioSamples / rate * 1e6),
+          data,
+        });
+        this.audioEncoder.encode(ad);
+        ad.close();
+        this._audioSamples += n;
+      } catch (err) { /* nunca derruba o áudio da página */ }
+    };
+  }
+
+  _stopAudioCapture() {
+    if (this._audioSp) {
+      try { this._audioSp.onaudioprocess = null; this._audioSp.disconnect(); } catch (e) {}
+      try { this._tap && this._tap.node.disconnect(this._audioSp); } catch (e) {}
+    }
+    if (this._audioSink) { try { this._audioSink.disconnect(); } catch (e) {} }
+    this._audioSp = null;
+    this._audioSink = null;
+  }
+
   _startStream(bitrate) {
     // Same 1080p-class cap as the MP4 path (see _startMP4).
     const w = this.canvas.width;
@@ -194,6 +278,16 @@ class TipoRecorder {
       stream.getTracks().forEach(track => track.stop());
       stream = sourceCanvas.captureStream(this.fps);
       this._streamTrack = stream.getVideoTracks()[0] || null;
+    }
+
+    // trilha de áudio no caminho MediaRecorder: destination node do tap
+    if (this._tap) {
+      try {
+        this._streamAudioDest = this._tap.ctx.createMediaStreamDestination();
+        this._tap.node.connect(this._streamAudioDest);
+        this._streamAudioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+        this.hasAudio = true;
+      } catch (e) { this._streamAudioDest = null; }
     }
 
     // Try MP4 first (Chrome 130+), then WebM
@@ -235,6 +329,13 @@ class TipoRecorder {
     this.lastCaptureTime = -1;
     this._warmupPending = 0;
     this._warmupMeta = null;
+    this._stopAudioCapture();
+    if (this.audioEncoder) { try { this.audioEncoder.close(); } catch (e) {} }
+    this.audioEncoder = null;
+    this._audioCfg = null;
+    this._audioSamples = 0;
+    if (this._streamAudioDest) { try { this._tap && this._tap.node.disconnect(this._streamAudioDest); } catch (e) {} }
+    this._streamAudioDest = null;
     this.encW = 0;
     this.encH = 0;
     this._firstTimestampUs = null;
@@ -360,6 +461,12 @@ class TipoRecorder {
 
   async _stopMP4() {
     if (this.frameCount === 0) this.captureFrame();
+    // fecha o áudio ANTES do finalize — flush entrega os últimos chunks AAC
+    this._stopAudioCapture();
+    if (this.audioEncoder) {
+      try { await this.audioEncoder.flush(); this.audioEncoder.close(); } catch (e) {}
+      this.audioEncoder = null;
+    }
     this.onProgress({ phase: 'flushing', percent: 30, frames: this.frameCount });
 
     const flushStart = performance.now();
