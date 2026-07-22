@@ -458,13 +458,20 @@ async function vertexCall(id, body) {
   const clean = String(id).replace(/^models\//, '');
   const suffix = `publishers/google/models/${clean}:generateContent`;
   // cada MODO é só a FORMA (path template + auth); a URL é remontada por
-  // modelo — memorizar a url baked-in do flash quebraria a chamada de imagem
-  const modes = state._vxMode ? [state._vxMode] : [
-    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'header' },
+  // modelo. **v1beta1 PRIMEIRO**: é a única superfície do Vertex com o
+  // imageConfig completo (imageSize) — o BUG do 2K era o ping do flash
+  // memorizar /v1/, que aceita chat e aspectRatio mas RECUSA imageSize
+  // (400) → a escada de payload derrubava o size → sempre 1K.
+  const ALL_MODES = [
     { path: `/v1beta1/projects/-/locations/global/${suffix}`, auth: 'header' },
+    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'header' },
     { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'query' },
     { path: `/v1/${suffix}`, auth: 'header' }, // forma curta (alguns projetos)
   ];
+  // modo memorizado tenta primeiro, mas 4xx NÃO trava mais a sessão:
+  // os outros modos entram na sequência (o payload pode exigir outra versão)
+  const memo = state._vxMode;
+  const modes = memo ? [memo, ...ALL_MODES.filter(m => m.path !== memo.path || m.auth !== memo.auth)] : ALL_MODES;
   let last = null;
   for (const m of modes) {
     const path = m.path.replace(/publishers\/google\/models\/[^:]+:generateContent/, suffix);
@@ -485,15 +492,15 @@ async function vertexCall(id, body) {
         const err = new Error(sanitizeApiError(r.status, detail));
         err.status = r.status;
         err.detail = detail;
-        // 400/401/403/404 = pode ser formato de rota/auth — tenta o próximo modo
-        if ([400, 401, 403, 404].includes(r.status) && !state._vxMode) { last = err; continue; }
+        // 400/401/403/404 = formato de rota/versão/auth — tenta o próximo modo
+        if ([400, 401, 403, 404].includes(r.status)) { last = err; continue; }
         throw err;
       }
-      state._vxMode = m; // memoriza o modo que funcionou
+      state._vxMode = m; // memoriza o VENCEDOR (pode trocar por payload)
       return r.json();
     } catch (e) {
       if (e instanceof TypeError) { last = e; continue; } // rede/CORS — tenta o próximo
-      if (e.status && [400, 401, 403, 404].includes(e.status) && !state._vxMode) { last = e; continue; }
+      if (e.status && [400, 401, 403, 404].includes(e.status)) { last = e; continue; }
       throw e;
     }
   }
