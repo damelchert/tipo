@@ -173,6 +173,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3e — STUDIO: PERSISTÊNCIA DO ESPAÇO (reload não perde mais nada)
+- **Auto-save com debounce 800ms** em IndexedDB `tipo-studio` (stores space+media): frames (posição/nome/fonte/stack/params/node selecionado), view (pan/zoom) e frame ativo. Triggers: syncStackUI, applyView, layoutWorld (drag) e listener DELEGADO de input/change no #paramsHost (panes são dinâmicos).
+- **Mídia como ArrayBuffer+mime** (GOTCHA Safari da galeria do Fotograma — Blob no IDB aborta no WebKit); frames duplicados COMPARTILHAM o mediaKey; GC de mídia órfã a cada save; falha de quota → toast e o setup salva sem a mídia. Webcam não persiste (volta como demo, stack preservado).
+- **Restore no boot** (async): reconstrói frames+stacks+params+inputs, re-carrega mídia do IDB via `loadFile(blob, f, {persist:false})`, aplica view salva; sem save → boot default (frame Riso + fitView). Flag `_restoring` suprime saves durante o restore.
+- **Botão "Novo"** na topbar: confirm() → limpa os 2 stores → reload (recomeça do zero).
+- **test-studio-persist.mjs 12/12** (permanente): monta espaço (VHS com param mexido + frame POSTER com imagem sintética reposicionado + zoom 77%) → reload → TUDO volta (inclusive a imagem do IDB renderizando) → Novo limpa → default Riso. Regressão test-studio ALL PASS.
+
 ### 22.3d — STUDIO: profundidade nos 14 efeitos ("mais controles, mais modulável" — Daniel curtindo: "tá ficando bem legal ein")
 - **+22 controles novos**, todos viram alvo de behavior/♪ de graça:
   - pixelate: **Shape** (Square/Dots/Diamond) + **Gap** + **Gap Color** (vira mosaico real);

@@ -184,6 +184,7 @@
 <div id="topbar">
   <span class="tb-title">TIP&Oacute; <i>STUDIO</i></span>
   <button class="tb-btn" onclick="newFrame()">+ Frame</button>
+  <button class="tb-btn" onclick="resetSpace()" title="apaga o espa&ccedil;o salvo e recome&ccedil;a">Novo</button>
   <select id="presetSel" title="receitas">
     <option value="">receitas&hellip;</option>
     <option value="riso">Riso</option>
@@ -878,6 +879,7 @@ function dupFrame(id) {
   const nf = newFrame({ blank: true, silent: true });
   nf.name = frameName(src) + ' copy';
   // fonte: imagem reusa o elemento; vídeo ganha player próprio na MESMA URL
+  nf.mediaKey = src.mediaKey; // persistência compartilha a mídia
   if (src.sourceType === 'image' && src.srcImage) {
     nf.sourceType = 'image';
     nf.srcImage = src.srcImage;
@@ -1109,6 +1111,7 @@ function applyView() {
   space.style.backgroundSize = `${g}px ${g}px`;
   space.style.backgroundPosition = `${view.x}px ${view.y}px`;
   document.getElementById('zoomLabel').textContent = Math.round(view.z * 100) + '%';
+  if (typeof scheduleSave === 'function') scheduleSave();
 }
 
 function zoomAt(cx, cy, k) {
@@ -1331,6 +1334,7 @@ function syncStackUI() {
   });
   syncInspector();
   layoutWorld();
+  if (typeof scheduleSave === 'function') scheduleSave();
 }
 
 function buildPane(frame, uid) {
@@ -1513,6 +1517,138 @@ document.getElementById('presetSel').addEventListener('change', e => {
 function resetAll() { applyStackPreset('riso'); }
 
 // ============================================================
+// PERSISTÊNCIA DO ESPAÇO (IndexedDB — auto-save com debounce)
+// Frames (posição/nome/fonte/stack/params) + view sobrevivem ao
+// reload. Mídia como ArrayBuffer+mime (GOTCHA Safari: Blob no IDB
+// aborta no WebKit — mesmo padrão da galeria do Fotograma).
+// Webcam não persiste (volta como demo, stack preservado).
+// ============================================================
+const DB_NAME = 'tipo-studio';
+let _db = null;
+let mediaSeq = 0;
+let _saveT = null;
+let _restoring = false;
+
+function db() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(DB_NAME, 1);
+    rq.onupgradeneeded = () => {
+      rq.result.createObjectStore('space');
+      rq.result.createObjectStore('media');
+    };
+    rq.onsuccess = () => { _db = rq.result; res(_db); };
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function idb(store, mode, fn) {
+  return db().then(d => new Promise((res, rej) => {
+    const tx = d.transaction(store, mode);
+    const rq = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(rq && rq.result);
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+
+function scheduleSave() {
+  if (_restoring) return;
+  clearTimeout(_saveT);
+  _saveT = setTimeout(saveSpace, 800);
+}
+
+async function saveSpace() {
+  try {
+    const rec = {
+      savedAt: Date.now(),
+      view: { x: view.x, y: view.y, z: view.z },
+      activeIdx: Math.max(0, frames.findIndex(f => f.id === activeId)),
+      frames: frames.map(f => ({
+        name: f.name, x: f.x, y: f.y,
+        sourceType: (f.sourceType === 'image' || f.sourceType === 'video') ? f.sourceType : null,
+        mediaKey: f.mediaKey || null,
+        selIdx: f.stack.findIndex(n => n.uid === f.selUid),
+        stack: f.stack.map(n => ({ fx: n.fx, on: n.on, params: { ...n.params } })),
+      })),
+    };
+    await idb('space', 'readwrite', s => s.put(rec, 'current'));
+    // GC de mídia órfã
+    const used = new Set(rec.frames.map(f => f.mediaKey).filter(Boolean));
+    const keys = await idb('media', 'readonly', s => s.getAllKeys());
+    for (const k of keys || []) {
+      if (!used.has(k)) await idb('media', 'readwrite', s => s.delete(k));
+    }
+  } catch (e) { console.warn('[studio] save:', e); }
+}
+
+async function persistMedia(frame, file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const key = 'm' + Date.now() + '-' + (++mediaSeq);
+    await idb('media', 'readwrite', s => s.put({ buf, mime: file.type }, key));
+    frame.mediaKey = key;
+    scheduleSave();
+  } catch (e) {
+    frame.mediaKey = null;
+    console.warn('[studio] mídia não persistida:', e);
+    TipoUI.showToast('Mídia grande demais pra salvar — o setup fica salvo sem ela');
+  }
+}
+
+async function restoreSpace() {
+  try {
+    const rec = await idb('space', 'readonly', s => s.get('current'));
+    if (!rec || !rec.frames || !rec.frames.length) return false;
+    _restoring = true;
+    for (const fr of rec.frames) {
+      const f = newFrame({ blank: true, silent: true, x: fr.x, y: fr.y });
+      f.name = fr.name || '';
+      fr.stack.forEach(n => {
+        addFx(n.fx, true);
+        const c = f.stack[f.stack.length - 1];
+        c.on = n.on;
+        Object.assign(c.params, n.params);
+        FX[n.fx].params.forEach(p => {
+          const el = document.getElementById(`st_${c.uid}_${p.k}`);
+          if (!el) return;
+          el.value = c.params[p.k];
+          const val = document.getElementById(`st_${c.uid}_${p.k}Val`);
+          if (val) val.textContent = c.params[p.k];
+        });
+      });
+      f.selUid = (fr.selIdx >= 0 && f.stack[fr.selIdx]) ? f.stack[fr.selIdx].uid : null;
+      if (fr.mediaKey) {
+        f.mediaKey = fr.mediaKey;
+        const m = await idb('media', 'readonly', s => s.get(fr.mediaKey));
+        if (m && m.buf) loadFile(new Blob([m.buf], { type: m.mime }), f, { persist: false });
+      }
+    }
+    activeId = frames[rec.activeIdx] ? frames[rec.activeIdx].id : frames[0].id;
+    closeInspector();
+    syncStackUI();
+    if (rec.view && rec.view.z) { view = rec.view; applyView(); } else fitView();
+    _restoring = false;
+    return true;
+  } catch (e) {
+    console.warn('[studio] restore:', e);
+    _restoring = false;
+    return false;
+  }
+}
+
+async function resetSpace() {
+  if (!confirm('Apagar o espaço salvo e recomeçar do zero?')) return;
+  try {
+    await idb('space', 'readwrite', s => s.clear());
+    await idb('media', 'readwrite', s => s.clear());
+  } catch (e) {}
+  location.reload();
+}
+
+// qualquer mexida nos params salva (delegado — panes são dinâmicos)
+document.getElementById('paramsHost').addEventListener('input', scheduleSave);
+document.getElementById('paramsHost').addEventListener('change', scheduleSave);
+
+// ============================================================
 // FONTE (por frame)
 // ============================================================
 function releaseSource(frame) {
@@ -1530,16 +1666,18 @@ function useDemo() {
   const f = F();
   if (!f) return;
   releaseSource(f);
+  f.mediaKey = null;
   f.sourceType = null;
   setFrameSize(f, 960, 720);
   f.needsRender = true;
   syncStackUI();
 }
 
-function loadFile(file, targetFrame) {
+function loadFile(file, targetFrame, opts = {}) {
   const f = targetFrame || F();
   if (!f) return;
   releaseSource(f);
+  if (opts.persist !== false) { f.mediaKey = null; persistMedia(f, file); }
   f.mediaUrl = URL.createObjectURL(file);
   if (file.type.startsWith('video/')) {
     const v = document.createElement('video');
@@ -1650,12 +1788,17 @@ async function toggleRec() {
 }
 
 // ============================================================
-// BOOT
+// BOOT — restaura o espaço salvo; sem save, nasce o frame Riso
 // ============================================================
 TipoUI.initChrome('visual');
-newFrame({ silent: true }); // frame 1 nasce com a receita Riso
-fitView();
-requestAnimationFrame(tick);
+(async () => {
+  const restored = await restoreSpace();
+  if (!restored) {
+    newFrame({ silent: true }); // frame 1 nasce com a receita Riso
+    fitView();
+  }
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
