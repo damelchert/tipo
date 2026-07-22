@@ -224,6 +224,63 @@ await page.evaluate(() => setActive(frames[0].id));
 const act = await page.evaluate(() => activeId === frames[0].id);
 check('setActive troca o frame ativo', act);
 
+// ---- controles POR FRAME (rec/png/dup/×/rename) ----
+const chrome = await page.evaluate(() => {
+  const b = frames[0].el.querySelectorAll('.fl-actions button');
+  const rec = frames[0].el.querySelector('.fl-rec');
+  return { n: b.length, h: rec.getBoundingClientRect.call ? rec.offsetHeight : 0 };
+});
+check('barra de ações do frame (rec/png/dup/×)', chrome.n === 4 && chrome.h >= 20, `(${chrome.n} botões, ${chrome.h}px)`);
+
+// REC no frame 2 grava O FRAME 2 (recorder rebinda no canvas certo)
+await page.evaluate(() => setActive(frames[0].id));
+const dlR = page.waitForEvent('download', { timeout: 30000 });
+await page.evaluate(() => frames[1].el.querySelector('.fl-rec').click());
+await page.waitForTimeout(1600);
+const recState = await page.evaluate(() => ({
+  live: recorder && recorder.isRecording,
+  right: recorder.canvas === frames[1].canvas,
+  fid: recFrameId === frames[1].id,
+  cls: frames[1].el.classList.contains('recording'),
+}));
+check('● do frame grava AQUELE frame', recState.live && recState.right && recState.fid && recState.cls, JSON.stringify(recState));
+await page.evaluate(() => frames[1].el.querySelector('.fl-rec').click());
+const recFile = await dlR;
+await recFile.saveAs('/tmp/tipo-studio-framerec.mp4');
+check('gravação por frame exporta', fs.statSync('/tmp/tipo-studio-framerec.mp4').size > 30000);
+
+// rename inline
+await page.evaluate(() => {
+  renameFrame(frames[1].id);
+  const inp = frames[1].el.querySelector('.fl-name-input');
+  inp.value = 'HERO';
+  inp.blur();
+});
+await page.waitForTimeout(150);
+const named = await page.evaluate(() => ({
+  name: frames[1].name,
+  label: frames[1].el.querySelector('.fl-name').textContent,
+}));
+check('renomear frame inline', named.name === 'HERO' && named.label === 'HERO', JSON.stringify(named));
+
+// duplicar: mesma receita, nome "copy"
+const dup = await page.evaluate(() => {
+  dupFrame(frames[1].id);
+  const nf = frames[frames.length - 1];
+  return {
+    n: frames.length,
+    sameStack: JSON.stringify(nf.stack.map(x => x.fx)) === JSON.stringify(frames[1].stack.map(x => x.fx)),
+    name: nf.name,
+  };
+});
+check('duplicar frame copia o stack', dup.n === 3 && dup.sameStack && dup.name === 'HERO copy', JSON.stringify(dup));
+
+// Delete no teclado remove o frame ativo (o duplicado está ativo)
+await page.keyboard.press('Delete');
+await page.waitForTimeout(150);
+const afterDel = await page.evaluate(() => frames.length);
+check('tecla Delete remove o frame ativo', afterDel === 2);
+
 // remover frame 2 limpa nodes/panes/dock
 await page.evaluate(() => removeFrame(frames[1].id));
 const afterRm = await page.evaluate(() => ({

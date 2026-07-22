@@ -397,6 +397,9 @@ const TipoUI = {
       this._visRec.setTimerElement(document.getElementById('recTimer'));
     }
     const rec = this._visRec;
+    // multi-canvas (Studio): rebind pro canvas pedido — sem isso o recorder
+    // ficava preso pra sempre no canvas da PRIMEIRA gravação
+    if (!rec.isRecording && canvas && rec.canvas !== canvas) rec.canvas = canvas;
     const btn = document.getElementById('recBtn');
     if (!rec.isRecording) {
       if (window.__tipoHQactive) { this.showToast('Aguarde o render HQ terminar'); return rec; }

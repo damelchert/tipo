@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="shared/style.css?v=20260713-id1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec2"></script>
-<script src="shared/ui.js?v=20260722-au2"></script>
+<script src="shared/ui.js?v=20260722-au3"></script>
 <style>
   @font-face { font-family: 'Clash Display'; src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight: 600 900; font-display: swap; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
@@ -27,12 +27,20 @@
 
   /* frames (mídias) flutuantes */
   .frame { position: absolute; }
-  .frame-label { position: absolute; top: -26px; left: 2px; right: 0; display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; cursor: move; }
+  /* label com tamanho CONSTANTE em tela (contra-escala o zoom, padrão Figma) */
+  .frame-label { position: absolute; bottom: 100%; margin-bottom: 8px; left: 2px; width: calc(100% * var(--st-z, 1)); display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; cursor: move; transform: scale(var(--st-invz, 1)); transform-origin: 0 100%; }
   .frame-label b { color: var(--accent); font-weight: 400; }
-  .frame-label .fl-x { border: 1px solid transparent; background: transparent; color: var(--text-5); cursor: pointer; font-size: 11px; padding: 1px 5px; border-radius: 4px; font-family: inherit; margin-left: 4px; }
-  .frame-label .fl-x:hover { color: var(--red); border-color: var(--red); }
+  .fl-name { cursor: text; border-bottom: 1px dashed transparent; }
+  .fl-name:hover { border-bottom-color: var(--text-5); }
+  .fl-name-input { background: var(--bg-2); border: 1px solid var(--accent); color: var(--text-1); font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; width: 130px; }
+  .fl-actions { margin-left: auto; display: flex; gap: 5px; }
+  .fl-actions button { border: 1px solid var(--border-2, #333); background: color-mix(in srgb, var(--bg-1, #141414) 88%, transparent); color: var(--text-4); cursor: pointer; font-size: 12px; width: 26px; height: 24px; border-radius: 6px; font-family: inherit; line-height: 1; padding: 0; }
+  .fl-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .fl-actions .fl-x:hover { color: var(--red); border-color: var(--red); }
+  .fl-actions .fl-rec.live { border-color: var(--red); color: var(--red); animation: stRecPulse 1.2s ease-in-out infinite; }
   .frame canvas { display: block; box-shadow: 0 18px 70px rgba(0,0,0,0.5); border-radius: 4px; background: #111; cursor: move; }
   .frame.active canvas { outline: 1.5px solid var(--accent); outline-offset: 3px; }
+  .frame.recording canvas { outline: 2px solid var(--red); outline-offset: 3px; animation: stRecPulse 1.2s ease-in-out infinite; }
 
   /* fios ligando docks aos frames */
   #wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
@@ -668,7 +676,14 @@ function newFrame(opts = {}) {
   const el = document.createElement('div');
   el.className = 'frame';
   el.dataset.fid = id;
-  el.innerHTML = `<div class="frame-label"><span class="fl-name">frame</span> &middot; <b class="fl-chain"></b> &middot; <span class="fl-res"></span><button type="button" class="fl-x" title="remover frame">&#10005;</button></div>`;
+  el.innerHTML =
+    `<div class="frame-label"><span class="fl-name" title="clique pra renomear">frame</span> &middot; <b class="fl-chain"></b> &middot; <span class="fl-res"></span>` +
+    `<span class="fl-actions">` +
+    `<button type="button" class="fl-rec" title="gravar ESTE frame">&#9679;</button>` +
+    `<button type="button" class="fl-png" title="PNG deste frame">&#10515;</button>` +
+    `<button type="button" class="fl-dup" title="duplicar frame (mesma fonte + stack)">&#10697;</button>` +
+    `<button type="button" class="fl-x" title="remover frame (Delete)">&#10005;</button>` +
+    `</span></div>`;
   const canvas = document.createElement('canvas');
   canvas.className = 'frame-canvas';
   el.appendChild(canvas);
@@ -680,6 +695,7 @@ function newFrame(opts = {}) {
 
   const frame = {
     id,
+    name: '',
     x: opts.x !== undefined ? opts.x : (frames.length ? right + FRAME_GAP : 0),
     y: opts.y !== undefined ? opts.y : 0,
     el, dock, canvas, ctx: canvas.getContext('2d'),
@@ -693,6 +709,12 @@ function newFrame(opts = {}) {
   };
   frame.demoCtx = frame.demoCanvas.getContext('2d');
   el.querySelector('.fl-x').addEventListener('click', e => { e.stopPropagation(); removeFrame(id); });
+  el.querySelector('.fl-rec').addEventListener('click', e => { e.stopPropagation(); recFrame(id); });
+  el.querySelector('.fl-png').addEventListener('click', e => { e.stopPropagation(); setActive(id); exportPNG(); });
+  el.querySelector('.fl-dup').addEventListener('click', e => { e.stopPropagation(); dupFrame(id); });
+  el.querySelector('.fl-name').addEventListener('click', e => { e.stopPropagation(); renameFrame(id); });
+  el.querySelector('.fl-name').addEventListener('pointerdown', e => e.stopPropagation());
+  el.querySelector('.fl-actions').addEventListener('pointerdown', e => e.stopPropagation());
   frames.push(frame);
   activeId = id;
   setFrameSize(frame, 960, 720);
@@ -735,6 +757,110 @@ function setActive(id) {
   closeInspector();
   syncStackUI();
 }
+
+/** REC direto no frame: escolhe EXPLICITAMENTE qual node grava */
+async function recFrame(id) {
+  if (recorder && recorder.isRecording && recFrameId !== id) {
+    const rf = frames.find(f => f.id === recFrameId);
+    TipoUI.showToast(`Já gravando ${frameName(rf)} — para lá primeiro`);
+    return;
+  }
+  setActive(id);
+  await toggleRec();
+}
+
+function frameName(f) {
+  if (!f) return 'frame';
+  return f.name || `frame ${frames.indexOf(f) + 1}`;
+}
+
+/** duplica fonte + stack — variações lado a lado da mesma mídia */
+function dupFrame(id) {
+  const src = frames.find(f => f.id === id);
+  if (!src) return;
+  const nf = newFrame({ blank: true, silent: true });
+  nf.name = frameName(src) + ' copy';
+  // fonte: imagem reusa o elemento; vídeo ganha player próprio na MESMA URL
+  if (src.sourceType === 'image' && src.srcImage) {
+    nf.sourceType = 'image';
+    nf.srcImage = src.srcImage;
+    nf.mediaUrl = src.mediaUrl; // revoke é guardado (URL compartilhada)
+    setFrameSize(nf, src.srcImage.naturalWidth, src.srcImage.naturalHeight);
+  } else if (src.sourceType === 'video' && src.mediaUrl) {
+    const v = document.createElement('video');
+    v.src = src.mediaUrl;
+    v.loop = true; v.muted = true; v.playsInline = true;
+    v.addEventListener('loadedmetadata', () => {
+      nf.sourceType = 'video';
+      nf.srcVideo = v;
+      nf.mediaUrl = src.mediaUrl;
+      setFrameSize(nf, v.videoWidth, v.videoHeight);
+      v.play();
+      nf.needsRender = true;
+      syncStackUI();
+    });
+  } // webcam/demo → demo (default do frame novo)
+  // stack: mesmos efeitos + params
+  src.stack.forEach(n => {
+    addFx(n.fx, true);
+    const copy = nf.stack[nf.stack.length - 1];
+    Object.assign(copy.params, n.params);
+    FX[n.fx].params.forEach(p => {
+      const el = document.getElementById(`st_${copy.uid}_${p.k}`);
+      if (!el) return;
+      el.value = copy.params[p.k];
+      const val = document.getElementById(`st_${copy.uid}_${p.k}Val`);
+      if (val) val.textContent = copy.params[p.k];
+    });
+  });
+  nf.selUid = nf.stack.length ? nf.stack[0].uid : null;
+  closeInspector();
+  syncStackUI();
+  nf.needsRender = true;
+  fitView();
+  TipoUI.showToast('Frame duplicado — mexe num, compara com o outro');
+}
+
+/** nome editável inline no label */
+function renameFrame(id) {
+  const f = frames.find(x => x.id === id);
+  if (!f) return;
+  const span = f.el.querySelector('.fl-name');
+  if (!span || span.querySelector('input')) return;
+  const inp = document.createElement('input');
+  inp.className = 'fl-name-input';
+  inp.value = f.name || frameName(f);
+  inp.maxLength = 24;
+  span.textContent = '';
+  span.appendChild(inp);
+  inp.focus();
+  inp.select();
+  const commit = () => {
+    f.name = inp.value.trim().slice(0, 24);
+    inp.remove(); // senão o guard do syncStackUI nunca re-renderiza o label
+    syncStackUI();
+  };
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { inp.value = f.name; inp.blur(); }
+  });
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('pointerdown', e => e.stopPropagation());
+}
+
+// teclado: Delete/Backspace remove o frame ativo; Esc fecha camadas
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select') || e.target.isContentEditable) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (recorder && recorder.isRecording && recFrameId === activeId) { TipoUI.showToast('Para a gravação antes de excluir'); return; }
+    removeFrame(activeId);
+  } else if (e.key === 'Escape') {
+    closeTools();
+    closeInspector();
+  }
+});
 
 function setFrameSize(frame, sw, sh) {
   let w = sw, h = sh;
@@ -880,6 +1006,8 @@ let view = { x: 0, y: 0, z: 1 };
 
 function applyView() {
   world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  world.style.setProperty('--st-z', view.z);
+  world.style.setProperty('--st-invz', 1 / view.z);
   const g = GRID * view.z;
   space.style.backgroundSize = `${g}px ${g}px`;
   space.style.backgroundPosition = `${view.x}px ${view.y}px`;
@@ -1093,11 +1221,13 @@ function syncStackUI() {
     dock.appendChild(add);
     // label + outline
     f.el.classList.toggle('active', f.id === activeId);
-    f.el.querySelector('.fl-name').textContent = `frame ${fi + 1}`;
+    const nameEl = f.el.querySelector('.fl-name');
+    if (!nameEl.querySelector('input')) nameEl.textContent = f.name || `frame ${fi + 1}`;
     const syms = f.stack.filter(n => n.on).map(n => FX[n.fx].sym.toLowerCase());
     f.el.querySelector('.fl-chain').textContent = syms.length ? syms.join(' → ') : 'passthrough';
     f.el.querySelector('.fl-res').textContent = `${f.PW}×${f.PH}`;
   });
+  syncRecUI();
   document.querySelectorAll('.fx-pane').forEach(p => {
     const f = F();
     p.classList.toggle('sel', !!f && p.dataset.uid === f.selUid);
@@ -1291,7 +1421,12 @@ function resetAll() { applyStackPreset('riso'); }
 function releaseSource(frame) {
   if (frame.webcamStream) { frame.webcamStream.getTracks().forEach(t => t.stop()); frame.webcamStream = null; }
   if (frame.srcVideo) { frame.srcVideo.pause(); frame.srcVideo = null; }
-  if (frame.mediaUrl) { URL.revokeObjectURL(frame.mediaUrl); frame.mediaUrl = null; }
+  if (frame.mediaUrl) {
+    // frames duplicados compartilham a URL — só revoga o último usuário
+    const shared = frames.some(o => o !== frame && o.mediaUrl === frame.mediaUrl);
+    if (!shared) URL.revokeObjectURL(frame.mediaUrl);
+    frame.mediaUrl = null;
+  }
 }
 
 function useDemo() {
@@ -1392,10 +1527,21 @@ function exportPNG() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tipo-studio.png';
+    a.download = `tipo-studio-${frameName(f).replace(/\s+/g, '-').toLowerCase()}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }, 'image/png');
+}
+
+function syncRecUI() {
+  const live = !!(recorder && recorder.isRecording);
+  document.getElementById('recBtn').classList.toggle('rec-live', live);
+  frames.forEach(f => {
+    const isRec = live && f.id === recFrameId;
+    f.el.classList.toggle('recording', isRec);
+    const b = f.el.querySelector('.fl-rec');
+    if (b) { b.classList.toggle('live', isRec); b.innerHTML = isRec ? '&#9632;' : '&#9679;'; b.title = isRec ? 'parar a gravação' : 'gravar ESTE frame'; }
+  });
 }
 
 async function toggleRec() {
@@ -1403,7 +1549,7 @@ async function toggleRec() {
   if (!f) return;
   recFrameId = f.id;
   recorder = await TipoUI.toggleVisualRec(f.canvas);
-  document.getElementById('recBtn').classList.toggle('rec-live', !!(recorder && recorder.isRecording));
+  syncRecUI();
 }
 
 // ============================================================

@@ -173,6 +173,14 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3c — STUDIO: chrome por frame (REC no frame certo, ⧉ dup, rename, Delete) + BUG do recorder preso no 1º canvas
+- **BUG REAL atrás do "grava só o primeiro" do Daniel**: `TipoUI.toggleVisualRec` criava o TipoRecorder UMA vez amarrado no canvas da 1ª chamada — gravações seguintes capturavam o 1º frame pra sempre. Fix no ui.js: rebind `rec.canvas = canvas` quando não está gravando (vale pra qualquer página multi-canvas).
+- **Barra de ações POR FRAME** no label: ● REC (grava AQUELE frame — recFrame seta ativo + amarra recFrameId; gravando: ● vira ■, outline vermelho pulsante no frame, REC de outro frame é bloqueado com toast), ⤓ PNG (nome do arquivo leva o nome do frame), ⧉ duplicar (mesma fonte + stack+params copiados; imagem reusa o elemento, vídeo ganha player próprio na MESMA objectURL — releaseSource só revoga quando NENHUM outro frame usa a URL), ✕ remover. Botões 26×24px.
+- **Label com tamanho CONSTANTE em tela** (contra-escala o zoom via --st-z/--st-invz no world, transform-origin 0 100%, width×z — padrão Figma): os botões não somem no zoom-out (era a raiz do "botão de exclusão muito pequeno").
+- **Rename inline** (pedido: "nomear o frame que tá trabalhando"): clique no nome → input (Enter/blur salva, Esc cancela, máx 24). GOTCHA: commit tem que REMOVER o input antes do syncStackUI (o guard `!nameEl.querySelector('input')` nunca re-renderizava o label). Nome aparece no label, no toast e no filename do PNG.
+- **Teclado**: Delete/Backspace remove o frame ativo (guard: não em input/select; bloqueado durante gravação do próprio frame), Esc fecha modal/inspector.
+- test-studio **49/49** (novos: barra 4 botões ≥24px, ● grava o frame CERTO com recorder.canvas conferido, rename, dup copia stack + nome "copy", Delete remove). Cache-bust au3.
+
 ### 22.3b — ÁUDIO DENTRO DO MP4 GRAVADO (fecha o loop música→efeito→Reel pronto, site-wide)
 - **Com TipoAudio tocando (arquivo/mic), QUALQUER gravação sai com a trilha embutida** — vale pras 40 ferramentas + Studio, no nível do recorder.
 - **Arquitetura**: TipoAudio ganhou um **bus** (GainNode) — fontes plugam nele; analisadores, monitor (audível só pra arquivo) e o tap leem do bus. `TipoAudio.tap()` → `{ctx, node}`; ui.js seta `TipoRecorder.audioTap` (hook estático consultado no start).
