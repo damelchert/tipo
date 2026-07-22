@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### HERO v2.1 — feedback do Daniel ("quadrados e tipografia toscos; bloco de baixo feio, só scroll; GSAP lento e concentrado, tem que vir da tela toda")
+- **GOTCHA da fonte**: o @font-face do index declara a família como **'ClashDisplay' (SEM espaço)** — o hero pedia "Clash Display" e caía no Plex Mono (as "serifas toscas" eram o fallback!). Fix + `document.fonts.load('600 100px "ClashDisplay"')` explícito antes do drawWord.
+- **Blocos arredondados** (roundRect raio cw·0.16) + Clash 600 em cw·0.68.
+- **Portas REMOVIDAS** — o CTA virou só o hint "role pra entrar ↓" (scroll/swipe/Esc saem; a porta do Studio vive na home de 3 painéis). Listeners dos botões mortos removidos juntos (senão addEventListener em null quebrava o hero).
+- **Líquido da TELA INTEIRA + mais rápido**: uniform novo `uZoomK` (amostragem 0.5+(uv-0.5)/zoomK — a palavra nasce ESTOURADA além das bordas, zoomK 2.6→1.0 assenta junto da cristalização); timeline encurtada de ~4.3s pra **~2.3s** (líquido 1.1s → cristaliza 1.2s power4), flow speed inicial 1.6.
+
 ### Exports padronizados: tipo-<tool>-AAAA-MM-DD_HH-MM-SS.ext (pedido do Daniel)
 - **TipoUI.stamp()/stampName(name)** — injeta o timestamp antes da extensão, IDEMPOTENTE (regex detecta stamp existente — Fotograma que já stampava não re-stampa). Aplicado nos DOIS funis: `TipoUI._downloadBlob` (PNG/PNGα/GIF/ASE/CSS/JSON/TXT/mockup/palette/pattern/share-mobile) e `TipoRecorder.download` (MP4/WebM/HQ — recorder usa TipoUI se existir).
 - recorder.js: `tipo-export.mp4` virou `tipo-<página>.mp4` (`_pageName()` do pathname) → stampado no download.

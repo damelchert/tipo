@@ -690,11 +690,7 @@ body { overflow: hidden; }
   <button class="hero-skip" id="heroSkip" type="button">pular →</button>
   <div class="hero-log" id="heroLog">revelando · liquid flow</div>
   <div class="hero-cta" id="heroCta">
-    <div class="hero-doors">
-      <button type="button" id="heroSpaces"><b>STUDIO</b><span>canvas infinito &middot; nodes &middot; &aacute;udio-reativo</span></button>
-      <button type="button" id="heroEnter"><b>FERRAMENTAS</b><span>40 modos &middot; visual &amp; kinetic</span></button>
-    </div>
-    <span class="hero-hint">role pra entrar ↓</span>
+    <span class="hero-hint">role pra entrar &darr;</span>
   </div>
 </div>
 
@@ -2152,9 +2148,11 @@ goKineticType = function() {
       x.translate(cx, cy);
       x.rotate((i % 2 ? -1 : 1) * 0.02);
       x.fillStyle = cols[i];
-      x.fillRect(-cw / 2, -cw / 2, cw, cw);
+      x.beginPath();
+      x.roundRect(-cw / 2, -cw / 2, cw, cw, cw * 0.16);
+      x.fill();
       x.fillStyle = ink[i];
-      x.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
+      x.font = `600 ${cw * 0.68}px "ClashDisplay", "IBM Plex Mono", monospace`;
       x.textAlign = 'center';
       x.textBaseline = 'middle';
       x.fillText(chars[i], 0, cw * 0.04);
@@ -2168,7 +2166,7 @@ out vec2 vUv;
 void main(){ vec2 p = vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); vUv = vec2(p.x, 1.0-p.y); gl_Position = vec4(p*2.0-1.0,0.0,1.0); }`;
   const FS = `#version 300 es
 precision highp float;
-uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime; uniform float uAmt; uniform float uScale; uniform vec2 uMouse;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime; uniform float uAmt; uniform float uScale; uniform float uZoomK; uniform vec2 uMouse;
 in vec2 vUv; out vec4 outC;
 float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
@@ -2179,7 +2177,8 @@ void main(){
   vec2 p = vUv*vec2(asp,1.0)*uScale + (uMouse-0.5)*0.6;
   vec2 q = vec2(fbm(p+vec2(uTime,0.0)), fbm(p+vec2(5.2,1.3)-uTime*0.7));
   vec2 w = vec2(fbm(p+2.4*q+vec2(1.7,9.2)), fbm(p+2.4*q+vec2(8.3,2.8)));
-  vec2 uv = vUv + (w-0.5)*uAmt/100.0*0.45;
+  vec2 base = 0.5 + (vUv - 0.5) / uZoomK;
+  vec2 uv = base + (w-0.5)*uAmt/100.0*0.45;
   outC = texture(uTex, clamp(uv,0.0,1.0));
 }`;
   function sh(type, src) {
@@ -2193,7 +2192,7 @@ void main(){
   gl.linkProgram(prog);
   gl.useProgram(prog);
   const U = {};
-  ['uTex', 'uRes', 'uTime', 'uAmt', 'uScale', 'uMouse'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+  ['uTex', 'uRes', 'uTime', 'uAmt', 'uScale', 'uZoomK', 'uMouse'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -2202,7 +2201,7 @@ void main(){
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
   // ---- estado animado por GSAP: derretido → cristal ----
-  const S = { amt: 160, scale: 7.5, speed: 1.0 };
+  const S = { amt: 150, scale: 7.0, speed: 1.6, zoomK: 2.6 };
   const mouse = { x: 0.5, y: 0.5 };
   window.addEventListener('pointermove', e => {
     mouse.x += (e.clientX / window.innerWidth - mouse.x) * 0.12;
@@ -2226,26 +2225,26 @@ void main(){
     gl.uniform1f(U.uTime, tAcc * 0.4);
     gl.uniform1f(U.uAmt, S.amt);
     gl.uniform1f(U.uScale, S.scale);
+    gl.uniform1f(U.uZoomK, S.zoomK);
     gl.uniform2f(U.uMouse, mouse.x, mouse.y);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
   let tl = null;
-  document.fonts.ready.then(() => {
+  Promise.all([document.fonts.ready, document.fonts.load('600 100px "ClashDisplay"').catch(() => {})]).then(() => {
     drawWord();
     requestAnimationFrame(frame);
     const setLog = txt => () => { log.textContent = txt; };
     tl = gsap.timeline({ defaults: { ease: 'sine.inOut' } });
     window.__heroTl = tl;
-    tl.to('#heroTag,#heroLog', { opacity: 1, duration: 0.5 }, 0.1)
-      // ato 1 — matéria líquida pura (irreconhecível, fluindo)
-      .to(S, { amt: 85, scale: 5.2, duration: 2.2, ease: 'sine.inOut' }, 0)
-      .add(setLog('revelando · tipó'), 1.6)
-      // ato 2 — cristalização: o warp morre, o fluxo congela, TIPÓ aparece
-      .to(S, { amt: 0, speed: 0.06, duration: 2.1, ease: 'power4.inOut' }, 2.2)
-      .add(setLog('40 ferramentas · studio · 100% browser'), 3.6)
-      // ato 3 — as duas portas
-      .to('#heroCta', { opacity: 1, duration: 0.6 }, 3.9)
+    tl.to('#heroTag,#heroLog', { opacity: 1, duration: 0.4 }, 0.1)
+      // ato 1 — a tela INTEIRA é matéria líquida (palavra estourada + warp alto)
+      .to(S, { amt: 80, scale: 5.0, zoomK: 1.5, duration: 1.1, ease: 'sine.inOut' }, 0)
+      .add(setLog('revelando · tipó'), 0.8)
+      // ato 2 — cristalização rápida: warp morre, zoom assenta, fluxo congela
+      .to(S, { amt: 0, zoomK: 1.0, speed: 0.06, duration: 1.2, ease: 'power4.inOut' }, 1.1)
+      .add(setLog('40 ferramentas · studio · 100% browser'), 2.0)
+      .to('#heroCta', { opacity: 1, duration: 0.5 }, 2.3)
       .add(() => hero.classList.add('parked'));
   });
   window.addEventListener('resize', () => { if (running) drawWord(); });
@@ -2269,11 +2268,6 @@ void main(){
       .to('#heroCta,#heroLog,#heroTag', { opacity: 0, duration: 0.3 }, 0)
       .to(hero, { yPercent: -100, duration: 0.6, ease: 'power4.inOut' }, 0.25);
   }
-  document.getElementById('heroEnter').addEventListener('click', () => heroExit(false));
-  document.getElementById('heroSpaces').addEventListener('click', () => {
-    sessionStorage.setItem('tipo-hero', '1');
-    location.href = 'studio.html';
-  });
   document.getElementById('heroSkip').addEventListener('click', () => heroExit(true));
   window.addEventListener('wheel', e => { if (!exiting && hero.style.display !== 'none' && e.deltaY > 6) heroExit(false); }, { passive: true });
   let touchY = null;
