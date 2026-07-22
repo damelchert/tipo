@@ -909,8 +909,282 @@ const TipoStagger = {
    this file. Sliders with the data-nobhv attribute are skipped.
    ============================================================ */
 
+/* ============================================================
+   TIPÓ — Audio Reactivity (TipoAudio)
+   O áudio vira FONTE do TipoBehavior: qualquer slider de qualquer
+   ferramenta reage a level/bass/mid/treble/kick/snare/hihat.
+   Arquitetura validada na eng. reversa do Sketch Tools:
+   2 AnalyserNodes — um suavizado (FFT 2048, smoothing .8) pra
+   nível+bandas, um SEM smoothing pra detecção de batida por
+   spectral flux com envelope de release por banda.
+   Fonte: arquivo de áudio (toca em loop, audível) ou microfone
+   (não ecoa). Botão ♪ flutuante aparece com o 1º behavior de
+   áudio; popover controla a fonte.
+   ============================================================ */
+
+const TipoAudio = {
+  FEATURES: ['level', 'bass', 'mid', 'treble', 'kick', 'snare', 'hihat'],
+  BANDS: { bass: [[60, 250]], mid: [[250, 2000]], treble: [[2000, 8000]] },
+  FLUX: {
+    kick:  { bands: [[60, 100]],                  tau: 0.10, gain: 3 },
+    snare: { bands: [[180, 260], [2500, 3500]],   tau: 0.11, gain: 3 },
+    hihat: { bands: [[10000, 16000]],             tau: 0.07, gain: 4 },
+  },
+  ctx: null,
+  running: false,
+  sourceKind: null, // 'file' | 'mic' | 'node' (teste)
+  sourceName: '',
+  features: { level: 0, bass: 0, mid: 0, treble: 0, kick: 0, snare: 0, hihat: 0 },
+  _smooth: null, _flux: null,
+  _sBuf: null, _fBuf: null,
+  _env: { kick: 0, snare: 0, hihat: 0 },
+  _prev: { kick: 0, snare: 0, hihat: 0 },
+  _audioEl: null, _mediaSrc: null, _micStream: null, _micSrc: null, _nodeSrc: null,
+  _lastT: 0,
+  _btn: null, _pop: null, _css: false,
+  _hinted: false,
+
+  ensure() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC();
+    this._smooth = this.ctx.createAnalyser();
+    this._smooth.fftSize = 2048;
+    this._smooth.smoothingTimeConstant = 0.8;
+    this._flux = this.ctx.createAnalyser();
+    this._flux.fftSize = 2048;
+    this._flux.smoothingTimeConstant = 0; // cru — essencial pro flux/beat
+    this._sBuf = new Uint8Array(this._smooth.frequencyBinCount);
+    this._fBuf = new Uint8Array(this._flux.frequencyBinCount);
+  },
+
+  _disconnectSource() {
+    if (this._audioEl) { this._audioEl.pause(); }
+    if (this._mediaSrc) { try { this._mediaSrc.disconnect(); } catch (e) {} }
+    if (this._micSrc) { try { this._micSrc.disconnect(); } catch (e) {} }
+    if (this._micStream) { this._micStream.getTracks().forEach(t => t.stop()); this._micStream = null; }
+    if (this._nodeSrc) { try { this._nodeSrc.disconnect(); } catch (e) {} this._nodeSrc = null; }
+    this._micSrc = null;
+    this.running = false;
+    this.sourceKind = null;
+  },
+
+  _wire(node, audible) {
+    node.connect(this._smooth);
+    node.connect(this._flux);
+    if (audible) node.connect(this.ctx.destination);
+    this.running = true;
+    this._env = { kick: 0, snare: 0, hihat: 0 };
+    this._prev = { kick: 0, snare: 0, hihat: 0 };
+  },
+
+  loadFile(file) {
+    this.ensure();
+    this._disconnectSource();
+    if (!this._audioEl) {
+      this._audioEl = document.createElement('audio');
+      this._audioEl.loop = true;
+      // MediaElementSource só pode nascer UMA vez por elemento
+      this._mediaSrc = this.ctx.createMediaElementSource(this._audioEl);
+    }
+    if (this._audioEl.src) URL.revokeObjectURL(this._audioEl.src);
+    this._audioEl.src = URL.createObjectURL(file);
+    this._audioEl.play();
+    this._wire(this._mediaSrc, true);
+    this.sourceKind = 'file';
+    this.sourceName = file.name;
+    this._syncPop();
+  },
+
+  async useMic() {
+    this.ensure();
+    this._disconnectSource();
+    try {
+      this._micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      if (typeof TipoUI !== 'undefined') TipoUI.showToast('Microfone negado');
+      this._syncPop();
+      return;
+    }
+    this._micSrc = this.ctx.createMediaStreamSource(this._micStream);
+    this._wire(this._micSrc, false); // sem destination = sem feedback
+    this.sourceKind = 'mic';
+    this.sourceName = 'microfone';
+    this._syncPop();
+  },
+
+  /** Hook de teste/integração: qualquer AudioNode como fonte */
+  connectNode(node) {
+    this.ensure();
+    this._disconnectSource();
+    this._nodeSrc = node;
+    this._wire(node, false);
+    this.sourceKind = 'node';
+    this.sourceName = 'node';
+  },
+
+  stopSource() {
+    this._disconnectSource();
+    this.sourceName = '';
+    Object.keys(this.features).forEach(k => { this.features[k] = 0; });
+    this._syncPop();
+  },
+
+  togglePlay() {
+    if (this.sourceKind !== 'file' || !this._audioEl) return;
+    if (this._audioEl.paused) this._audioEl.play(); else this._audioEl.pause();
+    this._syncPop();
+  },
+
+  /** média por banda; opts.peak mistura o PICO da banda (bandas largas
+   *  diluem conteúdo estreito — um lead de synth sumia na média pura) */
+  _bandAvg(buf, hzPerBin, bands, peak) {
+    let sum = 0;
+    for (const [lo, hi] of bands) {
+      const a = Math.max(0, Math.floor(lo / hzPerBin));
+      const b = Math.min(buf.length - 1, Math.ceil(hi / hzPerBin));
+      let s = 0, n = 0, mx = 0;
+      for (let i = a; i <= b; i++) { s += buf[i]; n++; if (buf[i] > mx) mx = buf[i]; }
+      const avg = n ? s / n / 255 : 0;
+      // knee no pico: descarta o piso espectral (sidelobes da janela ~-58dB)
+      const mk = Math.max(0, mx / 255 - 0.4) / 0.6;
+      sum += peak ? avg * 0.5 + mk * 0.5 : avg;
+    }
+    return sum / bands.length;
+  },
+
+  /** Chamado pelo loop do TipoBehavior — 1x por frame (guard por timestamp) */
+  update(now, dt) {
+    if (!this.running || now === this._lastT) return;
+    this._lastT = now;
+    const hz = this.ctx.sampleRate / this._smooth.fftSize;
+    this._smooth.getByteFrequencyData(this._sBuf);
+    let s = 0;
+    for (let i = 0; i < this._sBuf.length; i++) s += this._sBuf[i];
+    this.features.level = Math.min(1, (s / this._sBuf.length / 255) * 2.2);
+    for (const k of ['bass', 'mid', 'treble']) {
+      this.features[k] = Math.min(1, this._bandAvg(this._sBuf, hz, this.BANDS[k], true) * 1.6);
+    }
+    // flux (batida): energia crua → onset = delta positivo → envelope c/ release
+    this._flux.getByteFrequencyData(this._fBuf);
+    for (const k of ['kick', 'snare', 'hihat']) {
+      const cfg = this.FLUX[k];
+      const e = this._bandAvg(this._fBuf, hz, cfg.bands);
+      const onset = Math.max(0, e - this._prev[k]) * cfg.gain;
+      this._prev[k] = e;
+      this._env[k] = Math.max(this._env[k] * Math.exp(-dt / cfg.tau), Math.min(1, onset));
+      this.features[k] = this._env[k];
+    }
+  },
+
+  // ---- UI: botão ♪ + popover de fonte ----
+
+  _injectCSS() {
+    if (this._css) return;
+    this._css = true;
+    const st = document.createElement('style');
+    st.textContent = `
+.tipo-audio-btn { position:fixed; bottom:64px; right:62px; z-index:9000; width:40px; height:40px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616); color:var(--text-3,#bbb); font-size:16px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.25); font-family:var(--font-mono,monospace); }
+.tipo-audio-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+.tipo-audio-btn.live { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); animation:tipo-bhv-pulse 1.4s ease-in-out infinite; }
+#tipoAudioPop { position:fixed; bottom:112px; right:62px; z-index:9001; width:230px; background:var(--bg-1,#161616); border:1px solid var(--border-2,#3a3a3a); border-radius:8px; padding:12px 14px; box-shadow:0 8px 30px rgba(0,0,0,.4); display:none; font-family:var(--font-ui,'IBM Plex Mono',monospace); }
+#tipoAudioPop.open { display:block; }
+#tipoAudioPop .ta-head { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--accent,#2A8A7A); margin-bottom:10px; }
+#tipoAudioPop .ta-row { display:flex; gap:8px; margin-top:8px; }
+#tipoAudioPop button { flex:1; border:1px solid var(--border-2,#3a3a3a); background:transparent; color:var(--text-2,#ccc); font-size:10px; letter-spacing:0.5px; padding:7px 6px; border-radius:5px; cursor:pointer; font-family:inherit; }
+#tipoAudioPop button:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+#tipoAudioPop button.on { background:var(--accent,#2A8A7A); border-color:var(--accent,#2A8A7A); color:var(--bg-0,#0a0a0a); }
+#tipoAudioPop .ta-status { font-size:9px; color:var(--text-4,#999); margin-top:10px; line-height:1.5; word-break:break-all; }
+#tipoAudioPop .ta-meter { height:4px; border-radius:2px; background:var(--bg-2,#1e1e1e); margin-top:8px; overflow:hidden; }
+#tipoAudioPop .ta-meter i { display:block; height:100%; width:0; background:var(--accent,#2A8A7A); transition:width .06s linear; }
+`;
+    document.head.appendChild(st);
+  },
+
+  showUI() {
+    this._injectCSS();
+    if (this._btn) { this._btn.style.display = ''; return; }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tipo-audio-btn';
+    b.id = 'tipoAudioBtn';
+    b.textContent = '♪';
+    b.title = 'Fonte de áudio (behaviors ♪)';
+    b.addEventListener('click', e => { e.stopPropagation(); this._togglePop(); });
+    document.body.appendChild(b);
+    this._btn = b;
+    const p = document.createElement('div');
+    p.id = 'tipoAudioPop';
+    p.innerHTML =
+      '<div class="ta-head">♪ áudio reativo</div>' +
+      '<div class="ta-row"><button type="button" id="taFile">Carregar áudio</button>' +
+      '<button type="button" id="taMic">Mic</button></div>' +
+      '<div class="ta-row"><button type="button" id="taPlay" style="display:none;">Pausar</button>' +
+      '<button type="button" id="taStop" style="display:none;">Desligar</button></div>' +
+      '<div class="ta-meter"><i id="taMeter"></i></div>' +
+      '<div class="ta-status" id="taStatus">sobe um MP3/WAV ou liga o mic — os sliders com behavior ♪ dançam junto</div>';
+    p.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(p);
+    this._pop = p;
+    const file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'audio/*';
+    file.style.display = 'none';
+    document.body.appendChild(file);
+    file.addEventListener('change', () => { if (file.files[0]) this.loadFile(file.files[0]); file.value = ''; });
+    p.querySelector('#taFile').addEventListener('click', () => file.click());
+    p.querySelector('#taMic').addEventListener('click', () => this.useMic());
+    p.querySelector('#taPlay').addEventListener('click', () => this.togglePlay());
+    p.querySelector('#taStop').addEventListener('click', () => this.stopSource());
+    document.addEventListener('click', () => p.classList.remove('open'));
+  },
+
+  _togglePop() {
+    if (!this._pop) return;
+    this._pop.classList.toggle('open');
+    this._syncPop();
+  },
+
+  _syncPop() {
+    if (this._btn) this._btn.classList.toggle('live', this.running);
+    if (!this._pop) return;
+    const st = this._pop.querySelector('#taStatus');
+    const play = this._pop.querySelector('#taPlay');
+    const stop = this._pop.querySelector('#taStop');
+    const mic = this._pop.querySelector('#taMic');
+    mic.classList.toggle('on', this.sourceKind === 'mic');
+    play.style.display = this.sourceKind === 'file' ? '' : 'none';
+    stop.style.display = this.running || this.sourceKind ? '' : 'none';
+    if (this.sourceKind === 'file') {
+      play.textContent = this._audioEl && this._audioEl.paused ? 'Tocar' : 'Pausar';
+      st.textContent = '♪ ' + this.sourceName;
+    } else if (this.sourceKind === 'mic') {
+      st.textContent = '🎙 microfone ao vivo';
+    } else {
+      st.textContent = 'sobe um MP3/WAV ou liga o mic — os sliders com behavior ♪ dançam junto';
+    }
+  },
+
+  /** VU no popover (chamado pelo loop quando o pop está aberto) */
+  _meter() {
+    if (!this._pop || !this._pop.classList.contains('open')) return;
+    const m = this._pop.querySelector('#taMeter');
+    if (m) m.style.width = Math.round(this.features.level * 100) + '%';
+  },
+
+  /** 1º behavior de áudio sem fonte: mostra o botão + dica (1x) */
+  nudge() {
+    this.showUI();
+    if (this.running || this._hinted) return;
+    this._hinted = true;
+    if (this._pop) this._pop.classList.add('open');
+    if (typeof TipoUI !== 'undefined') TipoUI.showToast('Carrega um áudio ou liga o mic no ♪');
+  },
+};
+
 const TipoBehavior = {
   TYPES: ['sine', 'noise', 'loop', 'pingpong', 'step'],
+  AUDIO_TYPES: ['level', 'bass', 'mid', 'treble', 'kick', 'snare', 'hihat'],
   active: new Map(), // sliderId -> behavior state
   paused: false,
   _raf: null,
@@ -1031,6 +1305,10 @@ const TipoBehavior = {
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.033;
       last = now;
       if (this.paused) return;
+      // features de áudio calculadas 1x/frame quando algum behavior ♪ existe
+      let hasAudio = false;
+      this.active.forEach(b => { if (this.AUDIO_TYPES.includes(b.type)) hasAudio = true; });
+      if (hasAudio && typeof TipoAudio !== 'undefined') { TipoAudio.update(now, dt); TipoAudio._meter(); }
       this.active.forEach(b => this._update(b, dt));
     };
     this._raf = requestAnimationFrame(tick);
@@ -1038,9 +1316,19 @@ const TipoBehavior = {
 
   _update(b, dt) {
     if (!b.el.isConnected) { this.stop(b.id); return; } // slider was rebuilt/removed
+    const A0 = (b.amp / 100) * b.range;
+    // tipos ♪: o slider é empurrado do center pela feature de áudio;
+    // Speed vira SENSIBILIDADE (ganho 0..2 no sinal, 50 = 1x)
+    if (this.AUDIO_TYPES.includes(b.type)) {
+      const raw = (typeof TipoAudio !== 'undefined' && TipoAudio.running)
+        ? TipoAudio.features[b.type] : 0;
+      const f = Math.min(1, raw * (b.speed / 50));
+      this._apply(b, b.center + f * A0);
+      return;
+    }
     const spd = 0.2 + (b.speed / 100) * 2.8; // ~0.2..3 cycles factor
     b.t += dt * spd;
-    const A = (b.amp / 100) * b.range;
+    const A = A0;
     let v;
     switch (b.type) {
       case 'noise': {
@@ -1104,9 +1392,14 @@ const TipoBehavior = {
       '<div class="bhv-pop-row"><span>Type</span><select id="bhvPopType" data-nobhv>' +
       '<option value="sine">Oscillate</option><option value="noise">Noise</option>' +
       '<option value="loop">Loop</option><option value="pingpong">Ping-Pong</option>' +
-      '<option value="step">Random Step</option></select></div>' +
+      '<option value="step">Random Step</option>' +
+      '<optgroup label="♪ Audio">' +
+      '<option value="level">♪ Level</option><option value="bass">♪ Bass</option>' +
+      '<option value="mid">♪ Mid</option><option value="treble">♪ Treble</option>' +
+      '<option value="kick">♪ Kick</option><option value="snare">♪ Snare</option>' +
+      '<option value="hihat">♪ Hi-hat</option></optgroup></select></div>' +
       '<div class="bhv-pop-row"><span>Amount</span><input type="range" id="bhvPopAmp" min="1" max="100" value="35" data-nobhv></div>' +
-      '<div class="bhv-pop-row"><span>Speed</span><input type="range" id="bhvPopSpeed" min="1" max="100" value="50" data-nobhv></div>';
+      '<div class="bhv-pop-row"><span id="bhvPopSpdLbl">Speed</span><input type="range" id="bhvPopSpeed" min="1" max="100" value="50" data-nobhv></div>';
     document.body.appendChild(p);
     p.addEventListener('click', e => e.stopPropagation());
     p.querySelector('#bhvPopOff').addEventListener('click', () => {
@@ -1115,6 +1408,8 @@ const TipoBehavior = {
     p.querySelector('#bhvPopType').addEventListener('change', e => {
       const b = this.active.get(this._popFor);
       if (b) { b.type = e.target.value; b.t = 0; b.stepTimer = 0; }
+      this._syncSpdLabel(e.target.value);
+      if (b && this.AUDIO_TYPES.includes(b.type) && typeof TipoAudio !== 'undefined') TipoAudio.nudge();
     });
     p.querySelector('#bhvPopAmp').addEventListener('input', e => {
       const b = this.active.get(this._popFor);
@@ -1130,6 +1425,11 @@ const TipoBehavior = {
     this._pop = p;
   },
 
+  _syncSpdLabel(type) {
+    const lbl = this._pop && this._pop.querySelector('#bhvPopSpdLbl');
+    if (lbl) lbl.textContent = this.AUDIO_TYPES.includes(type) ? 'Sens.' : 'Speed';
+  },
+
   openPopover(el, btn) {
     this._buildPop();
     const b = this.active.get(el.id);
@@ -1139,6 +1439,7 @@ const TipoBehavior = {
     const label = row && row.querySelector('.range-label');
     this._pop.querySelector('#bhvPopName').textContent = (label ? label.textContent : el.id) + ' ~';
     this._pop.querySelector('#bhvPopType').value = b.type;
+    this._syncSpdLabel(b.type);
     this._pop.querySelector('#bhvPopAmp').value = b.amp;
     this._pop.querySelector('#bhvPopSpeed').value = b.speed;
     this._pop.classList.add('open');
