@@ -173,6 +173,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3a — STUDIO: 8→14 efeitos + controles fundos + × do frame visível ("mais controles" do pedido do Daniel)
+- **6 nodes novos**: **ASCII** (atlas de glifos ramp ' .:-~=+*#%@' em textura auxiliar — engine ganhou suporte a `uAtlas` na TEXTURE1, loc detectada por getUniformLocation; 3 modos de cor: ink/papel, cor da fonte, terminal mint; ramp invertível), **Duotone** (threshold+softness+2 cores), **Blur** (12-tap poisson single-pass), **Kaleido** (segments 2-16 + rotate + zoom, polar fold com correção de aspect), **Aberration** (radial com edge-only), **Adjust** (brightness/contrast/saturation/**hue** via rotação YIQ).
+- **Controles novos nos existentes**: halftone ganhou **Shape** (Dot/Square/Line/Diamond — métricas de distância diferentes), bayer ganhou **Mono P&B**, glitch ganhou **Blocks** (scramble de blocos 9×6 por hash), grain ganhou **Grain Size** (1-5, hash em coords quantizadas).
+- **2 receitas novas**: Terminal (ascii mint + grain) e Noir (adjust dessaturado + duotone + aberration + grain pesado) — 8 receitas.
+- **× do frame agora sempre visível** (era hover-only — Daniel pediu "botão para excluir frame": ele existia mas não se descobria).
+- test-studio **42/42** (o loop de fx itera Object.keys(FX) — os 6 novos entraram de graça; novos: modal 14/14, 8 receitas distintas, halftone shape muda render, × visível). Card do index atualizado (14 effects · multi-frame).
+
 ## 2026-07-21
 
 ### 22.2 v2 — STUDIO virou O ESPAÇO (feedback do Daniel: "não tá nem parecido com o modo canvas do Sketch/Flora/Magnific — quero experiência DIFERENTE do que já temos")

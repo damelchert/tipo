@@ -87,8 +87,9 @@ await page.evaluate(() => openTools());
 const modal = await page.evaluate(() => ({
   open: document.getElementById('toolsModal').classList.contains('open'),
   thumbs: document.querySelectorAll('.tool-thumb').length,
+  fxN: Object.keys(FX).length,
 }));
-check('modal Tools com 8 efeitos', modal.open && modal.thumbs === 8, `(${modal.thumbs})`);
+check('modal Tools com todos os efeitos', modal.open && modal.thumbs === modal.fxN && modal.fxN >= 14, `(${modal.thumbs}/${modal.fxN})`);
 await page.evaluate(() => { document.querySelectorAll('.tool-thumb')[0].click(); });
 await page.waitForTimeout(150);
 const added = await page.evaluate(() => ({
@@ -156,13 +157,32 @@ const bhv = await page.evaluate(() => ({
 check('behaviors nos params do stack', bhv.btns === bhv.sliders && bhv.btns > 0, `(${bhv.btns}/${bhv.sliders})`);
 
 // presets distintos entre si
+const pNames = ['riso', 'print', 'vhs', 'poster', 'zine', 'dream', 'terminal', 'noir'];
 const pHashes = [];
-for (const p of ['riso', 'print', 'vhs', 'poster', 'zine', 'dream']) {
+for (const p of pNames) {
   await page.evaluate(name => applyStackPreset(name), p);
   await page.waitForTimeout(280);
   pHashes.push((await hash()).h);
 }
-check('6 presets distintos', new Set(pHashes).size === 6, `(${new Set(pHashes).size})`);
+check('8 receitas distintas', new Set(pHashes).size === pNames.length, `(${new Set(pHashes).size})`);
+
+// controles novos: halftone shape muda o render; × do frame sempre visível
+await page.evaluate(() => { clearStack(); addFx('halftone', true); });
+await page.waitForTimeout(250);
+const hs0 = await hash();
+await page.evaluate(() => {
+  const el = document.getElementById(`st_${stack[0].uid}_shape`);
+  el.value = 2; // Line
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+});
+await page.waitForTimeout(250);
+const hs1 = await hash();
+check('halftone shape (Line) muda o render', hs0.h !== hs1.h);
+const flx = await page.evaluate(() => {
+  const b = document.querySelector('.frame .fl-x');
+  return b && getComputedStyle(b).display !== 'none';
+});
+check('botão × do frame sempre visível', flx);
 
 // ============ MULTI-FRAME ============
 // frame novo nasce com receita própria e render INDEPENDENTE

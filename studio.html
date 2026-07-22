@@ -29,9 +29,8 @@
   .frame { position: absolute; }
   .frame-label { position: absolute; top: -26px; left: 2px; right: 0; display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; cursor: move; }
   .frame-label b { color: var(--accent); font-weight: 400; }
-  .frame-label .fl-x { border: none; background: transparent; color: var(--text-5); cursor: pointer; font-size: 11px; padding: 0 3px; font-family: inherit; display: none; }
-  .frame-label .fl-x:hover { color: var(--red); }
-  .frame:hover .fl-x { display: inline; }
+  .frame-label .fl-x { border: 1px solid transparent; background: transparent; color: var(--text-5); cursor: pointer; font-size: 11px; padding: 1px 5px; border-radius: 4px; font-family: inherit; margin-left: 4px; }
+  .frame-label .fl-x:hover { color: var(--red); border-color: var(--red); }
   .frame canvas { display: block; box-shadow: 0 18px 70px rgba(0,0,0,0.5); border-radius: 4px; background: #111; cursor: move; }
   .frame.active canvas { outline: 1.5px solid var(--accent); outline-offset: 3px; }
 
@@ -145,6 +144,14 @@
   .tt-glitch { background: repeating-linear-gradient(0deg, #1A1818 0 6px, #2A8A7A 6px 9px, #1A1818 9px 14px, #D4A040 14px 16px); }
   .tt-wave { background: repeating-radial-gradient(circle at 50% 120%, #99E0D2 0 6px, #2A8A7A 6px 12px, #1B5A4E 12px 18px); }
   .tt-grain { background-color: #6b6459; background-image: radial-gradient(circle, rgba(248,245,240,.6) .8px, transparent .8px), radial-gradient(circle, rgba(26,24,24,.7) .8px, transparent .8px); background-size: 5px 5px, 7px 7px; background-position: 0 0, 3px 2px; }
+  .tt-ascii { background: #141313; position: relative; }
+  .tt-ascii::before { content: '@#*+=- .'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #99E0D2; font-family: monospace; font-size: 13px; letter-spacing: 2px; }
+  .tt-duotone { background: linear-gradient(105deg, #1A1818 48%, #F8F5F0 52%); }
+  .tt-blur { background: radial-gradient(circle at 40% 50%, #D4A040 0%, #2A8A7A 55%, #1A1818 100%); filter: blur(4px); }
+  .tt-kaleido { background: conic-gradient(#2A8A7A 0 30deg, #99E0D2 30deg 60deg, #D4A040 60deg 90deg, #1A1818 90deg 120deg, #2A8A7A 120deg 150deg, #99E0D2 150deg 180deg, #D4A040 180deg 210deg, #1A1818 210deg 240deg, #2A8A7A 240deg 270deg, #99E0D2 270deg 300deg, #D4A040 300deg 330deg, #1A1818 330deg); }
+  .tt-aberration { background: #141313; position: relative; }
+  .tt-aberration::before { content: 'AB'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; color: #F8F5F0; text-shadow: -3px 0 0 rgba(255,40,40,.7), 3px 0 0 rgba(40,80,255,.7); }
+  .tt-adjust { background: linear-gradient(90deg, #1A1818, #6a6a6a 35%, #F8F5F0 70%, #2A8A7A 70%, #D4A040); }
 
   /* ============ mobile ============ */
   @media (max-width: 768px) {
@@ -177,6 +184,8 @@
     <option value="poster">Poster</option>
     <option value="zine">Zine</option>
     <option value="dream">Dream</option>
+    <option value="terminal">Terminal</option>
+    <option value="noir">Noir</option>
   </select>
   <button class="tb-btn" onclick="exportPNG()">PNG</button>
   <button class="tb-btn" id="recBtn" onclick="toggleRec()">&#9210; REC</button>
@@ -267,14 +276,16 @@ void main(){
     params: [
       { k: 'levels', label: 'Levels', min: 2, max: 8, val: 3, u: 'uLevels' },
       { k: 'scale', label: 'Scale', min: 1, max: 10, val: 2, u: 'uScale' },
+      { k: 'mono', label: 'Mode', type: 'select', val: 0, u: 'uMono', options: ['Color', 'Mono (P&B)'] },
     ],
-    frag: `uniform float uLevels; uniform float uScale;
+    frag: `uniform float uLevels; uniform float uScale; uniform float uMono;
 const float B[16] = float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
 void main(){
   vec2 px = floor(gl_FragCoord.xy / max(uScale,1.0));
   int idx = int(mod(px.x,4.0)) + int(mod(px.y,4.0)) * 4;
   float th = (B[idx] + 0.5) / 16.0 - 0.5;
   vec3 c = texture(uTex, vUv).rgb;
+  if (uMono > 0.5) c = vec3(lum(c));
   float L = max(uLevels - 1.0, 1.0);
   outC = vec4(clamp(floor(c * L + 0.5 + th) / L, 0.0, 1.0), 1.0);
 }`,
@@ -285,9 +296,10 @@ void main(){
       { k: 'cell', label: 'Cell', min: 4, max: 42, val: 11, u: 'uCell' },
       { k: 'angle', label: 'Angle', min: 0, max: 90, val: 15, u: 'uAngle' },
       { k: 'gain', label: 'Ink Gain', min: 50, max: 160, val: 100, u: 'uGain' },
+      { k: 'shape', label: 'Shape', type: 'select', val: 0, u: 'uShape', options: ['Dot', 'Square', 'Line', 'Diamond'] },
       { k: 'ink', label: 'Ink', type: 'select', val: 2, u: 'uInkMode', options: ['Source color', 'Ink (preto)', 'Teal'] },
     ],
-    frag: `uniform float uCell; uniform float uAngle; uniform float uGain; uniform float uInkMode;
+    frag: `uniform float uCell; uniform float uAngle; uniform float uGain; uniform float uShape; uniform float uInkMode;
 void main(){
   float a = radians(uAngle);
   mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
@@ -298,7 +310,11 @@ void main(){
   vec3 src = texture(uTex, clamp(center, 0.0, 1.0)).rgb;
   float L = lum(src);
   float r = (1.0 - L) * uCell * 0.72 * (uGain / 100.0);
-  float d = length(p - cellO);
+  vec2 dp = p - cellO;
+  float d = uShape < 0.5 ? length(dp)
+          : uShape < 1.5 ? max(abs(dp.x), abs(dp.y)) * 1.12
+          : uShape < 2.5 ? abs(dp.y) * 1.6
+          : (abs(dp.x) + abs(dp.y)) * 0.82;
   float m = smoothstep(r, r - 1.5, d);
   vec3 paper = vec3(0.973, 0.961, 0.941);
   vec3 ink = uInkMode < 0.5 ? src : (uInkMode < 1.5 ? vec3(0.102, 0.094, 0.094) : vec3(0.165, 0.541, 0.478));
@@ -344,9 +360,10 @@ void main(){
     params: [
       { k: 'shift', label: 'RGB Shift', min: 0, max: 40, val: 6, u: 'uShift' },
       { k: 'slices', label: 'Slices', min: 0, max: 100, val: 30, u: 'uSlices' },
+      { k: 'blocks', label: 'Blocks', min: 0, max: 100, val: 0, u: 'uBlocks' },
       { k: 'scan', label: 'Scanlines', min: 0, max: 100, val: 20, u: 'uScan' },
     ],
-    frag: `uniform float uShift; uniform float uSlices; uniform float uScan;
+    frag: `uniform float uShift; uniform float uSlices; uniform float uBlocks; uniform float uScan;
 void main(){
   float t = floor(uTime * 10.0);
   vec2 uv = vUv;
@@ -354,6 +371,12 @@ void main(){
   float h = hash2(vec2(band, t));
   if (h < uSlices / 100.0 * 0.4) {
     uv.x += (hash2(vec2(band, t + 7.0)) - 0.5) * 0.12 * (uSlices / 100.0 + 0.3);
+  }
+  vec2 blk = floor(uv * vec2(9.0, 6.0));
+  float hb = hash2(blk + t * 13.7);
+  if (hb < uBlocks / 100.0 * 0.28) {
+    uv += (vec2(hash2(blk + t + 3.0), hash2(blk + t + 5.0)) - 0.5) * 0.09;
+    uv = clamp(uv, 0.0, 1.0);
   }
   vec2 sh = vec2(uShift / uRes.x, 0.0);
   float r = texture(uTex, clamp(uv + sh, 0.0, 1.0)).r;
@@ -380,17 +403,137 @@ void main(){
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
+  ascii: {
+    name: 'ASCII', ico: '#1A6A5A', sym: 'Aa', anim: false, atlas: true,
+    params: [
+      { k: 'cell', label: 'Cell', min: 6, max: 32, val: 12, u: 'uCell' },
+      { k: 'mode', label: 'Color', type: 'select', val: 2, u: 'uMode', options: ['Ink no papel', 'Cor da fonte', 'Terminal (mint)'] },
+      { k: 'invert', label: 'Ramp', type: 'select', val: 0, u: 'uInvert', options: ['Escuro = denso', 'Claro = denso'] },
+    ],
+    frag: `uniform sampler2D uAtlas; uniform float uCell; uniform float uMode; uniform float uInvert;
+void main(){
+  vec2 cellPx = vec2(max(uCell, 2.0));
+  vec2 cellIdx = floor(gl_FragCoord.xy / cellPx);
+  vec2 center = (cellIdx + 0.5) * cellPx / uRes;
+  vec3 src = texture(uTex, clamp(center, 0.0, 1.0)).rgb;
+  float L = lum(src);
+  float dens = uInvert > 0.5 ? L : 1.0 - L;
+  float g = floor(clamp(dens, 0.0, 0.999) * 11.0);
+  vec2 inner = fract(gl_FragCoord.xy / cellPx);
+  float mask = texture(uAtlas, vec2((g + inner.x) / 11.0, inner.y)).r;
+  vec3 paper = uMode < 1.5 ? vec3(0.973, 0.961, 0.941) : vec3(0.078, 0.075, 0.075);
+  vec3 ink = uMode < 0.5 ? vec3(0.102, 0.094, 0.094) : (uMode < 1.5 ? src : vec3(0.6, 0.878, 0.824));
+  if (uMode > 0.5 && uMode < 1.5) paper = vec3(0.078, 0.075, 0.075);
+  outC = vec4(mix(paper, ink, mask), 1.0);
+}`,
+  },
+  duotone: {
+    name: 'Duotone', ico: '#7A5A8A', sym: 'Du', anim: false,
+    params: [
+      { k: 'cut', label: 'Threshold', min: 0, max: 100, val: 50, u: 'uCut' },
+      { k: 'soft', label: 'Softness', min: 0, max: 60, val: 12, u: 'uSoft' },
+      { k: 'ink', label: 'Ink', type: 'color', val: '#1A1818', u: 'uInk' },
+      { k: 'paper', label: 'Paper', type: 'color', val: '#F8F5F0', u: 'uPaper' },
+    ],
+    frag: `uniform float uCut; uniform float uSoft; uniform vec3 uInk; uniform vec3 uPaper;
+void main(){
+  float L = lum(texture(uTex, vUv).rgb);
+  float s = max(uSoft, 0.5) / 100.0;
+  float m = smoothstep(uCut / 100.0 - s, uCut / 100.0 + s, L);
+  outC = vec4(mix(uInk, uPaper, m), 1.0);
+}`,
+  },
+  blur: {
+    name: 'Blur', ico: '#5A7A8A', sym: 'Bl', anim: false,
+    params: [{ k: 'radius', label: 'Radius', min: 0, max: 60, val: 12, u: 'uRadius' }],
+    frag: `uniform float uRadius;
+void main(){
+  vec2 px = uRadius / uRes;
+  vec3 acc = texture(uTex, vUv).rgb * 0.2;
+  const vec2 P[12] = vec2[12](
+    vec2(-0.94, -0.34), vec2(0.94, 0.34), vec2(-0.34, 0.94), vec2(0.34, -0.94),
+    vec2(-0.71, 0.71), vec2(0.71, -0.71), vec2(0.71, 0.71), vec2(-0.71, -0.71),
+    vec2(-0.45, 0.16), vec2(0.45, -0.16), vec2(0.16, 0.45), vec2(-0.16, -0.45));
+  for (int i = 0; i < 12; i++) {
+    acc += texture(uTex, clamp(vUv + P[i] * px, 0.0, 1.0)).rgb * (i < 8 ? 0.058 : 0.084);
+  }
+  outC = vec4(acc, 1.0);
+}`,
+  },
+  kaleido: {
+    name: 'Kaleido', ico: '#8A2A6A', sym: 'Ka', anim: false,
+    params: [
+      { k: 'seg', label: 'Segments', min: 2, max: 16, val: 6, u: 'uSeg' },
+      { k: 'rot', label: 'Rotate', min: 0, max: 360, val: 0, u: 'uRot' },
+      { k: 'zoom', label: 'Zoom', min: 50, max: 200, val: 100, u: 'uZoom' },
+    ],
+    frag: `uniform float uSeg; uniform float uRot; uniform float uZoom;
+void main(){
+  float asp = uRes.x / uRes.y;
+  vec2 d = (vUv - 0.5) * vec2(asp, 1.0) * (100.0 / uZoom);
+  float r = length(d);
+  float a = atan(d.y, d.x) + radians(uRot);
+  float seg = 6.2831853 / max(uSeg, 1.0);
+  a = mod(a, seg);
+  a = abs(a - seg * 0.5);
+  vec2 uv = vec2(cos(a), sin(a)) * r / vec2(asp, 1.0) + 0.5;
+  outC = texture(uTex, clamp(uv, 0.0, 1.0));
+}`,
+  },
+  aberration: {
+    name: 'Aberration', ico: '#A03828', sym: 'Ab', anim: false,
+    params: [
+      { k: 'amt', label: 'Amount', min: 0, max: 100, val: 30, u: 'uAmt' },
+      { k: 'edge', label: 'Edge Only', min: 0, max: 100, val: 60, u: 'uEdge' },
+    ],
+    frag: `uniform float uAmt; uniform float uEdge;
+void main(){
+  vec2 dir = vUv - 0.5;
+  float w = mix(1.0, smoothstep(0.0, 0.72, length(dir)), uEdge / 100.0);
+  vec2 off = dir * uAmt * 0.0016 * w;
+  float r = texture(uTex, clamp(vUv - off, 0.0, 1.0)).r;
+  float g = texture(uTex, vUv).g;
+  float b = texture(uTex, clamp(vUv + off, 0.0, 1.0)).b;
+  outC = vec4(r, g, b, 1.0);
+}`,
+  },
+  adjust: {
+    name: 'Adjust', ico: '#3A6A9A', sym: 'Aj', anim: false,
+    params: [
+      { k: 'bright', label: 'Brightness', min: -100, max: 100, val: 0, u: 'uBright' },
+      { k: 'contrast', label: 'Contrast', min: -100, max: 100, val: 0, u: 'uContrast' },
+      { k: 'sat', label: 'Saturation', min: 0, max: 200, val: 100, u: 'uSat' },
+      { k: 'hue', label: 'Hue', min: -180, max: 180, val: 0, u: 'uHue' },
+    ],
+    frag: `uniform float uBright; uniform float uContrast; uniform float uSat; uniform float uHue;
+void main(){
+  vec3 c = texture(uTex, vUv).rgb;
+  c += uBright / 250.0;
+  c = (c - 0.5) * (1.0 + uContrast / 100.0 * 1.4) + 0.5;
+  float L = lum(c);
+  c = mix(vec3(L), c, uSat / 100.0);
+  float h = radians(uHue);
+  float cs = cos(h), sn = sin(h);
+  // rotação de matiz via matriz YIQ aproximada
+  mat3 toYIQ = mat3(0.299, 0.587, 0.114, 0.596, -0.274, -0.322, 0.211, -0.523, 0.312);
+  mat3 toRGB = mat3(1.0, 0.956, 0.621, 1.0, -0.272, -0.647, 1.0, -1.106, 1.703);
+  vec3 yiq = c * toYIQ;
+  vec3 rot = vec3(yiq.x, yiq.y * cs - yiq.z * sn, yiq.y * sn + yiq.z * cs);
+  outC = vec4(clamp(rot * toRGB, 0.0, 1.0), 1.0);
+}`,
+  },
   grain: {
     name: 'Film Grain', ico: '#B08830', sym: 'Fg', anim: true,
     params: [
       { k: 'amt', label: 'Grain', min: 0, max: 100, val: 35, u: 'uAmt' },
+      { k: 'size', label: 'Grain Size', min: 1, max: 5, val: 1, u: 'uGSize' },
       { k: 'vig', label: 'Vignette', min: 0, max: 100, val: 30, u: 'uVig' },
     ],
-    frag: `uniform float uAmt; uniform float uVig;
+    frag: `uniform float uAmt; uniform float uGSize; uniform float uVig;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
   float step18 = floor(uTime * 18.0);
-  float n = hash2(gl_FragCoord.xy + vec2(step18 * 977.0, step18 * 131.0));
+  float n = hash2(floor(gl_FragCoord.xy / max(uGSize, 1.0)) + vec2(step18 * 977.0, step18 * 131.0));
   c += (n - 0.5) * uAmt / 100.0 * 0.55;
   float d = distance(vUv, vec2(0.5));
   c *= 1.0 - uVig / 100.0 * smoothstep(0.35, 0.85, d);
@@ -438,10 +581,37 @@ function getProgram(fxId) {
     uRes: gl.getUniformLocation(prog, 'uRes'),
     uTime: gl.getUniformLocation(prog, 'uTime'),
     uFlipY: gl.getUniformLocation(prog, 'uFlipY'),
+    uAtlas: gl.getUniformLocation(prog, 'uAtlas'),
   };
   def.params.forEach(p => { loc[p.u] = gl.getUniformLocation(prog, p.u); });
   programs[fxId] = { prog, loc };
   return programs[fxId];
+}
+
+/** atlas de glifos do ASCII: 11 chars da ramp em células 32px, 1 textura */
+let _asciiAtlasTex = null;
+function asciiAtlas() {
+  if (_asciiAtlasTex) return _asciiAtlasTex;
+  const RAMP = ' .:-~=+*#%@';
+  const CELL = 32;
+  const c = document.createElement('canvas');
+  c.width = CELL * RAMP.length;
+  c.height = CELL;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = '#fff';
+  x.font = `${CELL * 0.82}px "IBM Plex Mono", monospace`;
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  for (let i = 0; i < RAMP.length; i++) {
+    x.fillText(RAMP[i], i * CELL + CELL / 2, CELL * 0.56);
+  }
+  _asciiAtlasTex = makeTex();
+  gl.bindTexture(gl.TEXTURE_2D, _asciiAtlasTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  return _asciiAtlasTex;
 }
 
 function makeTex() {
@@ -639,6 +809,12 @@ function runPass(fxId, inputTex, targetFb, w, h, tSec, params) {
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, inputTex);
   gl.uniform1i(loc.uTex, 0);
+  if (loc.uAtlas) {
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, asciiAtlas());
+    gl.uniform1i(loc.uAtlas, 1);
+    gl.activeTexture(gl.TEXTURE0);
+  }
   gl.uniform2f(loc.uRes, w, h);
   gl.uniform1f(loc.uTime, tSec);
   gl.uniform1f(loc.uFlipY, targetFb === null ? 1 : 0);
@@ -1073,6 +1249,12 @@ const STACK_PRESETS = {
   dream:  [{ fx: 'wave', params: { amp: 26, freq: 4, speed: 18 } },
            { fx: 'gradmap', params: { c0: '#1B5A4E', c1: '#2A8A7A', c2: '#99E0D2', c3: '#F8F5F0' } },
            { fx: 'grain', params: { amt: 20, vig: 34 } }],
+  terminal: [{ fx: 'ascii', params: { cell: 12, mode: 2, invert: 0 } },
+             { fx: 'grain', params: { amt: 18, vig: 40 } }],
+  noir:   [{ fx: 'adjust', params: { bright: -8, contrast: 35, sat: 0, hue: 0 } },
+           { fx: 'duotone', params: { cut: 52, soft: 22, ink: '#1A1818', paper: '#F8F5F0' } },
+           { fx: 'aberration', params: { amt: 18, edge: 80 } },
+           { fx: 'grain', params: { amt: 38, size: 2, vig: 48 } }],
 };
 
 function applyStackPreset(name) {
