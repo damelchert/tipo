@@ -129,11 +129,46 @@ class TipoRecorder {
     });
 
     this.encoder = new VideoEncoder({
-      output: (chunk, meta) => { this.muxer.addVideoChunk(chunk, meta); },
+      output: (chunk, meta) => {
+        // chunks do warmup nunca entram no arquivo — mas a META do primeiro
+        // carrega o decoderConfig (SPS/PPS); sem repassá-la ao primeiro
+        // chunk real o MP4 sai indecodável
+        if (this._warmupPending > 0) {
+          this._warmupPending--;
+          if (meta && meta.decoderConfig) this._warmupMeta = meta;
+          return;
+        }
+        if (this._warmupMeta) {
+          if (!(meta && meta.decoderConfig)) meta = this._warmupMeta;
+          this._warmupMeta = null;
+        }
+        this.muxer.addVideoChunk(chunk, meta);
+      },
       error: (e) => console.error('VideoEncoder error:', e),
     });
 
     this.encoder.configure(config);
+
+    // WARM-UP: configure() retorna na hora, mas a sessão real do codec
+    // (hardware) só nasce no primeiro encode — que pode levar SEGUNDOS.
+    // Sem isso, os primeiros frames enfileiram, o backpressure derruba a
+    // captura e o take abre com um buraco de 2-3s (timestamps são
+    // real-time). Encodamos 1 frame dummy e esperamos o flush() — ele só
+    // resolve com o pipeline de verdade pronto; o chunk é descartado.
+    this._warmupPending = 1;
+    try {
+      if (!this._recCanvas) this._createStreamCanvas();
+      this._paintRecCanvas();
+      const dummy = new VideoFrame(this._recCanvas, { timestamp: 0 });
+      this.encoder.encode(dummy, { keyFrame: true });
+      dummy.close();
+      await this.encoder.flush();
+    } catch (err) {
+      console.warn('TipoRecorder warmup skipped:', err);
+    }
+    this._warmupPending = 0;
+    this._lastKeyTsUs = -1;       // 1º frame REAL volta a ser keyframe
+    this._firstTimestampUs = null; // relógio do take começa limpo
 
     this.frameCount = 0;
     this.lastCaptureTime = -1;
@@ -198,6 +233,8 @@ class TipoRecorder {
   _resetSession() {
     this.frameCount = 0;
     this.lastCaptureTime = -1;
+    this._warmupPending = 0;
+    this._warmupMeta = null;
     this.encW = 0;
     this.encH = 0;
     this._firstTimestampUs = null;
