@@ -276,6 +276,48 @@ await page.mouse.up();
 const dragged = await page.evaluate(() => frames[1].x);
 check('arrastar move o frame no mundo', Math.abs(dragged - drag.x0) > 60, `(${Math.round(drag.x0)} → ${Math.round(dragged)})`);
 
+// ============ BLEND NODE (22.5) ============
+const blend = await page.evaluate(async () => {
+  setActive(frames[1].id);
+  clearStack();
+  addFx('blend', true);
+  const node = frames[1].stack[0];
+  const sel = document.getElementById(`st_${node.uid}_src`);
+  const opts = [...sel.options].map(o => o.value);
+  node.params.src = frames[0].id; // frame 1 como segunda entrada
+  frames[1].needsRender = true;
+  await new Promise(r => setTimeout(r, 400));
+  return {
+    hasNone: opts[0] === '',
+    hasOther: opts.includes(frames[0].id),
+    noSelf: !opts.includes(frames[1].id),
+  };
+});
+check('blend: select lista os OUTROS frames', blend.hasNone && blend.hasOther && blend.noSelf, JSON.stringify(blend));
+const hB1 = await hash(await page.evaluate(() => frames[1].id));
+await page.evaluate(() => {
+  const n = frames[1].stack[0];
+  n.params.mode = 6; // máscara luma
+  frames[1].needsRender = true;
+});
+await page.waitForTimeout(350);
+const hB2 = await hash(await page.evaluate(() => frames[1].id));
+check('blend: modo muda a composição', hB1.h !== hB2.h && hB1.nz > 200, `(${hB1.h} vs ${hB2.h})`);
+// remover o frame-fonte não quebra (ref limpa, node passa reto)
+await page.evaluate(() => {
+  const keep = frames[1].id;
+  removeFrame(frames[0].id);
+  setActive(keep);
+});
+await page.waitForTimeout(350);
+const blendSafe = await page.evaluate(() => ({
+  n: frames.length,
+  src: frames[0].stack[0] ? frames[0].stack[0].params.src : 'gone',
+}));
+check('remover frame-fonte limpa a ref sem crash', blendSafe.n === 1 && blendSafe.src === '', JSON.stringify(blendSafe));
+await page.evaluate(() => { clearStack(); applyStackPreset('riso'); newFrame(); setActive(frames[0].id); });
+await page.waitForTimeout(400);
+
 // clicar no frame 1 ativa ele (dock/inspector seguem)
 await page.evaluate(() => setActive(frames[0].id));
 const act = await page.evaluate(() => activeId === frames[0].id);

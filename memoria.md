@@ -173,6 +173,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.5 — BLEND NODE (2 frames → 1): o Studio virou GRAFO
+- **FX 'blend'** (flag `blend:true`): segunda entrada = OUTRO frame, via `uBlendTex` (TEXTURE3). 7 modos: Mix/Multiply/Screen/Overlay/Lighten/Darken/Máscara-luma + Amount. Param tipo novo **'frameSel'**: select com os OUTROS frames (sem self), opções re-sincadas no syncStackUI com nome vivo.
+- **Engine**: `_blendSources` computado 1x/tick (frames citados por algum blend on); frame citado PUBLICA seu output num `outTex` persistente (pass `_copy` extra + copyTexSubImage2D, espaço de chain não-flipado). Ordem no array `frames` decide frescor (fonte antes = mesmo tick; depois = 1 tick de latência — ok a 30fps). Sem fonte válida o node PASSA RETO (continue).
+- **Persistência**: id de frame não sobrevive ao reload — `params.src` salvo como ÍNDICE e re-mapeado num 2º passe do restore depois de todos os frames criados. removeFrame limpa refs órfãs (`src=''`) + deleta outTex.
+- **Prova**: frame "MÁSCARA" (Texto TIPÓ branco/preto) × Multiply sobre frame com Flow+GradMap = **o líquido só existe DENTRO das letras** — type-as-mask, workflow de motion real. test-studio +3 checks (select lista outros/sem self, modo muda composição, remover fonte limpa ref sem crash) ALL PASS.
+- Nit conhecido: setar params.src por código não reflete no select até o próximo syncStackUI (uso real passa pelo select, restore roda sync depois — ok).
+
 ### 22.4 — SOURCE TEXTO no Studio (o "kinetic no spaces" — type generativo atravessando o chain)
 - **Fonte nova 'text'** por frame: canvas 2D animado (1440×810) com a palavra do usuário — 4 motions (Wave = bob+rot por letra, Scroll = marquee tilado que sempre preenche, Pulse = respiração com stagger, Parado), cores **Brand (cicla teal/gold/mint/cream por letra)** ou única + fundo, Size/Speed em .range-row (**♪ no Size = kinetic type áudio-reativo**).
 - **Fontes da casa sob demanda**: TipoFont.BUILTINS → `FontFace('StudioTxt-<nome>')` carregada lazy, frames de texto re-renderizam no load. (Clash/General Sans/Space Grotesk/Boska/Fraunces/Plex.)

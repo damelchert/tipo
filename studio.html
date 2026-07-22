@@ -161,6 +161,7 @@
   .tt-aberration::before { content: 'AB'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; color: #F8F5F0; text-shadow: -3px 0 0 rgba(255,40,40,.7), 3px 0 0 rgba(40,80,255,.7); }
   .tt-adjust { background: linear-gradient(90deg, #1A1818, #6a6a6a 35%, #F8F5F0 70%, #2A8A7A 70%, #D4A040); }
   .tt-flow { background: radial-gradient(ellipse 60% 90% at 30% 40%, #2A8A7A 0%, transparent 60%), radial-gradient(ellipse 80% 50% at 70% 60%, #D4A040 0%, transparent 55%), radial-gradient(ellipse 70% 80% at 50% 80%, #99E0D2 0%, transparent 50%), #1A1818; filter: blur(3px) contrast(1.4); }
+  .tt-blend { background: linear-gradient(115deg, #2A8A7A 0 44%, transparent 56%), linear-gradient(295deg, #D4A040 0 44%, transparent 56%), #1A1818; }
   .tt-droste { background: repeating-radial-gradient(circle at 50% 50%, #2A8A7A 0 6px, #D4A040 6px 10px, #1A1818 10px 15px, #99E0D2 15px 18px); }
   .tt-mosh { background: linear-gradient(90deg, #2A8A7A 0 18%, #35917f 18% 30%, #D4A040 30% 34%, #c79a45 34% 55%, #1A1818 55% 62%, #2f2b28 62% 78%, #99E0D2 78%); filter: blur(1px); }
   .tt-echo { background: #141313; position: relative; }
@@ -615,6 +616,31 @@ void main(){
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
+  blend: {
+    name: 'Blend (2 frames)', ico: '#B06A2A', sym: 'Bd', anim: true, blend: true,
+    params: [
+      { k: 'src', label: 'Frame', type: 'frameSel', val: '' },
+      { k: 'mode', label: 'Mode', type: 'select', val: 1, u: 'uBMode', options: ['Mix', 'Multiply', 'Screen', 'Overlay', 'Lighten', 'Darken', 'Máscara (luma)'] },
+      { k: 'amt', label: 'Amount', min: 0, max: 100, val: 100, u: 'uBAmt' },
+    ],
+    frag: `uniform sampler2D uBlendTex; uniform float uBMode; uniform float uBAmt;
+vec3 overlayC(vec3 a, vec3 b){
+  return mix(2.0 * a * b, 1.0 - 2.0 * (1.0 - a) * (1.0 - b), step(0.5, a));
+}
+void main(){
+  vec3 a = texture(uTex, vUv).rgb;
+  vec3 b = texture(uBlendTex, vUv).rgb;
+  vec3 r;
+  if (uBMode < 0.5) r = b;
+  else if (uBMode < 1.5) r = a * b;
+  else if (uBMode < 2.5) r = 1.0 - (1.0 - a) * (1.0 - b);
+  else if (uBMode < 3.5) r = overlayC(a, b);
+  else if (uBMode < 4.5) r = max(a, b);
+  else if (uBMode < 5.5) r = min(a, b);
+  else r = mix(a, b, lum(b)); // luminância do outro frame revela ele
+  outC = vec4(mix(a, r, uBAmt / 100.0), 1.0);
+}`,
+  },
   mosh: {
     name: 'Mosh', ico: '#8A3A2A', sym: 'Ms', anim: true, feedback: true,
     params: [
@@ -836,6 +862,7 @@ function getProgram(fxId) {
     uFlipY: gl.getUniformLocation(prog, 'uFlipY'),
     uAtlas: gl.getUniformLocation(prog, 'uAtlas'),
     uPrev: gl.getUniformLocation(prog, 'uPrev'),
+    uBlendTex: gl.getUniformLocation(prog, 'uBlendTex'),
   };
   def.params.forEach(p => { loc[p.u] = gl.getUniformLocation(prog, p.u); });
   programs[fxId] = { prog, loc };
@@ -1010,6 +1037,11 @@ function removeFrame(id) {
   });
   const tpane = document.querySelector(`.fx-pane[data-uid="_text_${f.id}"]`);
   if (tpane) tpane.remove();
+  if (f.outTex) gl.deleteTexture(f.outTex);
+  // blends apontando pro frame removido perdem a referência (passam reto)
+  frames.forEach(o => o.stack.forEach(n => {
+    if (FX[n.fx].blend && n.params.src === id) { n.params.src = ''; o.needsRender = true; }
+  }));
   f.el.remove();
   f.dock.remove();
   frames.splice(i, 1);
@@ -1200,7 +1232,7 @@ function uploadSource(frame, tMs) {
   } catch (e) { /* frame de vídeo ainda não pronto */ }
 }
 
-function runPass(fxId, inputTex, targetFb, w, h, tSec, params, prevTex) {
+function runPass(fxId, inputTex, targetFb, w, h, tSec, params, prevTex, blendTex) {
   const { prog, loc } = getProgram(fxId);
   gl.bindFramebuffer(gl.FRAMEBUFFER, targetFb);
   gl.viewport(0, 0, w, h);
@@ -1212,6 +1244,12 @@ function runPass(fxId, inputTex, targetFb, w, h, tSec, params, prevTex) {
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, prevTex);
     gl.uniform1i(loc.uPrev, 2);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+  if (loc.uBlendTex && blendTex) {
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, blendTex);
+    gl.uniform1i(loc.uBlendTex, 3);
     gl.activeTexture(gl.TEXTURE0);
   }
   if (loc.uAtlas) {
@@ -1245,6 +1283,12 @@ function renderFrame(frame, tMs) {
   let i = 0;
   for (const node of frame.stack) {
     if (!node.on) continue;
+    let blendTex = null;
+    if (FX[node.fx].blend) {
+      const sf = frames.find(x => x.id === node.params.src && x.id !== frame.id);
+      if (!sf || !sf.outTex) continue; // sem fonte válida = node passa reto
+      blendTex = sf.outTex;
+    }
     const target = (i % 2 === 0) ? frame.chainA : frame.chainB;
     const fb = FX[node.fx].feedback;
     if (fb) {
@@ -1256,7 +1300,7 @@ function renderFrame(frame, tMs) {
         node.fbW = w; node.fbH = h;
       }
     }
-    runPass(node.fx, cur, target.fb, w, h, tSec, node.params, fb ? node.fbTex : null);
+    runPass(node.fx, cur, target.fb, w, h, tSec, node.params, fb ? node.fbTex : null, blendTex);
     if (fb) {
       // o output vira o "prev" do próximo tick
       gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb);
@@ -1266,6 +1310,21 @@ function renderFrame(frame, tMs) {
     }
     cur = target.tex;
     i++;
+  }
+  // frames citados por algum Blend publicam o output num outTex persistente
+  if (_blendSources.has(frame.id)) {
+    if (!frame.outTex || frame.outW !== w || frame.outH !== h) {
+      if (frame.outTex) gl.deleteTexture(frame.outTex);
+      frame.outTex = makeTex();
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      frame.outW = w; frame.outH = h;
+    }
+    const pub = (i % 2 === 0) ? frame.chainA : frame.chainB;
+    runPass('_copy', cur, pub.fb, w, h, tSec, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pub.fb);
+    gl.bindTexture(gl.TEXTURE_2D, frame.outTex);
+    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
   runPass('_copy', cur, null, w, h, tSec, null);
   // conteúdo ocupa o canto inferior-esquerdo do glCanvas (origem GL)
@@ -1281,10 +1340,17 @@ function frameDynamic(frame) {
 }
 
 let lastFrameT = 0;
+let _blendSources = new Set();
 function tick(now) {
   requestAnimationFrame(tick);
   if (now - lastFrameT < 31) return;
   lastFrameT = now;
+  _blendSources = new Set();
+  for (const f of frames) {
+    for (const n of f.stack) {
+      if (n.on && FX[n.fx].blend && n.params.src) _blendSources.add(n.params.src);
+    }
+  }
   for (const f of frames) {
     if (!frameDynamic(f) && !f.needsRender) continue;
     f.needsRender = false;
@@ -1534,6 +1600,27 @@ function syncStackUI() {
     const f = F();
     p.classList.toggle('sel', !!f && p.dataset.uid === f.selUid);
   });
+  // selects de Blend: opções = os OUTROS frames (nome vivo)
+  document.querySelectorAll('select.frame-sel').forEach(sel => {
+    const owner = sel.dataset.owner;
+    const cur = (() => {
+      const of = frames.find(x => x.id === owner);
+      const node = of && of.stack.find(nn => `st_${nn.uid}_src` === sel.id);
+      return node ? node.params.src : sel.value;
+    })();
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = ''; none.textContent = '— escolhe um frame —';
+    sel.appendChild(none);
+    frames.forEach(fr => {
+      if (fr.id === owner) return;
+      const o = document.createElement('option');
+      o.value = fr.id;
+      o.textContent = frameName(fr);
+      sel.appendChild(o);
+    });
+    sel.value = cur || '';
+  });
   syncInspector();
   layoutWorld();
   if (typeof scheduleSave === 'function') scheduleSave();
@@ -1552,6 +1639,17 @@ function buildPane(frame, uid) {
       row.className = 'color-row';
       row.innerHTML = `<label>${p.label}</label><input type="color" id="${id}" value="${p.val}">`;
       row.querySelector('input').addEventListener('input', e => { n.params[p.k] = e.target.value; frame.needsRender = true; });
+      pane.appendChild(row);
+    } else if (p.type === 'frameSel') {
+      const row = document.createElement('div');
+      row.className = 'color-row';
+      row.innerHTML = `<label>${p.label}</label>`;
+      const sel = document.createElement('select');
+      sel.id = id;
+      sel.className = 'frame-sel';
+      sel.dataset.owner = frame.id;
+      sel.addEventListener('change', e => { n.params[p.k] = e.target.value; frame.needsRender = true; });
+      row.appendChild(sel);
       pane.appendChild(row);
     } else if (p.type === 'select') {
       const row = document.createElement('div');
@@ -1784,7 +1882,11 @@ async function saveSpace() {
         mediaKey: f.mediaKey || null,
         text: f.sourceType === 'text' ? { ...f.text } : null,
         selIdx: f.stack.findIndex(n => n.uid === f.selUid),
-        stack: f.stack.map(n => ({ fx: n.fx, on: n.on, params: { ...n.params } })),
+        stack: f.stack.map(n => {
+          const params = { ...n.params };
+          if (FX[n.fx].blend) params.src = frames.findIndex(x => x.id === params.src); // id → índice
+          return { fx: n.fx, on: n.on, params };
+        }),
       })),
     };
     await idb('space', 'readwrite', s => s.put(rec, 'current'));
@@ -1843,6 +1945,13 @@ async function restoreSpace() {
         if (m && m.buf) loadFile(new Blob([m.buf], { type: m.mime }), f, { persist: false });
       }
     }
+    // 2º passe: blends salvos como índice viram id dos frames recém-criados
+    frames.forEach(f => f.stack.forEach(n => {
+      if (FX[n.fx].blend) {
+        const idx = Number(n.params.src);
+        n.params.src = (idx >= 0 && frames[idx]) ? frames[idx].id : '';
+      }
+    }));
     activeId = frames[rec.activeIdx] ? frames[rec.activeIdx].id : frames[0].id;
     closeInspector();
     syncStackUI();

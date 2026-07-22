@@ -18,7 +18,7 @@ Deploy: Vercel (auto-deploy on push).
 
 ### ⏭ PRÓXIMAS ETAPAS (fila acordada com o Daniel — retomar daqui)
 1. **22.4 Source TEXTO no Studio** ✅ (2026-07-22): fonte 'text' por frame — 4 motions (wave/scroll marquee/pulse/parado), cores brand ciclando por letra, fontes da casa via FontFace lazy, Size/Speed ♪-moduláveis, pane pseudo-node no inspector, persistência completa. Provado: TIPÓ→Halftone, FLOW(Boska)→Mosh→GradMap.
-2. **22.5 Blend node**: node que recebe DOIS frames e combina (multiply/screen/overlay/máscara de luminância/alpha) — o salto de stack pra GRAFO. UI: node aponta pra outro frame como segunda entrada (select de frame no inspector); engine já tem tudo (texturas por frame no mesmo contexto).
+2. **22.5 Blend node** ✅ (2026-07-22): 7 modos (mix/multiply/screen/overlay/lighten/darken/máscara-luma) + Amount; frameSel dinâmico, outTex publicado por frame citado, persistência por índice, refs órfãs limpas. Provado: type-as-mask (TIPÓ recortando o Liquid Flow).
 3. **22.6 Ponte de canvas p5** (só se o source Texto deixar gosto): rodar um modo kinetic (coil/field) offscreen como fonte de frame — qualquer canvas serve de texImage2D. Pesado; avaliar depois do 22.4.
 4. **22.7 Slit-scan / Time Displacement** (agora VIÁVEL com a infra de feedback — history buffer por node) + candidatos: Voronoi shatter, Droste follow-ups.
 5. **22.8 Sketch-class restante**: BPM phase-lock nos behaviors ♪; quality tiers no Studio (low/med/high); error-diffusion e pixel-sort como pass CPU opcional; Export HQ offline pro Studio (hoje grava live ≤1440).
