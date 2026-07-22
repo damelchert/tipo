@@ -160,6 +160,16 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-21
 
+### 22.2 v2 — STUDIO virou O ESPAÇO (feedback do Daniel: "não tá nem parecido com o modo canvas do Sketch/Flora/Magnific — quero experiência DIFERENTE do que já temos")
+- v1 tinha o motor certo com a ROUPA velha (.tipo-panel lateral = igual às outras 39). v2 reescreveu a UI inteira (engine intocado):
+- **Canvas infinito**: #space com grade de pontos `radial-gradient` que ESCALA com o zoom (backgroundSize/Position acompanham a view — receita do Sketch); #world com `translate+scale` transform-origin 0 0. **Pan** = drag em espaço vazio (pointer capture) ou scroll de trackpad; **zoom** = ctrl/⌘+wheel ancorado no cursor (`zoomAt` corrige o pan pra âncora ficar parada) ou pinça 2 dedos (Map de pointers). Reset view + % de zoom no HUD (fitView enquadra frame+dock).
+- **Preview flutuante** no mundo (label "tipó studio · ht → fg · 960×720"), **nodes como cards no espaço** à direita (card de FONTE tracejado no topo + efeitos com ícone colorido/sym + ▲▼×/dot no hover + "+ efeito"), **fio SVG** ligando dock ao frame.
+- **Inspector flutuante arrastável** (drag pela header, screen-space) com os params do node selecionado; mobile vira bottom sheet full-width. Panes continuam TODOS no DOM (behaviors ♪ vivos).
+- **Modal Tools** (estilo Sketch): Fonte (Demo/Imagem-Vídeo/Webcam) + grid de 8 efeitos com thumbs CSS na paleta Athos — clique adiciona o node.
+- **Topbar central flutuante** (TIPÓ STUDIO · receitas · PNG · REC) — GIF/Link da casa SE INJETARAM sozinhos ao lado do REC (gate no #recBtn, de graça); ⏱ timeline idem. Chrome padrão preservado (← e ☼ nos cantos).
+- Sem .tipo-panel → TipoMobile pula a página naturalmente; drop de arquivo no espaço inteiro.
+- test-studio.mjs **27/27** (novos: pan por drag move o mundo, ctrl+wheel zooma E a grade escala junto, inspector abre com o node, modal com 8 thumbs adiciona por clique). Smokes mobile (inspector vira sheet full-width) e dark theme limpos — dark é o frame mais bonito.
+
 ### 22.2 TIPÓ STUDIO construído (studio.html — ferramenta #40, 17ª visual tool) — o "modo Sketch" da casa
 - **Engine**: WebGL2 puro (canvas GL escondido), ping-pong chainA/chainB (`makeTarget`), cada efeito = fragment shader com `uTex` da etapa anterior + `uRes`/`uTime`; fullscreen triangle via gl_VertexID (zero buffers); pass final `_copy` com uFlipY pro default framebuffer; **blit em canvas 2D visível** → TipoUI.toggleVisualRec/PNG/formatos funcionam pelo caminho padrão sem tocar no recorder. Loop rAF ~30fps on-demand (`isDynamic()` = demo/vídeo/webcam/fx animado/rec).
 - **8 efeitos** (registry FX declarativo: params {k,label,min,max,val,u} + frag): pixelate, bayer 4×4 (const array + threshold -0.5..0.5), halftone (grid rotado, sample no centro da célula, ink select source/preto/teal sobre paper cream), gradmap 4 stops smoothstep (Athos default), posterize+contrast, glitch (slices por hash de banda com uTime steppado 10fps + rgb shift + scanlines), wave (uv displace 2 eixos), grain (hash steppado 18fps + vignette).

@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<meta name="description" content="Tipó — Studio. Stack visual effects like nodes: halftone, dither, gradient map, glitch, wave, grain — chained in real time on image, video or webcam.">
+<meta name="description" content="Tipó — Studio. An infinite canvas where effects stack as nodes: halftone, dither, gradient map, glitch, wave, grain — chained live on image, video or webcam.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Studio</title>
 <link rel="stylesheet" href="shared/style.css?v=20260713-id1">
@@ -13,116 +13,221 @@
 <script src="shared/ui.js?v=20260721-std1"></script>
 <style>
   @font-face { font-family: 'Clash Display'; src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight: 600 900; font-display: swap; }
-  body { display: flex; height: 100vh; }
-  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
-  #canvasWrap canvas { max-width: 100%; max-height: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
-  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
-  .back-link:hover { color: var(--accent); }
-  .drop-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-5); letter-spacing: 2px; pointer-events: none; text-transform: uppercase; }
-  select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { background: var(--bg-0); }
 
-  /* ---- stack de efeitos ---- */
-  #stackList { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-  .stk-card { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 6px; cursor: pointer; user-select: none; }
-  .stk-card.sel { border-color: var(--accent); }
-  .stk-card.off { opacity: 0.45; }
-  .stk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 1px solid var(--accent); cursor: pointer; }
-  .stk-card.off .stk-dot { background: transparent; border-color: var(--text-5); }
-  .stk-name { flex: 1; font-size: 11px; letter-spacing: 0.5px; color: var(--text-1); }
+  /* ============ O ESPAÇO — canvas infinito com grade de pontos ============ */
+  #space {
+    position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: grab;
+    background-color: var(--bg-0);
+    background-image: radial-gradient(circle, var(--border-2, #333) 1.25px, transparent 1.25px);
+  }
+  #space.panning { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+
+  /* preview flutuante */
+  #frame { position: absolute; left: 0; top: 0; }
+  #frameLabel { position: absolute; top: -26px; left: 2px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; }
+  #frameLabel b { color: var(--accent); font-weight: 400; }
+  #mainCanvas { display: block; box-shadow: 0 18px 70px rgba(0,0,0,0.5); border-radius: 4px; background: #111; }
+
+  /* fio ligando o stack ao preview */
+  #wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  #wires path { fill: none; stroke: var(--border-2, #3a3a3a); stroke-width: 1.5; }
+
+  /* ============ NODES (stack) no espaço ============ */
+  #stackDock { position: absolute; width: 232px; display: flex; flex-direction: column; gap: 8px; }
+  .stk-card {
+    display: flex; align-items: center; gap: 9px; padding: 10px 12px;
+    background: var(--bg-1, #141414); border: 1px solid var(--border-2, #333);
+    border-radius: 10px; cursor: pointer; user-select: none;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    font-family: var(--font-ui);
+  }
+  .stk-card:hover { border-color: var(--text-5); }
+  .stk-card.sel { border-color: var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,0.35), 0 0 0 1px var(--accent); }
+  .stk-card.off .stk-name, .stk-card.off .stk-ico { opacity: 0.35; }
+  .stk-ico { flex: none; width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: var(--font-mono); color: #F8F5F0; }
+  .stk-name { flex: 1; font-size: 11.5px; letter-spacing: 0.4px; color: var(--text-1); }
   .stk-card.sel .stk-name { color: var(--accent); }
-  .stk-btns { display: flex; gap: 3px; }
-  .stk-btns button { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-2); border-radius: 4px; background: transparent; color: var(--text-4); font-size: 11px; cursor: pointer; font-family: var(--font-mono); line-height: 1; }
-  .stk-btns button:hover { border-color: var(--accent); color: var(--accent); }
-  .stk-btns button.stk-x:hover { border-color: var(--red); color: var(--red); }
-  #stackEmpty { font-size: 10px; color: var(--text-5); letter-spacing: 0.4px; padding: 10px 4px; border: 1px dashed var(--border-2); border-radius: 6px; text-align: center; margin-top: 8px; }
-  .stk-add-row { display: flex; gap: 6px; margin-top: 8px; }
-  .stk-add-row select { flex: 1; }
+  .stk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 1px solid var(--accent); }
+  .stk-card.off .stk-dot { background: transparent; border-color: var(--text-5); }
+  .stk-btns { display: none; gap: 3px; }
+  .stk-card:hover .stk-btns, .stk-card.sel .stk-btns { display: flex; }
+  .stk-btns button { width: 20px; height: 20px; padding: 0; border: none; border-radius: 4px; background: transparent; color: var(--text-5); font-size: 10px; cursor: pointer; font-family: var(--font-mono); line-height: 1; }
+  .stk-btns button:hover { background: var(--bg-2); color: var(--accent); }
+  .stk-btns button.stk-x:hover { color: var(--red); }
+  .stk-src { border-style: dashed; }
+  .stk-src .stk-sub { display: block; font-size: 8.5px; color: var(--text-5); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+  .stk-add {
+    text-align: center; font-size: 11px; letter-spacing: 1px; color: var(--text-4);
+    border: 1px dashed var(--border-2, #333); border-radius: 10px; padding: 10px;
+    cursor: pointer; user-select: none; font-family: var(--font-ui); background: transparent;
+  }
+  .stk-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ============ TOPBAR flutuante ============ */
+  #topbar {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 900;
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    background: color-mix(in srgb, var(--bg-1, #141414) 88%, transparent);
+    border: 1px solid var(--border-2, #333); border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35); backdrop-filter: blur(10px);
+    font-family: var(--font-mono); flex-wrap: wrap; justify-content: center;
+    max-width: calc(100vw - 120px);
+  }
+  #topbar .tb-title { font-size: 11px; letter-spacing: 2.5px; color: var(--text-1); }
+  #topbar .tb-title i { font-style: normal; color: var(--accent-warm, #D4A040); }
+  #topbar select { background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 5px 7px; font-size: 10px; font-family: var(--font-ui); border-radius: 6px; }
+  #topbar .tb-btn { border: 1px solid var(--border-2); background: transparent; color: var(--text-2); font-size: 10px; letter-spacing: 0.8px; padding: 6px 11px; border-radius: 7px; cursor: pointer; font-family: var(--font-ui); text-transform: uppercase; }
+  #topbar .tb-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #topbar .tb-btn.rec-live { border-color: var(--red); color: var(--red); animation: stRecPulse 1.2s ease-in-out infinite; }
+  @keyframes stRecPulse { 50% { opacity: 0.55; } }
+
+  /* zoom HUD */
+  #viewHud { position: fixed; bottom: 18px; left: 18px; z-index: 900; display: flex; gap: 8px; align-items: center; font-family: var(--font-mono); }
+  #viewHud .vh-zoom { font-size: 10px; color: var(--text-5); letter-spacing: 1px; min-width: 40px; }
+  #viewHud button { border: 1px solid var(--border-2); background: color-mix(in srgb, var(--bg-1, #141414) 88%, transparent); color: var(--text-3); font-size: 10px; padding: 6px 10px; border-radius: 7px; cursor: pointer; font-family: var(--font-ui); letter-spacing: 0.5px; }
+  #viewHud button:hover { border-color: var(--accent); color: var(--accent); }
+  #spaceHint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 890; font-size: 9.5px; letter-spacing: 1.5px; color: var(--text-5); text-transform: uppercase; font-family: var(--font-mono); pointer-events: none; text-align: center; }
+
+  /* ============ INSPECTOR flutuante (params do node) ============ */
+  #inspector {
+    position: fixed; top: 90px; left: 24px; z-index: 920; width: 252px;
+    background: color-mix(in srgb, var(--bg-1, #141414) 94%, transparent);
+    border: 1px solid var(--border-2, #333); border-radius: 12px;
+    box-shadow: 0 14px 50px rgba(0,0,0,0.45); backdrop-filter: blur(10px);
+    display: none; font-family: var(--font-ui);
+  }
+  #inspector.open { display: block; }
+  #inspHead { display: flex; align-items: center; gap: 9px; padding: 11px 13px; cursor: move; border-bottom: 1px solid var(--border-2, #2a2a2a); user-select: none; }
+  #inspHead .stk-ico { width: 20px; height: 20px; font-size: 10px; }
+  #inspName { flex: 1; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+  #inspHead button { border: none; background: transparent; color: var(--text-5); font-size: 13px; cursor: pointer; padding: 2px 5px; font-family: var(--font-mono); }
+  #inspHead button:hover { color: var(--accent); }
+  #inspHead button.insp-x:hover { color: var(--red); }
+  #inspBody { padding: 10px 14px 14px; max-height: min(52vh, 460px); overflow-y: auto; }
   .fx-pane { display: none; }
   .fx-pane.sel { display: block; }
-  .fx-pane .color-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-  .fx-pane .color-row label { font-size: 10px; color: var(--text-4); min-width: 52px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .fx-pane input[type="color"] { width: 38px; height: 24px; border: 1px solid var(--border-2); background: var(--bg-2); padding: 0; cursor: pointer; }
+  .fx-pane .range-row { margin-top: 7px; }
+  .fx-pane .color-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .fx-pane .color-row label { font-size: 9.5px; color: var(--text-4); min-width: 52px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .fx-pane input[type="color"] { width: 36px; height: 22px; border: 1px solid var(--border-2); background: var(--bg-2); padding: 0; cursor: pointer; }
+  .fx-pane select { flex: 1; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 5px 6px; font-size: 10.5px; font-family: var(--font-ui); border-radius: 5px; }
+  #inspBody .insp-hint { font-size: 9px; color: var(--text-5); letter-spacing: 0.4px; margin-top: 10px; line-height: 1.5; }
+
+  /* ============ MODAL de ferramentas (add node / trocar fonte) ============ */
+  #toolsModal { position: fixed; inset: 0; z-index: 950; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+  #toolsModal.open { display: flex; }
+  #toolsBox { width: min(560px, calc(100vw - 40px)); max-height: 80vh; overflow-y: auto; background: var(--bg-1, #141414); border: 1px solid var(--border-2, #333); border-radius: 14px; padding: 20px 22px; box-shadow: 0 24px 80px rgba(0,0,0,0.55); font-family: var(--font-ui); }
+  #toolsBox h2 { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-1); margin: 0 0 4px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); }
+  #toolsBox h2 button { border: 1px solid var(--border-2); background: transparent; color: var(--text-4); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 12px; }
+  #toolsBox h2 button:hover { border-color: var(--red); color: var(--red); }
+  #toolsBox h3 { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); margin: 16px 0 8px; font-family: var(--font-mono); }
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+  .tool-thumb { border: 1px solid var(--border-2, #333); border-radius: 10px; padding: 8px; cursor: pointer; background: var(--bg-2, #1a1a1a); text-align: center; }
+  .tool-thumb:hover { border-color: var(--accent); }
+  .tool-thumb .tt-vis { height: 52px; border-radius: 6px; margin-bottom: 7px; overflow: hidden; position: relative; }
+  .tool-thumb .tt-name { font-size: 10px; letter-spacing: 0.5px; color: var(--text-2); }
+  .tools-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tools-row .tool-inp { flex: 1; min-width: 100px; border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 10px; text-align: center; font-size: 10.5px; letter-spacing: 0.5px; color: var(--text-2); cursor: pointer; background: var(--bg-2); }
+  .tools-row .tool-inp:hover { border-color: var(--accent); color: var(--accent); }
+  /* mini-visuais dos efeitos (CSS puro, paleta Athos) */
+  .tt-halftone { background: radial-gradient(circle at 6px 8px, #2A8A7A 0 3px, transparent 3px), radial-gradient(circle at 20px 20px, #2A8A7A 0 4.5px, transparent 4.5px), radial-gradient(circle at 36px 10px, #2A8A7A 0 2px, transparent 2px), radial-gradient(circle at 52px 24px, #2A8A7A 0 5px, transparent 5px), radial-gradient(circle at 70px 12px, #2A8A7A 0 3px, transparent 3px), radial-gradient(circle at 88px 26px, #2A8A7A 0 4px, transparent 4px), #F8F5F0; }
+  .tt-bayer { background: conic-gradient(#1A1818 25%, #2A8A7A 25% 50%, #1A1818 50% 75%, #D4A040 75%); background-size: 8px 8px; }
+  .tt-pixelate { background: conic-gradient(#2A8A7A 25%, #D4A040 25% 50%, #99E0D2 50% 75%, #1A1818 75%); background-size: 26px 26px; }
+  .tt-gradmap { background: linear-gradient(90deg, #1A1818, #2A8A7A 38%, #D4A040 72%, #F8F5F0); }
+  .tt-posterize { background: linear-gradient(135deg, #1A1818 25%, #1B5A4E 25% 50%, #2A8A7A 50% 75%, #99E0D2 75%); }
+  .tt-glitch { background: repeating-linear-gradient(0deg, #1A1818 0 6px, #2A8A7A 6px 9px, #1A1818 9px 14px, #D4A040 14px 16px); }
+  .tt-wave { background: repeating-radial-gradient(circle at 50% 120%, #99E0D2 0 6px, #2A8A7A 6px 12px, #1B5A4E 12px 18px); }
+  .tt-grain { background-color: #6b6459; background-image: radial-gradient(circle, rgba(248,245,240,.6) .8px, transparent .8px), radial-gradient(circle, rgba(26,24,24,.7) .8px, transparent .8px); background-size: 5px 5px, 7px 7px; background-position: 0 0, 3px 2px; }
+
+  /* ============ mobile ============ */
+  @media (max-width: 768px) {
+    #topbar { top: 8px; gap: 6px; padding: 6px 10px; max-width: calc(100vw - 16px); }
+    #topbar .tb-title { display: none; }
+    #inspector { top: auto; bottom: 0; left: 0; right: 0; width: auto; border-radius: 14px 14px 0 0; }
+    #inspBody { max-height: 38vh; }
+    #viewHud { bottom: auto; top: 60px; left: 10px; }
+    #spaceHint { display: none; }
+    .tipo-back-btn { top: 12px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="tipo-panel" id="panel">
-  <h1>Studio <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
-
-  <div class="section">
-    <div class="section-title">Source</div>
-    <div class="btn-row">
-      <button class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
-      <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
-      <button class="btn btn-secondary" onclick="useDemo()">Demo</button>
+<div id="space">
+  <div id="world">
+    <svg id="wires"><path id="wirePath" d=""></path></svg>
+    <div id="frame">
+      <div id="frameLabel">tip&oacute; studio &middot; <b id="frameStack">riso</b> &middot; <span id="frameRes"></span></div>
+      <canvas id="mainCanvas"></canvas>
     </div>
-    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+    <div id="stackDock"></div>
   </div>
+</div>
 
-  <div class="section">
-    <div class="section-title">Presets</div>
-    <div class="preset-grid">
-      <span class="preset-chip" onclick="applyStackPreset('riso')">Riso</span>
-      <span class="preset-chip" onclick="applyStackPreset('print')">Print</span>
-      <span class="preset-chip" onclick="applyStackPreset('vhs')">VHS</span>
-      <span class="preset-chip" onclick="applyStackPreset('poster')">Poster</span>
-      <span class="preset-chip" onclick="applyStackPreset('zine')">Zine</span>
-      <span class="preset-chip" onclick="applyStackPreset('dream')">Dream</span>
-      <span class="preset-chip reset-chip" onclick="resetAll()">Reset</span>
-    </div>
+<div id="topbar">
+  <span class="tb-title">TIP&Oacute; <i>STUDIO</i></span>
+  <select id="presetSel" title="receitas">
+    <option value="">receitas&hellip;</option>
+    <option value="riso">Riso</option>
+    <option value="print">Print</option>
+    <option value="vhs">VHS</option>
+    <option value="poster">Poster</option>
+    <option value="zine">Zine</option>
+    <option value="dream">Dream</option>
+  </select>
+  <button class="tb-btn" onclick="exportPNG()">PNG</button>
+  <button class="tb-btn" id="recBtn" onclick="toggleRec()">&#9210; REC</button>
+</div>
+
+<div id="viewHud">
+  <button onclick="fitView()">Reset view</button>
+  <span class="vh-zoom" id="zoomLabel">100%</span>
+</div>
+<div id="spaceHint">arrasta pra navegar &middot; scroll/pin&ccedil;a d&aacute; zoom &middot; solta uma imagem ou v&iacute;deo aqui</div>
+
+<div id="inspector">
+  <div id="inspHead">
+    <span class="stk-ico" id="inspIco"></span>
+    <span id="inspName"></span>
+    <button type="button" id="inspBypass" title="liga/desliga">&#9679;</button>
+    <button type="button" class="insp-x" id="inspRemove" title="remover do stack">&#10005;</button>
+    <button type="button" id="inspClose" title="fechar">&mdash;</button>
   </div>
-
-  <div class="section">
-    <div class="section-title">Stack</div>
-    <div class="stk-add-row">
-      <select id="fxAdd">
-        <option value="halftone">Halftone</option>
-        <option value="bayer">Dither (Bayer)</option>
-        <option value="pixelate">Pixelate</option>
-        <option value="gradmap">Gradient Map</option>
-        <option value="posterize">Posterize</option>
-        <option value="glitch">Glitch</option>
-        <option value="wave">Wave</option>
-        <option value="grain">Film Grain</option>
-      </select>
-      <button class="btn" style="flex:none;" onclick="addFx(document.getElementById('fxAdd').value)">+ Add</button>
-    </div>
-    <div id="stackList"></div>
-    <div id="stackEmpty" style="display:none;">stack vazio — a fonte passa direto.<br>+ Add empilha efeitos; a ordem muda tudo.</div>
-  </div>
-
-  <div class="section" id="paramsSection">
-    <div class="section-title">Effect Controls</div>
+  <div id="inspBody">
     <div id="paramsHost"></div>
+    <div class="insp-hint">o "~" de cada slider anima &mdash; osciladores ou &#9834; &aacute;udio-reativo</div>
   </div>
-
-  <div class="section section-divider">
-    <div class="section-title">Export</div>
-    <div class="btn-row">
-      <button class="btn" onclick="exportPNG()">PNG</button>
-    </div>
-    <div class="btn-col" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-      <button class="btn btn-secondary" id="recBtn" onclick="toggleRec()">Record MP4</button>
-    </div>
-    <div class="record-timer" id="recTimer"></div>
-  </div>
-  <div style="height:40px;"></div>
 </div>
 
-<div id="canvasWrap">
-  <div class="drop-hint" id="dropHint">Drop image or video &bull; demo mode</div>
-  <canvas id="mainCanvas"></canvas>
+<div id="toolsModal">
+  <div id="toolsBox">
+    <h2>Tools <button type="button" onclick="closeTools()">&#10005;</button></h2>
+    <h3>Fonte</h3>
+    <div class="tools-row">
+      <div class="tool-inp" onclick="closeTools(); useDemo()">Demo TIP&Oacute;</div>
+      <div class="tool-inp" onclick="closeTools(); document.getElementById('fileInput').click()">Imagem / V&iacute;deo</div>
+      <div class="tool-inp" onclick="closeTools(); toggleWebcam()">Webcam</div>
+    </div>
+    <h3>Efeitos</h3>
+    <div class="tools-grid" id="toolsGrid"></div>
+  </div>
 </div>
+
+<input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
 
 <script>
 // ============================================================
-// TIPÓ — STUDIO (22.2)
-// Stack de efeitos como nodes, arquitetura validada na engenharia
-// reversa do Sketch Tools: WebGL2 puro, ping-pong de 2 framebuffers,
-// cada efeito = fragment shader que lê uTex (saída do anterior),
-// UM rAF síncrono roda a cadeia. Blit final num canvas 2D visível
-// (recorder/PNG/formatos funcionam pelo caminho padrão da casa).
-// Sliders usam .range-row → TipoBehavior/TipoAudio de graça.
+// TIPÓ — STUDIO (22.2 v2 — "o espaço")
+// Uma superfície só: canvas infinito com grade de pontos (pan/zoom),
+// preview flutuando no espaço, efeitos como NODES adicionados por um
+// seletor visual e ajustados num inspector flutuante — pegada
+// Flora/Magnific/Sketch. Sem páginas, sem painel lateral.
+// Engine: WebGL2 ping-pong (cada efeito = fragment shader lendo a
+// saída do anterior), blit final num canvas 2D pro recorder padrão.
+// Sliders em .range-row → TipoBehavior/TipoAudio de graça.
 // ============================================================
 
 const mainCanvas = document.getElementById('mainCanvas');
@@ -135,10 +240,9 @@ let recorder = null;
 let sourceType = null;       // null=demo | 'image' | 'video' | 'webcam'
 let srcImage = null, srcVideo = null, webcamStream = null;
 let mediaUrl = null;
-let PW = 960, PH = 720;      // resolução de processamento (fit da fonte)
+let PW = 960, PH = 720;
 const MAX_SHORT = 900, MAX_LONG = 1440;
 
-// demo animado brand (células TIPÓ flutuando — DNA do rastro/pixelsort)
 const demoCanvas = document.createElement('canvas');
 const demoCtx = demoCanvas.getContext('2d');
 function drawDemo(tMs) {
@@ -156,15 +260,13 @@ function drawDemo(tMs) {
     demoCtx.rotate(Math.sin(t * 0.5 + i) * 0.05);
     demoCtx.fillStyle = cols[i];
     demoCtx.fillRect(-cw / 2, -cw / 2, cw, cw);
-    demoCtx.fillStyle = i === 2 ? '#F8F5F0' : '#1A1818';
-    if (i === 0) demoCtx.fillStyle = '#F8F5F0';
+    demoCtx.fillStyle = (i === 0 || i === 2) ? '#F8F5F0' : '#1A1818';
     demoCtx.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
     demoCtx.textAlign = 'center';
     demoCtx.textBaseline = 'middle';
     demoCtx.fillText(chars[i], 0, cw * 0.03);
     demoCtx.restore();
   }
-  // dots que dão material pro halftone/dither respirar
   for (let i = 0; i < 5; i++) {
     const dx = w * (0.1 + i * 0.2) + Math.sin(t * 1.3 + i * 3.1) * w * 0.03;
     const dy = h * (i % 2 ? 0.16 : 0.85) + Math.cos(t + i) * h * 0.02;
@@ -176,7 +278,7 @@ function drawDemo(tMs) {
 }
 
 // ============================================================
-// FX REGISTRY — cada efeito: params declarativos + fragment shader
+// FX REGISTRY
 // ============================================================
 const FRAG_HEAD = `#version 300 es
 precision highp float;
@@ -191,7 +293,7 @@ float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 
 const FX = {
   pixelate: {
-    name: 'Pixelate', anim: false,
+    name: 'Pixelate', ico: '#1B5A4E', sym: 'Px', anim: false,
     params: [{ k: 'size', label: 'Cell', min: 2, max: 120, val: 16, u: 'uSize' }],
     frag: `uniform float uSize;
 void main(){
@@ -201,7 +303,7 @@ void main(){
 }`,
   },
   bayer: {
-    name: 'Dither (Bayer)', anim: false,
+    name: 'Dither (Bayer)', ico: '#1A1818', sym: 'Dt', anim: false,
     params: [
       { k: 'levels', label: 'Levels', min: 2, max: 8, val: 3, u: 'uLevels' },
       { k: 'scale', label: 'Scale', min: 1, max: 10, val: 2, u: 'uScale' },
@@ -218,7 +320,7 @@ void main(){
 }`,
   },
   halftone: {
-    name: 'Halftone', anim: false,
+    name: 'Halftone', ico: '#2A8A7A', sym: 'Ht', anim: false,
     params: [
       { k: 'cell', label: 'Cell', min: 4, max: 42, val: 11, u: 'uCell' },
       { k: 'angle', label: 'Angle', min: 0, max: 90, val: 15, u: 'uAngle' },
@@ -244,7 +346,7 @@ void main(){
 }`,
   },
   gradmap: {
-    name: 'Gradient Map', anim: false,
+    name: 'Gradient Map', ico: '#D4A040', sym: 'Gm', anim: false,
     params: [
       { k: 'mix', label: 'Mix', min: 0, max: 100, val: 100, u: 'uMixAmt' },
       { k: 'c0', label: 'Shadow', type: 'color', val: '#1A1818', u: 'uC0' },
@@ -263,7 +365,7 @@ void main(){
 }`,
   },
   posterize: {
-    name: 'Posterize', anim: false,
+    name: 'Posterize', ico: '#99E0D2', sym: 'Po', anim: false,
     params: [
       { k: 'levels', label: 'Levels', min: 2, max: 10, val: 4, u: 'uLevels' },
       { k: 'contrast', label: 'Contrast', min: -100, max: 100, val: 15, u: 'uContrast' },
@@ -278,7 +380,7 @@ void main(){
 }`,
   },
   glitch: {
-    name: 'Glitch', anim: true,
+    name: 'Glitch', ico: '#CC4840', sym: 'Gl', anim: true,
     params: [
       { k: 'shift', label: 'RGB Shift', min: 0, max: 40, val: 6, u: 'uShift' },
       { k: 'slices', label: 'Slices', min: 0, max: 100, val: 30, u: 'uSlices' },
@@ -303,7 +405,7 @@ void main(){
 }`,
   },
   wave: {
-    name: 'Wave', anim: true,
+    name: 'Wave', ico: '#1B7A6A', sym: 'Wv', anim: true,
     params: [
       { k: 'amp', label: 'Amount', min: 0, max: 80, val: 18, u: 'uAmp' },
       { k: 'freq', label: 'Frequency', min: 1, max: 30, val: 6, u: 'uFreq' },
@@ -319,7 +421,7 @@ void main(){
 }`,
   },
   grain: {
-    name: 'Film Grain', anim: true,
+    name: 'Film Grain', ico: '#B08830', sym: 'Fg', anim: true,
     params: [
       { k: 'amt', label: 'Grain', min: 0, max: 100, val: 35, u: 'uAmt' },
       { k: 'vig', label: 'Vignette', min: 0, max: 100, val: 30, u: 'uVig' },
@@ -338,7 +440,7 @@ void main(){
 };
 
 // ============================================================
-// GL ENGINE — programas, ping-pong, passes
+// GL ENGINE
 // ============================================================
 const VERT = `#version 300 es
 out vec2 vUv;
@@ -349,7 +451,7 @@ void main(){
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-const programs = {}; // fxId -> {prog, loc:{}}
+const programs = {};
 function compile(type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
@@ -403,7 +505,7 @@ function setProcSize(sw, sh) {
   const short = Math.min(w, h), long = Math.max(w, h);
   const k = Math.min(1, MAX_SHORT / short, MAX_LONG / long);
   w = Math.round(w * k); h = Math.round(h * k);
-  if (w === PW && h === PH && texSrc) return;
+  if (w === PW && h === PH && texSrc) { layoutWorld(); return; }
   PW = w; PH = h;
   glCanvas.width = w; glCanvas.height = h;
   mainCanvas.width = w; mainCanvas.height = h;
@@ -418,6 +520,9 @@ function setProcSize(sw, sh) {
   chainA = makeTarget(w, h);
   chainB = makeTarget(w, h);
   demoCanvas.width = w; demoCanvas.height = h;
+  document.getElementById('frameRes').textContent = `${w}×${h}`;
+  layoutWorld();
+  fitView();
 }
 
 function currentSourceEl() {
@@ -433,7 +538,7 @@ function uploadSource(tMs) {
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   try {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el);
-  } catch (e) { /* frame de vídeo ainda não pronto */ }
+  } catch (e) { /* frame ainda não pronto */ }
 }
 
 function runPass(fxId, inputTex, targetFb, tSec, params) {
@@ -473,16 +578,15 @@ function renderChain(tMs) {
     cur = target.tex;
     i++;
   }
-  runPass('_copy', cur, null, tSec, null); // default framebuffer + flip
+  runPass('_copy', cur, null, tSec, null);
   mainCtx.drawImage(glCanvas, 0, 0);
   if (recorder && recorder.isRecording) recorder.captureFrame();
 }
 
-// ---- loop on-demand (padrão da casa) ----
 let needsRender = true;
 let rafId = null, lastFrame = 0;
 function isDynamic() {
-  return !sourceType /* demo anima */ || sourceType === 'video' || sourceType === 'webcam' ||
+  return !sourceType || sourceType === 'video' || sourceType === 'webcam' ||
     stack.some(n => n.on && FX[n.fx].anim) || (recorder && recorder.isRecording);
 }
 function tick(now) {
@@ -496,9 +600,108 @@ function tick(now) {
 function requestRender() { needsRender = true; }
 
 // ============================================================
-// STACK — modelo + UI
+// O ESPAÇO — pan / zoom / grade
 // ============================================================
-let stack = [];   // [{uid, fx, on, params}]
+const space = document.getElementById('space');
+const world = document.getElementById('world');
+const GRID = 19;
+let view = { x: 0, y: 0, z: 1 };
+
+function applyView() {
+  world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  const g = GRID * view.z;
+  space.style.backgroundSize = `${g}px ${g}px`;
+  space.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  document.getElementById('zoomLabel').textContent = Math.round(view.z * 100) + '%';
+}
+
+function zoomAt(cx, cy, k) {
+  const nz = Math.min(3, Math.max(0.2, view.z * k));
+  const kk = nz / view.z;
+  view.x = cx - (cx - view.x) * kk;
+  view.y = cy - (cy - view.y) * kk;
+  view.z = nz;
+  applyView();
+}
+
+function fitView() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const worldW = PW + DOCK_GAP + DOCK_W, worldH = Math.max(PH, 300);
+  const z = Math.min(1.6, Math.min(vw * 0.8 / worldW, vh * 0.72 / worldH));
+  view.z = z;
+  view.x = (vw - worldW * z) / 2;
+  view.y = (vh - PH * z) / 2 + 10;
+  applyView();
+}
+
+space.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) {
+    zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.012));
+  } else {
+    view.x -= e.deltaX;
+    view.y -= e.deltaY;
+    applyView();
+  }
+}, { passive: false });
+
+// pan por drag (mouse/touch) + pinch com 2 dedos
+const pointers = new Map();
+let pinchD0 = 0, pinchZ0 = 1;
+space.addEventListener('pointerdown', e => {
+  if (e.target.closest('.stk-card, .stk-add, #topbar, #inspector, #toolsModal, #viewHud')) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinchD0 = Math.hypot(a.x - b.x, a.y - b.y);
+    pinchZ0 = view.z;
+  }
+  space.setPointerCapture(e.pointerId);
+  space.classList.add('panning');
+});
+space.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  if (pointers.size === 2) {
+    p.x = e.clientX; p.y = e.clientY;
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    if (pinchD0 > 0) zoomAt(cx, cy, (pinchZ0 * (d / pinchD0)) / view.z);
+  } else {
+    view.x += e.clientX - p.x;
+    view.y += e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    applyView();
+  }
+});
+const endPointer = e => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchD0 = 0;
+  if (!pointers.size) space.classList.remove('panning');
+};
+space.addEventListener('pointerup', endPointer);
+space.addEventListener('pointercancel', endPointer);
+window.addEventListener('resize', fitView);
+
+// layout do mundo: frame em (0,0), dock de nodes à direita, fio entre eles
+const DOCK_GAP = 90, DOCK_W = 232;
+function layoutWorld() {
+  const dock = document.getElementById('stackDock');
+  dock.style.left = (PW + DOCK_GAP) + 'px';
+  dock.style.top = '0px';
+  const wires = document.getElementById('wires');
+  wires.setAttribute('width', PW + DOCK_GAP + DOCK_W);
+  wires.setAttribute('height', Math.max(PH, 400));
+  const x0 = PW + 4, y0 = 40, x1 = PW + DOCK_GAP - 4, y1 = 26;
+  document.getElementById('wirePath').setAttribute('d',
+    `M ${x0} ${y0} C ${x0 + 40} ${y0}, ${x1 - 40} ${y1}, ${x1} ${y1}`);
+}
+
+// ============================================================
+// STACK — modelo + nodes no espaço
+// ============================================================
+let stack = [];
 let selUid = null;
 let uidSeq = 0;
 
@@ -512,6 +715,7 @@ function addFx(fxId, silent) {
   selUid = uid;
   buildPane(uid);
   syncStackUI();
+  openInspector();
   requestRender();
   if (!silent) TipoUI.showToast(def.name + ' no stack');
 }
@@ -522,7 +726,10 @@ function removeFx(uid) {
   stack.splice(i, 1);
   const pane = document.querySelector(`.fx-pane[data-uid="${uid}"]`);
   if (pane) pane.remove();
-  if (selUid === uid) selUid = stack.length ? stack[Math.min(i, stack.length - 1)].uid : null;
+  if (selUid === uid) {
+    selUid = stack.length ? stack[Math.min(i, stack.length - 1)].uid : null;
+    if (!selUid) closeInspector();
+  }
   syncStackUI();
   requestRender();
 }
@@ -547,36 +754,59 @@ function toggleFx(uid) {
 function selectFx(uid) {
   selUid = uid;
   syncStackUI();
+  openInspector();
 }
 
+const SRC_LABEL = { image: 'Imagem', video: 'Vídeo', webcam: 'Webcam' };
 function syncStackUI() {
-  const list = document.getElementById('stackList');
-  list.innerHTML = '';
+  const dock = document.getElementById('stackDock');
+  dock.innerHTML = '';
+  // node da FONTE (topo da cadeia)
+  const src = document.createElement('div');
+  src.className = 'stk-card stk-src';
+  src.innerHTML =
+    `<span class="stk-ico" style="background:#2A8A7A;">Sr</span>` +
+    `<span class="stk-name">${sourceType ? SRC_LABEL[sourceType] : 'Demo TIPÓ'}<span class="stk-sub">fonte</span></span>` +
+    `<span class="stk-btns"><button type="button" title="trocar">&#8644;</button></span>`;
+  src.addEventListener('click', () => openTools());
+  dock.appendChild(src);
+  // nodes de efeito
   stack.forEach((n, i) => {
+    const def = FX[n.fx];
     const card = document.createElement('div');
     card.className = 'stk-card' + (n.uid === selUid ? ' sel' : '') + (n.on ? '' : ' off');
     card.dataset.uid = n.uid;
     card.innerHTML =
-      `<span class="stk-dot" title="on/off"></span>` +
-      `<span class="stk-name">${i + 1}. ${FX[n.fx].name}</span>` +
+      `<span class="stk-ico" style="background:${def.ico};">${def.sym}</span>` +
+      `<span class="stk-name">${def.name}</span>` +
       `<span class="stk-btns">` +
       `<button type="button" class="stk-up" title="sobe">&#9650;</button>` +
       `<button type="button" class="stk-dn" title="desce">&#9660;</button>` +
-      `<button type="button" class="stk-x" title="remove">&times;</button></span>`;
+      `<button type="button" class="stk-x" title="remove">&times;</button></span>` +
+      `<span class="stk-dot" title="on/off"></span>`;
     card.addEventListener('click', () => selectFx(n.uid));
     card.querySelector('.stk-dot').addEventListener('click', e => { e.stopPropagation(); toggleFx(n.uid); });
     card.querySelector('.stk-up').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, -1); });
     card.querySelector('.stk-dn').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, 1); });
     card.querySelector('.stk-x').addEventListener('click', e => { e.stopPropagation(); removeFx(n.uid); });
-    list.appendChild(card);
+    dock.appendChild(card);
   });
-  document.getElementById('stackEmpty').style.display = stack.length ? 'none' : '';
+  // botão + add
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'stk-add';
+  add.textContent = '+ efeito';
+  add.addEventListener('click', () => openTools());
+  dock.appendChild(add);
+  // panes
   document.querySelectorAll('.fx-pane').forEach(p => p.classList.toggle('sel', p.dataset.uid === selUid));
-  document.getElementById('paramsSection').style.display = stack.length ? '' : 'none';
+  syncInspector();
+  const names = stack.filter(n => n.on).map(n => FX[n.fx].sym.toLowerCase());
+  document.getElementById('frameStack').textContent = names.length ? names.join(' → ') : 'passthrough';
 }
 
-/** painel de params de UM node — todos ficam no DOM (display:none nos não
- *  selecionados) pra behaviors/áudio continuarem vivos ao trocar de card */
+/** panes de params ficam TODOS no DOM (hidden) — behaviors/áudio
+ *  continuam vivos quando o inspector troca de node */
 function buildPane(uid) {
   const n = stack.find(x => x.uid === uid);
   const def = FX[n.fx];
@@ -597,7 +827,6 @@ function buildPane(uid) {
       row.innerHTML = `<label>${p.label}</label>`;
       const sel = document.createElement('select');
       sel.id = id;
-      sel.style.flex = '1';
       p.options.forEach((o, i) => {
         const op = document.createElement('option');
         op.value = i; op.textContent = o;
@@ -630,12 +859,75 @@ function clearStack() {
   stack = [];
   selUid = null;
   document.getElementById('paramsHost').innerHTML = '';
+  closeInspector();
   syncStackUI();
   requestRender();
 }
 
 // ============================================================
-// PRESETS de stack (receitas brand)
+// INSPECTOR flutuante
+// ============================================================
+const inspector = document.getElementById('inspector');
+function openInspector() {
+  if (!selUid) return;
+  inspector.classList.add('open');
+  syncInspector();
+}
+function closeInspector() { inspector.classList.remove('open'); }
+function syncInspector() {
+  if (!selUid) { closeInspector(); return; }
+  const n = stack.find(x => x.uid === selUid);
+  if (!n) { closeInspector(); return; }
+  const def = FX[n.fx];
+  const ico = document.getElementById('inspIco');
+  ico.style.background = def.ico;
+  ico.textContent = def.sym;
+  document.getElementById('inspName').textContent = def.name;
+  document.getElementById('inspBypass').style.color = n.on ? 'var(--accent)' : 'var(--text-5)';
+}
+document.getElementById('inspClose').addEventListener('click', () => closeInspector());
+document.getElementById('inspBypass').addEventListener('click', () => { if (selUid) toggleFx(selUid); });
+document.getElementById('inspRemove').addEventListener('click', () => { if (selUid) removeFx(selUid); });
+
+// drag do inspector pela header (desktop)
+(() => {
+  const head = document.getElementById('inspHead');
+  let drag = null;
+  head.addEventListener('pointerdown', e => {
+    if (e.target.tagName === 'BUTTON' || window.innerWidth <= 768) return;
+    const r = inspector.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', e => {
+    if (!drag) return;
+    inspector.style.left = Math.max(4, Math.min(window.innerWidth - 260, e.clientX - drag.dx)) + 'px';
+    inspector.style.top = Math.max(4, Math.min(window.innerHeight - 120, e.clientY - drag.dy)) + 'px';
+  });
+  head.addEventListener('pointerup', () => { drag = null; });
+})();
+
+// ============================================================
+// MODAL de tools
+// ============================================================
+function openTools() { document.getElementById('toolsModal').classList.add('open'); }
+function closeTools() { document.getElementById('toolsModal').classList.remove('open'); }
+document.getElementById('toolsModal').addEventListener('click', e => {
+  if (e.target.id === 'toolsModal') closeTools();
+});
+(() => {
+  const grid = document.getElementById('toolsGrid');
+  Object.entries(FX).forEach(([id, def]) => {
+    const t = document.createElement('div');
+    t.className = 'tool-thumb';
+    t.innerHTML = `<div class="tt-vis tt-${id}"></div><div class="tt-name">${def.name}</div>`;
+    t.addEventListener('click', () => { closeTools(); addFx(id); });
+    grid.appendChild(t);
+  });
+})();
+
+// ============================================================
+// PRESETS de receita
 // ============================================================
 const STACK_PRESETS = {
   riso:   [{ fx: 'halftone', params: { cell: 11, angle: 15, gain: 108, ink: 2 } },
@@ -663,7 +955,6 @@ function applyStackPreset(name) {
     addFx(r.fx, true);
     const node = stack[stack.length - 1];
     Object.assign(node.params, r.params);
-    // sincroniza os inputs do pane com os params do preset
     FX[r.fx].params.forEach(p => {
       const el = document.getElementById(`st_${node.uid}_${p.k}`);
       if (!el) return;
@@ -673,37 +964,36 @@ function applyStackPreset(name) {
     });
   });
   selUid = stack.length ? stack[0].uid : null;
+  closeInspector();
   syncStackUI();
   requestRender();
 }
-
-function resetAll() {
-  applyStackPreset('riso');
-  TipoUI.showToast('Reset — stack Riso');
-}
+document.getElementById('presetSel').addEventListener('change', e => {
+  if (e.target.value) { applyStackPreset(e.target.value); TipoUI.showToast('Receita ' + e.target.value); }
+  e.target.value = '';
+});
+function resetAll() { applyStackPreset('riso'); }
 
 // ============================================================
-// FONTE — upload, webcam, demo, drag&drop
+// FONTE
 // ============================================================
 function releaseSource() {
   if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
   if (srcVideo) { srcVideo.pause(); srcVideo = null; }
   if (mediaUrl) { URL.revokeObjectURL(mediaUrl); mediaUrl = null; }
-  document.getElementById('webcamBtn').classList.remove('rec-on');
 }
 
 function useDemo() {
   releaseSource();
   sourceType = null;
   setProcSize(960, 720);
-  document.getElementById('dropHint').style.display = '';
+  syncStackUI();
   requestRender();
 }
 
 function loadFile(file) {
   releaseSource();
   mediaUrl = URL.createObjectURL(file);
-  document.getElementById('dropHint').style.display = 'none';
   if (file.type.startsWith('video/')) {
     const v = document.createElement('video');
     v.src = mediaUrl;
@@ -713,6 +1003,7 @@ function loadFile(file) {
       srcVideo = v;
       setProcSize(v.videoWidth, v.videoHeight);
       v.play();
+      syncStackUI();
       requestRender();
     });
   } else {
@@ -721,6 +1012,7 @@ function loadFile(file) {
       sourceType = 'image';
       srcImage = img;
       setProcSize(img.naturalWidth, img.naturalHeight);
+      syncStackUI();
       requestRender();
     };
     img.src = mediaUrl;
@@ -741,8 +1033,7 @@ async function toggleWebcam() {
       srcVideo = v;
       setProcSize(v.videoWidth, v.videoHeight);
       v.play();
-      document.getElementById('dropHint').style.display = 'none';
-      document.getElementById('webcamBtn').classList.add('rec-on');
+      syncStackUI();
       requestRender();
     });
   } catch (e) {
@@ -754,9 +1045,8 @@ document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
   e.target.value = '';
 });
-const wrap = document.getElementById('canvasWrap');
-wrap.addEventListener('dragover', e => e.preventDefault());
-wrap.addEventListener('drop', e => {
+space.addEventListener('dragover', e => e.preventDefault());
+space.addEventListener('drop', e => {
   e.preventDefault();
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
@@ -778,6 +1068,7 @@ function exportPNG() {
 
 async function toggleRec() {
   recorder = await TipoUI.toggleVisualRec(mainCanvas);
+  document.getElementById('recBtn').classList.toggle('rec-live', !!(recorder && recorder.isRecording));
 }
 
 // ============================================================
@@ -787,6 +1078,7 @@ TipoUI.initChrome('visual');
 setProcSize(960, 720);
 useDemo();
 applyStackPreset('riso');
+fitView();
 tick(performance.now());
 </script>
 </body>

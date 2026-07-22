@@ -38,16 +38,63 @@ const hash = () => page.evaluate(() => {
   return { h, nz };
 });
 
-// boot: preset Riso default, canvas com conteúdo
+// boot: preset Riso default, canvas com conteúdo, espaço montado
 const boot = await page.evaluate(() => ({
   stack: stack.map(n => n.fx),
   panes: document.querySelectorAll('.fx-pane').length,
-  cards: document.querySelectorAll('.stk-card').length,
+  cards: document.querySelectorAll('.stk-card').length, // 1 fonte + 2 efeitos
+  addBtn: !!document.querySelector('.stk-add'),
+  grid: getComputedStyle(document.getElementById('space')).backgroundImage.includes('radial-gradient'),
 }));
 check('boot: stack Riso (halftone+grain)', boot.stack.join(',') === 'halftone,grain', `(${boot.stack})`);
-check('boot: cards + panes', boot.cards === 2 && boot.panes === 2);
+check('boot: nodes no espaço (fonte+2fx+add)', boot.cards === 3 && boot.panes === 2 && boot.addBtn);
+check('grade de pontos no espaço', boot.grid);
 const h0 = await hash();
 check('canvas renderizando (não vazio)', h0.nz > 400, `(nz=${h0.nz})`);
+
+// PAN: drag no espaço vazio move o mundo
+const v0 = await page.evaluate(() => ({ ...view }));
+await page.mouse.move(700, 500);
+await page.mouse.down();
+await page.mouse.move(820, 560, { steps: 5 });
+await page.mouse.up();
+const v1 = await page.evaluate(() => ({ ...view }));
+check('pan por drag move o mundo', Math.abs(v1.x - v0.x) > 80 && Math.abs(v1.y - v0.y) > 30, `(dx=${Math.round(v1.x - v0.x)})`);
+
+// ZOOM: ctrl+wheel muda a escala E a grade acompanha
+await page.keyboard.down('Control');
+await page.mouse.wheel(0, -400);
+await page.keyboard.up('Control');
+await page.waitForTimeout(100);
+const v2 = await page.evaluate(() => ({ z: view.z, bg: document.getElementById('space').style.backgroundSize }));
+check('ctrl+wheel dá zoom', v2.z > v1.z, `(${v1.z.toFixed(2)} → ${v2.z.toFixed(2)})`);
+check('grade escala com o zoom', v2.bg.includes((19 * v2.z).toFixed(0).slice(0, 2)), `(${v2.bg})`);
+await page.evaluate(() => fitView());
+
+// INSPECTOR: clicar num node abre o painel flutuante com os params dele
+await page.evaluate(() => selectFx(stack[0].uid));
+await page.waitForTimeout(150);
+const insp = await page.evaluate(() => ({
+  open: document.getElementById('inspector').classList.contains('open'),
+  name: document.getElementById('inspName').textContent,
+  pane: !!document.querySelector('.fx-pane.sel .range-row'),
+}));
+check('inspector abre com o node', insp.open && insp.name === 'Halftone' && insp.pane, `(${insp.name})`);
+
+// MODAL de tools: abre, tem os 8 efeitos, adiciona por clique
+await page.evaluate(() => openTools());
+const modal = await page.evaluate(() => ({
+  open: document.getElementById('toolsModal').classList.contains('open'),
+  thumbs: document.querySelectorAll('.tool-thumb').length,
+}));
+check('modal Tools com 8 efeitos', modal.open && modal.thumbs === 8, `(${modal.thumbs})`);
+await page.evaluate(() => { document.querySelectorAll('.tool-thumb')[0].click(); });
+await page.waitForTimeout(150);
+const added = await page.evaluate(() => ({
+  n: stack.length,
+  closed: !document.getElementById('toolsModal').classList.contains('open'),
+}));
+check('clique no thumb adiciona node', added.n === 3 && added.closed);
 
 // stack vazio = passthrough ≠ com efeitos
 await page.evaluate(() => clearStack());
