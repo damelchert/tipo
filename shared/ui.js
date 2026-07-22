@@ -667,9 +667,24 @@ const TipoUI = {
       || document.querySelector('canvas');
   },
 
+  /** timestamp padrão dos exports: AAAA-MM-DD_HH-MM-SS */
+  stamp() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+  },
+
+  /** injeta o timestamp antes da extensão (idempotente — não re-stampa) */
+  stampName(name) {
+    if (/\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/.test(name)) return name;
+    const i = name.lastIndexOf('.');
+    return i < 0 ? `${name}-${this.stamp()}` : `${name.slice(0, i)}-${this.stamp()}${name.slice(i)}`;
+  },
+
   /** Every export funnels through here. On mobile, offers the native share
-   *  sheet (Web Share API) alongside download; on desktop, downloads direct. */
+   *  sheet (Web Share API) alongside download; on desktop, downloads direct.
+   *  Todo arquivo sai com timestamp (tipo-<tool>-AAAA-MM-DD_HH-MM-SS.ext). */
   _downloadBlob(blob, filename) {
+    filename = this.stampName(filename);
     let file = null;
     try { file = new File([blob], filename, { type: blob.type || 'application/octet-stream' }); } catch (e) {}
     if (document.body.classList.contains('tipo-mobile') && file &&

@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### Exports padronizados: tipo-<tool>-AAAA-MM-DD_HH-MM-SS.ext (pedido do Daniel)
+- **TipoUI.stamp()/stampName(name)** — injeta o timestamp antes da extensão, IDEMPOTENTE (regex detecta stamp existente — Fotograma que já stampava não re-stampa). Aplicado nos DOIS funis: `TipoUI._downloadBlob` (PNG/PNGα/GIF/ASE/CSS/JSON/TXT/mockup/palette/pattern/share-mobile) e `TipoRecorder.download` (MP4/WebM/HQ — recorder usa TipoUI se existir).
+- recorder.js: `tipo-export.mp4` virou `tipo-<página>.mp4` (`_pageName()` do pathname) → stampado no download.
+- Varredura dos anchors DIRETOS (não passavam por funil): datamosh, depth (2), gradientmap, overlay (2), pixelsort, studio, riso (downloadCanvas), dithering (4 — de quebra `dithered-output.*` virou `tipo-dithering.*`, era o último export fora do prefixo tipo-).
+- Validado end-to-end: coil PNG `tipo-coil-2026-07-21_23-59-44.png`, coil MP4, studio PNG (com nome do frame), datamosh PNG. Cache-bust au4/rec3.
+
 ### FASE 15 v2 — HERO "A REVELAÇÃO LÍQUIDA" + entrada em DUAS PORTAS (pedido do Daniel: "GSAP do início com a cara do liquid flow que termina no TIPÓ; separar SPACES dos modos convencionais")
 - **Hero novo substituiu O Ensaio**: WebGL2 fullscreen com o MESMO shader de domain warp duplo do Liquid Flow do Studio, warpando um wordmark offscreen (4 blocos brand T-I-P-Ó em Clash sobre ink). **GSAP dirige o estado físico**: ato 1 = matéria líquida pura (amt 160→85, irreconhecível, fluindo), ato 2 = cristalização (amt→0 power4.inOut E speed→0.06 — o fluxo CONGELA junto), ato 3 = as duas portas. Mouse perturba o campo (offset suave no domain). Saída derrete de volta (amt→120) antes do slide. **GOTCHA flip duplo**: UNPACK_FLIP_Y + flip no vertex shader = TIPÓ de cabeça pra baixo — só um dos dois.
 - **Duas portas no fim do hero**: SPACES (→ studio.html, seta o session flag antes de navegar) × FERRAMENTAS (→ home). Gates preservados do Ensaio (1x/sessão, hash pula, reduced-motion, wheel/swipe/Esc/skip).

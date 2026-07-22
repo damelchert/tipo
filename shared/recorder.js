@@ -501,7 +501,7 @@ class TipoRecorder {
     this.onProgress({ phase: 'done', percent: 100, duration, sizeMB });
     this.onStatusChange('idle');
 
-    return { blob, filename: 'tipo-export.mp4', duration, sizeMB };
+    return { blob, filename: `tipo-${TipoRecorder._pageName()}.mp4`, duration, sizeMB };
   }
 
   async _stopStream() {
@@ -528,7 +528,7 @@ class TipoRecorder {
     this.onProgress({ phase: 'done', percent: 100, duration, sizeMB });
     this.onStatusChange('idle');
 
-    return { blob, filename: `tipo-export.${ext}`, duration, sizeMB };
+    return { blob, filename: `tipo-${TipoRecorder._pageName()}.${ext}`, duration, sizeMB };
   }
 
   _startTimer() {
@@ -548,7 +548,12 @@ class TipoRecorder {
     if (this.timerEl) this.timerEl.style.display = 'none';
   }
 
+  static _pageName() {
+    return (location.pathname.split('/').pop() || 'export').replace('.html', '') || 'export';
+  }
+
   static download(blob, filename) {
+    if (typeof TipoUI !== 'undefined' && TipoUI.stampName) filename = TipoUI.stampName(filename);
     const link = document.createElement('a');
     link.download = filename;
     link.href = URL.createObjectURL(blob);
