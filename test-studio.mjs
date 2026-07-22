@@ -303,6 +303,43 @@ await page.evaluate(() => {
 await page.waitForTimeout(350);
 const hB2 = await hash(await page.evaluate(() => frames[1].id));
 check('blend: modo muda a composição', hB1.h !== hB2.h && hB1.nz > 200, `(${hB1.h} vs ${hB2.h})`);
+// caso REAL do Daniel: fonte ESTÁTICA (imagem) citada pelo blend — o frame
+// estático já renderizou antes do blend existir e precisa ser acordado
+const staticBlend = await page.evaluate(async () => {
+  // frame 1 vira IMAGEM estática (stack vazio = passthrough)
+  setActive(frames[0].id);
+  clearStack();
+  const c = document.createElement('canvas');
+  c.width = 400; c.height = 300;
+  const x = c.getContext('2d');
+  x.fillStyle = '#204080'; x.fillRect(0, 0, 400, 300);
+  x.fillStyle = '#D4A040'; x.fillRect(100, 75, 200, 150);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  loadFile(new File([blob], 's.png', { type: 'image/png' }), frames[0]);
+  await new Promise(r => setTimeout(r, 700)); // renderiza 1x e dorme
+  return frames[0].sourceType;
+});
+check('fonte estática pronta', staticBlend === 'image');
+const hNoBlend = await hash(await page.evaluate(() => frames[1].id));
+await page.evaluate(() => {
+  setActive(frames[1].id);
+  clearStack();
+  addFx('blend', true);
+  frames[1].stack[0].params.src = frames[0].id;
+  frames[1].stack[0].params.mode = 1; // multiply
+  frames[1].needsRender = true;
+});
+await page.waitForTimeout(600);
+const hStaticBlend = await hash(await page.evaluate(() => frames[1].id));
+check('blend com fonte ESTÁTICA funciona (era o bug)', hStaticBlend.h !== hNoBlend.h, `(${hNoBlend.h} vs ${hStaticBlend.h})`);
+// restaura o estado que o teste de remoção espera: frame2 com blend → frame1
+await page.evaluate(() => {
+  setActive(frames[0].id); useDemo(); applyStackPreset('riso');
+  setActive(frames[1].id); clearStack(); addFx('blend', true);
+  frames[1].stack[0].params.src = frames[0].id;
+});
+await page.waitForTimeout(400);
+
 // remover o frame-fonte não quebra (ref limpa, node passa reto)
 await page.evaluate(() => {
   const keep = frames[1].id;

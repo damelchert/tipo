@@ -1396,6 +1396,11 @@ function tick(now) {
       if (n.on && FX[n.fx].blend && n.params.src) _blendSources.add(n.params.src);
     }
   }
+  // fonte citada que ainda não publicou (ex.: IMAGEM estática já renderizada
+  // antes do blend nascer) é ACORDADA — senão o node passa reto pra sempre
+  for (const f of frames) {
+    if (_blendSources.has(f.id) && !f.outTex) f.needsRender = true;
+  }
   for (const f of frames) {
     if (!frameDynamic(f) && !f.needsRender) continue;
     f.needsRender = false;

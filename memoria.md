@@ -173,6 +173,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### STUDIO: Blend "não muda nada" com fonte ESTÁTICA (caso real do Daniel: 2 imagens)
+- **Bug de gate**: frame de IMAGEM com stack vazio renderiza 1x e dorme (on-demand) → nunca publica o `outTex` → o Blend que o cita cai no guard "sem fonte válida" e passa reto PRA SEMPRE. Os testes originais usavam demo (sempre animado) e não pegaram.
+- **Fix no tick**: fonte citada por blend que ainda não tem outTex é ACORDADA (`needsRender = true`) — renderiza uma vez, publica, e o consumidor sampleia a textura persistente dali em diante.
+- test-studio: caso novo com 2 imagens estáticas (multiply muda o render) + restauração de estado pro teste de remoção. ALL PASS.
+
 ### STUDIO: o "travando no Export HQ" era progresso INVISÍVEL (+ prova do REC→HQ automático)
 - **Causa**: o `_progressUI` do hq.js procura `#exportProgress`/`.progress-box`/`#progressTitle`/`#progressBar`/`#progressInfo` — o Studio NÃO tinha esse markup. Tudo null-guarded → o render rodava em resolução nativa (lento) sem barra, sem ETA e SEM botão Cancelar = "travou". Fix: markup padrão da casa no studio.html + CSS próprio (z-index 2000, acima de espaço/topbar/inspector).
 - **REC → STOP entrega HQ automático confirmado em teste**: gravar no frame de vídeo → stop → deliverRecording assume → overlay "renderizando" → download `...-HQ.mp4` em 2560×1440 nativo. O live capture segue como fallback de cancelamento (fluxo 16.6).
