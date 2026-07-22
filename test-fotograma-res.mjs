@@ -71,6 +71,7 @@ check('blob final é o 2K', dims === 2048, `(${dims})`);
 // ---- EMULSÃO × RESOLUÇÃO: Pro = só descrição (sem imagem no payload) ----
 await page.evaluate(() => {
   state.mood = { full: { dataUrl: 'data:image/jpeg;base64,' + 'A'.repeat(64), mime: 'image/jpeg' }, crop: null, desc: 'warm amber pigments, soft window light, fine grain', img: null };
+  syncMoodUI(); // no mundo real o setMoodFile chama isso
 });
 imgCalls = 0;
 await page.click('#genBtn');
@@ -80,6 +81,10 @@ const proHasImg = proParts && proParts.some(x => x.inlineData);
 const proPrompt = proParts && (proParts.find(x => x.text) || {}).text || '';
 check('Pro: emulsão SEM imagem no payload (âncora de resolução)', proHasImg === false, `(parts=${proParts && proParts.length})`);
 check('Pro: cláusula de mood por DESCRIÇÃO', proPrompt.includes('exact physical mood') && proPrompt.includes('WITH its stated proportions'), '');
+check('emulsão ANULA stock/luz/paleta/grading', !proPrompt.includes('Kodak') && !proPrompt.includes('golden hour') && !proPrompt.includes('desaturated muted') && !proPrompt.includes('warm shadows'), '');
+check('cláusula OVERRIDE presente', proPrompt.includes('OVERRIDES any other color'), '');
+const selDis = await page.evaluate(() => ['luz','stock','paleta'].every(id => document.getElementById(id).disabled));
+check('seletores anulados na UI (disabled)', selDis, '');
 const capMood = await page.evaluate(() => document.getElementById('stillCaption').textContent);
 check('legenda mostra emulsão desc', capMood.includes('emulsão 🧪 desc'), `(${capMood.slice(0,90)})`);
 // Nano 2 (sem imageSize): imagem VAI no payload

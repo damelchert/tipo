@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### FOTOGRAMA: EMULSÃO v3 — anulação TOTAL (pedido do Daniel: "emulsão precisa anular luz/film stock/paleta")
+- Com emulsão ativa, agora SE CALAM: **luz do seletor, film stock inteiro (era 'Kodak Vision3 500T' no prompt), paleta, texture-override e o grading da estética** (P.fixed tinha 'warm shadows' brigando com mood frio + P.mood) — substituídos por 'honest photographic texture, no digital smoothing'. **Lente FICA** (ótica/bokeh, não cor). A spec da referência é a única voz tonal.
+- Cláusula ganhou reforço final: "This reference mood OVERRIDES any other color, film or lighting direction — the final grade must match the stated palette and its proportions boldly and unmistakably."
+- **UI**: seletores anulados ficam disabled + opacity .45 + tooltip "em espera — a emulsão manda" (syncMoodUI); legenda troca o stock por "grade da referência" (senão mentia). GOTCHA: o trava-paleta do P&B (syncStockHint) re-habilitava a paleta por cima do syncMoodUI — agora `disabled = bw || mood`.
+- test-fotograma-res +3 checks (anulação no prompt, OVERRIDE, selects disabled) ALL PASS + scene/vertex.
+
 ### FOTOGRAMA: EMULSÃO v2 — o mood agora COLA (caso real: referência lavanda/violeta saía cinza)
 - **3 causas empilhadas** (visíveis no print do Daniel): (1) descrição capada em 300 chars/tokens — o painel dele mostrava "Palette: Ultramarine Blue, Titanium White," CORTADA no meio; (2) o seletor de Paleta continuava no prompt — o default "desaturated muted palette" ENGOLIA o mood violeta; (3) cláusula no fim do prompt = posição fraca.
 - **Fix**: EMULSAO_SYSTEM virou **spec de colorista estruturada** (COLORS com PROPORÇÕES ~% por matiz + nomes precisos "hot pink ≠ red", TEMPERATURE com onde, LIGHT com contrast ratio, TEXTURE, MOOD 1 palavra; 700 chars, tokens 600, proíbe "cinematic/moody" genérico); **emulsão é LEI sobre a cor** — paleta do seletor SE CALA (toast "Emulsão assumiu a paleta"), texture-override aponta "color follows the reference mood"; cláusula subiu pra LOGO APÓS a cena com "reproduce the palette WITH its stated proportions".

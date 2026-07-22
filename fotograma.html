@@ -630,12 +630,13 @@ function refsClause(refs) {
 function moodClause(mood, attached) {
   if (!mood) return '';
   const d = mood.desc ? ` Its physical mood: ${mood.desc}` : '';
+  const OVERRIDE = ' This reference mood OVERRIDES any other color, film or lighting direction — the final grade must match the stated palette and its proportions boldly and unmistakably.';
   if (attached === false) {
     return mood.desc
-      ? ` Grade the ENTIRE image with this exact physical mood — reproduce the color palette WITH its stated proportions, the temperature, the light character and the texture faithfully; never copy objects, people or composition:${d}`
+      ? ` Grade the ENTIRE image with this exact physical mood — reproduce the color palette WITH its stated proportions, the temperature, the light character and the texture faithfully; never copy objects, people or composition:${d}${OVERRIDE}`
       : '';
   }
-  return ` Apply the mood of the attached STYLE reference image — reproduce its color palette WITH the same proportions, temperature, light character and texture; never its objects, people or composition.${d}`;
+  return ` Apply the mood of the attached STYLE reference image — reproduce its color palette WITH the same proportions, temperature, light character and texture; never its objects, people or composition.${d}${OVERRIDE}`;
 }
 
 /** montagem FINAL determinística — os seletores (enquadramento, luz,
@@ -670,21 +671,20 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   const mood = job ? job.mood : state.mood;
   const dir = sceneDirections(rawScene || sceneText, sceneText);
   state.sceneOverrides = dir;
+  // EMULSÃO ATIVA = ELA É A ÚNICA VOZ TONAL: luz, film stock, paleta e o
+  // grading da estética (P.fixed tem 'warm shadows' etc) SE CALAM — a spec
+  // da referência manda em cor/luz/textura. Lente fica (ótica, não cor).
   const bits = [
     dir.framing ? '' : currentFraming().phrase,
-    dir.light ? '' : currentLuz().phrase,
+    (dir.light || mood) ? '' : currentLuz().phrase,
     lens.phrase,
-    stock.phrase,
-    // emulsão ativa = A COR É DELA: o seletor de paleta se cala (senão o
-    // default 'desaturated muted' engole o mood — caso real do violeta)
-    stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
-             : (mood ? '' : currentPaleta().phrase),
+    mood ? '' : stock.phrase,
+    mood ? '' : (stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
+                          : currentPaleta().phrase),
     // texture override (hack Higgsfield): o stock empresta SÓ grão/textura
-    stock.bw ? '' : (mood
-      ? 'film stock texture and grain applied to luminance only, color follows the reference mood'
-      : 'film stock texture and grain applied to luminance only, color stays true to the palette direction'),
-    P.fixed,
-    P.mood,
+    (mood || stock.bw) ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
+    mood ? 'honest photographic texture, no digital smoothing' : P.fixed,
+    mood ? '' : P.mood,
     'true real-world scale and proportions',
   ].filter(Boolean);
   const refs = job ? job.refs : state.refs;
@@ -1005,7 +1005,7 @@ async function revealJob(job) {
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${job.mood ? 'grade da referência' : currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     showPrompt(job.scene);
     $('dlBtn').disabled = false;
@@ -1226,7 +1226,7 @@ function buildSelects() {
 function syncStockHint() {
   const s = currentStock();
   $('stockHint').textContent = s.hint || (s.bw ? 'preto e branco' : '');
-  $('paleta').disabled = !!s.bw;
+  $('paleta').disabled = !!s.bw || !!state.mood; // P&B OU emulsão travam a paleta
 }
 
 function syncLenteHint() {
@@ -1396,6 +1396,7 @@ async function setMoodFile(f) {
     moodSel = null;
     $('moodBox').style.display = '';
     $('moodClear').style.display = '';
+    syncMoodUI();
     drawMoodCanvas();
     if (state.connected) {
       $('moodDesc').textContent = '🧪 lendo a emulsão…';
@@ -1410,12 +1411,24 @@ $('moodFile').addEventListener('change', e => {
   setMoodFile(f);
 });
 
+/** emulsão ativa desativa os seletores que ela anula (luz/stock/paleta) */
+function syncMoodUI() {
+  const on = !!state.mood;
+  ['luz', 'stock', 'paleta'].forEach(id => {
+    const el = $(id);
+    el.disabled = on;
+    el.title = on ? 'em espera — a emulsão manda na cor/luz/textura' : '';
+    el.style.opacity = on ? 0.45 : 1;
+  });
+}
+
 $('moodClear').addEventListener('click', () => {
   state.mood = null;
   moodSel = null;
   $('moodBox').style.display = 'none';
   $('moodClear').style.display = 'none';
   $('moodDesc').textContent = '';
+  syncMoodUI();
 });
 
 function syncResRow() {
