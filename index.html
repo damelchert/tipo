@@ -691,7 +691,7 @@ body { overflow: hidden; }
   <div class="hero-log" id="heroLog">revelando · liquid flow</div>
   <div class="hero-cta" id="heroCta">
     <div class="hero-doors">
-      <button type="button" id="heroSpaces"><b>SPACES</b><span>canvas infinito &middot; nodes &middot; &aacute;udio-reativo</span></button>
+      <button type="button" id="heroSpaces"><b>STUDIO</b><span>canvas infinito &middot; nodes &middot; &aacute;udio-reativo</span></button>
       <button type="button" id="heroEnter"><b>FERRAMENTAS</b><span>40 modos &middot; visual &amp; kinetic</span></button>
     </div>
     <span class="hero-hint">role pra entrar ↓</span>
@@ -731,7 +731,7 @@ body { overflow: hidden; }
           <div class="tipo-preview-bg">
             <div class="spaces-preview"></div>
           </div>
-          <div class="tipo-split-label split-text" data-text="Spaces">Spaces</div>
+          <div class="tipo-split-label split-text" data-text="Studio">Studio</div>
           <div class="tipo-split-sub split-sub">canvas infinito &bull; nodes &bull; multi-frame &bull; &aacute;udio-reativo</div>
           <div class="split-ticker"><div class="split-ticker-track">Halftone · Dither · Pixelate · Gradient Map · Posterize · Glitch · Wave · Liquid Flow · Mosh · Echo Trails · Droste · Fractal Julia · ASCII · Duotone · Blur · Kaleido · Aberration · Adjust · Grain&nbsp;·&nbsp;<!--dup-->Halftone · Dither · Pixelate · Gradient Map · Posterize · Glitch · Wave · Liquid Flow · Mosh · Echo Trails · Droste · Fractal Julia · ASCII · Duotone · Blur · Kaleido · Aberration · Adjust · Grain&nbsp;·&nbsp;</div></div>
         </div>
@@ -2243,7 +2243,7 @@ void main(){
       .add(setLog('revelando · tipó'), 1.6)
       // ato 2 — cristalização: o warp morre, o fluxo congela, TIPÓ aparece
       .to(S, { amt: 0, speed: 0.06, duration: 2.1, ease: 'power4.inOut' }, 2.2)
-      .add(setLog('40 ferramentas · spaces · 100% browser'), 3.6)
+      .add(setLog('40 ferramentas · studio · 100% browser'), 3.6)
       // ato 3 — as duas portas
       .to('#heroCta', { opacity: 1, duration: 0.6 }, 3.9)
       .add(() => hero.classList.add('parked'));
