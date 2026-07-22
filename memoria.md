@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3g — STUDIO: Tiny Planet REMOVIDO ("tá muito meme") → Droste + Fractal Julia (17 efeitos)
+- **Droste** (anim): tiling log-polar — `l = mod(log(r) - t·speed, log(ratio))` = **zoom infinito** em log-espaço, `a += twist·l` = acoplamento espiral (Escher). Ratio/Twist/Zoom Speed/Rotate. Demo: células TIPÓ aninhando em espiral recursiva.
+- **Fractal (Julia)** (anim, "vários parâmetros" como pedido): iteração z²+c com **orbit trap de imagem** — o z final vira coordenada de amostragem da FONTE (espelhada com fract/abs, sem streaks) → o fractal COME a imagem, rendado barroco com as letras tilando na borda. C Real/C Imag/Iterations/Zoom/**Morph** (c orbita animado — o fractal respira)/Variant Julia|Burning Ship. Julia default clássico (-0.396, 0.605).
+- Tiny Planet removido do catálogo; **guard no restoreSpace**: node com fx fora do catálogo é PULADO (senão `f.stack[length-1]` pegava o node errado e corrompia o restore de espaços salvos com o efeito extinto).
+- Suite ALL PASS (17/17 no modal). Screenshot: Droste espiralando + Julia×GradMap = filigrana Athos.
+
 ### 22.3f — STUDIO: Liquid Flow + Tiny Planet (16 efeitos — pedido pós-Kaleido: "algo semelhante mas diferente, que transforma a imagem completamente")
 - **Liquid Flow** (anim): domain warp DUPLO com fbm de value noise (o ruído desloca o ruído — mármore líquido), octaves controláveis (Detail 1-5 via break no loop), Scale com correção de aspect, Speed animado. O complemento orgânico do Kaleido cristalino. Flow+GradMap no demo = continentes vivos.
 - **Tiny Planet** (anim): remapeamento retangular→polar com 3 modos — Planeta (base da imagem no centro), Túnel infinito (y = fract(k/r)), Poço (invertido) — + Zoom/Rotate/Spin animado. Ângulo com fract() wrap (emenda esquerda-direita é inerente ao efeito).

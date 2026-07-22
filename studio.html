@@ -161,7 +161,8 @@
   .tt-aberration::before { content: 'AB'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; color: #F8F5F0; text-shadow: -3px 0 0 rgba(255,40,40,.7), 3px 0 0 rgba(40,80,255,.7); }
   .tt-adjust { background: linear-gradient(90deg, #1A1818, #6a6a6a 35%, #F8F5F0 70%, #2A8A7A 70%, #D4A040); }
   .tt-flow { background: radial-gradient(ellipse 60% 90% at 30% 40%, #2A8A7A 0%, transparent 60%), radial-gradient(ellipse 80% 50% at 70% 60%, #D4A040 0%, transparent 55%), radial-gradient(ellipse 70% 80% at 50% 80%, #99E0D2 0%, transparent 50%), #1A1818; filter: blur(3px) contrast(1.4); }
-  .tt-polar { background: conic-gradient(from 0deg, #2A8A7A, #D4A040, #99E0D2, #1A1818, #2A8A7A); border-radius: 50%; margin: 0 auto; width: 52px !important; }
+  .tt-droste { background: repeating-radial-gradient(circle at 50% 50%, #2A8A7A 0 6px, #D4A040 6px 10px, #1A1818 10px 15px, #99E0D2 15px 18px); }
+  .tt-fractal { background: radial-gradient(circle at 35% 60%, #99E0D2 0 4px, transparent 4px), radial-gradient(circle at 62% 38%, #D4A040 0 7px, transparent 7px), radial-gradient(ellipse 70% 40% at 50% 50%, #2A8A7A 0%, #1B5A4E 45%, #1A1818 80%); }
 
   /* ============ mobile ============ */
   @media (max-width: 768px) {
@@ -610,26 +611,56 @@ void main(){
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
-  polar: {
-    name: 'Tiny Planet', ico: '#6A4A9A', sym: 'Tp', anim: true,
+  droste: {
+    name: 'Droste', ico: '#6A4A9A', sym: 'Dr', anim: true,
     params: [
-      { k: 'mode', label: 'Mode', type: 'select', val: 0, u: 'uPMode', options: ['Planeta', 'Túnel', 'Poço (invertido)'] },
-      { k: 'zoom', label: 'Zoom', min: 40, max: 250, val: 100, u: 'uPZoom' },
-      { k: 'rot', label: 'Rotate', min: 0, max: 360, val: 0, u: 'uPRot' },
-      { k: 'spin', label: 'Spin', min: 0, max: 100, val: 0, u: 'uPSpin' },
+      { k: 'ratio', label: 'Ratio', min: 15, max: 80, val: 30, u: 'uRatio' },
+      { k: 'twist', label: 'Twist', min: -100, max: 100, val: 35, u: 'uTwist' },
+      { k: 'speed', label: 'Zoom Speed', min: 0, max: 100, val: 20, u: 'uDSpeed' },
+      { k: 'rot', label: 'Rotate', min: 0, max: 360, val: 0, u: 'uDRot' },
     ],
-    frag: `uniform float uPMode; uniform float uPZoom; uniform float uPRot; uniform float uPSpin;
+    frag: `uniform float uRatio; uniform float uTwist; uniform float uDSpeed; uniform float uDRot;
 void main(){
   float asp = uRes.x / uRes.y;
-  vec2 d = (vUv - 0.5) * vec2(asp, 1.0);
-  float r = length(d) * (100.0 / uPZoom);
-  float a = atan(d.y, d.x) + radians(uPRot) + uTime * uPSpin / 100.0 * 1.2;
-  float x = fract(a / 6.2831853 + 0.5);
-  float y;
-  if (uPMode < 0.5)      y = clamp(1.0 - r * 1.15, 0.0, 1.0);  // planeta: base da imagem no centro
-  else if (uPMode < 1.5) y = fract(0.28 / max(r, 0.02));        // túnel infinito
-  else                   y = clamp(r * 1.15, 0.0, 1.0);         // poço: topo no centro
-  outC = texture(uTex, vec2(x, y));
+  vec2 z = (vUv - 0.5) * vec2(asp, 1.0);
+  float ratio = uRatio / 10.0; // 1.5..8
+  float k = log(ratio);
+  float l = log(max(length(z), 1e-4));
+  float a = atan(z.y, z.x) + radians(uDRot);
+  a += uTwist / 100.0 * l;                              // acoplamento espiral
+  l = mod(l - uTime * uDSpeed / 100.0 * 0.8, k);        // zoom INFINITO em log-espaço
+  float rs = exp(l - k);                                // anel-fonte (1/ratio, 1]
+  vec2 uv = 0.5 + vec2(cos(a), sin(a)) * rs * 0.5 * vec2(1.0 / asp, 1.0) * 0.96;
+  outC = texture(uTex, clamp(uv, 0.0, 1.0));
+}`,
+  },
+  fractal: {
+    name: 'Fractal (Julia)', ico: '#3A2A6A', sym: 'Jl', anim: true,
+    params: [
+      { k: 'cr', label: 'C Real', min: -100, max: 100, val: -36, u: 'uCr' },
+      { k: 'ci', label: 'C Imag', min: -100, max: 100, val: 55, u: 'uCi' },
+      { k: 'iter', label: 'Iterations', min: 2, max: 40, val: 10, u: 'uFIter' },
+      { k: 'zoom', label: 'Zoom', min: 40, max: 300, val: 100, u: 'uFZoom' },
+      { k: 'morph', label: 'Morph', min: 0, max: 100, val: 15, u: 'uMorph' },
+      { k: 'variant', label: 'Variant', type: 'select', val: 0, u: 'uVariant', options: ['Julia', 'Burning Ship'] },
+    ],
+    frag: `uniform float uCr; uniform float uCi; uniform float uFIter; uniform float uFZoom; uniform float uMorph; uniform float uVariant;
+vec2 cmul(vec2 a, vec2 b){ return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+void main(){
+  float asp = uRes.x / uRes.y;
+  vec2 zz = (vUv - 0.5) * vec2(asp, 1.0) * (220.0 / uFZoom);
+  float t = uTime * uMorph / 100.0 * 0.35;
+  vec2 c = vec2(uCr, uCi) / 100.0 * 1.1 + (uMorph > 0.0 ? 0.10 * vec2(cos(t), sin(t * 0.83)) : vec2(0.0));
+  for (int i = 0; i < 40; i++) {
+    if (float(i) >= uFIter) break;
+    if (uVariant > 0.5) zz = abs(zz);
+    zz = cmul(zz, zz) + c;
+    if (dot(zz, zz) > 16.0) break;
+  }
+  // orbit trap: o z final vira coordenada de amostragem da FONTE
+  // (espelhado — a imagem é dobrada pela dinâmica do fractal, sem streaks)
+  vec2 suv = abs(fract(zz * 0.25 + 0.5) * 2.0 - 1.0);
+  outC = texture(uTex, suv);
 }`,
   },
   aberration: {
@@ -1664,6 +1695,7 @@ async function restoreSpace() {
       const f = newFrame({ blank: true, silent: true, x: fr.x, y: fr.y });
       f.name = fr.name || '';
       fr.stack.forEach(n => {
+        if (!FX[n.fx]) return; // efeito removido do catálogo — pula o node
         addFx(n.fx, true);
         const c = f.stack[f.stack.length - 1];
         c.on = n.on;
