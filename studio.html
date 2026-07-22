@@ -976,7 +976,25 @@ function newFrame(opts = {}) {
 }
 
 function removeFrame(id) {
-  if (frames.length <= 1) { TipoUI.showToast('Último frame não sai'); return; }
+  if (recorder && recorder.isRecording && recFrameId === id) {
+    TipoUI.showToast('Para a gravação antes de excluir');
+    return;
+  }
+  // último frame não some — vira um frame ZERADO (demo + receita default)
+  if (frames.length <= 1) {
+    const f = frames[0];
+    setActive(f.id);
+    releaseSource(f);
+    f.mediaKey = null;
+    f.sourceType = null;
+    f.name = '';
+    f.x = 0; f.y = 0;
+    setFrameSize(f, 960, 720);
+    applyStackPreset('riso');
+    fitView();
+    TipoUI.showToast('Frame zerado — o espaço precisa de pelo menos um');
+    return;
+  }
   const i = frames.findIndex(f => f.id === id);
   if (i < 0) return;
   const f = frames[i];
