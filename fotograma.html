@@ -632,10 +632,10 @@ function moodClause(mood, attached) {
   const d = mood.desc ? ` Its physical mood: ${mood.desc}` : '';
   if (attached === false) {
     return mood.desc
-      ? ` Grade the image with this exact physical mood — transfer ONLY palette, grain, light character and texture; never objects, people or composition:${d}`
+      ? ` Grade the ENTIRE image with this exact physical mood — reproduce the color palette WITH its stated proportions, the temperature, the light character and the texture faithfully; never copy objects, people or composition:${d}`
       : '';
   }
-  return ` Apply the mood of the attached STYLE reference image — transfer ONLY its palette, grain, light character and texture; never its objects, people or composition.${d}`;
+  return ` Apply the mood of the attached STYLE reference image — reproduce its color palette WITH the same proportions, temperature, light character and texture; never its objects, people or composition.${d}`;
 }
 
 /** montagem FINAL determinística — os seletores (enquadramento, luz,
@@ -667,6 +667,7 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   const P = PROGRAMAS[state.prog];
   const stock = currentStock();
   const lens = currentLente();
+  const mood = job ? job.mood : state.mood;
   const dir = sceneDirections(rawScene || sceneText, sceneText);
   state.sceneOverrides = dir;
   const bits = [
@@ -674,18 +675,21 @@ function buildFinalPrompt(sceneText, rawScene, job) {
     dir.light ? '' : currentLuz().phrase,
     lens.phrase,
     stock.phrase,
-    stock.bw ? 'black and white photography, monochromatic palette, no color anywhere' : currentPaleta().phrase,
-    // texture override (hack Higgsfield): o stock empresta SÓ grão/textura —
-    // a color science dele não atropela a paleta escolhida ("filtro VSCO")
-    stock.bw ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
+    // emulsão ativa = A COR É DELA: o seletor de paleta se cala (senão o
+    // default 'desaturated muted' engole o mood — caso real do violeta)
+    stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
+             : (mood ? '' : currentPaleta().phrase),
+    // texture override (hack Higgsfield): o stock empresta SÓ grão/textura
+    stock.bw ? '' : (mood
+      ? 'film stock texture and grain applied to luminance only, color follows the reference mood'
+      : 'film stock texture and grain applied to luminance only, color stays true to the palette direction'),
     P.fixed,
     P.mood,
     'true real-world scale and proportions',
   ].filter(Boolean);
-  const mood = job ? job.mood : state.mood;
   const refs = job ? job.refs : state.refs;
   const moodAttached = !/pro/i.test($('model').value || ''); // Pro = só descrição (resolução plena)
-  return `${sceneText}. ${bits.join(', ')}.${moodClause(mood, moodAttached)}${refsClause(refs)}${cleanRule()}`;
+  return `${sceneText}.${moodClause(mood, moodAttached)} ${bits.join(', ')}.${refsClause(refs)}${cleanRule()}`;
 }
 
 /** system prompt do Diretor ✨ — a LLM enriquece SÓ a cena (sujeito,
@@ -716,7 +720,13 @@ function saneExpansion(txt) {
 }
 
 // ---- EMULSÃO: transfere a química da referência (Gemini vision) ----
-const EMULSAO_SYSTEM = `You are a film colorist and archivist. Look at the image and describe ONLY its transferable physical mood: palette as 4-6 named pigments, light character (direction, hardness, warmth), film texture (grain size, halation, contrast curve, how the blacks sit), and ONE word for the emotional register. NEVER mention objects, people, places or composition. Max 300 characters, one paragraph, English.`;
+const EMULSAO_SYSTEM = `You are a master film colorist. Analyze the image and write a COLOR GRADE SPEC precise enough for another artist to replicate the exact look on a different scene.
+COLORS: 4-6 precise hue names WITH approximate proportions of the frame (e.g. "lavender-violet ~50%, titanium white ~20%, ultramarine ~15%, blush pink ~10%, deep plum accents"). Name hues exactly — hot pink is not red, lavender is not purple.
+TEMPERATURE: warm / cool / mixed, and where in the frame.
+LIGHT: direction, hardness, contrast ratio, how highlights roll off.
+TEXTURE: grain size, halation, where the blacks and whites sit.
+MOOD: one word.
+NEVER mention objects, people, places or composition. NEVER use vague terms like "cinematic" or "moody" alone. One paragraph with the labels inline. Max 700 characters, English.`;
 
 async function analisarMood(mood) {
   mood = mood || state.mood;
@@ -727,7 +737,7 @@ async function analisarMood(mood) {
       { inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } },
       { text: 'Describe the transferable mood of this image.' },
     ] }],
-    generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
+    generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
   });
   const txt = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
   if (txt) {
@@ -959,6 +969,7 @@ async function revealJob(job) {
       }
     }
     const prompt = buildFinalPrompt(scene, job.scene, job);
+    if (job.mood) TipoUI.showToast('Emulsão assumiu a paleta — seletor de cor em espera');
     if (state.sceneOverrides.framing || state.sceneOverrides.light) {
       const o = [state.sceneOverrides.framing ? 'enquadramento' : '', state.sceneOverrides.light ? 'luz' : ''].filter(Boolean).join(' e ');
       TipoUI.showToast(`Teu texto assumiu ${o} — seletor em espera`);

@@ -79,7 +79,7 @@ const proParts = lastImgBody && lastImgBody.contents[0].parts;
 const proHasImg = proParts && proParts.some(x => x.inlineData);
 const proPrompt = proParts && (proParts.find(x => x.text) || {}).text || '';
 check('Pro: emulsão SEM imagem no payload (âncora de resolução)', proHasImg === false, `(parts=${proParts && proParts.length})`);
-check('Pro: cláusula de mood por DESCRIÇÃO', proPrompt.includes('Grade the image with this exact physical mood'), '');
+check('Pro: cláusula de mood por DESCRIÇÃO', proPrompt.includes('exact physical mood') && proPrompt.includes('WITH its stated proportions'), '');
 const capMood = await page.evaluate(() => document.getElementById('stillCaption').textContent);
 check('legenda mostra emulsão desc', capMood.includes('emulsão 🧪 desc'), `(${capMood.slice(0,90)})`);
 // Nano 2 (sem imageSize): imagem VAI no payload
