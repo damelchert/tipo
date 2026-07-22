@@ -173,6 +173,11 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### FOTOGRAMA: galeria comia takes (cap 30 SILENCIOSO, até curtidas!) + cinto-e-suspensório da resolução
+- **Bug grave achado pelo Daniel ("muita coisa que gerei sumiu")**: addTake tinha `while > 30 → pop + idbDelete` — deleção PERMANENTE e silenciosa do mais antigo, INCLUSIVE ♥. Fix: teto **120**, despeja o mais antigo **SEM ♥** (curtida é permanente; só cai se todas curtidas), toast avisa a cada despejo. Takes perdidos pré-fix são irrecuperáveis (deletados do IDB).
+- **Resolução com emulsão de novo (1376×768)**: screenshot dele provavelmente pré-deploy do fix desc-mode, MAS havia buraco real restante — **refs de produto anexadas também ancoram** (e jobs antigos reusados carregam dataURLs de 1024). Cinto-e-suspensório: no Pro, `refHiRes()` garante TODA ref anexada ≥2048 no lado maior (upscale suave canvas, cacheado por ref) direto no payload. Âncora agora é classe 2K por construção.
+- Suites scene/res/prompt ALL PASS.
+
 ### FOTOGRAMA: faixa de prompt na galeria (pedido: "clicar na imagem e ver o prompt do usuário, com botão copiar")
 - Sob a legenda do still: **faixa com a CENA digitada** daquele take (params.scene já persistia no IDB desde o dia 1 — takes antigos ganham de graça) + botão **copiar** (clipboard API com fallback execCommand). Revelação nova mostra o prompt do job; clique na galeria troca pro do take clicado. O prompt FINAL continua blindado (só o input do usuário aparece).
 - test-fotograma-prompt.mjs (permanente) 4/4 + regressões scene/res ALL PASS.

@@ -746,6 +746,29 @@ function devMsg(m) {
   if (el) el.textContent = m;
 }
 
+/** garante ref ≥2048 no lado maior (upscale suave) — âncora de resolução
+ *  alta no Pro; cacheado por ref pra não refazer entre tentativas */
+async function refHiRes(r) {
+  if (r._hi) return r._hi;
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = r.dataUrl; });
+  const long = Math.max(img.width, img.height);
+  if (long >= 2000) {
+    r._hi = { mime: r.mime, data: r.dataUrl.split(',')[1] };
+    return r._hi;
+  }
+  const k = 2048 / long;
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * k);
+  c.height = Math.round(img.height * k);
+  const cx = c.getContext('2d');
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(img, 0, 0, c.width, c.height);
+  r._hi = { mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).split(',')[1] };
+  return r._hi;
+}
+
 async function tryImageModel(model, prompt, job) {
   const isPro = /pro/i.test(model);
   // partes multimodais: emulsão + refs de cena + texto — do JOB (snapshot do
@@ -762,7 +785,11 @@ async function tryImageModel(model, prompt, job) {
     parts.push({ inlineData: { mimeType: src.mime, data: src.dataUrl.split(',')[1] } });
     state.lastMoodAttached = true;
   }
-  refs.forEach(r => parts.push({ inlineData: { mimeType: r.mime, data: r.dataUrl.split(',')[1] } }));
+  for (const r of refs) {
+    // Pro: ref anexada ANCORA a resolução de saída — garante entrada ≥2048
+    const d = isPro ? await refHiRes(r) : { mime: r.mime, data: r.dataUrl.split(',')[1] };
+    parts.push({ inlineData: { mimeType: d.mime, data: d.data } });
+  }
   parts.push({ text: prompt });
   const mk = (modalities, cfg) => ({
     contents: [{ role: 'user', parts }],
@@ -1036,10 +1063,18 @@ function addTake(url, caption, blob, params) {
   const take = { id, url, caption, blob, params, liked: false, ts: Date.now() };
   state.takes.unshift(take);
   idbPut({ id, caption, params, liked: false, ts: take.ts, blob });
-  while (state.takes.length > 30) {
-    const dead = state.takes.pop();
+  const MAX_TAKES = 120;
+  while (state.takes.length > MAX_TAKES) {
+    // despeja o mais ANTIGO sem ♥ (curtida é permanente); avisa sempre
+    let idx = -1;
+    for (let j = state.takes.length - 1; j >= 0; j--) {
+      if (!state.takes[j].liked) { idx = j; break; }
+    }
+    if (idx < 0) idx = state.takes.length - 1;
+    const dead = state.takes.splice(idx, 1)[0];
     URL.revokeObjectURL(dead.url);
     idbDelete(dead.id);
+    TipoUI.showToast(`Galeria cheia (${MAX_TAKES}) — o take mais antigo sem ♥ saiu`);
   }
   renderGallery(0);
 }
