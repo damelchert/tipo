@@ -173,6 +173,12 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### STUDIO: o "travando no Export HQ" era progresso INVISÍVEL (+ prova do REC→HQ automático)
+- **Causa**: o `_progressUI` do hq.js procura `#exportProgress`/`.progress-box`/`#progressTitle`/`#progressBar`/`#progressInfo` — o Studio NÃO tinha esse markup. Tudo null-guarded → o render rodava em resolução nativa (lento) sem barra, sem ETA e SEM botão Cancelar = "travou". Fix: markup padrão da casa no studio.html + CSS próprio (z-index 2000, acima de espaço/topbar/inspector).
+- **REC → STOP entrega HQ automático confirmado em teste**: gravar no frame de vídeo → stop → deliverRecording assume → overlay "renderizando" → download `...-HQ.mp4` em 2560×1440 nativo. O live capture segue como fallback de cancelamento (fluxo 16.6).
+- test-studio-hq +4 checks (overlay abre com Cancelar, fecha no fim, REC entrega -HQ, resolução nativa) — 12 checks ALL PASS.
+- Nota UX: vídeo longo/4K-portrait = render de MINUTOS — agora com barra/ETA/Cancelar visíveis.
+
 ### FOTOGRAMA: EMULSÃO v3.1 — seletor de POTÊNCIA 0-100 (pedido pós-"ficou show")
 - **Slider Potência** no moodBox (default 100, data-nobhv). Contrato em camadas:
   - **≥85**: fidelidade total — texto v3 intacto (proporções + OVERRIDE bold), seletores anulados;

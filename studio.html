@@ -169,6 +169,15 @@
   .tt-echo::before { content: 'T'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 26px; color: #99E0D2; text-shadow: 6px 2px 0 rgba(153,224,210,.5), 12px 4px 0 rgba(153,224,210,.28), 18px 6px 0 rgba(153,224,210,.14); }
   .tt-fractal { background: radial-gradient(circle at 35% 60%, #99E0D2 0 4px, transparent 4px), radial-gradient(circle at 62% 38%, #D4A040 0 7px, transparent 7px), radial-gradient(ellipse 70% 40% at 50% 50%, #2A8A7A 0%, #1B5A4E 45%, #1A1818 80%); }
 
+  /* overlay de progresso HQ — acima do espaço/topbar/inspector */
+  #exportProgress { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; background: rgba(8, 8, 8, 0.72); backdrop-filter: blur(6px); }
+  #exportProgress.open { display: flex; }
+  #exportProgress .progress-box { width: min(420px, calc(100vw - 48px)); background: var(--bg-1, #141414); border: 1px solid var(--border-2, #333); border-radius: 14px; padding: 22px 24px; text-align: center; font-family: var(--font-mono, monospace); box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
+  #progressTitle { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent, #2A8A7A); }
+  #exportProgress .progress-track { height: 6px; border-radius: 3px; background: var(--bg-2, #1e1e1e); margin: 14px 0 10px; overflow: hidden; }
+  #progressBar { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent, #2A8A7A), var(--accent-brand, #99E0D2)); transition: width .2s; }
+  #progressInfo { font-size: 10px; color: var(--text-4, #999); letter-spacing: 0.5px; line-height: 1.6; }
+
   /* ============ mobile ============ */
   @media (max-width: 768px) {
     #topbar { top: 8px; gap: 6px; padding: 6px 10px; max-width: calc(100vw - 16px); }
@@ -244,6 +253,15 @@
 </div>
 
 <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+
+<!-- overlay de progresso do Export HQ / stop de gravação (contrato da casa) -->
+<div id="exportProgress">
+  <div class="progress-box">
+    <div id="progressTitle">Renderizando&hellip;</div>
+    <div class="progress-track"><div id="progressBar"></div></div>
+    <div id="progressInfo"></div>
+  </div>
+</div>
 
 <script>
 // ============================================================
