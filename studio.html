@@ -231,6 +231,7 @@
     <h2>Tools <button type="button" onclick="closeTools()">&#10005;</button></h2>
     <h3>Fonte do frame ativo</h3>
     <div class="tools-row">
+      <div class="tool-inp" onclick="closeTools(); useText()">Texto (type vivo)</div>
       <div class="tool-inp" onclick="closeTools(); useDemo()">Demo TIP&Oacute;</div>
       <div class="tool-inp" onclick="closeTools(); document.getElementById('fileInput').click()">Imagem / V&iacute;deo</div>
       <div class="tool-inp" onclick="closeTools(); toggleWebcam()">Webcam</div>
@@ -1007,6 +1008,8 @@ function removeFrame(id) {
     const pane = document.querySelector(`.fx-pane[data-uid="${n.uid}"]`);
     if (pane) pane.remove();
   });
+  const tpane = document.querySelector(`.fx-pane[data-uid="_text_${f.id}"]`);
+  if (tpane) tpane.remove();
   f.el.remove();
   f.dock.remove();
   frames.splice(i, 1);
@@ -1046,7 +1049,10 @@ function dupFrame(id) {
   nf.name = frameName(src) + ' copy';
   // fonte: imagem reusa o elemento; vídeo ganha player próprio na MESMA URL
   nf.mediaKey = src.mediaKey; // persistência compartilha a mídia
-  if (src.sourceType === 'image' && src.srcImage) {
+  if (src.sourceType === 'text') {
+    nf.text = JSON.parse(JSON.stringify(src.text));
+    useText(nf);
+  } else if (src.sourceType === 'image' && src.srcImage) {
     nf.sourceType = 'image';
     nf.srcImage = src.srcImage;
     nf.mediaUrl = src.mediaUrl; // revoke é guardado (URL compartilhada)
@@ -1180,11 +1186,13 @@ function drawDemo(frame, tMs) {
 function currentSourceEl(frame) {
   if (frame.sourceType === 'video' || frame.sourceType === 'webcam') return frame.srcVideo;
   if (frame.sourceType === 'image') return frame.srcImage;
+  if (frame.sourceType === 'text') return frame.textCanvas;
   return frame.demoCanvas;
 }
 
 function uploadSource(frame, tMs) {
   if (!frame.sourceType) drawDemo(frame, tMs);
+  if (frame.sourceType === 'text') drawText(frame, tMs);
   gl.bindTexture(gl.TEXTURE_2D, frame.texSrc);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   try {
@@ -1267,6 +1275,7 @@ function renderFrame(frame, tMs) {
 
 function frameDynamic(frame) {
   return !frame.sourceType || frame.sourceType === 'video' || frame.sourceType === 'webcam' ||
+    frame.sourceType === 'text' ||
     frame.stack.some(n => n.on && (FX[n.fx].anim || FX[n.fx].feedback)) ||
     (recorder && recorder.isRecording && frame.id === recFrameId);
 }
@@ -1470,7 +1479,7 @@ function selectFx(uid) {
   openInspector();
 }
 
-const SRC_LABEL = { image: 'Imagem', video: 'Vídeo', webcam: 'Webcam' };
+const SRC_LABEL = { image: 'Imagem', video: 'Vídeo', webcam: 'Webcam', text: 'Texto' };
 function syncStackUI() {
   frames.forEach((f, fi) => {
     const dock = f.dock;
@@ -1481,7 +1490,10 @@ function syncStackUI() {
       `<span class="stk-ico" style="background:#2A8A7A;">Sr</span>` +
       `<span class="stk-name">${f.sourceType ? SRC_LABEL[f.sourceType] : 'Demo TIPÓ'}<span class="stk-sub">fonte</span></span>` +
       `<span class="stk-btns"><button type="button" title="trocar">&#8644;</button></span>`;
-    src.addEventListener('click', () => { setActive(f.id); openTools(); });
+    src.addEventListener('click', () => {
+      setActive(f.id);
+      if (f.sourceType === 'text') { selectTextPane(f); } else { openTools(); }
+    });
     dock.appendChild(src);
     f.stack.forEach(n => {
       const def = FX[n.fx];
@@ -1603,14 +1615,27 @@ function openInspector() {
 function closeInspector() { inspector.classList.remove('open'); }
 function syncInspector() {
   const f = F();
+  const ico = document.getElementById('inspIco');
+  const byp = document.getElementById('inspBypass');
+  const rem = document.getElementById('inspRemove');
+  // pane da FONTE de texto (pseudo-node '_text_<frameId>')
+  if (f && f.selUid === '_text_' + f.id) {
+    ico.style.background = '#2A8A7A';
+    ico.textContent = 'Tx';
+    document.getElementById('inspName').textContent = 'Texto (fonte)';
+    byp.style.display = 'none';
+    rem.style.display = 'none';
+    return;
+  }
+  byp.style.display = '';
+  rem.style.display = '';
   const n = f && f.stack.find(x => x.uid === f.selUid);
   if (!n) { closeInspector(); return; }
   const def = FX[n.fx];
-  const ico = document.getElementById('inspIco');
   ico.style.background = def.ico;
   ico.textContent = def.sym;
   document.getElementById('inspName').textContent = def.name;
-  document.getElementById('inspBypass').style.color = n.on ? 'var(--accent)' : 'var(--text-5)';
+  byp.style.color = n.on ? 'var(--accent)' : 'var(--text-5)';
 }
 document.getElementById('inspClose').addEventListener('click', () => closeInspector());
 document.getElementById('inspBypass').addEventListener('click', () => { const f = F(); if (f && f.selUid) toggleFx(f.selUid); });
@@ -1755,8 +1780,9 @@ async function saveSpace() {
       activeIdx: Math.max(0, frames.findIndex(f => f.id === activeId)),
       frames: frames.map(f => ({
         name: f.name, x: f.x, y: f.y,
-        sourceType: (f.sourceType === 'image' || f.sourceType === 'video') ? f.sourceType : null,
+        sourceType: (f.sourceType === 'image' || f.sourceType === 'video' || f.sourceType === 'text') ? f.sourceType : null,
         mediaKey: f.mediaKey || null,
+        text: f.sourceType === 'text' ? { ...f.text } : null,
         selIdx: f.stack.findIndex(n => n.uid === f.selUid),
         stack: f.stack.map(n => ({ fx: n.fx, on: n.on, params: { ...n.params } })),
       })),
@@ -1808,7 +1834,10 @@ async function restoreSpace() {
         });
       });
       f.selUid = (fr.selIdx >= 0 && f.stack[fr.selIdx]) ? f.stack[fr.selIdx].uid : null;
-      if (fr.mediaKey) {
+      if (fr.sourceType === 'text' && fr.text) {
+        f.text = { ...TEXT_DEFAULTS(), ...fr.text };
+        useText(f);
+      } else if (fr.mediaKey) {
         f.mediaKey = fr.mediaKey;
         const m = await idb('media', 'readonly', s => s.get(fr.mediaKey));
         if (m && m.buf) loadFile(new Blob([m.buf], { type: m.mime }), f, { persist: false });
@@ -1839,6 +1868,194 @@ async function resetSpace() {
 // qualquer mexida nos params salva (delegado — panes são dinâmicos)
 document.getElementById('paramsHost').addEventListener('input', scheduleSave);
 document.getElementById('paramsHost').addEventListener('change', scheduleSave);
+
+// ============================================================
+// SOURCE TEXTO (22.4) — type generativo alimentando o chain.
+// Fontes da casa (TipoFont.BUILTINS) carregadas sob demanda como
+// FontFace própria; 4 movimentos; cores brand ciclando por letra.
+// Sliders do pane em .range-row = behaviors/♪ de graça (Size no
+// kick = kinetic type que os 23 modos não fazem).
+// ============================================================
+const TEXT_DEFAULTS = () => ({
+  str: 'TIPÓ', font: 'Clash Display', size: 42,
+  motion: 'wave', speed: 50, colorMode: 'brand',
+  color: '#F8F5F0', bg: '#1A1818',
+});
+const BRAND_CYCLE = ['#2A8A7A', '#D4A040', '#99E0D2', '#F8F5F0'];
+const _fontCache = {};
+function ensureFont(name) {
+  if (_fontCache[name]) return _fontCache[name];
+  const b = (typeof TipoFont !== 'undefined' ? TipoFont.BUILTINS : []).find(x => x.name === name);
+  const fam = 'StudioTxt-' + name.replace(/\s+/g, '');
+  _fontCache[name] = fam;
+  if (b) {
+    const ff = new FontFace(fam, `url(${b.file})`);
+    ff.load().then(f => {
+      document.fonts.add(f);
+      frames.forEach(fr => { if (fr.sourceType === 'text') fr.needsRender = true; });
+    }).catch(() => {});
+  }
+  return fam;
+}
+
+function drawText(frame, tMs) {
+  const T = frame.text;
+  if (!T) return;
+  const c = frame.textCtx, W = frame.textCanvas.width, H = frame.textCanvas.height;
+  const t = tMs / 1000 * (T.speed / 50);
+  c.fillStyle = T.bg;
+  c.fillRect(0, 0, W, H);
+  const size = H * T.size / 100;
+  const fam = ensureFont(T.font);
+  c.font = `600 ${size}px "${fam}", "IBM Plex Mono", monospace`;
+  c.textBaseline = 'middle';
+  const str = T.str || 'TIPÓ';
+  const colOf = i => T.colorMode === 'brand' ? BRAND_CYCLE[i % BRAND_CYCLE.length] : T.color;
+  if (T.motion === 'scroll') {
+    // marquee: a palavra tila e corre — sempre preenche a largura
+    const unit = c.measureText(str + '  ').width;
+    const off = (t * size * 1.4) % unit;
+    c.textAlign = 'left';
+    let x = -off - unit;
+    let k = 0;
+    while (x < W + unit) {
+      let cx = x;
+      for (let i = 0; i < str.length; i++) {
+        c.fillStyle = colOf(i + k);
+        c.fillText(str[i], cx, H / 2);
+        cx += c.measureText(str[i]).width;
+      }
+      x += unit;
+      k++;
+    }
+    return;
+  }
+  // centrado, transform por letra
+  c.textAlign = 'center';
+  const widths = [...str].map(ch => c.measureText(ch).width);
+  const total = widths.reduce((a, b) => a + b, 0);
+  let x = (W - total) / 2;
+  for (let i = 0; i < str.length; i++) {
+    const cx = x + widths[i] / 2;
+    let dy = 0, rot = 0, sc = 1;
+    if (T.motion === 'wave') {
+      dy = Math.sin(t * 2.1 + i * 0.55) * size * 0.14;
+      rot = Math.sin(t * 2.1 + i * 0.55) * 0.07;
+    } else if (T.motion === 'pulse') {
+      sc = 1 + Math.sin(t * 2.4 + i * 0.5) * 0.14;
+    }
+    c.save();
+    c.translate(cx, H / 2 + dy);
+    c.rotate(rot);
+    c.scale(sc, sc);
+    c.fillStyle = colOf(i);
+    c.fillText(str[i], 0, 0);
+    c.restore();
+    x += widths[i];
+  }
+}
+
+function useText(frame) {
+  const f = frame || F();
+  if (!f) return;
+  releaseSource(f);
+  f.mediaKey = null;
+  f.sourceType = 'text';
+  if (!f.text) f.text = TEXT_DEFAULTS();
+  if (!f.textCanvas) {
+    f.textCanvas = document.createElement('canvas');
+    f.textCtx = f.textCanvas.getContext('2d');
+  }
+  setFrameSize(f, 1440, 810);
+  f.textCanvas.width = f.PW;
+  f.textCanvas.height = f.PH;
+  ensureFont(f.text.font);
+  buildTextPane(f);
+  selectTextPane(f);
+  f.needsRender = true;
+  syncStackUI();
+}
+
+function selectTextPane(f) {
+  buildTextPane(f);
+  f.selUid = '_text_' + f.id;
+  syncStackUI();
+  inspector.classList.add('open');
+  syncInspector();
+}
+
+/** pane da fonte de texto — mesmo padrão dos fx-panes (fica no DOM) */
+function buildTextPane(f) {
+  const uid = '_text_' + f.id;
+  if (document.querySelector(`.fx-pane[data-uid="${uid}"]`)) return;
+  const T = f.text;
+  const pane = document.createElement('div');
+  pane.className = 'fx-pane';
+  pane.dataset.uid = uid;
+  const upd = () => { f.needsRender = true; scheduleSave(); };
+  // texto
+  const rowT = document.createElement('div');
+  rowT.className = 'color-row';
+  rowT.innerHTML = `<label>Texto</label>`;
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = T.str;
+  inp.maxLength = 24;
+  inp.style.cssText = 'flex:1; background:var(--bg-2); border:1px solid var(--border-2); color:var(--text-1); padding:5px 7px; font-size:11px; font-family:var(--font-ui); border-radius:5px;';
+  inp.addEventListener('input', () => { T.str = inp.value || 'TIPÓ'; upd(); });
+  inp.addEventListener('keydown', e => e.stopPropagation()); // Delete não mata o frame
+  rowT.appendChild(inp);
+  pane.appendChild(rowT);
+  // font + motion + cor (selects)
+  const mkSel = (label, opts, val, on) => {
+    const row = document.createElement('div');
+    row.className = 'color-row';
+    row.innerHTML = `<label>${label}</label>`;
+    const sel = document.createElement('select');
+    opts.forEach(([v, txt]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = txt;
+      sel.appendChild(o);
+    });
+    sel.value = val;
+    sel.addEventListener('change', e => { on(e.target.value); upd(); });
+    row.appendChild(sel);
+    pane.appendChild(row);
+  };
+  const fonts = (typeof TipoFont !== 'undefined' ? TipoFont.BUILTINS : []).map(b => [b.name, b.name]);
+  mkSel('Fonte', fonts.length ? fonts : [['Clash Display', 'Clash Display']], T.font, v => { T.font = v; ensureFont(v); });
+  mkSel('Motion', [['wave', 'Wave'], ['scroll', 'Scroll (marquee)'], ['pulse', 'Pulse'], ['none', 'Parado']], T.motion, v => { T.motion = v; });
+  mkSel('Cores', [['brand', 'Brand (cicla)'], ['single', 'Cor única']], T.colorMode, v => { T.colorMode = v; });
+  // sliders (range-row → behaviors/♪)
+  const mkRange = (label, key, min, max) => {
+    const row = document.createElement('div');
+    row.className = 'range-row';
+    const id = `st_${f.id}_txt_${key}`;
+    row.innerHTML = `<span class="range-label">${label}</span>` +
+      `<input type="range" id="${id}" min="${min}" max="${max}" step="1" value="${T[key]}">` +
+      `<span class="range-value" id="${id}Val">${T[key]}</span>`;
+    const r = row.querySelector('input');
+    r.addEventListener('input', () => {
+      T[key] = Number(r.value);
+      document.getElementById(id + 'Val').textContent = r.value;
+      upd();
+    });
+    pane.appendChild(row);
+  };
+  mkRange('Size', 'size', 12, 80);
+  mkRange('Speed', 'speed', 0, 100);
+  // cores
+  const mkColor = (label, key) => {
+    const row = document.createElement('div');
+    row.className = 'color-row';
+    row.innerHTML = `<label>${label}</label><input type="color" value="${T[key]}">`;
+    row.querySelector('input').addEventListener('input', e => { T[key] = e.target.value; upd(); });
+    pane.appendChild(row);
+  };
+  mkColor('Type', 'color');
+  mkColor('Fundo', 'bg');
+  document.getElementById('paramsHost').appendChild(pane);
+}
 
 // ============================================================
 // FONTE (por frame)

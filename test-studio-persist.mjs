@@ -49,6 +49,12 @@ await page.evaluate(async () => {
   loadFile(new File([blob], 't.png', { type: 'image/png' }), f2);
   setActive(f2.id);
   applyStackPreset('poster');
+  // frame 3: source TEXTO custom
+  const f3 = newFrame({ blank: true, silent: true });
+  setActive(f3.id);
+  useText(f3);
+  f3.text.str = 'HELLO';
+  f3.text.motion = 'pulse';
   view.z = 0.77;
   applyView();
 });
@@ -66,16 +72,20 @@ const st = await page.evaluate(() => ({
   f2src: frames[1] ? frames[1].sourceType : null,
   f2stack: frames[1] ? frames[1].stack.map(x => x.fx).join(',') : null,
   z: Math.round(view.z * 100),
-  activeIsF2: activeId === (frames[1] && frames[1].id),
+  activeOk: activeId === (frames[2] && frames[2].id),
 }));
-check('2 frames restaurados', st.n === 2);
+check('3 frames restaurados', st.n === 3);
+const tx = await page.evaluate(() => ({
+  src: frames[2].sourceType, str: frames[2].text && frames[2].text.str, motion: frames[2].text && frames[2].text.motion,
+}));
+check('source texto restaurado (str+motion)', tx.src === 'text' && tx.str === 'HELLO' && tx.motion === 'pulse', JSON.stringify(tx));
 check('stack do frame 1 (vhs)', st.f1stack === 'wave,glitch,grain', `(${st.f1stack})`);
 check('param mexido persistiu (amp 55)', st.f1amp === 55, `(${st.f1amp})`);
 check('nome do frame 2', st.f2name === 'POSTER');
 check('posição do frame 2', st.f2pos && st.f2pos[0] === 2200 && st.f2pos[1] === 300, `(${st.f2pos})`);
 check('stack do frame 2 (poster)', st.f2stack === 'posterize,gradmap', `(${st.f2stack})`);
 check('view restaurada (77%)', st.z === 77, `(${st.z}%)`);
-check('frame ativo restaurado', st.activeIsF2);
+check('frame ativo restaurado', st.activeOk);
 // a IMAGEM voltou do IDB e renderiza
 await page.waitForTimeout(800);
 const img = await page.evaluate(() => {

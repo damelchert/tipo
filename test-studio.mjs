@@ -207,6 +207,40 @@ const flx = await page.evaluate(() => {
 });
 check('botão × do frame sempre visível', flx);
 
+// ============ SOURCE TEXTO (22.4) ============
+await page.evaluate(() => { clearStack(); useText(); });
+await page.waitForTimeout(600);
+const txt1 = await page.evaluate(() => ({
+  src: frames[0].sourceType,
+  pane: !!document.querySelector(`.fx-pane[data-uid="_text_${frames[0].id}"]`),
+  insp: document.getElementById('inspName').textContent,
+  label: frames[0].dock.querySelector('.stk-src .stk-name').textContent.includes('Texto'),
+}));
+check('useText: fonte texto + pane no inspector', txt1.src === 'text' && txt1.pane && txt1.insp === 'Texto (fonte)' && txt1.label, JSON.stringify(txt1));
+const hTx1 = await hash();
+check('texto renderiza (não vazio)', hTx1.nz > 200, `(nz=${hTx1.nz})`);
+// wave anima: hashes divergem no tempo
+await page.waitForTimeout(500);
+const hTx2 = await hash();
+check('motion wave anima o texto', hTx1.h !== hTx2.h);
+// trocar o texto/motion re-renderiza
+await page.evaluate(() => {
+  const f = frames[0];
+  f.text.str = 'STUDIO';
+  f.text.motion = 'scroll';
+  f.needsRender = true;
+});
+await page.waitForTimeout(300);
+const hTx3 = await hash();
+check('texto/motion novos mudam o render', hTx3.h !== hTx2.h);
+// texto atravessa o chain: + kaleido muda tudo
+await page.evaluate(() => addFx('kaleido', true));
+await page.waitForTimeout(300);
+const hTx4 = await hash();
+check('texto atravessa o chain (kaleido)', hTx4.h !== hTx3.h);
+await page.evaluate(() => { clearStack(); useDemo(); applyStackPreset('riso'); });
+await page.waitForTimeout(300);
+
 // ============ MULTI-FRAME ============
 // frame novo nasce com receita própria e render INDEPENDENTE
 await page.evaluate(() => { applyStackPreset('riso'); });
@@ -309,7 +343,8 @@ await page.evaluate(() => removeFrame(frames[1].id));
 const afterRm = await page.evaluate(() => ({
   n: frames.length,
   docks: document.querySelectorAll('.frame-dock').length,
-  panes: document.querySelectorAll('.fx-pane').length,
+  // panes de texto vivem no DOM por design (como os fx-panes) — só os de efeito contam
+  panes: document.querySelectorAll('.fx-pane:not([data-uid^="_text_"])').length,
   stackN: stack.length,
 }));
 check('removeFrame limpa tudo', afterRm.n === 1 && afterRm.docks === 1 && afterRm.panes === afterRm.stackN, JSON.stringify(afterRm));

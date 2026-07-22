@@ -173,6 +173,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.4 — SOURCE TEXTO no Studio (o "kinetic no spaces" — type generativo atravessando o chain)
+- **Fonte nova 'text'** por frame: canvas 2D animado (1440×810) com a palavra do usuário — 4 motions (Wave = bob+rot por letra, Scroll = marquee tilado que sempre preenche, Pulse = respiração com stagger, Parado), cores **Brand (cicla teal/gold/mint/cream por letra)** ou única + fundo, Size/Speed em .range-row (**♪ no Size = kinetic type áudio-reativo**).
+- **Fontes da casa sob demanda**: TipoFont.BUILTINS → `FontFace('StudioTxt-<nome>')` carregada lazy, frames de texto re-renderizam no load. (Clash/General Sans/Space Grotesk/Boska/Fraunces/Plex.)
+- **UI**: entrada "Texto (type vivo)" no modal Tools; pane da fonte = pseudo-node `_text_<frameId>` no inspector (syncInspector esconde bypass/×; card da fonte clicado abre o pane quando é texto, ⇄ abre o modal). Input de texto com stopPropagation no keydown (senão Delete matava o frame enquanto digita).
+- Persistência salva/restaura `f.text` (sourceType 'text' no space record); dup copia o texto; removeFrame limpa o pane `_text_`.
+- Provado no screenshot: TIPÓ wave→Halftone e FLOW em Boska→Mosh→GradMap. test-studio +5 checks (pane/render/anima/muda/atravessa o chain) e persist +2 (str+motion voltam) — ALL PASS. GOTCHA de teste: panes `_text_` ficam no DOM por design — contagem de panes exclui `[data-uid^="_text_"]`.
+
 ### HERO v2.1 — feedback do Daniel ("quadrados e tipografia toscos; bloco de baixo feio, só scroll; GSAP lento e concentrado, tem que vir da tela toda")
 - **GOTCHA da fonte**: o @font-face do index declara a família como **'ClashDisplay' (SEM espaço)** — o hero pedia "Clash Display" e caía no Plex Mono (as "serifas toscas" eram o fallback!). Fix + `document.fonts.load('600 100px "ClashDisplay"')` explícito antes do drawWord.
 - **Blocos arredondados** (roundRect raio cw·0.16) + Clash 600 em cw·0.68.

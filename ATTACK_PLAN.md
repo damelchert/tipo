@@ -17,7 +17,7 @@ Deploy: Vercel (auto-deploy on push).
 - **Também fechado nesse ciclo**: travada inicial de TODAS as gravações morta (warmup do encoder, test-rec-start 34ms máx), exports padronizados `tipo-<tool>-AAAA-MM-DD_HH-MM-SS.ext`, HERO v2.1 "Revelação Líquida" (liquid da tela toda → TIPÓ em Clash, ~2.3s, só scroll) e home em 3 painéis (STUDIO | Visual | Kinetic).
 
 ### ⏭ PRÓXIMAS ETAPAS (fila acordada com o Daniel — retomar daqui)
-1. **22.4 Source TEXTO no Studio** (recomendado como próximo; resposta ao "kinetic no spaces?"): fonte generativa — usuário digita a palavra, escolhe fonte da casa (TipoFont BUILTINS), cores brand e 3-4 movimentos (wave/scroll/pulse/none) num canvas 2D animado que alimenta o chain. Texto→Mosh→Kaleido = kinetic type que os 23 modos não fazem. Entra no modal Tools na seção Fonte.
+1. **22.4 Source TEXTO no Studio** ✅ (2026-07-22): fonte 'text' por frame — 4 motions (wave/scroll marquee/pulse/parado), cores brand ciclando por letra, fontes da casa via FontFace lazy, Size/Speed ♪-moduláveis, pane pseudo-node no inspector, persistência completa. Provado: TIPÓ→Halftone, FLOW(Boska)→Mosh→GradMap.
 2. **22.5 Blend node**: node que recebe DOIS frames e combina (multiply/screen/overlay/máscara de luminância/alpha) — o salto de stack pra GRAFO. UI: node aponta pra outro frame como segunda entrada (select de frame no inspector); engine já tem tudo (texturas por frame no mesmo contexto).
 3. **22.6 Ponte de canvas p5** (só se o source Texto deixar gosto): rodar um modo kinetic (coil/field) offscreen como fonte de frame — qualquer canvas serve de texImage2D. Pesado; avaliar depois do 22.4.
 4. **22.7 Slit-scan / Time Displacement** (agora VIÁVEL com a infra de feedback — history buffer por node) + candidatos: Voronoi shatter, Droste follow-ups.
