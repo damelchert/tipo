@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
 <script src="shared/ui.js?v=20260722-au4"></script>
+<script src="shared/hq.js?v=20260715-rec1"></script>
 <style>
   @font-face { font-family: 'Clash Display'; src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight: 600 900; font-display: swap; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
@@ -1275,7 +1276,7 @@ function runPass(fxId, inputTex, targetFb, w, h, tSec, params, prevTex, blendTex
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 
-function renderFrame(frame, tMs) {
+function renderFrame(frame, tMs, outCtx) {
   const tSec = tMs / 1000;
   const w = frame.PW, h = frame.PH;
   uploadSource(frame, tMs);
@@ -1328,8 +1329,33 @@ function renderFrame(frame, tMs) {
   }
   runPass('_copy', cur, null, w, h, tSec, null);
   // conteúdo ocupa o canto inferior-esquerdo do glCanvas (origem GL)
-  frame.ctx.drawImage(glCanvas, 0, glCanvas.height - h, w, h, 0, 0, w, h);
-  if (recorder && recorder.isRecording && frame.id === recFrameId) recorder.captureFrame();
+  const dst = outCtx || frame.ctx;
+  dst.drawImage(glCanvas, 0, glCanvas.height - h, w, h, 0, 0, w, h);
+  if (!outCtx && recorder && recorder.isRecording && frame.id === recFrameId) recorder.captureFrame();
+}
+
+/** redimensiona o pipeline de UM frame pra render full-res (HQ/PNG nativo) */
+function hqResize(f, W, H) {
+  const keep = { f, PW: f.PW, PH: f.PH, A: f.chainA, B: f.chainB, cW: f.canvas.width, cH: f.canvas.height, glW: glCanvas.width, glH: glCanvas.height };
+  f.PW = W; f.PH = H;
+  f.chainA = makeTarget(W, H);
+  f.chainB = makeTarget(W, H);
+  if (glCanvas.width < W) glCanvas.width = W;
+  if (glCanvas.height < H) glCanvas.height = H;
+  // feedback renasce no tamanho novo (evolui frame a frame no render offline)
+  f.stack.forEach(n => { if (n.fbTex) { gl.deleteTexture(n.fbTex); n.fbTex = null; } });
+  return keep;
+}
+function hqRestore(keep) {
+  const f = keep.f;
+  freeTarget(f.chainA);
+  freeTarget(f.chainB);
+  f.chainA = keep.A; f.chainB = keep.B;
+  f.PW = keep.PW; f.PH = keep.PH;
+  f.canvas.width = keep.cW; f.canvas.height = keep.cH;
+  glCanvas.width = keep.glW; glCanvas.height = keep.glH;
+  f.stack.forEach(n => { if (n.fbTex) { gl.deleteTexture(n.fbTex); n.fbTex = null; } });
+  f.needsRender = true;
 }
 
 function frameDynamic(frame) {
@@ -1343,6 +1369,7 @@ let lastFrameT = 0;
 let _blendSources = new Set();
 function tick(now) {
   requestAnimationFrame(tick);
+  if (window.__tipoHQactive) return; // render offline no comando
   if (now - lastFrameT < 31) return;
   lastFrameT = now;
   _blendSources = new Set();
@@ -2275,7 +2302,20 @@ space.addEventListener('drop', e => {
 function exportPNG() {
   const f = F();
   if (!f) return;
+  // fonte tem resolução acima do preview? renderiza full-res só pro PNG
+  const nat = f.sourceType === 'image' && f.srcImage ? { w: f.srcImage.naturalWidth, h: f.srcImage.naturalHeight }
+            : (f.sourceType === 'video' || f.sourceType === 'webcam') && f.srcVideo ? { w: f.srcVideo.videoWidth, h: f.srcVideo.videoHeight }
+            : null;
+  let keep = null;
+  if (nat && Math.max(nat.w, nat.h) > Math.max(f.PW, f.PH) + 8) {
+    const k = Math.min(1, 4096 / Math.max(nat.w, nat.h));
+    let W = Math.round(nat.w * k); W += W % 2;
+    let H = Math.round(nat.h * k); H += H % 2;
+    keep = hqResize(f, W, H);
+    f.canvas.width = W; f.canvas.height = H;
+  }
   renderFrame(f, performance.now());
+  const doneRestore = () => { if (keep) hqRestore(keep); };
   f.canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2283,6 +2323,7 @@ function exportPNG() {
     a.download = TipoUI.stampName(`tipo-studio-${frameName(f).replace(/\s+/g, '-').toLowerCase()}.png`);
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
+    doneRestore();
   }, 'image/png');
 }
 
@@ -2303,6 +2344,38 @@ async function toggleRec() {
   recFrameId = f.id;
   recorder = await TipoUI.toggleVisualRec(f.canvas);
   syncRecUI();
+}
+
+// ============================================================
+// EXPORT HQ (16.x no Studio) — vídeo fonte renderizado OFFLINE
+// através do chain em resolução NATIVA (até 4K, codec ladder do
+// hq.js) com o ÁUDIO do fonte remuxado. Record→stop entrega HQ
+// automático (16.6); botão Export HQ injetado ao lado do REC.
+// ============================================================
+let _hqKeep = null;
+function hqFrame() { return frames.find(x => x.id === (recFrameId || activeId)) || F(); }
+if (typeof TipoHQ !== 'undefined') {
+  TipoHQ.enable({
+    getVideo: () => {
+      const f = hqFrame();
+      return (f && f.sourceType === 'video' && f.srcVideo) ? f.srcVideo : null;
+    },
+    begin: (W, H) => {
+      const f = hqFrame();
+      _hqKeep = hqResize(f, W, H);
+      // blend continua servido durante o offline
+      _blendSources = new Set();
+      frames.forEach(fr => fr.stack.forEach(n => {
+        if (n.on && FX[n.fx].blend && n.params.src) _blendSources.add(n.params.src);
+      }));
+    },
+    render: (video, tSec, ctx, W, H) => {
+      const f = _hqKeep ? _hqKeep.f : hqFrame();
+      renderFrame(f, tSec * 1000, ctx);
+    },
+    end: () => { if (_hqKeep) { hqRestore(_hqKeep); _hqKeep = null; } },
+    filename: () => `tipo-studio-${frameName(hqFrame()).replace(/\s+/g, '-').toLowerCase()}-HQ`,
+  });
 }
 
 // ============================================================

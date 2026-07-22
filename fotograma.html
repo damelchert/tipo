@@ -763,7 +763,7 @@ async function tryImageModel(model, prompt, job) {
   const attempts = [
     { body: mk(['IMAGE'], 'full'), note: '' },
     { body: mk(['TEXT', 'IMAGE'], 'full'), note: '' },
-    { body: mk(['TEXT', 'IMAGE'], 'ar'), note: '' },
+    { body: mk(['TEXT', 'IMAGE'], 'ar'), note: isPro ? 'resolução caiu pro padrão do modelo (API recusou o imageSize) — tente revelar de novo' : '' },
     { body: mk(['TEXT', 'IMAGE'], 'none'), note: 'formato caiu pro default do modelo' },
   ];
   let lastErr = null;
@@ -918,6 +918,16 @@ async function revealJob(job) {
     const img = await generateImage(prompt, job);
     const blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
     state.lastBlob = blob;
+    // a API às vezes IGNORA o imageSize mesmo aceitando o payload — confere
+    try {
+      const bmp = await createImageBitmap(blob);
+      const asked = { '1K': 1024, '2K': 2048, '4K': 4096 }[job.imgSize] || 0;
+      const got = Math.max(bmp.width, bmp.height);
+      if (/pro/i.test($('model').value || '') && asked > 1024 && got < asked * 0.9) {
+        state.lastCfgNote = [state.lastCfgNote, `saiu ${bmp.width}×${bmp.height} (pedido ${job.imgSize}) — revele de novo pra tentar full-res`].filter(Boolean).join(' · ');
+      }
+      bmp.close();
+    } catch (e) {}
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
     const cap = `${PROGRAMAS[state.prog].nome.toLowerCase()} · ${currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? ' · emulsão 🧪' : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
