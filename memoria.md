@@ -158,6 +158,21 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-22
+
+### RECORDER — travada inicial das gravações MORTA (bug real de todas as ferramentas, diagnóstico no MP4 do Daniel)
+- **Sintoma no arquivo dele**: frames fluem 0→0.33s (11 frames), BURACO de 3.17s, segue normal. Causa: `VideoEncoder.configure()` retorna na hora mas a sessão de HARDWARE (VideoToolbox) só nasce no 1º encode e pode levar segundos; os primeiros frames enfileiram, `encodeQueueSize > 10` derruba a captura, e como timestamps são real-time o warmup vira buraco no arquivo.
+- **Fix (shared/recorder.js `_startMP4`)**: warm-up antes do take — encoda 1 frame dummy, `await encoder.flush()` (só resolve com o pipeline pronto), descarta o chunk **MAS preserva a meta com decoderConfig** (SPS/PPS vem SÓ no 1º chunk; sem repassar ao 1º chunk real o MP4 sai INDECODÁVEL — 2ª iteração do fix), zera `_lastKeyTsUs`/`_firstTimestampUs` e só então liga o relógio. Vale pras 40 ferramentas + Studio por construção.
+- **test-rec-start.mjs** (permanente): grava 4s em studio/coil/gradientmap, extrai pts via ffmpeg showinfo (GOTCHA: showinfo escreve no STDERR mesmo em sucesso — spawnSync, não execFileSync) e exige gap máx <200ms do frame 0 ao fim → **34-36ms** nas 3 (era 3170ms). Regressão test-hq ALL PASS (vídeos sintéticos /tmp/hq-src-*.mp4 são efêmeros — regenerar com ffmpeg testsrc2 1080/1440 quando o /tmp limpar) + kinetic OK. Cache-bust `recorder.js?v=20260722-rec1`.
+
+### 22.2 v3 — STUDIO MULTI-FRAME (várias mídias simultâneas no espaço)
+- **Modelo**: `frames[]` — cada frame = {x,y no mundo, fonte própria (demo/imagem/vídeo/webcam), PW/PH, texSrc+chainA/B próprios, canvas 2D próprio, stack+selUid próprios, needsRender}. UM contexto WebGL2 compartilhado: glCanvas dimensionado pro MAIOR frame (`syncGlSize`), render por frame com viewport (w,h) e blit `drawImage(glCanvas, 0, glH-h, w, h, ...)` (conteúdo ocupa canto inferior-esquerdo — origem GL). rAF único percorre frames, cada um com gate próprio (dinâmico ou dirty).
+- **UX**: cada frame flutua com label (nome · chain · res · × remove) + dock de nodes + fio SVG próprios; **arrastar o frame move ele** (world coords /z), pan só no vazio; clique ativa (outline accent) e dock/inspector/presets/PNG/REC seguem o ATIVO; "+ Frame" na topbar (nasce à direita com receita DIFERENTE do vizinho, pra comparação); **drop no vazio cria frame novo na posição do drop; drop sobre um frame troca a fonte dele**. fitView enquadra o bounding box de todos.
+- **Compat de testes/API**: `window.stack`/`selUid` viraram getters do frame ativo — a suite antiga seguiu passando sem reescrever. REC amarra no frame do clique (`recFrameId`) — trocar de ativo no meio não muda a gravação.
+- removeFrame libera fonte + GL (deleteTexture/Framebuffer) + panes; último frame não sai.
+- test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
+- **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
+
 ## 2026-07-21
 
 ### 22.2 v2 — STUDIO virou O ESPAÇO (feedback do Daniel: "não tá nem parecido com o modo canvas do Sketch/Flora/Magnific — quero experiência DIFERENTE do que já temos")

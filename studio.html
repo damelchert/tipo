@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<meta name="description" content="Tipó — Studio. An infinite canvas where effects stack as nodes: halftone, dither, gradient map, glitch, wave, grain — chained live on image, video or webcam.">
+<meta name="description" content="Tipó — Studio. An infinite canvas where effects stack as nodes on multiple media at once: halftone, dither, gradient map, glitch, wave, grain — chained live.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Studio</title>
 <link rel="stylesheet" href="shared/style.css?v=20260713-id1">
@@ -25,18 +25,22 @@
   #space.panning { cursor: grabbing; }
   #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
 
-  /* preview flutuante */
-  #frame { position: absolute; left: 0; top: 0; }
-  #frameLabel { position: absolute; top: -26px; left: 2px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; }
-  #frameLabel b { color: var(--accent); font-weight: 400; }
-  #mainCanvas { display: block; box-shadow: 0 18px 70px rgba(0,0,0,0.5); border-radius: 4px; background: #111; }
+  /* frames (mídias) flutuantes */
+  .frame { position: absolute; }
+  .frame-label { position: absolute; top: -26px; left: 2px; right: 0; display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-mono); white-space: nowrap; cursor: move; }
+  .frame-label b { color: var(--accent); font-weight: 400; }
+  .frame-label .fl-x { border: none; background: transparent; color: var(--text-5); cursor: pointer; font-size: 11px; padding: 0 3px; font-family: inherit; display: none; }
+  .frame-label .fl-x:hover { color: var(--red); }
+  .frame:hover .fl-x { display: inline; }
+  .frame canvas { display: block; box-shadow: 0 18px 70px rgba(0,0,0,0.5); border-radius: 4px; background: #111; cursor: move; }
+  .frame.active canvas { outline: 1.5px solid var(--accent); outline-offset: 3px; }
 
-  /* fio ligando o stack ao preview */
+  /* fios ligando docks aos frames */
   #wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
   #wires path { fill: none; stroke: var(--border-2, #3a3a3a); stroke-width: 1.5; }
 
-  /* ============ NODES (stack) no espaço ============ */
-  #stackDock { position: absolute; width: 232px; display: flex; flex-direction: column; gap: 8px; }
+  /* ============ NODES (stack) por frame ============ */
+  .frame-dock { position: absolute; width: 232px; display: flex; flex-direction: column; gap: 8px; }
   .stk-card {
     display: flex; align-items: center; gap: 9px; padding: 10px 12px;
     background: var(--bg-1, #141414); border: 1px solid var(--border-2, #333);
@@ -158,17 +162,13 @@
 
 <div id="space">
   <div id="world">
-    <svg id="wires"><path id="wirePath" d=""></path></svg>
-    <div id="frame">
-      <div id="frameLabel">tip&oacute; studio &middot; <b id="frameStack">riso</b> &middot; <span id="frameRes"></span></div>
-      <canvas id="mainCanvas"></canvas>
-    </div>
-    <div id="stackDock"></div>
+    <svg id="wires"></svg>
   </div>
 </div>
 
 <div id="topbar">
   <span class="tb-title">TIP&Oacute; <i>STUDIO</i></span>
+  <button class="tb-btn" onclick="newFrame()">+ Frame</button>
   <select id="presetSel" title="receitas">
     <option value="">receitas&hellip;</option>
     <option value="riso">Riso</option>
@@ -186,7 +186,7 @@
   <button onclick="fitView()">Reset view</button>
   <span class="vh-zoom" id="zoomLabel">100%</span>
 </div>
-<div id="spaceHint">arrasta pra navegar &middot; scroll/pin&ccedil;a d&aacute; zoom &middot; solta uma imagem ou v&iacute;deo aqui</div>
+<div id="spaceHint">arrasta o vazio pra navegar &middot; arrasta um frame pra mover &middot; scroll/pin&ccedil;a d&aacute; zoom &middot; solta m&iacute;dia aqui</div>
 
 <div id="inspector">
   <div id="inspHead">
@@ -205,13 +205,13 @@
 <div id="toolsModal">
   <div id="toolsBox">
     <h2>Tools <button type="button" onclick="closeTools()">&#10005;</button></h2>
-    <h3>Fonte</h3>
+    <h3>Fonte do frame ativo</h3>
     <div class="tools-row">
       <div class="tool-inp" onclick="closeTools(); useDemo()">Demo TIP&Oacute;</div>
       <div class="tool-inp" onclick="closeTools(); document.getElementById('fileInput').click()">Imagem / V&iacute;deo</div>
       <div class="tool-inp" onclick="closeTools(); toggleWebcam()">Webcam</div>
     </div>
-    <h3>Efeitos</h3>
+    <h3>Efeitos (entram no frame ativo)</h3>
     <div class="tools-grid" id="toolsGrid"></div>
   </div>
 </div>
@@ -220,62 +220,22 @@
 
 <script>
 // ============================================================
-// TIPÓ — STUDIO (22.2 v2 — "o espaço")
-// Uma superfície só: canvas infinito com grade de pontos (pan/zoom),
-// preview flutuando no espaço, efeitos como NODES adicionados por um
-// seletor visual e ajustados num inspector flutuante — pegada
-// Flora/Magnific/Sketch. Sem páginas, sem painel lateral.
-// Engine: WebGL2 ping-pong (cada efeito = fragment shader lendo a
-// saída do anterior), blit final num canvas 2D pro recorder padrão.
-// Sliders em .range-row → TipoBehavior/TipoAudio de graça.
+// TIPÓ — STUDIO (22.2 v3 — multi-frame)
+// O espaço agora segura VÁRIAS mídias ao mesmo tempo: cada frame
+// flutua no canvas infinito com sua fonte + seu stack de nodes,
+// todos renderizando ao vivo no MESMO contexto WebGL2 (ping-pong
+// por frame, glCanvas compartilhado dimensionado pro maior frame).
+// Frames são arrastáveis; clique ativa (dock/inspector/export
+// seguem o frame ativo). Compara receitas lado a lado.
 // ============================================================
 
-const mainCanvas = document.getElementById('mainCanvas');
-const mainCtx = mainCanvas.getContext('2d');
 const glCanvas = document.createElement('canvas');
 const gl = glCanvas.getContext('webgl2', { antialias: false, preserveDrawingBuffer: true });
 let recorder = null;
+let recFrameId = null;
 
-// ---- fonte ----
-let sourceType = null;       // null=demo | 'image' | 'video' | 'webcam'
-let srcImage = null, srcVideo = null, webcamStream = null;
-let mediaUrl = null;
-let PW = 960, PH = 720;
 const MAX_SHORT = 900, MAX_LONG = 1440;
-
-const demoCanvas = document.createElement('canvas');
-const demoCtx = demoCanvas.getContext('2d');
-function drawDemo(tMs) {
-  const w = demoCanvas.width, h = demoCanvas.height, t = tMs / 1000;
-  demoCtx.fillStyle = '#F8F5F0';
-  demoCtx.fillRect(0, 0, w, h);
-  const cols = ['#2A8A7A', '#D4A040', '#1A1818', '#99E0D2'];
-  const chars = ['T', 'I', 'P', 'Ó'];
-  const cw = w * 0.19;
-  for (let i = 0; i < 4; i++) {
-    const cx = w * (0.16 + i * 0.225) + Math.sin(t * 0.7 + i * 1.7) * w * 0.012;
-    const cy = h * 0.5 + Math.sin(t * 0.9 + i * 2.3) * h * 0.05;
-    demoCtx.save();
-    demoCtx.translate(cx, cy);
-    demoCtx.rotate(Math.sin(t * 0.5 + i) * 0.05);
-    demoCtx.fillStyle = cols[i];
-    demoCtx.fillRect(-cw / 2, -cw / 2, cw, cw);
-    demoCtx.fillStyle = (i === 0 || i === 2) ? '#F8F5F0' : '#1A1818';
-    demoCtx.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
-    demoCtx.textAlign = 'center';
-    demoCtx.textBaseline = 'middle';
-    demoCtx.fillText(chars[i], 0, cw * 0.03);
-    demoCtx.restore();
-  }
-  for (let i = 0; i < 5; i++) {
-    const dx = w * (0.1 + i * 0.2) + Math.sin(t * 1.3 + i * 3.1) * w * 0.03;
-    const dy = h * (i % 2 ? 0.16 : 0.85) + Math.cos(t + i) * h * 0.02;
-    demoCtx.fillStyle = cols[i % 4] + '55';
-    demoCtx.beginPath();
-    demoCtx.arc(dx, dy, w * 0.028, 0, Math.PI * 2);
-    demoCtx.fill();
-  }
-}
+const DOCK_GAP = 90, DOCK_W = 232, FRAME_GAP = 150;
 
 // ============================================================
 // FX REGISTRY
@@ -440,7 +400,7 @@ void main(){
 };
 
 // ============================================================
-// GL ENGINE
+// GL ENGINE (contexto único, recursos POR FRAME)
 // ============================================================
 const VERT = `#version 300 es
 out vec2 vUv;
@@ -484,72 +444,202 @@ function getProgram(fxId) {
   return programs[fxId];
 }
 
-let texSrc = null, chainA = null, chainB = null;
-function makeTarget(w, h) {
+function makeTex() {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+function makeTarget(w, h) {
+  const tex = makeTex();
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
   const fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   return { tex, fb };
 }
+function freeTarget(t) {
+  if (!t) return;
+  gl.deleteFramebuffer(t.fb);
+  gl.deleteTexture(t.tex);
+}
 
-function setProcSize(sw, sh) {
+/** glCanvas compartilhado: sempre do tamanho do MAIOR frame */
+function syncGlSize() {
+  const gw = Math.max(2, ...frames.map(f => f.PW));
+  const gh = Math.max(2, ...frames.map(f => f.PH));
+  if (glCanvas.width !== gw || glCanvas.height !== gh) {
+    glCanvas.width = gw;
+    glCanvas.height = gh;
+  }
+}
+
+// ============================================================
+// FRAMES — múltiplas mídias no espaço
+// ============================================================
+let frames = [];
+let activeId = null;
+let frameSeq = 0;
+let uidSeq = 0;
+const F = () => frames.find(f => f.id === activeId) || frames[0];
+
+// compat de testes/API: `stack`/`selUid` espelham o frame ativo
+Object.defineProperty(window, 'stack', { get: () => (F() ? F().stack : []) });
+Object.defineProperty(window, 'selUid', { get: () => (F() ? F().selUid : null) });
+
+function newFrame(opts = {}) {
+  const id = 'f' + (++frameSeq);
+  // posiciona à direita do frame mais à direita (comparação lado a lado)
+  const right = frames.length ? Math.max(...frames.map(f => f.x + f.PW + DOCK_GAP + DOCK_W)) : 0;
+  const el = document.createElement('div');
+  el.className = 'frame';
+  el.dataset.fid = id;
+  el.innerHTML = `<div class="frame-label"><span class="fl-name">frame</span> &middot; <b class="fl-chain"></b> &middot; <span class="fl-res"></span><button type="button" class="fl-x" title="remover frame">&#10005;</button></div>`;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'frame-canvas';
+  el.appendChild(canvas);
+  document.getElementById('world').appendChild(el);
+  const dock = document.createElement('div');
+  dock.className = 'frame-dock';
+  dock.dataset.fid = id;
+  document.getElementById('world').appendChild(dock);
+
+  const frame = {
+    id,
+    x: opts.x !== undefined ? opts.x : (frames.length ? right + FRAME_GAP : 0),
+    y: opts.y !== undefined ? opts.y : 0,
+    el, dock, canvas, ctx: canvas.getContext('2d'),
+    sourceType: null, srcImage: null, srcVideo: null, webcamStream: null, mediaUrl: null,
+    demoCanvas: document.createElement('canvas'),
+    PW: 0, PH: 0,
+    texSrc: makeTex(),
+    chainA: null, chainB: null,
+    stack: [], selUid: null,
+    needsRender: true,
+  };
+  frame.demoCtx = frame.demoCanvas.getContext('2d');
+  el.querySelector('.fl-x').addEventListener('click', e => { e.stopPropagation(); removeFrame(id); });
+  frames.push(frame);
+  activeId = id;
+  setFrameSize(frame, 960, 720);
+  if (!opts.blank) {
+    // frame novo nasce com uma receita diferente da do vizinho (comparação)
+    const names = Object.keys(STACK_PRESETS);
+    const used = frames.length > 1 ? names.indexOf('riso') + (frames.length - 1) : 0;
+    applyStackPreset(names[used % names.length]);
+  }
+  syncStackUI();
+  if (!opts.silent && frames.length > 1) TipoUI.showToast('Frame novo — arrasta pra posicionar');
+  if (frames.length > 1) fitView();
+  return frame;
+}
+
+function removeFrame(id) {
+  if (frames.length <= 1) { TipoUI.showToast('Último frame não sai'); return; }
+  const i = frames.findIndex(f => f.id === id);
+  if (i < 0) return;
+  const f = frames[i];
+  releaseSource(f);
+  freeTarget(f.chainA);
+  freeTarget(f.chainB);
+  gl.deleteTexture(f.texSrc);
+  f.stack.forEach(n => {
+    const pane = document.querySelector(`.fx-pane[data-uid="${n.uid}"]`);
+    if (pane) pane.remove();
+  });
+  f.el.remove();
+  f.dock.remove();
+  frames.splice(i, 1);
+  if (activeId === id) { activeId = frames[0].id; closeInspector(); }
+  syncGlSize();
+  syncStackUI();
+}
+
+function setActive(id) {
+  if (activeId === id) return;
+  activeId = id;
+  closeInspector();
+  syncStackUI();
+}
+
+function setFrameSize(frame, sw, sh) {
   let w = sw, h = sh;
   const short = Math.min(w, h), long = Math.max(w, h);
   const k = Math.min(1, MAX_SHORT / short, MAX_LONG / long);
   w = Math.round(w * k); h = Math.round(h * k);
-  if (w === PW && h === PH && texSrc) { layoutWorld(); return; }
-  PW = w; PH = h;
-  glCanvas.width = w; glCanvas.height = h;
-  mainCanvas.width = w; mainCanvas.height = h;
-  if (!texSrc) {
-    texSrc = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texSrc);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  }
-  chainA = makeTarget(w, h);
-  chainB = makeTarget(w, h);
-  demoCanvas.width = w; demoCanvas.height = h;
-  document.getElementById('frameRes').textContent = `${w}×${h}`;
+  if (w === frame.PW && h === frame.PH && frame.chainA) return;
+  frame.PW = w; frame.PH = h;
+  frame.canvas.width = w; frame.canvas.height = h;
+  freeTarget(frame.chainA);
+  freeTarget(frame.chainB);
+  frame.chainA = makeTarget(w, h);
+  frame.chainB = makeTarget(w, h);
+  frame.demoCanvas.width = w; frame.demoCanvas.height = h;
+  syncGlSize();
   layoutWorld();
-  fitView();
 }
 
-function currentSourceEl() {
-  if (sourceType === 'video' || sourceType === 'webcam') return srcVideo;
-  if (sourceType === 'image') return srcImage;
-  return demoCanvas;
+function drawDemo(frame, tMs) {
+  const c = frame.demoCtx, w = frame.demoCanvas.width, h = frame.demoCanvas.height;
+  const t = tMs / 1000;
+  c.fillStyle = '#F8F5F0';
+  c.fillRect(0, 0, w, h);
+  const cols = ['#2A8A7A', '#D4A040', '#1A1818', '#99E0D2'];
+  const chars = ['T', 'I', 'P', 'Ó'];
+  const cw = w * 0.19;
+  for (let i = 0; i < 4; i++) {
+    const cx = w * (0.16 + i * 0.225) + Math.sin(t * 0.7 + i * 1.7) * w * 0.012;
+    const cy = h * 0.5 + Math.sin(t * 0.9 + i * 2.3) * h * 0.05;
+    c.save();
+    c.translate(cx, cy);
+    c.rotate(Math.sin(t * 0.5 + i) * 0.05);
+    c.fillStyle = cols[i];
+    c.fillRect(-cw / 2, -cw / 2, cw, cw);
+    c.fillStyle = (i === 0 || i === 2) ? '#F8F5F0' : '#1A1818';
+    c.font = `900 ${cw * 0.62}px "Clash Display", "IBM Plex Mono", monospace`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(chars[i], 0, cw * 0.03);
+    c.restore();
+  }
+  for (let i = 0; i < 5; i++) {
+    const dx = w * (0.1 + i * 0.2) + Math.sin(t * 1.3 + i * 3.1) * w * 0.03;
+    const dy = h * (i % 2 ? 0.16 : 0.85) + Math.cos(t + i) * h * 0.02;
+    c.fillStyle = cols[i % 4] + '55';
+    c.beginPath();
+    c.arc(dx, dy, w * 0.028, 0, Math.PI * 2);
+    c.fill();
+  }
 }
 
-function uploadSource(tMs) {
-  if (!sourceType) drawDemo(tMs);
-  const el = currentSourceEl();
-  gl.bindTexture(gl.TEXTURE_2D, texSrc);
+function currentSourceEl(frame) {
+  if (frame.sourceType === 'video' || frame.sourceType === 'webcam') return frame.srcVideo;
+  if (frame.sourceType === 'image') return frame.srcImage;
+  return frame.demoCanvas;
+}
+
+function uploadSource(frame, tMs) {
+  if (!frame.sourceType) drawDemo(frame, tMs);
+  gl.bindTexture(gl.TEXTURE_2D, frame.texSrc);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   try {
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el);
-  } catch (e) { /* frame ainda não pronto */ }
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentSourceEl(frame));
+  } catch (e) { /* frame de vídeo ainda não pronto */ }
 }
 
-function runPass(fxId, inputTex, targetFb, tSec, params) {
+function runPass(fxId, inputTex, targetFb, w, h, tSec, params) {
   const { prog, loc } = getProgram(fxId);
   gl.bindFramebuffer(gl.FRAMEBUFFER, targetFb);
-  gl.viewport(0, 0, PW, PH);
+  gl.viewport(0, 0, w, h);
   gl.useProgram(prog);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, inputTex);
   gl.uniform1i(loc.uTex, 0);
-  gl.uniform2f(loc.uRes, PW, PH);
+  gl.uniform2f(loc.uRes, w, h);
   gl.uniform1f(loc.uTime, tSec);
   gl.uniform1f(loc.uFlipY, targetFb === null ? 1 : 0);
   if (params) {
@@ -566,41 +656,46 @@ function runPass(fxId, inputTex, targetFb, tSec, params) {
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 
-function renderChain(tMs) {
+function renderFrame(frame, tMs) {
   const tSec = tMs / 1000;
-  uploadSource(tMs);
-  let cur = texSrc;
+  const w = frame.PW, h = frame.PH;
+  uploadSource(frame, tMs);
+  let cur = frame.texSrc;
   let i = 0;
-  for (const node of stack) {
+  for (const node of frame.stack) {
     if (!node.on) continue;
-    const target = (i % 2 === 0) ? chainA : chainB;
-    runPass(node.fx, cur, target.fb, tSec, node.params);
+    const target = (i % 2 === 0) ? frame.chainA : frame.chainB;
+    runPass(node.fx, cur, target.fb, w, h, tSec, node.params);
     cur = target.tex;
     i++;
   }
-  runPass('_copy', cur, null, tSec, null);
-  mainCtx.drawImage(glCanvas, 0, 0);
-  if (recorder && recorder.isRecording) recorder.captureFrame();
+  runPass('_copy', cur, null, w, h, tSec, null);
+  // conteúdo ocupa o canto inferior-esquerdo do glCanvas (origem GL)
+  frame.ctx.drawImage(glCanvas, 0, glCanvas.height - h, w, h, 0, 0, w, h);
+  if (recorder && recorder.isRecording && frame.id === recFrameId) recorder.captureFrame();
 }
 
-let needsRender = true;
-let rafId = null, lastFrame = 0;
-function isDynamic() {
-  return !sourceType || sourceType === 'video' || sourceType === 'webcam' ||
-    stack.some(n => n.on && FX[n.fx].anim) || (recorder && recorder.isRecording);
+function frameDynamic(frame) {
+  return !frame.sourceType || frame.sourceType === 'video' || frame.sourceType === 'webcam' ||
+    frame.stack.some(n => n.on && FX[n.fx].anim) ||
+    (recorder && recorder.isRecording && frame.id === recFrameId);
 }
+
+let lastFrameT = 0;
 function tick(now) {
-  rafId = requestAnimationFrame(tick);
-  if (!isDynamic() && !needsRender) return;
-  if (now - lastFrame < 31) return;
-  lastFrame = now;
-  needsRender = false;
-  renderChain(now);
+  requestAnimationFrame(tick);
+  if (now - lastFrameT < 31) return;
+  lastFrameT = now;
+  for (const f of frames) {
+    if (!frameDynamic(f) && !f.needsRender) continue;
+    f.needsRender = false;
+    renderFrame(f, now);
+  }
 }
-function requestRender() { needsRender = true; }
+function requestRender() { const f = F(); if (f) f.needsRender = true; }
 
 // ============================================================
-// O ESPAÇO — pan / zoom / grade
+// O ESPAÇO — pan / zoom / drag de frames
 // ============================================================
 const space = document.getElementById('space');
 const world = document.getElementById('world');
@@ -616,7 +711,7 @@ function applyView() {
 }
 
 function zoomAt(cx, cy, k) {
-  const nz = Math.min(3, Math.max(0.2, view.z * k));
+  const nz = Math.min(3, Math.max(0.15, view.z * k));
   const kk = nz / view.z;
   view.x = cx - (cx - view.x) * kk;
   view.y = cy - (cy - view.y) * kk;
@@ -625,12 +720,16 @@ function zoomAt(cx, cy, k) {
 }
 
 function fitView() {
+  if (!frames.length) return;
+  const x0 = Math.min(...frames.map(f => f.x));
+  const y0 = Math.min(...frames.map(f => f.y)) - 40;
+  const x1 = Math.max(...frames.map(f => f.x + f.PW + DOCK_GAP + DOCK_W));
+  const y1 = Math.max(...frames.map(f => f.y + f.PH));
   const vw = window.innerWidth, vh = window.innerHeight;
-  const worldW = PW + DOCK_GAP + DOCK_W, worldH = Math.max(PH, 300);
-  const z = Math.min(1.6, Math.min(vw * 0.8 / worldW, vh * 0.72 / worldH));
+  const z = Math.min(1.6, vw * 0.85 / (x1 - x0), vh * 0.72 / (y1 - y0));
   view.z = z;
-  view.x = (vw - worldW * z) / 2;
-  view.y = (vh - PH * z) / 2 + 10;
+  view.x = (vw - (x1 - x0) * z) / 2 - x0 * z;
+  view.y = (vh - (y1 - y0) * z) / 2 - y0 * z + 10;
   applyView();
 }
 
@@ -645,16 +744,24 @@ space.addEventListener('wheel', e => {
   }
 }, { passive: false });
 
-// pan por drag (mouse/touch) + pinch com 2 dedos
 const pointers = new Map();
 let pinchD0 = 0, pinchZ0 = 1;
+let dragFrame = null; // {frame, dx, dy}
 space.addEventListener('pointerdown', e => {
-  if (e.target.closest('.stk-card, .stk-add, #topbar, #inspector, #toolsModal, #viewHud')) return;
+  if (e.target.closest('.stk-card, .stk-add, .fl-x, #topbar, #inspector, #toolsModal, #viewHud')) return;
+  const frEl = e.target.closest('.frame');
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     pinchD0 = Math.hypot(a.x - b.x, a.y - b.y);
     pinchZ0 = view.z;
+    dragFrame = null;
+  } else if (frEl) {
+    const frame = frames.find(f => f.id === frEl.dataset.fid);
+    if (frame) {
+      setActive(frame.id);
+      dragFrame = { frame, x0: frame.x, y0: frame.y, sx: e.clientX, sy: e.clientY };
+    }
   }
   space.setPointerCapture(e.pointerId);
   space.classList.add('panning');
@@ -666,8 +773,11 @@ space.addEventListener('pointermove', e => {
     p.x = e.clientX; p.y = e.clientY;
     const [a, b] = [...pointers.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y);
-    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-    if (pinchD0 > 0) zoomAt(cx, cy, (pinchZ0 * (d / pinchD0)) / view.z);
+    if (pinchD0 > 0) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, (pinchZ0 * (d / pinchD0)) / view.z);
+  } else if (dragFrame) {
+    dragFrame.frame.x = dragFrame.x0 + (e.clientX - dragFrame.sx) / view.z;
+    dragFrame.frame.y = dragFrame.y0 + (e.clientY - dragFrame.sy) / view.z;
+    layoutWorld();
   } else {
     view.x += e.clientX - p.x;
     view.y += e.clientY - p.y;
@@ -678,42 +788,44 @@ space.addEventListener('pointermove', e => {
 const endPointer = e => {
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchD0 = 0;
-  if (!pointers.size) space.classList.remove('panning');
+  if (!pointers.size) { space.classList.remove('panning'); dragFrame = null; }
 };
 space.addEventListener('pointerup', endPointer);
 space.addEventListener('pointercancel', endPointer);
 window.addEventListener('resize', fitView);
 
-// layout do mundo: frame em (0,0), dock de nodes à direita, fio entre eles
-const DOCK_GAP = 90, DOCK_W = 232;
 function layoutWorld() {
-  const dock = document.getElementById('stackDock');
-  dock.style.left = (PW + DOCK_GAP) + 'px';
-  dock.style.top = '0px';
   const wires = document.getElementById('wires');
-  wires.setAttribute('width', PW + DOCK_GAP + DOCK_W);
-  wires.setAttribute('height', Math.max(PH, 400));
-  const x0 = PW + 4, y0 = 40, x1 = PW + DOCK_GAP - 4, y1 = 26;
-  document.getElementById('wirePath').setAttribute('d',
-    `M ${x0} ${y0} C ${x0 + 40} ${y0}, ${x1 - 40} ${y1}, ${x1} ${y1}`);
+  let paths = '';
+  let maxX = 0, maxY = 0;
+  for (const f of frames) {
+    f.el.style.left = f.x + 'px';
+    f.el.style.top = f.y + 'px';
+    f.dock.style.left = (f.x + f.PW + DOCK_GAP) + 'px';
+    f.dock.style.top = f.y + 'px';
+    const x0 = f.x + f.PW + 4, y0 = f.y + 40, x1 = f.x + f.PW + DOCK_GAP - 4, y1 = f.y + 26;
+    paths += `<path d="M ${x0} ${y0} C ${x0 + 40} ${y0}, ${x1 - 40} ${y1}, ${x1} ${y1}"></path>`;
+    maxX = Math.max(maxX, f.x + f.PW + DOCK_GAP + DOCK_W);
+    maxY = Math.max(maxY, f.y + Math.max(f.PH, 400));
+  }
+  wires.setAttribute('width', maxX + 100);
+  wires.setAttribute('height', maxY + 100);
+  wires.innerHTML = paths;
 }
 
 // ============================================================
-// STACK — modelo + nodes no espaço
+// STACK — modelo + UI (opera no frame ATIVO)
 // ============================================================
-let stack = [];
-let selUid = null;
-let uidSeq = 0;
-
 function addFx(fxId, silent) {
+  const f = F();
   const def = FX[fxId];
-  if (!def || stack.length >= 8) { if (stack.length >= 8) TipoUI.showToast('Stack cheio (8)'); return; }
+  if (!f || !def || f.stack.length >= 8) { if (f && f.stack.length >= 8) TipoUI.showToast('Stack cheio (8)'); return; }
   const uid = 'n' + (++uidSeq);
   const params = {};
   def.params.forEach(p => { params[p.k] = p.val; });
-  stack.push({ uid, fx: fxId, on: true, params });
-  selUid = uid;
-  buildPane(uid);
+  f.stack.push({ uid, fx: fxId, on: true, params });
+  f.selUid = uid;
+  buildPane(f, uid);
   syncStackUI();
   openInspector();
   requestRender();
@@ -721,94 +833,105 @@ function addFx(fxId, silent) {
 }
 
 function removeFx(uid) {
-  const i = stack.findIndex(n => n.uid === uid);
-  if (i < 0) return;
-  stack.splice(i, 1);
+  const f = frames.find(fr => fr.stack.some(n => n.uid === uid));
+  if (!f) return;
+  const i = f.stack.findIndex(n => n.uid === uid);
+  f.stack.splice(i, 1);
   const pane = document.querySelector(`.fx-pane[data-uid="${uid}"]`);
   if (pane) pane.remove();
-  if (selUid === uid) {
-    selUid = stack.length ? stack[Math.min(i, stack.length - 1)].uid : null;
-    if (!selUid) closeInspector();
+  if (f.selUid === uid) {
+    f.selUid = f.stack.length ? f.stack[Math.min(i, f.stack.length - 1)].uid : null;
+    if (!f.selUid) closeInspector();
   }
+  f.needsRender = true;
   syncStackUI();
-  requestRender();
 }
 
 function moveFx(uid, dir) {
-  const i = stack.findIndex(n => n.uid === uid);
+  const f = frames.find(fr => fr.stack.some(n => n.uid === uid));
+  if (!f) return;
+  const i = f.stack.findIndex(n => n.uid === uid);
   const j = i + dir;
-  if (i < 0 || j < 0 || j >= stack.length) return;
-  [stack[i], stack[j]] = [stack[j], stack[i]];
+  if (j < 0 || j >= f.stack.length) return;
+  [f.stack[i], f.stack[j]] = [f.stack[j], f.stack[i]];
+  f.needsRender = true;
   syncStackUI();
-  requestRender();
 }
 
 function toggleFx(uid) {
-  const n = stack.find(x => x.uid === uid);
+  const f = frames.find(fr => fr.stack.some(n => n.uid === uid));
+  const n = f && f.stack.find(x => x.uid === uid);
   if (!n) return;
   n.on = !n.on;
+  f.needsRender = true;
   syncStackUI();
-  requestRender();
 }
 
 function selectFx(uid) {
-  selUid = uid;
+  const f = frames.find(fr => fr.stack.some(n => n.uid === uid));
+  if (!f) return;
+  activeId = f.id;
+  f.selUid = uid;
   syncStackUI();
   openInspector();
 }
 
 const SRC_LABEL = { image: 'Imagem', video: 'Vídeo', webcam: 'Webcam' };
 function syncStackUI() {
-  const dock = document.getElementById('stackDock');
-  dock.innerHTML = '';
-  // node da FONTE (topo da cadeia)
-  const src = document.createElement('div');
-  src.className = 'stk-card stk-src';
-  src.innerHTML =
-    `<span class="stk-ico" style="background:#2A8A7A;">Sr</span>` +
-    `<span class="stk-name">${sourceType ? SRC_LABEL[sourceType] : 'Demo TIPÓ'}<span class="stk-sub">fonte</span></span>` +
-    `<span class="stk-btns"><button type="button" title="trocar">&#8644;</button></span>`;
-  src.addEventListener('click', () => openTools());
-  dock.appendChild(src);
-  // nodes de efeito
-  stack.forEach((n, i) => {
-    const def = FX[n.fx];
-    const card = document.createElement('div');
-    card.className = 'stk-card' + (n.uid === selUid ? ' sel' : '') + (n.on ? '' : ' off');
-    card.dataset.uid = n.uid;
-    card.innerHTML =
-      `<span class="stk-ico" style="background:${def.ico};">${def.sym}</span>` +
-      `<span class="stk-name">${def.name}</span>` +
-      `<span class="stk-btns">` +
-      `<button type="button" class="stk-up" title="sobe">&#9650;</button>` +
-      `<button type="button" class="stk-dn" title="desce">&#9660;</button>` +
-      `<button type="button" class="stk-x" title="remove">&times;</button></span>` +
-      `<span class="stk-dot" title="on/off"></span>`;
-    card.addEventListener('click', () => selectFx(n.uid));
-    card.querySelector('.stk-dot').addEventListener('click', e => { e.stopPropagation(); toggleFx(n.uid); });
-    card.querySelector('.stk-up').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, -1); });
-    card.querySelector('.stk-dn').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, 1); });
-    card.querySelector('.stk-x').addEventListener('click', e => { e.stopPropagation(); removeFx(n.uid); });
-    dock.appendChild(card);
+  frames.forEach((f, fi) => {
+    const dock = f.dock;
+    dock.innerHTML = '';
+    const src = document.createElement('div');
+    src.className = 'stk-card stk-src';
+    src.innerHTML =
+      `<span class="stk-ico" style="background:#2A8A7A;">Sr</span>` +
+      `<span class="stk-name">${f.sourceType ? SRC_LABEL[f.sourceType] : 'Demo TIPÓ'}<span class="stk-sub">fonte</span></span>` +
+      `<span class="stk-btns"><button type="button" title="trocar">&#8644;</button></span>`;
+    src.addEventListener('click', () => { setActive(f.id); openTools(); });
+    dock.appendChild(src);
+    f.stack.forEach(n => {
+      const def = FX[n.fx];
+      const card = document.createElement('div');
+      card.className = 'stk-card' + (f.id === activeId && n.uid === f.selUid ? ' sel' : '') + (n.on ? '' : ' off');
+      card.dataset.uid = n.uid;
+      card.innerHTML =
+        `<span class="stk-ico" style="background:${def.ico};">${def.sym}</span>` +
+        `<span class="stk-name">${def.name}</span>` +
+        `<span class="stk-btns">` +
+        `<button type="button" class="stk-up" title="sobe">&#9650;</button>` +
+        `<button type="button" class="stk-dn" title="desce">&#9660;</button>` +
+        `<button type="button" class="stk-x" title="remove">&times;</button></span>` +
+        `<span class="stk-dot" title="on/off"></span>`;
+      card.addEventListener('click', () => selectFx(n.uid));
+      card.querySelector('.stk-dot').addEventListener('click', e => { e.stopPropagation(); toggleFx(n.uid); });
+      card.querySelector('.stk-up').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, -1); });
+      card.querySelector('.stk-dn').addEventListener('click', e => { e.stopPropagation(); moveFx(n.uid, 1); });
+      card.querySelector('.stk-x').addEventListener('click', e => { e.stopPropagation(); removeFx(n.uid); });
+      dock.appendChild(card);
+    });
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'stk-add';
+    add.textContent = '+ efeito';
+    add.addEventListener('click', () => { setActive(f.id); openTools(); });
+    dock.appendChild(add);
+    // label + outline
+    f.el.classList.toggle('active', f.id === activeId);
+    f.el.querySelector('.fl-name').textContent = `frame ${fi + 1}`;
+    const syms = f.stack.filter(n => n.on).map(n => FX[n.fx].sym.toLowerCase());
+    f.el.querySelector('.fl-chain').textContent = syms.length ? syms.join(' → ') : 'passthrough';
+    f.el.querySelector('.fl-res').textContent = `${f.PW}×${f.PH}`;
   });
-  // botão + add
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'stk-add';
-  add.textContent = '+ efeito';
-  add.addEventListener('click', () => openTools());
-  dock.appendChild(add);
-  // panes
-  document.querySelectorAll('.fx-pane').forEach(p => p.classList.toggle('sel', p.dataset.uid === selUid));
+  document.querySelectorAll('.fx-pane').forEach(p => {
+    const f = F();
+    p.classList.toggle('sel', !!f && p.dataset.uid === f.selUid);
+  });
   syncInspector();
-  const names = stack.filter(n => n.on).map(n => FX[n.fx].sym.toLowerCase());
-  document.getElementById('frameStack').textContent = names.length ? names.join(' → ') : 'passthrough';
+  layoutWorld();
 }
 
-/** panes de params ficam TODOS no DOM (hidden) — behaviors/áudio
- *  continuam vivos quando o inspector troca de node */
-function buildPane(uid) {
-  const n = stack.find(x => x.uid === uid);
+function buildPane(frame, uid) {
+  const n = frame.stack.find(x => x.uid === uid);
   const def = FX[n.fx];
   const pane = document.createElement('div');
   pane.className = 'fx-pane';
@@ -819,7 +942,7 @@ function buildPane(uid) {
       const row = document.createElement('div');
       row.className = 'color-row';
       row.innerHTML = `<label>${p.label}</label><input type="color" id="${id}" value="${p.val}">`;
-      row.querySelector('input').addEventListener('input', e => { n.params[p.k] = e.target.value; requestRender(); });
+      row.querySelector('input').addEventListener('input', e => { n.params[p.k] = e.target.value; frame.needsRender = true; });
       pane.appendChild(row);
     } else if (p.type === 'select') {
       const row = document.createElement('div');
@@ -833,7 +956,7 @@ function buildPane(uid) {
         sel.appendChild(op);
       });
       sel.value = p.val;
-      sel.addEventListener('change', e => { n.params[p.k] = Number(e.target.value); requestRender(); });
+      sel.addEventListener('change', e => { n.params[p.k] = Number(e.target.value); frame.needsRender = true; });
       row.appendChild(sel);
       pane.appendChild(row);
     } else {
@@ -847,7 +970,7 @@ function buildPane(uid) {
       inp.addEventListener('input', () => {
         n.params[p.k] = Number(inp.value);
         document.getElementById(id + 'Val').textContent = inp.value;
-        requestRender();
+        frame.needsRender = true;
       });
       pane.appendChild(row);
     }
@@ -856,27 +979,33 @@ function buildPane(uid) {
 }
 
 function clearStack() {
-  stack = [];
-  selUid = null;
-  document.getElementById('paramsHost').innerHTML = '';
+  const f = F();
+  if (!f) return;
+  f.stack.forEach(n => {
+    const pane = document.querySelector(`.fx-pane[data-uid="${n.uid}"]`);
+    if (pane) pane.remove();
+  });
+  f.stack = [];
+  f.selUid = null;
   closeInspector();
+  f.needsRender = true;
   syncStackUI();
-  requestRender();
 }
 
 // ============================================================
-// INSPECTOR flutuante
+// INSPECTOR flutuante (node selecionado do frame ativo)
 // ============================================================
 const inspector = document.getElementById('inspector');
 function openInspector() {
-  if (!selUid) return;
+  const f = F();
+  if (!f || !f.selUid) return;
   inspector.classList.add('open');
   syncInspector();
 }
 function closeInspector() { inspector.classList.remove('open'); }
 function syncInspector() {
-  if (!selUid) { closeInspector(); return; }
-  const n = stack.find(x => x.uid === selUid);
+  const f = F();
+  const n = f && f.stack.find(x => x.uid === f.selUid);
   if (!n) { closeInspector(); return; }
   const def = FX[n.fx];
   const ico = document.getElementById('inspIco');
@@ -886,10 +1015,9 @@ function syncInspector() {
   document.getElementById('inspBypass').style.color = n.on ? 'var(--accent)' : 'var(--text-5)';
 }
 document.getElementById('inspClose').addEventListener('click', () => closeInspector());
-document.getElementById('inspBypass').addEventListener('click', () => { if (selUid) toggleFx(selUid); });
-document.getElementById('inspRemove').addEventListener('click', () => { if (selUid) removeFx(selUid); });
+document.getElementById('inspBypass').addEventListener('click', () => { const f = F(); if (f && f.selUid) toggleFx(f.selUid); });
+document.getElementById('inspRemove').addEventListener('click', () => { const f = F(); if (f && f.selUid) removeFx(f.selUid); });
 
-// drag do inspector pela header (desktop)
 (() => {
   const head = document.getElementById('inspHead');
   let drag = null;
@@ -927,7 +1055,7 @@ document.getElementById('toolsModal').addEventListener('click', e => {
 })();
 
 // ============================================================
-// PRESETS de receita
+// PRESETS de receita (frame ativo)
 // ============================================================
 const STACK_PRESETS = {
   riso:   [{ fx: 'halftone', params: { cell: 11, angle: 15, gain: 108, ink: 2 } },
@@ -949,11 +1077,12 @@ const STACK_PRESETS = {
 
 function applyStackPreset(name) {
   const recipe = STACK_PRESETS[name];
-  if (!recipe) return;
+  const f = F();
+  if (!recipe || !f) return;
   clearStack();
   recipe.forEach(r => {
     addFx(r.fx, true);
-    const node = stack[stack.length - 1];
+    const node = f.stack[f.stack.length - 1];
     Object.assign(node.params, r.params);
     FX[r.fx].params.forEach(p => {
       const el = document.getElementById(`st_${node.uid}_${p.k}`);
@@ -963,10 +1092,10 @@ function applyStackPreset(name) {
       if (val) val.textContent = node.params[p.k];
     });
   });
-  selUid = stack.length ? stack[0].uid : null;
+  f.selUid = f.stack.length ? f.stack[0].uid : null;
   closeInspector();
   syncStackUI();
-  requestRender();
+  f.needsRender = true;
 }
 document.getElementById('presetSel').addEventListener('change', e => {
   if (e.target.value) { applyStackPreset(e.target.value); TipoUI.showToast('Receita ' + e.target.value); }
@@ -975,66 +1104,72 @@ document.getElementById('presetSel').addEventListener('change', e => {
 function resetAll() { applyStackPreset('riso'); }
 
 // ============================================================
-// FONTE
+// FONTE (por frame)
 // ============================================================
-function releaseSource() {
-  if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
-  if (srcVideo) { srcVideo.pause(); srcVideo = null; }
-  if (mediaUrl) { URL.revokeObjectURL(mediaUrl); mediaUrl = null; }
+function releaseSource(frame) {
+  if (frame.webcamStream) { frame.webcamStream.getTracks().forEach(t => t.stop()); frame.webcamStream = null; }
+  if (frame.srcVideo) { frame.srcVideo.pause(); frame.srcVideo = null; }
+  if (frame.mediaUrl) { URL.revokeObjectURL(frame.mediaUrl); frame.mediaUrl = null; }
 }
 
 function useDemo() {
-  releaseSource();
-  sourceType = null;
-  setProcSize(960, 720);
+  const f = F();
+  if (!f) return;
+  releaseSource(f);
+  f.sourceType = null;
+  setFrameSize(f, 960, 720);
+  f.needsRender = true;
   syncStackUI();
-  requestRender();
 }
 
-function loadFile(file) {
-  releaseSource();
-  mediaUrl = URL.createObjectURL(file);
+function loadFile(file, targetFrame) {
+  const f = targetFrame || F();
+  if (!f) return;
+  releaseSource(f);
+  f.mediaUrl = URL.createObjectURL(file);
   if (file.type.startsWith('video/')) {
     const v = document.createElement('video');
-    v.src = mediaUrl;
+    v.src = f.mediaUrl;
     v.loop = true; v.muted = true; v.playsInline = true;
     v.addEventListener('loadedmetadata', () => {
-      sourceType = 'video';
-      srcVideo = v;
-      setProcSize(v.videoWidth, v.videoHeight);
+      f.sourceType = 'video';
+      f.srcVideo = v;
+      setFrameSize(f, v.videoWidth, v.videoHeight);
       v.play();
+      f.needsRender = true;
       syncStackUI();
-      requestRender();
     });
   } else {
     const img = new Image();
     img.onload = () => {
-      sourceType = 'image';
-      srcImage = img;
-      setProcSize(img.naturalWidth, img.naturalHeight);
+      f.sourceType = 'image';
+      f.srcImage = img;
+      setFrameSize(f, img.naturalWidth, img.naturalHeight);
+      f.needsRender = true;
       syncStackUI();
-      requestRender();
     };
-    img.src = mediaUrl;
+    img.src = f.mediaUrl;
   }
 }
 
 async function toggleWebcam() {
-  if (sourceType === 'webcam') { useDemo(); return; }
+  const f = F();
+  if (!f) return;
+  if (f.sourceType === 'webcam') { useDemo(); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    releaseSource();
-    webcamStream = stream;
+    releaseSource(f);
+    f.webcamStream = stream;
     const v = document.createElement('video');
     v.srcObject = stream;
     v.muted = true; v.playsInline = true;
     v.addEventListener('loadedmetadata', () => {
-      sourceType = 'webcam';
-      srcVideo = v;
-      setProcSize(v.videoWidth, v.videoHeight);
+      f.sourceType = 'webcam';
+      f.srcVideo = v;
+      setFrameSize(f, v.videoWidth, v.videoHeight);
       v.play();
+      f.needsRender = true;
       syncStackUI();
-      requestRender();
     });
   } catch (e) {
     TipoUI.showToast('Webcam negada');
@@ -1045,18 +1180,33 @@ document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
   e.target.value = '';
 });
+// drop: sobre um frame troca a fonte DELE; no vazio cria frame NOVO ali
 space.addEventListener('dragover', e => e.preventDefault());
 space.addEventListener('drop', e => {
   e.preventDefault();
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const frEl = e.target.closest('.frame');
+  if (frEl) {
+    const f = frames.find(x => x.id === frEl.dataset.fid);
+    if (f) { setActive(f.id); loadFile(file, f); }
+  } else {
+    const wx = (e.clientX - view.x) / view.z;
+    const wy = (e.clientY - view.y) / view.z;
+    const nf = newFrame({ x: wx, y: wy, blank: true, silent: true });
+    loadFile(file, nf);
+    TipoUI.showToast('Frame novo com tua mídia');
+  }
 });
 
 // ============================================================
-// EXPORT
+// EXPORT (frame ativo)
 // ============================================================
 function exportPNG() {
-  renderChain(performance.now());
-  mainCanvas.toBlob(blob => {
+  const f = F();
+  if (!f) return;
+  renderFrame(f, performance.now());
+  f.canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1067,7 +1217,10 @@ function exportPNG() {
 }
 
 async function toggleRec() {
-  recorder = await TipoUI.toggleVisualRec(mainCanvas);
+  const f = F();
+  if (!f) return;
+  recFrameId = f.id;
+  recorder = await TipoUI.toggleVisualRec(f.canvas);
   document.getElementById('recBtn').classList.toggle('rec-live', !!(recorder && recorder.isRecording));
 }
 
@@ -1075,11 +1228,9 @@ async function toggleRec() {
 // BOOT
 // ============================================================
 TipoUI.initChrome('visual');
-setProcSize(960, 720);
-useDemo();
-applyStackPreset('riso');
+newFrame({ silent: true }); // frame 1 nasce com a receita Riso
 fitView();
-tick(performance.now());
+requestAnimationFrame(tick);
 </script>
 </body>
 </html>

@@ -30,13 +30,14 @@ page.on('pageerror', e => errs.push(e.message));
 await page.goto('http://localhost/studio.html', { waitUntil: 'load' });
 await page.waitForTimeout(1400);
 
-const hash = () => page.evaluate(() => {
-  const c = document.getElementById('mainCanvas');
+const hash = (fid) => page.evaluate(id => {
+  const f = id ? frames.find(x => x.id === id) : frames.find(x => x.id === activeId);
+  const c = f.canvas;
   const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
   let h = 0, nz = 0;
   for (let i = 0; i < x.length; i += 89) { h = (h * 31 + x[i]) >>> 0; if (x[i] > 8) nz++; }
   return { h, nz };
-});
+}, fid || null);
 
 // boot: preset Riso default, canvas com conteúdo, espaço montado
 const boot = await page.evaluate(() => ({
@@ -52,11 +53,11 @@ check('grade de pontos no espaço', boot.grid);
 const h0 = await hash();
 check('canvas renderizando (não vazio)', h0.nz > 400, `(nz=${h0.nz})`);
 
-// PAN: drag no espaço vazio move o mundo
+// PAN: drag no espaço VAZIO move o mundo (canto inferior-esquerdo é vazio)
 const v0 = await page.evaluate(() => ({ ...view }));
-await page.mouse.move(700, 500);
+await page.mouse.move(80, 880);
 await page.mouse.down();
-await page.mouse.move(820, 560, { steps: 5 });
+await page.mouse.move(200, 820, { steps: 5 });
 await page.mouse.up();
 const v1 = await page.evaluate(() => ({ ...view }));
 check('pan por drag move o mundo', Math.abs(v1.x - v0.x) > 80 && Math.abs(v1.y - v0.y) > 30, `(dx=${Math.round(v1.x - v0.x)})`);
@@ -162,6 +163,56 @@ for (const p of ['riso', 'print', 'vhs', 'poster', 'zine', 'dream']) {
   pHashes.push((await hash()).h);
 }
 check('6 presets distintos', new Set(pHashes).size === 6, `(${new Set(pHashes).size})`);
+
+// ============ MULTI-FRAME ============
+// frame novo nasce com receita própria e render INDEPENDENTE
+await page.evaluate(() => { applyStackPreset('riso'); });
+await page.waitForTimeout(250);
+const hF1 = await hash();
+const mf = await page.evaluate(() => { const f = newFrame(); return { n: frames.length, id: f.id, active: activeId === f.id }; });
+await page.waitForTimeout(350);
+check('newFrame cria 2º frame ativo', mf.n === 2 && mf.active);
+const docks = await page.evaluate(() => ({
+  docks: document.querySelectorAll('.frame-dock').length,
+  els: document.querySelectorAll('.frame').length,
+  wires: document.querySelectorAll('#wires path').length,
+}));
+check('2 frames = 2 docks + 2 fios', docks.docks === 2 && docks.els === 2 && docks.wires === 2);
+const hF2 = await hash(mf.id);
+check('frames renderizam receitas distintas', hF2.h !== hF1.h && hF2.nz > 300, `(${hF1.h} vs ${hF2.h})`);
+// frame 1 continua com o render dele (independência)
+const hF1b = await hash(await page.evaluate(() => frames[0].id));
+check('frame 1 independente do frame 2', hF1b.nz > 300);
+
+// DRAG do frame: arrastar o frame 2 muda a posição no mundo
+await page.evaluate(() => fitView());
+await page.waitForTimeout(120);
+const drag = await page.evaluate(() => {
+  const f = frames[1];
+  const r = f.canvas.getBoundingClientRect();
+  return { x0: f.x, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+});
+await page.mouse.move(drag.cx, drag.cy);
+await page.mouse.down();
+await page.mouse.move(drag.cx + 140, drag.cy + 60, { steps: 6 });
+await page.mouse.up();
+const dragged = await page.evaluate(() => frames[1].x);
+check('arrastar move o frame no mundo', Math.abs(dragged - drag.x0) > 60, `(${Math.round(drag.x0)} → ${Math.round(dragged)})`);
+
+// clicar no frame 1 ativa ele (dock/inspector seguem)
+await page.evaluate(() => setActive(frames[0].id));
+const act = await page.evaluate(() => activeId === frames[0].id);
+check('setActive troca o frame ativo', act);
+
+// remover frame 2 limpa nodes/panes/dock
+await page.evaluate(() => removeFrame(frames[1].id));
+const afterRm = await page.evaluate(() => ({
+  n: frames.length,
+  docks: document.querySelectorAll('.frame-dock').length,
+  panes: document.querySelectorAll('.fx-pane').length,
+  stackN: stack.length,
+}));
+check('removeFrame limpa tudo', afterRm.n === 1 && afterRm.docks === 1 && afterRm.panes === afterRm.stackN, JSON.stringify(afterRm));
 
 // PNG export
 const dl = page.waitForEvent('download', { timeout: 10000 });
