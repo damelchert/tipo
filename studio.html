@@ -271,12 +271,25 @@ float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 const FX = {
   pixelate: {
     name: 'Pixelate', ico: '#1B5A4E', sym: 'Px', anim: false,
-    params: [{ k: 'size', label: 'Cell', min: 2, max: 120, val: 16, u: 'uSize' }],
-    frag: `uniform float uSize;
+    params: [
+      { k: 'size', label: 'Cell', min: 2, max: 120, val: 16, u: 'uSize' },
+      { k: 'shape', label: 'Shape', type: 'select', val: 0, u: 'uShape', options: ['Square', 'Dots', 'Diamond'] },
+      { k: 'gap', label: 'Gap', min: 0, max: 60, val: 0, u: 'uGap' },
+      { k: 'bg', label: 'Gap Color', type: 'color', val: '#1A1818', u: 'uBg' },
+    ],
+    frag: `uniform float uSize; uniform float uShape; uniform float uGap; uniform vec3 uBg;
 void main(){
-  vec2 cell = vec2(max(uSize,1.0)) / uRes;
+  float s = max(uSize, 1.0);
+  vec2 cell = vec2(s) / uRes;
   vec2 uv = (floor(vUv / cell) + 0.5) * cell;
-  outC = texture(uTex, uv);
+  vec3 c = texture(uTex, uv).rgb;
+  vec2 dp = (fract(vUv / cell) - 0.5) * 2.0; // -1..1 dentro da célula
+  float half_ = 1.0 - uGap / 100.0;
+  float d = uShape < 0.5 ? max(abs(dp.x), abs(dp.y))
+          : uShape < 1.5 ? length(dp)
+          : abs(dp.x) + abs(dp.y);
+  float m = 1.0 - smoothstep(half_ - 0.08, half_, d);
+  outC = vec4(mix(uBg, c, uGap > 0.0 || uShape > 0.5 ? m : 1.0), 1.0);
 }`,
   },
   bayer: {
@@ -284,14 +297,32 @@ void main(){
     params: [
       { k: 'levels', label: 'Levels', min: 2, max: 8, val: 3, u: 'uLevels' },
       { k: 'scale', label: 'Scale', min: 1, max: 10, val: 2, u: 'uScale' },
+      { k: 'pattern', label: 'Matrix', type: 'select', val: 1, u: 'uPattern', options: ['2×2 (grosso)', '4×4 (clássico)', '8×8 (fino)'] },
+      { k: 'bias', label: 'Bias', min: -50, max: 50, val: 0, u: 'uBias' },
       { k: 'mono', label: 'Mode', type: 'select', val: 0, u: 'uMono', options: ['Color', 'Mono (P&B)'] },
     ],
-    frag: `uniform float uLevels; uniform float uScale; uniform float uMono;
-const float B[16] = float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
+    frag: `uniform float uLevels; uniform float uScale; uniform float uPattern; uniform float uBias; uniform float uMono;
+const float B2[4] = float[4](0.,2.,3.,1.);
+const float B4[16] = float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
+const float B8[64] = float[64](
+   0.,32., 8.,40., 2.,34.,10.,42., 48.,16.,56.,24.,50.,18.,58.,26.,
+  12.,44., 4.,36.,14.,46., 6.,38., 60.,28.,52.,20.,62.,30.,54.,22.,
+   3.,35.,11.,43., 1.,33., 9.,41., 51.,19.,59.,27.,49.,17.,57.,25.,
+  15.,47., 7.,39.,13.,45., 5.,37., 63.,31.,55.,23.,61.,29.,53.,21.);
 void main(){
   vec2 px = floor(gl_FragCoord.xy / max(uScale,1.0));
-  int idx = int(mod(px.x,4.0)) + int(mod(px.y,4.0)) * 4;
-  float th = (B[idx] + 0.5) / 16.0 - 0.5;
+  float th;
+  if (uPattern < 0.5) {
+    int i = int(mod(px.x,2.0)) + int(mod(px.y,2.0)) * 2;
+    th = (B2[i] + 0.5) / 4.0 - 0.5;
+  } else if (uPattern < 1.5) {
+    int i = int(mod(px.x,4.0)) + int(mod(px.y,4.0)) * 4;
+    th = (B4[i] + 0.5) / 16.0 - 0.5;
+  } else {
+    int i = int(mod(px.x,8.0)) + int(mod(px.y,8.0)) * 8;
+    th = (B8[i] + 0.5) / 64.0 - 0.5;
+  }
+  th += uBias / 100.0;
   vec3 c = texture(uTex, vUv).rgb;
   if (uMono > 0.5) c = vec3(lum(c));
   float L = max(uLevels - 1.0, 1.0);
@@ -305,9 +336,11 @@ void main(){
       { k: 'angle', label: 'Angle', min: 0, max: 90, val: 15, u: 'uAngle' },
       { k: 'gain', label: 'Ink Gain', min: 50, max: 160, val: 100, u: 'uGain' },
       { k: 'shape', label: 'Shape', type: 'select', val: 0, u: 'uShape', options: ['Dot', 'Square', 'Line', 'Diamond'] },
-      { k: 'ink', label: 'Ink', type: 'select', val: 2, u: 'uInkMode', options: ['Source color', 'Ink (preto)', 'Teal'] },
+      { k: 'ink', label: 'Ink', type: 'select', val: 2, u: 'uInkMode', options: ['Source color', 'Ink (preto)', 'Teal', 'Custom'] },
+      { k: 'inkc', label: 'Custom Ink', type: 'color', val: '#2A8A7A', u: 'uInkC' },
+      { k: 'paper', label: 'Paper', type: 'color', val: '#F8F5F0', u: 'uPaper' },
     ],
-    frag: `uniform float uCell; uniform float uAngle; uniform float uGain; uniform float uShape; uniform float uInkMode;
+    frag: `uniform float uCell; uniform float uAngle; uniform float uGain; uniform float uShape; uniform float uInkMode; uniform vec3 uInkC; uniform vec3 uPaper;
 void main(){
   float a = radians(uAngle);
   mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
@@ -324,24 +357,30 @@ void main(){
           : uShape < 2.5 ? abs(dp.y) * 1.6
           : (abs(dp.x) + abs(dp.y)) * 0.82;
   float m = smoothstep(r, r - 1.5, d);
-  vec3 paper = vec3(0.973, 0.961, 0.941);
-  vec3 ink = uInkMode < 0.5 ? src : (uInkMode < 1.5 ? vec3(0.102, 0.094, 0.094) : vec3(0.165, 0.541, 0.478));
-  outC = vec4(mix(paper, ink, m), 1.0);
+  vec3 ink = uInkMode < 0.5 ? src
+           : uInkMode < 1.5 ? vec3(0.102, 0.094, 0.094)
+           : uInkMode < 2.5 ? vec3(0.165, 0.541, 0.478)
+           : uInkC;
+  outC = vec4(mix(uPaper, ink, m), 1.0);
 }`,
   },
   gradmap: {
     name: 'Gradient Map', ico: '#D4A040', sym: 'Gm', anim: false,
     params: [
       { k: 'mix', label: 'Mix', min: 0, max: 100, val: 100, u: 'uMixAmt' },
+      { k: 'steps', label: 'Posterize', min: 0, max: 8, val: 0, u: 'uSteps' },
+      { k: 'inv', label: 'Direction', type: 'select', val: 0, u: 'uInv', options: ['Normal', 'Invertida'] },
       { k: 'c0', label: 'Shadow', type: 'color', val: '#1A1818', u: 'uC0' },
       { k: 'c1', label: 'Low', type: 'color', val: '#2A8A7A', u: 'uC1' },
       { k: 'c2', label: 'High', type: 'color', val: '#D4A040', u: 'uC2' },
       { k: 'c3', label: 'Light', type: 'color', val: '#F8F5F0', u: 'uC3' },
     ],
-    frag: `uniform float uMixAmt; uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
+    frag: `uniform float uMixAmt; uniform float uSteps; uniform float uInv; uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
 void main(){
   vec3 src = texture(uTex, vUv).rgb;
   float L = lum(src);
+  if (uInv > 0.5) L = 1.0 - L;
+  if (uSteps >= 2.0) L = floor(L * (uSteps - 1.0) + 0.5) / (uSteps - 1.0);
   vec3 g = mix(uC0, uC1, smoothstep(0.0, 0.38, L));
   g = mix(g, uC2, smoothstep(0.38, 0.72, L));
   g = mix(g, uC3, smoothstep(0.72, 1.0, L));
@@ -353,10 +392,12 @@ void main(){
     params: [
       { k: 'levels', label: 'Levels', min: 2, max: 10, val: 4, u: 'uLevels' },
       { k: 'contrast', label: 'Contrast', min: -100, max: 100, val: 15, u: 'uContrast' },
+      { k: 'gamma', label: 'Midtones', min: 40, max: 250, val: 100, u: 'uGamma' },
     ],
-    frag: `uniform float uLevels; uniform float uContrast;
+    frag: `uniform float uLevels; uniform float uContrast; uniform float uGamma;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
+  c = pow(clamp(c, 0.0, 1.0), vec3(100.0 / uGamma));
   float k = 1.0 + uContrast / 100.0 * 1.6;
   c = clamp((c - 0.5) * k + 0.5, 0.0, 1.0);
   float L = max(uLevels - 1.0, 1.0);
@@ -370,10 +411,12 @@ void main(){
       { k: 'slices', label: 'Slices', min: 0, max: 100, val: 30, u: 'uSlices' },
       { k: 'blocks', label: 'Blocks', min: 0, max: 100, val: 0, u: 'uBlocks' },
       { k: 'scan', label: 'Scanlines', min: 0, max: 100, val: 20, u: 'uScan' },
+      { k: 'noise', label: 'Noise', min: 0, max: 100, val: 0, u: 'uNoise' },
+      { k: 'speed', label: 'Speed', min: 1, max: 100, val: 35, u: 'uSpeed' },
     ],
-    frag: `uniform float uShift; uniform float uSlices; uniform float uBlocks; uniform float uScan;
+    frag: `uniform float uShift; uniform float uSlices; uniform float uBlocks; uniform float uScan; uniform float uNoise; uniform float uSpeed;
 void main(){
-  float t = floor(uTime * 10.0);
+  float t = floor(uTime * mix(2.0, 26.0, uSpeed / 100.0));
   vec2 uv = vUv;
   float band = floor(uv.y * 24.0);
   float h = hash2(vec2(band, t));
@@ -391,8 +434,9 @@ void main(){
   float g = texture(uTex, uv).g;
   float b = texture(uTex, clamp(uv - sh, 0.0, 1.0)).b;
   vec3 c = vec3(r, g, b);
+  c += (hash2(gl_FragCoord.xy + t * 17.3) - 0.5) * uNoise / 100.0 * 0.6;
   float s = uScan / 100.0 * 0.28 * (0.5 + 0.5 * sin(uv.y * uRes.y * 3.14159));
-  outC = vec4(c * (1.0 - s), 1.0);
+  outC = vec4(clamp(c * (1.0 - s), 0.0, 1.0), 1.0);
 }`,
   },
   wave: {
@@ -401,13 +445,22 @@ void main(){
       { k: 'amp', label: 'Amount', min: 0, max: 80, val: 18, u: 'uAmp' },
       { k: 'freq', label: 'Frequency', min: 1, max: 30, val: 6, u: 'uFreq' },
       { k: 'speed', label: 'Speed', min: 0, max: 100, val: 35, u: 'uSpeed' },
+      { k: 'dir', label: 'Direction', type: 'select', val: 2, u: 'uDir', options: ['Horizontal', 'Vertical', 'Ambas', 'Radial (ripple)'] },
     ],
-    frag: `uniform float uAmp; uniform float uFreq; uniform float uSpeed;
+    frag: `uniform float uAmp; uniform float uFreq; uniform float uSpeed; uniform float uDir;
 void main(){
   float ph = uTime * uSpeed / 18.0;
   vec2 uv = vUv;
-  uv.x += sin(uv.y * uFreq * 6.2832 + ph) * uAmp / uRes.x;
-  uv.y += cos(uv.x * uFreq * 4.2 + ph * 0.7) * uAmp * 0.4 / uRes.y;
+  if (uDir < 2.5) {
+    if (uDir < 0.5 || uDir > 1.5) uv.x += sin(uv.y * uFreq * 6.2832 + ph) * uAmp / uRes.x;
+    if (uDir > 0.5) uv.y += cos(uv.x * uFreq * 4.2 + ph * 0.7) * uAmp * 0.4 / uRes.y;
+  } else {
+    float asp = uRes.x / uRes.y;
+    vec2 d = (uv - 0.5) * vec2(asp, 1.0);
+    float r = length(d);
+    float off = sin(r * uFreq * 6.2832 - ph * 1.4) * uAmp / uRes.y;
+    uv += (r > 0.001 ? normalize(d) / vec2(asp, 1.0) : vec2(0.0)) * off;
+  }
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
@@ -415,16 +468,17 @@ void main(){
     name: 'ASCII', ico: '#1A6A5A', sym: 'Aa', anim: false, atlas: true,
     params: [
       { k: 'cell', label: 'Cell', min: 6, max: 32, val: 12, u: 'uCell' },
+      { k: 'contrast', label: 'Contrast', min: 50, max: 250, val: 100, u: 'uContrast' },
       { k: 'mode', label: 'Color', type: 'select', val: 2, u: 'uMode', options: ['Ink no papel', 'Cor da fonte', 'Terminal (mint)'] },
       { k: 'invert', label: 'Ramp', type: 'select', val: 0, u: 'uInvert', options: ['Escuro = denso', 'Claro = denso'] },
     ],
-    frag: `uniform sampler2D uAtlas; uniform float uCell; uniform float uMode; uniform float uInvert;
+    frag: `uniform sampler2D uAtlas; uniform float uCell; uniform float uContrast; uniform float uMode; uniform float uInvert;
 void main(){
   vec2 cellPx = vec2(max(uCell, 2.0));
   vec2 cellIdx = floor(gl_FragCoord.xy / cellPx);
   vec2 center = (cellIdx + 0.5) * cellPx / uRes;
   vec3 src = texture(uTex, clamp(center, 0.0, 1.0)).rgb;
-  float L = lum(src);
+  float L = clamp((lum(src) - 0.5) * (uContrast / 100.0) + 0.5, 0.0, 1.0);
   float dens = uInvert > 0.5 ? L : 1.0 - L;
   float g = floor(clamp(dens, 0.0, 0.999) * 11.0);
   vec2 inner = fract(gl_FragCoord.xy / cellPx);
@@ -440,51 +494,79 @@ void main(){
     params: [
       { k: 'cut', label: 'Threshold', min: 0, max: 100, val: 50, u: 'uCut' },
       { k: 'soft', label: 'Softness', min: 0, max: 60, val: 12, u: 'uSoft' },
+      { k: 'bands', label: 'Bands', min: 2, max: 6, val: 2, u: 'uBands' },
       { k: 'ink', label: 'Ink', type: 'color', val: '#1A1818', u: 'uInk' },
       { k: 'paper', label: 'Paper', type: 'color', val: '#F8F5F0', u: 'uPaper' },
     ],
-    frag: `uniform float uCut; uniform float uSoft; uniform vec3 uInk; uniform vec3 uPaper;
+    frag: `uniform float uCut; uniform float uSoft; uniform float uBands; uniform vec3 uInk; uniform vec3 uPaper;
 void main(){
   float L = lum(texture(uTex, vUv).rgb);
   float s = max(uSoft, 0.5) / 100.0;
   float m = smoothstep(uCut / 100.0 - s, uCut / 100.0 + s, L);
+  if (uBands > 2.5) m = floor(m * (uBands - 1.0) + 0.5) / (uBands - 1.0);
   outC = vec4(mix(uInk, uPaper, m), 1.0);
 }`,
   },
   blur: {
     name: 'Blur', ico: '#5A7A8A', sym: 'Bl', anim: false,
-    params: [{ k: 'radius', label: 'Radius', min: 0, max: 60, val: 12, u: 'uRadius' }],
-    frag: `uniform float uRadius;
+    params: [
+      { k: 'radius', label: 'Radius', min: 0, max: 60, val: 12, u: 'uRadius' },
+      { k: 'type', label: 'Type', type: 'select', val: 0, u: 'uType', options: ['Gaussian', 'Motion (direção)', 'Zoom (radial)'] },
+      { k: 'angle', label: 'Angle', min: 0, max: 360, val: 0, u: 'uBAngle' },
+    ],
+    frag: `uniform float uRadius; uniform float uType; uniform float uBAngle;
 void main(){
   vec2 px = uRadius / uRes;
-  vec3 acc = texture(uTex, vUv).rgb * 0.2;
-  const vec2 P[12] = vec2[12](
-    vec2(-0.94, -0.34), vec2(0.94, 0.34), vec2(-0.34, 0.94), vec2(0.34, -0.94),
-    vec2(-0.71, 0.71), vec2(0.71, -0.71), vec2(0.71, 0.71), vec2(-0.71, -0.71),
-    vec2(-0.45, 0.16), vec2(0.45, -0.16), vec2(0.16, 0.45), vec2(-0.16, -0.45));
-  for (int i = 0; i < 12; i++) {
-    acc += texture(uTex, clamp(vUv + P[i] * px, 0.0, 1.0)).rgb * (i < 8 ? 0.058 : 0.084);
+  vec3 acc;
+  if (uType < 0.5) {
+    acc = texture(uTex, vUv).rgb * 0.2;
+    const vec2 P[12] = vec2[12](
+      vec2(-0.94, -0.34), vec2(0.94, 0.34), vec2(-0.34, 0.94), vec2(0.34, -0.94),
+      vec2(-0.71, 0.71), vec2(0.71, -0.71), vec2(0.71, 0.71), vec2(-0.71, -0.71),
+      vec2(-0.45, 0.16), vec2(0.45, -0.16), vec2(0.16, 0.45), vec2(-0.16, -0.45));
+    for (int i = 0; i < 12; i++) {
+      acc += texture(uTex, clamp(vUv + P[i] * px, 0.0, 1.0)).rgb * (i < 8 ? 0.058 : 0.084);
+    }
+  } else if (uType < 1.5) {
+    float a = radians(uBAngle);
+    vec2 dir = vec2(cos(a), sin(a)) * px;
+    acc = vec3(0.0);
+    for (int i = -6; i <= 6; i++) {
+      acc += texture(uTex, clamp(vUv + dir * float(i) / 6.0, 0.0, 1.0)).rgb;
+    }
+    acc /= 13.0;
+  } else {
+    vec2 dir = (vUv - 0.5) * uRadius * 0.02;
+    acc = vec3(0.0);
+    for (int i = 0; i < 13; i++) {
+      acc += texture(uTex, clamp(vUv - dir * float(i) / 12.0, 0.0, 1.0)).rgb;
+    }
+    acc /= 13.0;
   }
   outC = vec4(acc, 1.0);
 }`,
   },
   kaleido: {
-    name: 'Kaleido', ico: '#8A2A6A', sym: 'Ka', anim: false,
+    name: 'Kaleido', ico: '#8A2A6A', sym: 'Ka', anim: true,
     params: [
       { k: 'seg', label: 'Segments', min: 2, max: 16, val: 6, u: 'uSeg' },
       { k: 'rot', label: 'Rotate', min: 0, max: 360, val: 0, u: 'uRot' },
+      { k: 'spin', label: 'Spin', min: 0, max: 100, val: 0, u: 'uSpin' },
       { k: 'zoom', label: 'Zoom', min: 50, max: 200, val: 100, u: 'uZoom' },
+      { k: 'cx', label: 'Center X', min: -50, max: 50, val: 0, u: 'uCx' },
+      { k: 'cy', label: 'Center Y', min: -50, max: 50, val: 0, u: 'uCy' },
     ],
-    frag: `uniform float uSeg; uniform float uRot; uniform float uZoom;
+    frag: `uniform float uSeg; uniform float uRot; uniform float uSpin; uniform float uZoom; uniform float uCx; uniform float uCy;
 void main(){
   float asp = uRes.x / uRes.y;
-  vec2 d = (vUv - 0.5) * vec2(asp, 1.0) * (100.0 / uZoom);
+  vec2 c0 = vec2(0.5 + uCx / 100.0, 0.5 + uCy / 100.0);
+  vec2 d = (vUv - c0) * vec2(asp, 1.0) * (100.0 / uZoom);
   float r = length(d);
-  float a = atan(d.y, d.x) + radians(uRot);
+  float a = atan(d.y, d.x) + radians(uRot) + uTime * uSpin / 100.0 * 1.4;
   float seg = 6.2831853 / max(uSeg, 1.0);
   a = mod(a, seg);
   a = abs(a - seg * 0.5);
-  vec2 uv = vec2(cos(a), sin(a)) * r / vec2(asp, 1.0) + 0.5;
+  vec2 uv = vec2(cos(a), sin(a)) * r / vec2(asp, 1.0) + c0;
   outC = texture(uTex, clamp(uv, 0.0, 1.0));
 }`,
   },
@@ -493,11 +575,13 @@ void main(){
     params: [
       { k: 'amt', label: 'Amount', min: 0, max: 100, val: 30, u: 'uAmt' },
       { k: 'edge', label: 'Edge Only', min: 0, max: 100, val: 60, u: 'uEdge' },
+      { k: 'dir', label: 'Fringe', type: 'select', val: 0, u: 'uFringe', options: ['Radial (lente)', 'Horizontal', 'Vertical'] },
     ],
-    frag: `uniform float uAmt; uniform float uEdge;
+    frag: `uniform float uAmt; uniform float uEdge; uniform float uFringe;
 void main(){
-  vec2 dir = vUv - 0.5;
-  float w = mix(1.0, smoothstep(0.0, 0.72, length(dir)), uEdge / 100.0);
+  vec2 rad = vUv - 0.5;
+  vec2 dir = uFringe < 0.5 ? rad : (uFringe < 1.5 ? vec2(0.4, 0.0) : vec2(0.0, 0.4));
+  float w = mix(1.0, smoothstep(0.0, 0.72, length(rad)), uEdge / 100.0);
   vec2 off = dir * uAmt * 0.0016 * w;
   float r = texture(uTex, clamp(vUv - off, 0.0, 1.0)).r;
   float g = texture(uTex, vUv).g;
@@ -512,10 +596,15 @@ void main(){
       { k: 'contrast', label: 'Contrast', min: -100, max: 100, val: 0, u: 'uContrast' },
       { k: 'sat', label: 'Saturation', min: 0, max: 200, val: 100, u: 'uSat' },
       { k: 'hue', label: 'Hue', min: -180, max: 180, val: 0, u: 'uHue' },
+      { k: 'temp', label: 'Temperature', min: -100, max: 100, val: 0, u: 'uTemp' },
+      { k: 'inv', label: 'Invert', type: 'select', val: 0, u: 'uInvC', options: ['Normal', 'Negativo'] },
     ],
-    frag: `uniform float uBright; uniform float uContrast; uniform float uSat; uniform float uHue;
+    frag: `uniform float uBright; uniform float uContrast; uniform float uSat; uniform float uHue; uniform float uTemp; uniform float uInvC;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
+  if (uInvC > 0.5) c = 1.0 - c;
+  c.r += uTemp / 100.0 * 0.09;
+  c.b -= uTemp / 100.0 * 0.09;
   c += uBright / 250.0;
   c = (c - 0.5) * (1.0 + uContrast / 100.0 * 1.4) + 0.5;
   float L = lum(c);
@@ -535,14 +624,22 @@ void main(){
     params: [
       { k: 'amt', label: 'Grain', min: 0, max: 100, val: 35, u: 'uAmt' },
       { k: 'size', label: 'Grain Size', min: 1, max: 5, val: 1, u: 'uGSize' },
+      { k: 'mode', label: 'Grain Type', type: 'select', val: 0, u: 'uCMode', options: ['Mono', 'Colorido'] },
+      { k: 'flicker', label: 'Flicker', min: 0, max: 100, val: 0, u: 'uFlick' },
       { k: 'vig', label: 'Vignette', min: 0, max: 100, val: 30, u: 'uVig' },
     ],
-    frag: `uniform float uAmt; uniform float uGSize; uniform float uVig;
+    frag: `uniform float uAmt; uniform float uGSize; uniform float uCMode; uniform float uFlick; uniform float uVig;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
   float step18 = floor(uTime * 18.0);
-  float n = hash2(floor(gl_FragCoord.xy / max(uGSize, 1.0)) + vec2(step18 * 977.0, step18 * 131.0));
-  c += (n - 0.5) * uAmt / 100.0 * 0.55;
+  vec2 gp = floor(gl_FragCoord.xy / max(uGSize, 1.0)) + vec2(step18 * 977.0, step18 * 131.0);
+  if (uCMode < 0.5) {
+    c += (hash2(gp) - 0.5) * uAmt / 100.0 * 0.55;
+  } else {
+    c += (vec3(hash2(gp), hash2(gp + 31.7), hash2(gp + 77.3)) - 0.5) * uAmt / 100.0 * 0.55;
+  }
+  // flicker de exposição steppado (cadência de projeção — DNA do overlay)
+  c *= 1.0 + (hash2(vec2(step18, 3.7)) - 0.5) * uFlick / 100.0 * 0.35;
   float d = distance(vUv, vec2(0.5));
   c *= 1.0 - uVig / 100.0 * smoothstep(0.35, 0.85, d);
   outC = vec4(clamp(c, 0.0, 1.0), 1.0);

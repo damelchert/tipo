@@ -173,6 +173,24 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - test-studio.mjs **34/34** (novos: 2º frame ativo com receita própria e render independente, 2 docks + 2 fios, drag move o frame, setActive, removeFrame limpa tudo). Screenshot: Riso e VHS lado a lado, cada um com seu chain — a mesa de trabalho.
 - **Próximo da fila 22.2**: mais efeitos/controles (halftone shapes, ascii-atlas, blur, kaleido), Blend node (2 frames → 1, começo do grafo real), persistência do espaço (IndexedDB).
 
+### 22.3d — STUDIO: profundidade nos 14 efeitos ("mais controles, mais modulável" — Daniel curtindo: "tá ficando bem legal ein")
+- **+22 controles novos**, todos viram alvo de behavior/♪ de graça:
+  - pixelate: **Shape** (Square/Dots/Diamond) + **Gap** + **Gap Color** (vira mosaico real);
+  - bayer: **Matrix 2×2/4×4/8×8** (const arrays GLSL, indexação dinâmica ok em ES 3.0) + **Bias**;
+  - halftone: ink **Custom** (color picker) + **Paper color** (era cream fixo);
+  - gradmap: **Posterize** (quantiza L pré-rampa) + **Direction invertida**;
+  - posterize: **Midtones** (gamma);
+  - glitch: **Noise** + **Speed** (taxa do stepping do uTime);
+  - wave: **Direction** (H/V/Ambas/**Radial ripple** com correção de aspect);
+  - grain: **Grain Type mono/colorido** (hash por canal) + **Flicker** (exposição steppada 18fps — DNA do overlay);
+  - ascii: **Contrast** pré-glifo;
+  - duotone: **Bands** 2-6 (multi-tone);
+  - blur: **Type Gaussian/Motion(ângulo)/Zoom(radial)** + **Angle**;
+  - kaleido: **Spin** (animado — virou anim:true) + **Center X/Y**;
+  - aberration: **Fringe Radial/Horizontal/Vertical**;
+  - adjust: **Temperature** + **Invert (negativo)**.
+- test-studio **55 checks ALL PASS** (batch novo: 6 controles novos mudam o render a partir do default).
+
 ### 22.3c — STUDIO: chrome por frame (REC no frame certo, ⧉ dup, rename, Delete) + BUG do recorder preso no 1º canvas
 - **BUG REAL atrás do "grava só o primeiro" do Daniel**: `TipoUI.toggleVisualRec` criava o TipoRecorder UMA vez amarrado no canvas da 1ª chamada — gravações seguintes capturavam o 1º frame pra sempre. Fix no ui.js: rebind `rec.canvas = canvas` quando não está gravando (vale pra qualquer página multi-canvas).
 - **Barra de ações POR FRAME** no label: ● REC (grava AQUELE frame — recFrame seta ativo + amarra recFrameId; gravando: ● vira ■, outline vermelho pulsante no frame, REC de outro frame é bloqueado com toast), ⤓ PNG (nome do arquivo leva o nome do frame), ⧉ duplicar (mesma fonte + stack+params copiados; imagem reusa o elemento, vídeo ganha player próprio na MESMA objectURL — releaseSource só revoga quando NENHUM outro frame usa a URL), ✕ remover. Botões 26×24px.

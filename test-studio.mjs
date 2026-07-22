@@ -178,6 +178,29 @@ await page.evaluate(() => {
 await page.waitForTimeout(250);
 const hs1 = await hash();
 check('halftone shape (Line) muda o render', hs0.h !== hs1.h);
+
+// batch de controles novos (22.3d): cada um muda o render a partir do default
+const NEW_PARAMS = [
+  ['wave', 'dir', 3],        // radial ripple
+  ['bayer', 'pattern', 2],   // 8×8
+  ['adjust', 'inv', 1],      // negativo
+  ['pixelate', 'gap', 40],   // mosaico com gap
+  ['duotone', 'bands', 5],   // multi-tone
+  ['blur', 'type', 2],       // zoom radial
+];
+for (const [fx, key, val] of NEW_PARAMS) {
+  await page.evaluate(([f]) => { clearStack(); addFx(f, true); }, [fx]);
+  await page.waitForTimeout(220);
+  const b0 = await hash();
+  await page.evaluate(([k, v]) => {
+    const el = document.getElementById(`st_${stack[0].uid}_${k}`);
+    el.value = v;
+    el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+  }, [key, val]);
+  await page.waitForTimeout(220);
+  const b1 = await hash();
+  check(`novo controle ${fx}.${key} muda o render`, b0.h !== b1.h);
+}
 const flx = await page.evaluate(() => {
   const b = document.querySelector('.frame .fl-x');
   return b && getComputedStyle(b).display !== 'none';
