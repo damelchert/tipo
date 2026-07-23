@@ -123,6 +123,58 @@ const ang = await page.evaluate(() => {
 check('lentes Angénieux no select', ang.opts.includes('optimo') && ang.opts.includes('anghr'), '');
 check('Optimo: French Look no prompt', ang.p1.includes('French look') && ang.p1.includes('focus fall-off'), '');
 check('25-250 vintage: aberração esférica + veiling glare', ang.p2.includes('spherical aberration') && ang.p2.includes('veiling glare'), '');
+// ---- auditoria 23/07: APERTURE_POINT, anti-cerveja, art direction, preview ----
+const ap = await page.evaluate(() => {
+  setProg('cinema');
+  document.getElementById('apertura').value = 'f16';
+  const p = buildFinalPrompt('a market street', 'a market street', null);
+  document.getElementById('apertura').value = 'auto';
+  setProg('commercial');
+  const hid = document.getElementById('secApertura').style.display === 'none';
+  setProg('cinema');
+  return { p, hid };
+});
+check('PROFUNDIDADE f/16 entra no prompt (deep focus)', ap.p.includes('deep focus, every plane'), '');
+check('PROFUNDIDADE some na publicidade (gênero comanda ótica)', ap.hid, '');
+const food = await page.evaluate(() => {
+  setProg('commercial');
+  state.genero = 'food'; document.getElementById('genero').value = 'food';
+  const p = buildFinalPrompt('a burger on a table', 'a burger on a table', null);
+  const sys = buildDiretorSystem();
+  setProg('cinema');
+  return { p, sys };
+});
+check('food SEM empurrador de líquido no prompt (anti-cerveja)', !food.p.includes('backlit translucency') && !food.p.includes('condensation'), '');
+check('Diretor food: proibido penetra ("NEVER add uninvited")', food.sys.includes('NEVER add uninvited dishes or beverages'), '');
+check('Diretor: cláusula ART DIRECTION IS A DELIVERABLE', await page.evaluate(() => buildDiretorSystem().includes('ART DIRECTION IS A DELIVERABLE') && buildDiretorSystem().includes('Never leave a style word as a bare adjective')), '');
+const refLock = await page.evaluate(() => {
+  state.refs = [{ dataUrl: 'data:image/jpeg;base64,AAAA', mime: 'image/jpeg' }];
+  const p = buildFinalPrompt('a sneaker on concrete', 'a sneaker on concrete', null);
+  state.refs = [];
+  return p;
+});
+check('refs: trava identidade, NÃO composição (anti-preguiça)', refLock.includes('NOT composition') && refLock.includes('do not be lazy'), '');
+const dirSticky = await page.evaluate(() => {
+  document.getElementById('diretor').checked = true; // o teste desligou no topo (mock)
+  const pr = snapshotParams(); pr.diretor = false;
+  applyParams(pr);
+  return document.getElementById('diretor').checked;
+});
+check('Diretor default ON e take antigo NÃO desliga mais', dirSticky === true, '');
+const pv = await page.evaluate(async () => {
+  document.getElementById('pvToggle').click();
+  document.getElementById('scene').value = 'beco com letreiros neon à noite';
+  document.getElementById('scene').dispatchEvent(new Event('input', { bubbles: true }));
+  await new Promise(r => setTimeout(r, 50));
+  return {
+    open: document.getElementById('pvBody').style.display !== 'none',
+    txt: document.getElementById('pvTxt').textContent,
+    warn: document.getElementById('pvWarn').textContent,
+  };
+});
+check('PREVIEW: painel abre e mostra o prompt final ao vivo', pv.open && pv.txt.includes('beco com letreiros neon') && pv.txt.includes('Kodak'), '');
+check('PREVIEW: avisa contradição (texto traz LUZ → seletor mudo)', pv.warn.includes('LUZ'), '');
+check('PREVIEW: mostra que o Diretor vai decupar', pv.warn.includes('Diretor ligado'), '');
 const legacy = await page.evaluate(() => {
   setProg('cinecom'); // take antigo da galeria
   return state.prog;
