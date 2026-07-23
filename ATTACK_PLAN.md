@@ -62,6 +62,11 @@ Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a
 - ✅ UX: geração não-bloqueante (tile na galeria), fila ≤4, galeria 1/3 com ações grandes + lightbox + export tipo_fotograma_data-hora; galeria persistente em IndexedDB (fix Safari: ArrayBuffer, não Blob).
 - **Estado consolidado na memoria.md (seção "FOTOGRAMA — ESTADO FINAL CONSOLIDADO").**
 - [ ] 21.7 — idioma da UI (hoje PT — entra na decisão de voz única da 20.2)
+#### 21.8 — MODO PUBLICITÁRIO v2 (Daniel 23/07) — ✅ (2026-07-23)
+- ✅ Publicidade Cinemática removida (fallback cinecom→commercial pra takes antigos); PUBLICIDADE reescrita com gramática contemporânea (saturação confiante, contraste com detalhe nas duas pontas, speculars controlados).
+- ✅ **GÊNEROS de campanha** (taxonomia ShotDeck): select na Estética (só na Publicidade) — Moda/Luxo, Automotivo, Comida & Bebida, Beleza/Fragrância, Esporte, Tech/Produto. Cada gênero = phrase por código + instintos do Diretor + persona de fotógrafo do segmento (`progDef()`).
+- ✅ **MUSIC VIDEO** como 3º programa (stock default CineStill 800T); paleta **"Cores da marca"**.
+- [ ] 21.8b — refinar seeds dos gêneros com a pesquisa NotebookLM do Daniel (brief pronto em `tipo_vault/knowledge/BRIEF_pesquisa_publicidade_notebooklm.md` — fichas visuais por gênero: lente, luz, contraste/saturação, paleta, textura, composição, refs). Candidatos a novos gêneros: Streetwear/Fast fashion, Travel/Airline.
 
 ### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)
 **Veredito da auditoria** (27 capturas: hero, home light/dark, catálogo, 14 ferramentas, timeline, mobile): Creativity 8.5 / Design 6.5 / Usability 7 / Content 8 — "produto premium vestindo partes de produtinho". Premium: hero, entradas curadas (riso/depth/morisawa/overlay), sistema do painel, palette. Produtinho: catálogo de cards genérico, dark mode quebrado (canvas cream + faixa exposta no field, cinzas divergentes na home), controles nativos do browser, header com nav ilegível, idioma misturado (hero PT × site EN × pílulas PT), pill "FREE" ambígua, dithering abre vazio + anatomia divergente, badge entry bagunçada.

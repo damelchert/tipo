@@ -158,6 +158,17 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ---
 
+## 2026-07-23
+
+### FOTOGRAMA — MODO PUBLICITÁRIO v2 (pedido do Daniel 23/07: "PUBLICIDADE não tá diferente do CINEMATICO, nomenclatura do PUBLICIDADE CINEMATICA estranha")
+- **Publicidade Cinemática (cinecom) MORREU** — pouca diferença real, nome ruim. `setProg` tem fallback: takes antigos da galeria com `prog:'cinecom'` caem em `commercial` (sem crash no ↺ reusar).
+- **PUBLICIDADE reescrita com a gramática do anúncio contemporâneo** (diagnóstico do Daniel: "hoje tem muito plano grande angular, saturação mais forte, contraste forte mas não enterrado nem estourado, campanhas levam a paleta da marca"): fixed = `bold confident saturation, punchy contrast holding detail in both shadows and highlights — never crushed, never blown out, sculpted key light, crisp controlled speculars, contemporary campaign image`.
+- **GÊNEROS DE CAMPANHA** (insight do print do ShotDeck dele: publicidade não é UM look, é uma família de looks por segmento de produto): tabela `GENEROS` + select `#genero` que só aparece no programa Publicidade. 7 gêneros: Geral, Moda/Luxo, Automotivo, Comida & Bebida, Beleza/Fragrância, Esporte, Tech/Produto. Cada um tem `phrase` (códigos do segmento, entra SEMPRE por código no prompt — styling/acabamento, sem cor pra não brigar com paleta/emulsão), `scene` (instintos "WHEN they fit" anexados ao P.scene do Diretor) e `persona` (o Diretor vira fotógrafo daquele segmento). Fusão via `progDef()` — todos os call sites (buildFinalPrompt, buildDiretorSystem) passam por ele. Snapshot/applyParams/legenda carregam o gênero.
+- **MUSIC VIDEO (clipe)** entrou como 3º programa no lugar do cinecom (ideia do Daniel vendo o gênero Music Video no ShotDeck): fixed com `expressive bold color, halation blooming on practicals, contrast pushed with attitude, a frame with swagger`; persona "music video DP known for bold visual worlds"; instintos: surreal staging, practicals coloridos, grupo coreografado, smoke/confetti/rain, eye contact. **Stock default = CineStill 800T** (halation, cara de clipe — tag `prog:'clipe'` no stock).
+- **Paleta nova "Cores da marca"** (`brand`): "the brand's signature colors carried through the whole frame — wardrobe, set, props and light echoing the product's own palette".
+- **Pesquisa NotebookLM**: o `cinema_de_marca.pdf` do Daniel é sobre brand FILM (storytelling/psicologia, vago pra prompt de still). Brief do que pesquisar (ficha técnica visual POR GÊNERO: lente/enquadramento, luz, contraste/saturação, paleta, textura, composição, 3 refs) salvo em `tipo_vault/knowledge/BRIEF_pesquisa_publicidade_notebooklm.md` — quando o .md da pesquisa chegar, fundir nos seeds da tabela GENEROS.
+- test-fotograma-prompt.mjs +11 checks (cinecom morto, select escondido/visível, frase do gênero no prompt, persona do Diretor, gramática nova, stock do clipe, fallback legacy, paleta brand). 4 suítes Fotograma ALL PASS.
+
 ## 2026-07-22
 
 ### RECORDER — travada inicial das gravações MORTA (bug real de todas as ferramentas, diagnóstico no MP4 do Daniel)

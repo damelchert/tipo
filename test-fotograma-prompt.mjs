@@ -49,6 +49,41 @@ await page.click('#promptCopy');
 await page.waitForTimeout(200);
 const clip = await page.evaluate(() => navigator.clipboard.readText());
 check('botão copiar joga no clipboard', clip === 'padaria com pombas ao amanhecer', `(${clip})`);
+// ---- MODO PUBLICITÁRIO v2: programas, gêneros, fallback cinecom ----
+const progs = await page.evaluate(() => Object.keys(PROGRAMAS));
+check('cinecom morreu, clipe nasceu', !progs.includes('cinecom') && progs.includes('clipe'), `(${progs})`);
+check('seletor de gênero escondido no Cinema', await page.evaluate(() =>
+  document.getElementById('generoRow').style.display === 'none'));
+const pub = await page.evaluate(() => {
+  setProg('commercial');
+  state.genero = 'moda';
+  document.getElementById('genero').value = 'moda';
+  return {
+    vis: document.getElementById('generoRow').style.display !== 'none',
+    prompt: buildFinalPrompt('a model on a rooftop', 'a model on a rooftop', null),
+    persona: buildDiretorSystem().slice(0, 90),
+  };
+});
+check('seletor de gênero aparece na Publicidade', pub.vis);
+check('gênero moda entra no prompt por código', pub.prompt.includes('luxury fashion campaign still'), '');
+check('nova gramática publicitária (contraste com detalhe)', pub.prompt.includes('never crushed, never blown out') && pub.prompt.includes('bold confident saturation'), '');
+check('Diretor assume persona do gênero', pub.persona.includes('luxury fashion campaign photographer'), `(${pub.persona})`);
+const mv = await page.evaluate(() => {
+  setProg('clipe');
+  return { stock: document.getElementById('stock').value, prompt: buildFinalPrompt('singer under rain', 'singer under rain', null) };
+});
+check('Music Video: stock default CineStill 800T', mv.stock === 'cine800', `(${mv.stock})`);
+check('Music Video: gramática própria no prompt', mv.prompt.includes('swagger') && !mv.prompt.includes('campaign still'), '');
+const legacy = await page.evaluate(() => {
+  setProg('cinecom'); // take antigo da galeria
+  return state.prog;
+});
+check('take antigo cinecom cai na Publicidade', legacy === 'commercial', `(${legacy})`);
+const brand = await page.evaluate(() => {
+  document.getElementById('paleta').value = 'brand';
+  return buildFinalPrompt('a soda can on ice', 'a soda can on ice', null);
+});
+check('paleta Cores da marca disponível', brand.includes("the brand's signature colors"), '');
 check('zero pageerrors', errs.length === 0, errs.join('|').slice(0,150));
 await browser.close();
 console.log(fails ? `${fails} FAIL` : 'ALL PASS');
