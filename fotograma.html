@@ -273,14 +273,18 @@ const PROGRAMAS = {
     fixed: 'ultra-fine film grain, bold confident saturation, punchy contrast holding detail in both shadows and highlights — never crushed, never blown out, sculpted key light, crisp controlled speculars, contemporary campaign image',
     mood: 'contemporary campaign energy',
     persona: 'You are a top advertising campaign photographer shooting on film.',
-    scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed. Campaign instincts to draw on WHEN they fit: tone-on-tone styling against a seamless backdrop, graphic color blocking, frozen kinetic energy, hero product clarity.',
+    // DNA do moodboard ShotDeck do Daniel (23/07): câmera perto e imersiva,
+    // carisma direto pra lente, cores de figurino/set coordenadas, humor candid
+    scene: 'Hero the subject; supporting props minimal and intentional; background clean with depth. Styling deliberate — every element art-directed, wardrobe and set colors deliberately coordinated like production design. Campaign instincts to draw on WHEN they fit: camera close and immersive among the action, subjects with direct-to-camera charisma, candid humor in a styled world, real skin with sweat and freckles, tone-on-tone styling against a seamless backdrop, graphic color blocking, frozen kinetic energy, hero product clarity.',
   },
   clipe: {
     nome: 'Music Video', sub: 'clipe · ousadia visual',
-    fixed: 'expressive bold color, living film grain, halation blooming on practical lights, contrast pushed with attitude, a frame with swagger',
+    fixed: 'expressive bold color, living film grain with analog artifacts, halation blooming on practical lights, contrast pushed with attitude — shadows allowed to crush, a frame with swagger',
     mood: 'music video energy',
     persona: 'You are a music video director of photography known for bold visual worlds.',
-    scene: 'Let the frame perform: charismatic subjects owning the camera, styling with intention, sets that feel designed or found-and-transformed. Instincts to draw on WHEN they fit: surreal staging in ordinary places, color-drenched practical lights, choreographed group energy, smoke or confetti or rain as punctuation, direct eye contact with the lens.',
+    // 'Programa decide' na lente vira anamórfica vintage (ficha Music Video da pesquisa)
+    lensAuto: 'vintage anamorphic glass, oval bokeh, subtle horizontal streak flare',
+    scene: 'Let the frame perform: charismatic subjects owning the camera, styling with intention, sets that feel designed or found-and-transformed. Instincts to draw on WHEN they fit: hallucinatory neon and volumetric haze with god rays, light leaks, surreal staging in ordinary places, color-drenched practical lights, choreographed group energy, smoke or confetti or rain as punctuation, controlled chaos with the subject defiantly off-center, direct eye contact with the lens.',
   },
 };
 
@@ -289,23 +293,26 @@ const PROGRAMAS = {
 // phrase = entra SEMPRE por código no prompt; scene = instintos do Diretor.
 const GENEROS = [
   { id: 'geral', label: 'Geral', hint: 'campanha ampla, sem segmento', phrase: '', scene: '', persona: '' },
-  { id: 'moda', label: 'Moda / Luxo', hint: 'fashion campaign — atitude editorial', phrase: 'luxury fashion campaign still, garments and accessories rendered with hero clarity, styling impeccable',
-    scene: 'Fashion instincts WHEN they fit: models with editorial attitude and angular poses, the house\'s garments styled head-to-toe, architectural or unexpected locations, jewelry and textiles catching light.',
+  { id: 'moda', label: 'Moda / Luxo', hint: 'fashion — flash direto, gleam dos materiais', phrase: 'luxury fashion campaign still, garments and accessories rendered with hero clarity, fabric sheen and the gleam of materials popping from the frame, styling impeccable',
+    scene: 'Fashion instincts WHEN they fit: models with editorial attitude and sculptural elevated poses that turn them into art, direct on-camera flash with crisp deliberate shadows, the house\'s garments styled head-to-toe, architectural or unexpected locations, extreme jewelry close-ups showing the cut of stones, silk and satin textures alive.',
     persona: 'You are a luxury fashion campaign photographer shooting on film.' },
-  { id: 'auto', label: 'Automotivo', hint: 'o carro como escultura', phrase: 'automotive campaign still, bodywork reflections drawn long and precise, stance planted',
-    scene: 'Automotive instincts WHEN they fit: the car as sculpture, wet asphalt doubling the world, sweeping empty roads or brutalist architecture, motion suggested by the environment.',
+  { id: 'street', label: 'Streetwear', hint: 'flash cru, grão pesado, lo-fi 2000s', phrase: 'streetwear campaign still, raw direct on-camera flash like a 2000s disposable camera, heavy film grain, punchy saturated color blocking',
+    scene: 'Streetwear instincts WHEN they fit: paparazzi energy, stolen-frame lo-fi chaos, neon and electric chartreuse accents, skate-shop color walls, light leaks and analog artifacts, attitude over polish.',
+    persona: 'You are a streetwear campaign photographer shooting raw flash on film.' },
+  { id: 'auto', label: 'Automotivo', hint: 'compressão tele, sombras baixas profundas', phrase: 'automotive campaign still, telephoto compression flattening the background, bodywork reflections drawn long and precise, stance planted, the lower shadows kept deep and mysterious',
+    scene: 'Automotive instincts WHEN they fit: the car as sculpture with reflections tracing its design lines, wet asphalt doubling the world, golden hour or soft overcast sky for honest paint, sweeping empty roads or brutalist architecture, three-quarter hero views, motion suggested by the environment.',
     persona: 'You are an automotive campaign photographer shooting on film.' },
-  { id: 'food', label: 'Comida & Bebida', hint: 'apetite — texturas vivas', phrase: 'food and beverage campaign still, appetite textures glistening, condensation and steam alive',
-    scene: 'Appetite instincts WHEN they fit: ingredients caught mid-motion, backlit translucency in liquids, crumbs and drips celebrated, surfaces that invite touch.',
+  { id: 'food', label: 'Comida & Bebida', hint: 'apetite — backlight, líquido congelado', phrase: 'food and beverage campaign still, appetite textures glistening, backlit translucency in liquids, condensation and steam alive, controlled blacks keeping every crumb readable',
+    scene: 'Appetite instincts WHEN they fit: high-speed frozen pours and splashes, ingredients suspended mid-air, crumbs and drips celebrated, earthy wood and stone surfaces grounding the freshness, bright high-key positivity.',
     persona: 'You are a food and beverage campaign photographer shooting on film.' },
-  { id: 'beleza', label: 'Beleza / Fragrância', hint: 'pele real, vidro e luz', phrase: 'beauty campaign still, skin real and luminous with visible pores, glass and liquid catching precise highlights',
-    scene: 'Beauty instincts WHEN they fit: sensual minimalism, near-macro intimacy on skin and product, water or silk as texture partners, one perfect gesture.',
+  { id: 'beleza', label: 'Beleza / Fragrância', hint: 'glass skin — transparência radical', phrase: 'beauty campaign still, glass-skin glow with visible pores — radical transparency, no digital smoothing, glass and liquid catching precise highlights',
+    scene: 'Beauty instincts WHEN they fit: soft wrapping high-key light, near-macro intimacy with selective focus on eyes or lips, water or silk as texture partners, sun-washed pastels or deep plum moods, one perfect gesture.',
     persona: 'You are a beauty and fragrance campaign photographer shooting on film.' },
-  { id: 'esporte', label: 'Esporte', hint: 'ação congelada, suor e garra', phrase: 'sports campaign still, peak action frozen sharp, sweat and grit celebrated',
-    scene: 'Athletic instincts WHEN they fit: muscle tension readable, chalk dust or water spray suspended, gladiator intensity in the eyes, arena scale or raw street courts.',
+  { id: 'esporte', label: 'Esporte', hint: 'rim light dura esculpindo, ação congelada', phrase: 'sports campaign still, peak action frozen sharp, hard rim light carving muscle definition, sweat and grit celebrated',
+    scene: 'Athletic instincts WHEN they fit: dynamic off-center energy suggesting speed, chalk dust or water spray suspended, gladiator intensity in the eyes, high-visibility color pops, arena scale or raw street courts.',
     persona: 'You are a sports campaign photographer shooting on film.' },
-  { id: 'tech', label: 'Tech / Produto', hint: 'minimalismo geométrico', phrase: 'product design campaign still, geometric minimalism, edge highlights precise, surfaces immaculate',
-    scene: 'Product instincts WHEN they fit: the object floating with confidence, gradient or seamless environments, one graphic shadow, material honesty — metal reads as metal, glass as glass.',
+  { id: 'tech', label: 'Tech / Produto', hint: 'dark mode, speculars afiados', phrase: 'product design campaign still, geometric minimalism, razor specular edge highlights on metal and glass, absolute clean blacks, surfaces immaculate',
+    scene: 'Product instincts WHEN they fit: the object floating with confidence in vast negative space, dark-mode backdrops with thermal gradients or bioluminescent neon accents, clinical symmetry, one graphic shadow, material honesty — metal reads as metal, glass as glass.',
     persona: 'You are a product campaign photographer shooting on film.' },
 ];
 
@@ -315,6 +322,8 @@ const LENTES = [
   { id: 'auto',    label: 'Programa decide',            phrase: '', hint: 'a ótica fica por conta do programa' },
   { id: 'cookes4', label: 'Cooke S4/i',                 phrase: 'Cooke S4 lens, silky warm sharpness', hint: '"the Cooke look" — nitidez com calor humano' },
   { id: 'panchro', label: 'Cooke Speed Panchro (vintage)', phrase: 'Cooke Speed Panchro, painterly low contrast, warm halation', hint: 'romance clássico, anos dourados' },
+  { id: 'optimo',  label: 'Angénieux Optimo',           phrase: 'Angénieux Optimo, creamy painterly French look, silky smooth focus fall-off, naturalistic golden warmth on skin, gentle amber flare', hint: 'o "French Look" — cremosa, romântica, pele dourada' },
+  { id: 'anghr',   label: 'Angénieux 25-250 (vintage)', phrase: 'vintage Angénieux 25-250 zoom, glowing spherical aberration, gentle veiling glare lifting the blacks and lowering contrast, ethereal hazy bokeh with a veil of the past', hint: 'véu do passado — glow etéreo, contraste baixo' },
   { id: 'superspeed', label: 'Zeiss Super Speed (vintage)', phrase: 'Zeiss Super Speed wide open, dreamy vintage glow', hint: 'aberta e sonhadora, alma setentista' },
   { id: 'master',  label: 'Zeiss Master Prime',         phrase: 'Zeiss Master Prime, surgically sharp and neutral', hint: 'precisão cirúrgica, moderna' },
   { id: 'primo',   label: 'Panavision Primo',           phrase: 'Panavision Primo, high contrast classic Hollywood rendering', hint: 'o gold standard do cinema americano' },
@@ -738,7 +747,8 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   const bits = [
     dir.framing ? '' : currentFraming().phrase,
     (dir.light || mood) ? '' : currentLuz().phrase,
-    lens.phrase,
+    // 'Programa decide' na lente deixa o programa opinar (ex.: clipe → anamórfica)
+    lens.phrase || P.lensAuto || '',
     // gênero de campanha: códigos do segmento (styling/acabamento, não cor)
     P.genrePhrase || '',
     mood ? '' : stock.phrase,

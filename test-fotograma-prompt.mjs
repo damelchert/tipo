@@ -74,6 +74,27 @@ const mv = await page.evaluate(() => {
 });
 check('Music Video: stock default CineStill 800T', mv.stock === 'cine800', `(${mv.stock})`);
 check('Music Video: gramática própria no prompt', mv.prompt.includes('swagger') && !mv.prompt.includes('campaign still'), '');
+check('Music Video: lente "Programa decide" vira anamórfica vintage', mv.prompt.includes('vintage anamorphic glass'), '');
+// ---- refinos da pesquisa (23/07): streetwear, Angénieux, fichas ----
+const street = await page.evaluate(() => {
+  setProg('commercial');
+  state.genero = 'street';
+  document.getElementById('genero').value = 'street';
+  return buildFinalPrompt('kids on a skate ramp', 'kids on a skate ramp', null);
+});
+check('gênero Streetwear (flash cru 2000s)', street.includes('disposable camera'), '');
+const ang = await page.evaluate(() => {
+  const opts = [...document.getElementById('lente').options].map(o => o.value);
+  document.getElementById('lente').value = 'optimo';
+  const p1 = buildFinalPrompt('portrait by a window', 'portrait by a window', null);
+  document.getElementById('lente').value = 'anghr';
+  const p2 = buildFinalPrompt('portrait by a window', 'portrait by a window', null);
+  document.getElementById('lente').value = 'auto';
+  return { opts, p1, p2 };
+});
+check('lentes Angénieux no select', ang.opts.includes('optimo') && ang.opts.includes('anghr'), '');
+check('Optimo: French Look no prompt', ang.p1.includes('French look') && ang.p1.includes('focus fall-off'), '');
+check('25-250 vintage: aberração esférica + veiling glare', ang.p2.includes('spherical aberration') && ang.p2.includes('veiling glare'), '');
 const legacy = await page.evaluate(() => {
   setProg('cinecom'); // take antigo da galeria
   return state.prog;
