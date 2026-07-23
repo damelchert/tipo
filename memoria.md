@@ -177,6 +177,13 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 - **Lentes Angénieux** (pesquisa dedicada do Daniel): **Optimo** ('French Look' — creamy painterly, silky focus fall-off, golden skin warmth, amber flare) e **25-250 vintage** (spherical aberration glow, veiling glare levantando os pretos/baixando contraste, 'veil of the past'). LENTES 12→14.
 - test-fotograma-prompt +6 checks (lensAuto anamórfica, streetwear, Angénieux no select + frases). 4 suítes ALL PASS.
 
+### FOTOGRAMA — PUBLICIDADE ISOLA os presets (print do Daniel 23/07: Neon mista → golden hour)
+- **Diagnóstico do print** (Publicidade+Streetwear, Primo, Neon mista, 50D, Muted → veio golden hour de janela): briga em 3 camadas. (1) a cena dele terminava em **"dia"** → RX_LIGHT detectou luz no texto e a arbitragem "texto é lei" CALOU o seletor Neon (funcionou como projetado, mas imprevisível pra ele); (2) mesmo sem isso, 4 vozes de luz/grade no prompt (gênero manda flash-on, 50D puxa luz plena, Primo puxa Hollywood contrast, seletor manda neon) — o modelo escolhe a mais coerente e o resto morre; (3) o grade publicitário (P.fixed) diluído no meio da guerra → pós não imprimia.
+- **Fix (ideia do Daniel): na PUBLICIDADE os seletores Lente/Luz/Film Stock/Paleta SOMEM** (UI `#secLente/#secLuz/#secStock/#secPaleta` display:none via setProg + `#adNote` explica: "o gênero comanda lente, luz e pós — quer luz específica? escreve na cena"). No buildFinalPrompt, flag `ad`: luz/lente/stock/paleta/texture-override NÃO entram — o GÊNERO é a única voz de ótica/luz (as fichas já carregam flash-on, tele compression, backlight, rim light...).
+- **Pós agora imprime**: commercial.fixed reescrito como voz de pós dominante — `graded like a big-budget campaign in post: ... immaculate commercial retouch finish`. Legenda em publicidade mostra "grade de campanha" (não mais o stock morto).
+- Enquadramento/AR/resolução/modelo FICAM (framing dele funcionou — Extreme Close saiu certo). Paleta "Cores da marca" só existe fora da publicidade agora (se fizer falta lá, candidato: toggle dedicado no gênero).
+- test-fotograma-prompt +4 checks (cenário do print: neon/Kodak/Panavision/muted FORA do prompt em ad; grade comanda; seções somem + nota; cinema volta tudo). 4 suítes ALL PASS.
+
 ## 2026-07-22
 
 ### RECORDER — travada inicial das gravações MORTA (bug real de todas as ferramentas, diagnóstico no MP4 do Daniel)

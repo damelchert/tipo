@@ -83,6 +83,34 @@ const street = await page.evaluate(() => {
   return buildFinalPrompt('kids on a skate ramp', 'kids on a skate ramp', null);
 });
 check('gênero Streetwear (flash cru 2000s)', street.includes('disposable camera'), '');
+// ---- PUBLICIDADE ISOLA os presets (cenário do print do Daniel 23/07:
+// Neon mista + 50D + Primo + Muted brigando → golden hour aleatória) ----
+const adIso = await page.evaluate(() => {
+  setProg('commercial');
+  state.genero = 'street';
+  document.getElementById('luz').value = 'neonmix';
+  document.getElementById('stock').value = 'v50d';
+  document.getElementById('lente').value = 'primo';
+  document.getElementById('paleta').value = 'muted';
+  const p = buildFinalPrompt('a man with dreads in a japanese restaurant', 'a man with dreads in a japanese restaurant', null);
+  return {
+    p,
+    hidden: ['secLente', 'secLuz', 'secStock', 'secPaleta'].every(id => document.getElementById(id).style.display === 'none'),
+    note: document.getElementById('adNote').style.display !== 'none',
+  };
+});
+check('publicidade: luz/stock/lente/paleta FORA do prompt',
+  !adIso.p.includes('neon signage') && !adIso.p.includes('Kodak') && !adIso.p.includes('Panavision') && !adIso.p.includes('desaturated muted'), '');
+check('publicidade: grade de campanha comanda o pós', adIso.p.includes('graded like a big-budget campaign in post'), '');
+check('publicidade: seções somem da UI + nota explica', adIso.hidden && adIso.note, '');
+const back = await page.evaluate(() => {
+  setProg('cinema');
+  return {
+    vis: ['secLente', 'secLuz', 'secStock', 'secPaleta'].every(id => document.getElementById(id).style.display !== 'none'),
+    p: buildFinalPrompt('a man in a bar', 'a man in a bar', null),
+  };
+});
+check('cinema: seções voltam e presets voltam ao prompt', back.vis && back.p.includes('Panavision') && back.p.includes('neon signage'), '');
 const ang = await page.evaluate(() => {
   const opts = [...document.getElementById('lente').options].map(o => o.value);
   document.getElementById('lente').value = 'optimo';
@@ -101,6 +129,7 @@ const legacy = await page.evaluate(() => {
 });
 check('take antigo cinecom cai na Publicidade', legacy === 'commercial', `(${legacy})`);
 const brand = await page.evaluate(() => {
+  setProg('cinema'); // paleta só existe fora da publicidade
   document.getElementById('paleta').value = 'brand';
   return buildFinalPrompt('a soda can on ice', 'a soda can on ice', null);
 });

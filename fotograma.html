@@ -158,7 +158,7 @@
     <select id="model"><option value="">conecte a chave &mdash; &#128273; no canto superior direito</option></select>
   </div>
 
-  <div class="section">
+  <div class="section" id="secLente">
     <div class="section-title">Lente</div>
     <select id="lente"></select>
     <div class="stock-hint" id="lenteHint"></div>
@@ -169,20 +169,24 @@
     <div class="chip-grid" id="framingChips"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="secLuz">
     <div class="section-title">Luz</div>
     <select id="luz"></select>
   </div>
 
-  <div class="section">
+  <div class="section" id="secStock">
     <div class="section-title">Film Stock</div>
     <select id="stock"></select>
     <div class="stock-hint" id="stockHint"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="secPaleta">
     <div class="section-title">Paleta</div>
     <select id="paleta"></select>
+  </div>
+
+  <div class="section" id="adNote" style="display:none;">
+    <div class="stock-hint" style="margin-top:0;">na publicidade o <b>gênero</b> comanda lente, luz e p&oacute;s &mdash; quer uma luz espec&iacute;fica? escreve na cena (teu texto &eacute; lei)</div>
   </div>
 
   <div class="section section-divider">
@@ -270,7 +274,7 @@ const PROGRAMAS = {
     nome: 'Publicidade', sub: 'campanha contemporânea',
     // a gramática do anúncio de HOJE: saturação confiante, contraste forte
     // mas com detalhe preservado nas duas pontas (nem enterrado nem estourado)
-    fixed: 'ultra-fine film grain, bold confident saturation, punchy contrast holding detail in both shadows and highlights — never crushed, never blown out, sculpted key light, crisp controlled speculars, contemporary campaign image',
+    fixed: 'graded like a big-budget campaign in post: bold confident saturation, punchy contrast holding detail in both shadows and highlights — never crushed, never blown out, sculpted key light, crisp controlled speculars, ultra-fine film grain, immaculate commercial retouch finish',
     mood: 'contemporary campaign energy',
     persona: 'You are a top advertising campaign photographer shooting on film.',
     // DNA do moodboard ShotDeck do Daniel (23/07): câmera perto e imersiva,
@@ -744,18 +748,23 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   // EMULSÃO ATIVA = ELA É A ÚNICA VOZ TONAL: luz, film stock, paleta e o
   // grading da estética (P.fixed tem 'warm shadows' etc) SE CALAM — a spec
   // da referência manda em cor/luz/textura. Lente fica (ótica, não cor).
+  // PUBLICIDADE = lente/luz/stock/paleta NÃO EXISTEM (seletores brigavam
+  // entre si e com o gênero — Daniel 23/07): o GÊNERO é a única voz de
+  // ótica/luz e o grade de campanha comanda o pós. Luz específica? Na cena.
+  const ad = state.prog === 'commercial';
   const bits = [
     dir.framing ? '' : currentFraming().phrase,
-    (dir.light || mood) ? '' : currentLuz().phrase,
+    (dir.light || mood || ad) ? '' : currentLuz().phrase,
     // 'Programa decide' na lente deixa o programa opinar (ex.: clipe → anamórfica)
-    lens.phrase || P.lensAuto || '',
-    // gênero de campanha: códigos do segmento (styling/acabamento, não cor)
+    ad ? '' : (lens.phrase || P.lensAuto || ''),
+    // gênero de campanha: códigos do segmento — na publicidade ele carrega
+    // luz e ótica também (flash-on, tele compression, backlight...)
     P.genrePhrase || '',
-    mood ? '' : stock.phrase,
-    mood ? '' : (stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
+    (mood || ad) ? '' : stock.phrase,
+    (mood || ad) ? '' : (stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
                           : currentPaleta().phrase),
     // texture override (hack Higgsfield): o stock empresta SÓ grão/textura
-    (mood || stock.bw) ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
+    (mood || ad || stock.bw) ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
     mood ? 'honest photographic texture, no digital smoothing' : P.fixed,
     mood ? '' : P.mood,
     'true real-world scale and proportions',
@@ -1085,7 +1094,7 @@ async function revealJob(job) {
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${(PROGRAMAS[state.prog] || PROGRAMAS.cinema).nome.toLowerCase()}${state.prog === 'commercial' && state.genero !== 'geral' ? ' · ' + (GENEROS.find(g => g.id === state.genero) || {}).label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : currentStock().label.toLowerCase()} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${(PROGRAMAS[state.prog] || PROGRAMAS.cinema).nome.toLowerCase()}${state.prog === 'commercial' && state.genero !== 'geral' ? ' · ' + (GENEROS.find(g => g.id === state.genero) || {}).label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : (state.prog === 'commercial' ? 'grade de campanha' : currentStock().label.toLowerCase())} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     showPrompt(job.scene);
     $('dlBtn').disabled = false;
@@ -1332,7 +1341,12 @@ function setProg(p) {
   if (!PROGRAMAS[p]) p = (p === 'cinecom') ? 'commercial' : 'cinema';
   state.prog = p;
   document.querySelectorAll('.prog-btn').forEach(b => b.classList.toggle('on', b.dataset.prog === p));
-  $('generoRow').style.display = p === 'commercial' ? '' : 'none';
+  const ad = p === 'commercial';
+  $('generoRow').style.display = ad ? '' : 'none';
+  // PUBLICIDADE: lente/luz/stock/paleta SOMEM — o gênero é a única voz de
+  // ótica, luz e pós (Daniel 23/07: "os presets tão brigando entre si")
+  ['secLente', 'secLuz', 'secStock', 'secPaleta'].forEach(id => { $(id).style.display = ad ? 'none' : ''; });
+  $('adNote').style.display = ad ? '' : 'none';
   // stock SUGERIDO pela estética (só um default — o usuário manda)
   const def = STOCKS.find(s => s.prog === p);
   if (def) { $('stock').value = def.id; syncStockHint(); }
