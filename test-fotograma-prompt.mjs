@@ -186,6 +186,46 @@ const brand = await page.evaluate(() => {
   return buildFinalPrompt('a soda can on ice', 'a soda can on ice', null);
 });
 check('paleta Cores da marca disponível', brand.includes("the brand's signature colors"), '');
+// ---- MODO FICHA: campo preenchido substitui o seletor ----
+const ficha = await page.evaluate(() => {
+  setProg('cinema');
+  document.getElementById('fichaFocal').value = '85mm at chest height, half body';
+  document.getElementById('fichaLuz').value = 'hard side softbox with a blue kicker';
+  document.getElementById('fichaTextura').value = 'dirty 16mm grain, strong halation';
+  document.getElementById('fichaTextura').dispatchEvent(new Event('input', { bubbles: true }));
+  const p1 = buildFinalPrompt('a chef plating pasta', 'a chef plating pasta', null);
+  setProg('commercial'); // ficha vence até na publicidade
+  const p2 = buildFinalPrompt('a chef plating pasta', 'a chef plating pasta', null);
+  const snap = snapshotParams();
+  setProg('cinema');
+  return { p1, p2, snapN: Object.values(snap.ficha).filter(Boolean).length, badge: document.getElementById('fichaToggle').textContent };
+});
+check('ficha: focal/luz/textura substituem seletores', ficha.p1.includes('85mm at chest height') && ficha.p1.includes('blue kicker') && ficha.p1.includes('dirty 16mm grain'), '');
+check('ficha: seletores substituídos SOMEM (sem eye level/Kodak/texture-override)', !ficha.p1.includes('honest eye level') && !ficha.p1.includes('Kodak') && !ficha.p1.includes('applied to luminance only'), '');
+check('ficha: vence até na publicidade', ficha.p2.includes('blue kicker') && ficha.p2.includes('graded like a big-budget campaign'), '');
+check('ficha: snapshot leva os campos + badge conta', ficha.snapN === 3 && ficha.badge.includes('✍3'), `(${ficha.badge})`);
+const fichaClear = await page.evaluate(() => {
+  const pr = snapshotParams(); pr.ficha = {};
+  applyParams(pr);
+  return fichaCount() === 0 && buildFinalPrompt('a chef plating pasta', 'a chef plating pasta', null).includes('Kodak');
+});
+check('ficha: applyParams limpa e seletores voltam', fichaClear, '');
+// ---- DRAG da galeria pra REFERÊNCIAS e EMULSÃO ----
+const drag = await page.evaluate(async () => {
+  const t = state.takes[0];
+  const mk = () => { const dt = new DataTransfer(); dt.setData('application/x-tipo-take', t.id); return dt; };
+  document.getElementById('refsSection').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: mk() }));
+  await new Promise(r => setTimeout(r, 400));
+  const refsOk = state.refs.length === 1 && state.refs[0].dataUrl.startsWith('data:image/jpeg');
+  document.getElementById('emulsaoSection').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: mk() }));
+  await new Promise(r => setTimeout(r, 600));
+  const moodOk = !!state.mood && !!state.mood.full && document.getElementById('moodBox').style.display !== 'none';
+  const draggable = document.querySelector('#gallery .take img').draggable === true;
+  return { refsOk, moodOk, draggable };
+});
+check('take da galeria é arrastável', drag.draggable, '');
+check('drop do take em REFERÊNCIAS vira ref', drag.refsOk, '');
+check('drop do take em EMULSÃO vira mood', drag.moodOk, '');
 check('zero pageerrors', errs.length === 0, errs.join('|').slice(0,150));
 await browser.close();
 console.log(fails ? `${fails} FAIL` : 'ALL PASS');

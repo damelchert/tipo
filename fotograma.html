@@ -66,6 +66,11 @@
   .ref-thumb button { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--red, #CC4840); color: #fff; font-size: 9px; line-height: 1; cursor: pointer; }
 
   select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
+  /* ficha técnica: campos livres por ponto */
+  .ficha-grid { display: flex; flex-direction: column; gap: 7px; }
+  .ficha-grid label { display: block; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-ui); }
+  .ficha-grid input { width: 100%; margin-top: 3px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 10.5px; font-family: var(--font-ui); border-radius: 4px; box-sizing: border-box; }
+  .ficha-grid input:not(:placeholder-shown) { border-color: var(--accent); }
   .stock-hint { font-size: 9px; color: var(--text-5); margin-top: 4px; min-height: 12px; }
 
   #genBtn { width: 100%; padding: 12px; font-size: 12px; letter-spacing: 2px; }
@@ -192,6 +197,21 @@
 
   <div class="section" id="adNote" style="display:none;">
     <div class="stock-hint" style="margin-top:0;">na publicidade o <b>gênero</b> comanda lente, luz e p&oacute;s &mdash; quer uma luz espec&iacute;fica? escreve na cena (teu texto &eacute; lei)</div>
+  </div>
+
+  <div class="section" id="secFicha">
+    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">Ficha t&eacute;cnica <button type="button" id="fichaToggle" style="background:none; border:1px solid var(--border-2); border-radius:4px; color:var(--text-3); font-family:var(--font-ui); font-size:9px; padding:2px 8px; cursor:pointer;">abrir</button></div>
+    <div id="fichaBody" style="display:none;">
+      <div class="stock-hint" style="margin:0 0 8px;">escreve &agrave; m&atilde;o o ponto que quiser &mdash; preenchido SUBSTITUI o seletor correspondente; vazio, o programa decide (funciona em qualquer est&eacute;tica, inclusive publicidade)</div>
+      <div class="ficha-grid">
+        <label>dist&acirc;ncia / focal<input type="text" id="fichaFocal" placeholder="ex: 85mm, meio corpo, c&acirc;mera na altura do peito" spellcheck="false"></label>
+        <label>&oacute;tica / lente<input type="text" id="fichaOtica" placeholder="ex: Petzval swirl, bordas derretendo" spellcheck="false"></label>
+        <label>profundidade<input type="text" id="fichaDof" placeholder="ex: f/1.4, s&oacute; os olhos em foco" spellcheck="false"></label>
+        <label>luz<input type="text" id="fichaLuz" placeholder="ex: softbox lateral dura + kicker azul" spellcheck="false"></label>
+        <label>textura / gr&atilde;o<input type="text" id="fichaTextura" placeholder="ex: gr&atilde;o 16mm sujo, halation forte" spellcheck="false"></label>
+        <label>grade / cor<input type="text" id="fichaGrade" placeholder="ex: bleach bypass, verdes &aacute;cidos" spellcheck="false"></label>
+      </div>
+    </div>
   </div>
 
   <div class="section" id="secPreview">
@@ -684,6 +704,14 @@ function currentLuz() { return LUZES.find(l => l.id === $('luz').value) || LUZES
 function currentLente() { return LENTES.find(l => l.id === $('lente').value) || LENTES[0]; }
 function currentApertura() { return APERTURAS.find(a => a.id === $('apertura').value) || APERTURAS[0]; }
 
+// FICHA TÉCNICA: campo preenchido à mão SUBSTITUI o seletor correspondente
+// (vale em toda estética — é a mão do usuário, mais forte que gênero/emulsão)
+function fichaVals() {
+  const v = id => (($(id) && $(id).value) || '').trim();
+  return { focal: v('fichaFocal'), otica: v('fichaOtica'), dof: v('fichaDof'), luz: v('fichaLuz'), textura: v('fichaTextura'), grade: v('fichaGrade') };
+}
+function fichaCount(f) { return Object.values(f || fichaVals()).filter(Boolean).length; }
+
 function cleanRule() {
   return $('cleanImg').checked ? ' No overlaid text or graphics, no watermarks, no film borders or frame edges; branding may appear only where it naturally lives on products in the scene.' : '';
 }
@@ -779,21 +807,22 @@ function buildFinalPrompt(sceneText, rawScene, job) {
   // entre si e com o gênero — Daniel 23/07): o GÊNERO é a única voz de
   // ótica/luz e o grade de campanha comanda o pós. Luz específica? Na cena.
   const ad = state.prog === 'commercial';
+  const F = fichaVals(); // ficha preenchida vence o seletor (e o modo publicidade)
   const bits = [
-    dir.framing ? '' : currentFraming().phrase,
-    (dir.light || mood || ad) ? '' : currentLuz().phrase,
+    F.focal || (dir.framing ? '' : currentFraming().phrase),
+    F.luz || ((dir.light || mood || ad) ? '' : currentLuz().phrase),
     // 'Programa decide' na lente deixa o programa opinar (ex.: clipe → anamórfica)
-    ad ? '' : (lens.phrase || P.lensAuto || ''),
+    F.otica || (ad ? '' : (lens.phrase || P.lensAuto || '')),
     // APERTURE_POINT: profundidade de campo (ótica pura — emulsão não cala)
-    ad ? '' : currentApertura().phrase,
+    F.dof || (ad ? '' : currentApertura().phrase),
     // gênero de campanha: códigos do segmento — na publicidade ele carrega
     // luz e ótica também (flash-on, tele compression, backlight...)
     P.genrePhrase || '',
-    (mood || ad) ? '' : stock.phrase,
-    (mood || ad) ? '' : (stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
-                          : currentPaleta().phrase),
+    F.textura || ((mood || ad) ? '' : stock.phrase),
+    F.grade || ((mood || ad) ? '' : (stock.bw ? 'black and white photography, monochromatic palette, no color anywhere'
+                          : currentPaleta().phrase)),
     // texture override (hack Higgsfield): o stock empresta SÓ grão/textura
-    (mood || ad || stock.bw) ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
+    (mood || ad || stock.bw || F.textura) ? '' : 'film stock texture and grain applied to luminance only, color stays true to the palette direction',
     mood ? 'honest photographic texture, no digital smoothing' : P.fixed,
     mood ? '' : P.mood,
     'true real-world scale and proportions',
@@ -999,6 +1028,7 @@ function snapshotParams() {
     // snapshot das imagens do CLIQUE — job na fila não muda se o usuário
     // trocar refs/emulsão enquanto espera (não persiste no IDB: ver addTake)
     refs: state.refs.slice(), mood: state.mood, moodStrength: state.moodStrength,
+    ficha: fichaVals(),
   };
 }
 
@@ -1017,6 +1047,11 @@ function applyParams(pr) {
   $('luz').value = pr.luz;
   $('lente').value = pr.lente; syncLenteHint();
   $('apertura').value = pr.apertura || 'auto';
+  const fi = pr.ficha || {};
+  $('fichaFocal').value = fi.focal || ''; $('fichaOtica').value = fi.otica || '';
+  $('fichaDof').value = fi.dof || ''; $('fichaLuz').value = fi.luz || '';
+  $('fichaTextura').value = fi.textura || ''; $('fichaGrade').value = fi.grade || '';
+  syncFichaBadge();
   $('cleanImg').checked = pr.clean;
   state.moodStrength = pr.moodStrength ?? 100;
   $('moodStrength').value = state.moodStrength;
@@ -1126,7 +1161,7 @@ async function revealJob(job) {
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
-    const cap = `${(PROGRAMAS[state.prog] || PROGRAMAS.cinema).nome.toLowerCase()}${state.prog === 'commercial' && state.genero !== 'geral' ? ' · ' + (GENEROS.find(g => g.id === state.genero) || {}).label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : (state.prog === 'commercial' ? 'grade de campanha' : currentStock().label.toLowerCase())} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${(PROGRAMAS[state.prog] || PROGRAMAS.cinema).nome.toLowerCase()}${state.prog === 'commercial' && state.genero !== 'geral' ? ' · ' + (GENEROS.find(g => g.id === state.genero) || {}).label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : (state.prog === 'commercial' ? 'grade de campanha' : currentStock().label.toLowerCase())} · ${state.sceneOverrides.framing ? 'enquadramento do texto' : currentFraming().label.toLowerCase()} · ${state.ar} · ${state.lastModelLabel || ''}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${fichaCount(job.ficha) ? ' · ficha ✍' + fichaCount(job.ficha) : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     showPrompt(job.scene);
     $('dlBtn').disabled = false;
@@ -1270,6 +1305,13 @@ function renderGallery(selIdx = -1) {
       $('dlBtn').disabled = false;
       showPrompt(t.params && t.params.scene);
       renderGallery(i);
+    });
+    // arrastar o take pra REFERÊNCIAS ou EMULSÃO (Daniel 23/07)
+    const im = d.querySelector('img');
+    im.draggable = true;
+    im.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('application/x-tipo-take', t.id);
+      e.dataTransfer.effectAllowed = 'copy';
     });
     d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; idbPut({ id: t.id, caption: t.caption, params: t.params, liked: t.liked, ts: t.ts, blob: t.blob }); renderGallery(selIdx); });
     d.querySelector('[data-a="dl"]').addEventListener('click', () => {
@@ -1419,9 +1461,24 @@ function refreshPreview() {
   if (dir.light && !ad && !moodCmd) w.push('⚠ teu texto traz LUZ → seletor Luz mudo (texto é lei)');
   if (moodCmd) w.push('🧪 emulsão no comando → cor/luz/stock/paleta vêm da referência');
   if (ad) w.push('publicidade: o GÊNERO comanda ótica e luz · grade de campanha no pós');
+  const fN = fichaCount();
+  if (fN) w.push(`✍ ficha técnica: ${fN} campo${fN > 1 ? 's' : ''} no comando (substitui seletor — vale até na publicidade)`);
   if ($('diretor').checked) w.push('✨ Diretor ligado: a CENA acima será decupada em inglês rico na revelação — todas as tags entram idênticas');
   $('pvWarn').innerHTML = w.join('<br>');
 }
+
+// ficha técnica: toggle + badge com contagem de campos ativos
+function syncFichaBadge() {
+  const open = $('fichaBody').style.display !== 'none';
+  const n = fichaCount();
+  $('fichaToggle').textContent = open ? 'fechar' : (n ? `abrir ✍${n}` : 'abrir');
+}
+$('fichaToggle').addEventListener('click', () => {
+  const open = $('fichaBody').style.display === 'none';
+  $('fichaBody').style.display = open ? '' : 'none';
+  syncFichaBadge();
+});
+$('fichaBody').addEventListener('input', syncFichaBadge);
 $('pvToggle').addEventListener('click', () => {
   const open = $('pvBody').style.display === 'none';
   $('pvBody').style.display = open ? '' : 'none';
@@ -1432,7 +1489,7 @@ $('pvCopy').addEventListener('click', () => {
   navigator.clipboard.writeText($('pvTxt').textContent).then(() => TipoUI.showToast('prompt copiado'));
 });
 // qualquer input/seleção/chip re-renderiza (barato: early-return se fechado)
-document.addEventListener('input', refreshPreview, true);
+document.addEventListener('input', () => { refreshPreview(); syncFichaBadge(); }, true);
 document.addEventListener('change', refreshPreview, true);
 document.addEventListener('click', () => setTimeout(refreshPreview, 0), true);
 
@@ -1482,13 +1539,23 @@ $('refFiles').addEventListener('change', e => {
   addRefFiles(files);
 });
 
-// drag & drop nas duas seções
+// drag & drop nas duas seções — aceita arquivos do sistema E takes da galeria
+function takeDropFile(e) {
+  const id = e.dataTransfer.getData('application/x-tipo-take');
+  if (!id) return null;
+  const t = state.takes.find(x => x.id === id);
+  if (!t || !t.blob) return null;
+  return new File([t.blob], `tipo-take-${id}.png`, { type: t.blob.type || 'image/png' });
+}
+
 function bindDrop(el, fn) {
   el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dropping'); });
   el.addEventListener('dragleave', () => el.classList.remove('dropping'));
   el.addEventListener('drop', e => {
     e.preventDefault();
     el.classList.remove('dropping');
+    const tk = takeDropFile(e);
+    if (tk) { fn([tk]); return; }
     fn(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
   });
 }
