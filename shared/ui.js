@@ -2873,10 +2873,22 @@ const TipoMobile = {
     panel.querySelectorAll('.section').forEach(sec => {
       const title = sec.querySelector('.section-title');
       if (!title) return;
+      // Algumas ferramentas têm disclosure próprio dentro do título. Deixar
+      // o colapso genérico atuar nelas cria duas fontes de estado e exige
+      // dois toques para reabrir no mobile.
+      if (sec.hasAttribute('data-mobile-own-toggle')) {
+        sec.classList.remove('sec-collapsed');
+        return;
+      }
       const name = title.textContent.trim().toLowerCase();
-      if (!KEEP_OPEN.some(k => name.startsWith(k))) sec.classList.add('sec-collapsed');
+      if (sec.hasAttribute('data-mobile-open')) {
+        sec.classList.remove('sec-collapsed');
+      } else if (!KEEP_OPEN.some(k => name.startsWith(k))) {
+        sec.classList.add('sec-collapsed');
+      }
       title.addEventListener('click', e => {
         if (e.target.classList && e.target.classList.contains('tipo-help-icon')) return;
+        if (e.target.closest('button, input, select, a, label')) return;
         sec.classList.toggle('sec-collapsed');
       });
     });

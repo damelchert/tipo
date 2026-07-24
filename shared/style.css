@@ -711,9 +711,12 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
   }
   .tipo-mobile .section.sec-collapsed > .section-title::after { content: '▸'; }
   .tipo-mobile .section.sec-collapsed > *:not(.section-title) { display: none !important; }
+  .tipo-mobile .section[data-mobile-own-toggle] > .section-title { cursor: default; }
+  .tipo-mobile .section[data-mobile-own-toggle] > .section-title::after { content: none; }
 
   /* touch targets */
   .tipo-mobile .btn { min-height: 44px; }
+  .tipo-mobile .fchip, .tipo-mobile .prog-btn { min-height: 44px; }
   .tipo-mobile .preset-chip { padding: 10px 14px; }
   .tipo-mobile select { min-height: 40px; }
   .tipo-mobile input[type="text"] { min-height: 42px; font-size: 16px; } /* 16px kills iOS zoom-on-focus */

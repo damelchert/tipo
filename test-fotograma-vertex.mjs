@@ -28,7 +28,7 @@ await ctx.route('**/*', async route => {
     if (isImage) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: png2k } }] } }] }) });
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A Brazilian flag flies above a concrete building beneath a clear open sky.' }] } }] }) });
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return route.fallback();
   try {
