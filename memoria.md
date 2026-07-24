@@ -160,6 +160,15 @@ Ao entrar em qualquer ferramenta (especialmente kinetic type), o render default 
 
 ## 2026-07-23
 
+### SESSÃO 23/07 — RESUMO (Fotograma: o dia do modo PUBLICITÁRIO, 5 commits: 5168401 → 208ab44)
+Arco completo em um dia, dirigido por prints e testes reais do Daniel:
+1. **Publicitário v2** (`5168401`): cinecom morto → Music Video; gêneros de campanha (taxonomia ShotDeck); gramática contemporânea; paleta Cores da marca.
+2. **v2.1 pesquisa aplicada** (`a841083`): fichas NotebookLM por gênero + STREETWEAR novo; moodboard ShotDeck (22 frames estudados) fundido no programa; lentes Angénieux (Optimo + 25-250 vintage); lensAuto (Programa decide → anamórfica no clipe).
+3. **Publicidade isola presets** (`b4d3a85`): print "Neon mista → golden hour" — Lente/Luz/Stock/Paleta somem na Publicidade; gênero = única voz de ótica/luz; fixed = voz de pós dominante.
+4. **Auditoria Cinema Studio 2 + controle total** (`f883e99`): seletor PROFUNDIDADE (APERTURE_POINT, o buraco no mapa de slots); refs anti-preguiça; cerveja fantasma do food morta; cláusula ART DIRECTION no Diretor; Diretor sticky (↺ não desliga); painel PROMPT FINAL ao vivo com avisos.
+5. **Modo Ficha + drag da galeria** (`208ab44`): 6 campos livres que substituem seletores (vencem tudo); takes arrastáveis pra refs/emulsão (iterar sobre o próprio output).
+Estado: test-fotograma-prompt 41 checks, 4 suítes ALL PASS. Detalhes de cada bloco nas seções abaixo. Pendências: 21.7 idioma da UI; candidato a gênero Travel/Airline; validação real dos gêneros no Higgsfield (Daniel ainda não pediu).
+
 ### FOTOGRAMA — MODO PUBLICITÁRIO v2 (pedido do Daniel 23/07: "PUBLICIDADE não tá diferente do CINEMATICO, nomenclatura do PUBLICIDADE CINEMATICA estranha")
 - **Publicidade Cinemática (cinecom) MORREU** — pouca diferença real, nome ruim. `setProg` tem fallback: takes antigos da galeria com `prog:'cinecom'` caem em `commercial` (sem crash no ↺ reusar).
 - **PUBLICIDADE reescrita com a gramática do anúncio contemporâneo** (diagnóstico do Daniel: "hoje tem muito plano grande angular, saturação mais forte, contraste forte mas não enterrado nem estourado, campanhas levam a paleta da marca"): fixed = `bold confident saturation, punchy contrast holding detail in both shadows and highlights — never crushed, never blown out, sculpted key light, crisp controlled speculars, contemporary campaign image`.
