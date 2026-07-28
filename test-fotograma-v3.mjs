@@ -800,13 +800,54 @@ try {
     renderRefs();
     document.querySelector('#refsSection > .section-title').click();
   }, PNG1);
-  const removeTarget = await mobile.locator('.ref-thumb button').evaluate(el => {
+  await mobile.evaluate(() => document.querySelector('.ref-role-picker summary').click());
+  await mobile.evaluate(() => document.querySelector('[data-ref-role="auto"]').click());
+  await mobile.evaluate(() => document.querySelector('[data-ref-role="character"]').click());
+  await mobile.evaluate(() => document.querySelector('[data-ref-role="composition"]').click());
+  const mobileRoles = await mobile.evaluate(() => ({
+    roles: [...state.refs[0].roles],
+    auto: document.querySelector('[data-ref-role="auto"]').checked,
+    summary: document.querySelector('.ref-role-picker summary').textContent,
+  }));
+  check('mobile seleciona múltiplas funções e mantém Auto exclusivo',
+    JSON.stringify(mobileRoles.roles) === JSON.stringify(['character', 'composition'])
+      && !mobileRoles.auto && mobileRoles.summary.includes('Personagem + Composição'));
+
+  const pickerLayout = async width => {
+    await mobile.setViewportSize({ width, height: 844 });
+    return mobile.evaluate(() => {
+      const card = document.querySelector('.ref-thumb');
+      const menu = document.querySelector('.ref-role-menu');
+      const section = document.getElementById('refsSection');
+      const labels = [...menu.querySelectorAll('label')].map(label => {
+        const r = label.getBoundingClientRect();
+        return { width: r.width, height: r.height };
+      });
+      const cardRect = card.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const sectionRect = section.getBoundingClientRect();
+      return {
+        noScroll: card.scrollWidth <= card.clientWidth && menu.scrollWidth <= menu.clientWidth
+          && section.scrollWidth <= section.clientWidth,
+        contained: menuRect.left >= sectionRect.left - 1 && menuRect.right <= sectionRect.right + 1
+          && cardRect.left >= sectionRect.left - 1 && cardRect.right <= sectionRect.right + 1,
+        touch: labels.every(r => r.height >= 44 && r.width > 0),
+      };
+    });
+  };
+  const layout390 = await pickerLayout(390);
+  const layout320 = await pickerLayout(320);
+  check('seletor múltiplo cabe em 390 px e 320 px sem scroll horizontal',
+    layout390.noScroll && layout390.contained && layout320.noScroll && layout320.contained);
+  check('opções da referência mantêm alvo tátil de 44 px no mobile', layout390.touch && layout320.touch);
+
+  const removeTarget = await mobile.locator('.ref-remove').evaluate(el => {
     const r = el.getBoundingClientRect();
     return { width: r.width, height: r.height };
   });
   check('mobile usa alvo tátil 44×44 para tirar referência', removeTarget.width >= 44 && removeTarget.height >= 44,
     `(${removeTarget.width}×${removeTarget.height})`);
-  await mobile.evaluate(() => document.querySelector('.ref-thumb button').click());
+  await mobile.evaluate(() => document.querySelector('.ref-remove').click());
   check('mobile tira a referência em um toque', await mobile.evaluate(() => state.refs.length === 0));
   await mobile.close();
   pageErrors.push(...mobileErrors);

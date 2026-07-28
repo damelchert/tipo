@@ -112,6 +112,15 @@ check('select sem 1K, default 2K', await page.evaluate(() => {
   const options = [...document.getElementById('imgSize').options].map(x => x.value);
   return !options.includes('1K') && document.getElementById('imgSize').value === '2K';
 }));
+const magnificRatios = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'];
+const ratioCatalog = await page.evaluate(() => ({
+  source: [...ARS],
+  chips: [...document.querySelectorAll('#arChips .fchip')].map(x => x.dataset.ar),
+}));
+check('Aspect Ratio tem os 10 formatos do Nano Banana no Magnific',
+  JSON.stringify(ratioCatalog.source) === JSON.stringify(magnificRatios)
+    && JSON.stringify(ratioCatalog.chips) === JSON.stringify(magnificRatios),
+  `(${ratioCatalog.chips.join(', ')})`);
 
 await page.fill('#apiKey', 'AIzaTESTKEY123');
 await page.click('#keyConnect');
@@ -225,6 +234,39 @@ check('Nano 2: prompt final vem depois da imagem de STYLE',
   typeof nanoParts.at(-1)?.text === 'string' && /attached STYLE reference/i.test(nanoParts.at(-1).text));
 check('Nano 2: envia imageSize 2K', nanoBody?.generationConfig?.imageConfig?.imageSize === '2K');
 check('Nano 2: mantém aspect ratio no payload', nanoBody?.generationConfig?.imageConfig?.aspectRatio === '16:9');
+
+// Os quatro formatos antes ausentes precisam sobreviver ao chip, snapshot e
+// payload; nenhum pode cair silenciosamente no default do modelo.
+const newlyAddedRatios = ['4:3', '5:4', '3:4', '2:3'];
+const routedRatios = [];
+await page.evaluate(() => { state.mood = null; syncMoodUI(); });
+for (const ratio of newlyAddedRatios) {
+  await page.locator(`#arChips .fchip[data-ar="${ratio}"]`).click();
+  await revealAndWait();
+  routedRatios.push({
+    selected: await page.evaluate(() => state.ar),
+    payload: lastImgBody?.generationConfig?.imageConfig?.aspectRatio,
+    caption: await page.evaluate(() => document.getElementById('stillCaption').textContent),
+  });
+}
+check('novos formatos chegam intactos ao payload e à legenda',
+  routedRatios.every((x, i) => x.selected === newlyAddedRatios[i]
+    && x.payload === newlyAddedRatios[i] && x.caption.includes(`· ${newlyAddedRatios[i]} ·`)),
+  `(${routedRatios.map(x => `${x.selected}>${x.payload}`).join(', ')})`);
+await page.setViewportSize({ width: 390, height: 844 });
+await page.waitForTimeout(100);
+const mobileRatioLayout = await page.evaluate(() => {
+  const grid = document.getElementById('arChips');
+  const box = grid.getBoundingClientRect();
+  const chips = [...grid.querySelectorAll('.fchip')].map(x => x.getBoundingClientRect());
+  return {
+    count: chips.length,
+    contained: chips.every(x => x.left >= box.left - 1 && x.right <= box.right + 1),
+    noHorizontalOverflow: grid.scrollWidth <= grid.clientWidth + 1,
+  };
+});
+check('os 10 formatos quebram linha sem estourar o painel mobile',
+  mobileRatioLayout.count === 10 && mobileRatioLayout.contained && mobileRatioLayout.noHorizontalOverflow);
 
 check('zero pageerrors', errs.length === 0, errs.join(' | ').slice(0, 180));
 check('zero rede externa não mockada', unexpectedExternal.length === 0, unexpectedExternal.join(' | ').slice(0, 180));
