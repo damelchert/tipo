@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Tipó — Video Depth Map. Convert video into a stable grayscale depth reference for Seedance, entirely in your browser.">
+<meta name="theme-color" content="#0a0a0a">
+<title>Tipó — Video Depth Map</title>
+<link rel="stylesheet" href="shared/style.css?v=20260713-id1">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
+<script src="shared/ui.js?v=20260722-au4"></script>
+<style>
+  body { display:flex; height:100vh; overflow:hidden; }
+  select { width:100%; min-width:0; background:var(--bg-2); color:var(--text-1); border:1px solid var(--border-2); padding:6px; font:11px var(--font-ui); }
+  .checkbox-label { display:flex; align-items:center; gap:8px; min-height:28px; color:var(--text-3); font-size:11px; }
+  .checkbox-label input { accent-color:var(--accent); }
+  .process-note { margin-top:7px; color:var(--text-5); font-size:9px; line-height:1.5; letter-spacing:.2px; }
+  .status-card { margin-top:8px; padding:9px 10px; border:1px solid var(--border-1); border-radius:5px; background:var(--bg-2); }
+  #modelStatus { color:var(--text-3); font-size:10px; line-height:1.4; min-height:14px; }
+  #progressText { color:var(--accent); font-size:9px; line-height:1.4; margin-top:3px; min-height:13px; }
+  .progress-track { height:3px; margin-top:7px; overflow:hidden; border-radius:2px; background:var(--border-1); }
+  #progressBar { width:0; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-warm)); transition:width .18s ease; }
+  #depthWorkspace { flex:1; min-width:0; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0c0c0c; }
+  #depthCanvas { display:block; width:100%; height:auto; max-height:100%; background:#070707; box-shadow:0 8px 50px rgba(0,0,0,.45); }
+  .empty-state { position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; pointer-events:none; transition:opacity .2s ease; }
+  .empty-state.hidden { opacity:0; }
+  .empty-inner { width:min(420px,76%); text-align:center; }
+  .empty-depth { height:96px; border:1px solid rgba(153,224,210,.28); border-radius:7px; background:
+    radial-gradient(circle at 28% 50%,#f8f5f0 0 7%,#aaa 8% 16%,#515151 17% 28%,transparent 29%),
+    linear-gradient(115deg,#101010 5%,#404040 36%,#bdbdbd 58%,#f5f5f5 76%,#262626 96%);
+    filter:contrast(1.08); animation:depthPulse 3.2s ease-in-out infinite alternate; }
+  @keyframes depthPulse { to { filter:contrast(1.28) brightness(.88); transform:scale(.985); } }
+  .empty-title { margin-top:18px; color:var(--text-2); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; }
+  .empty-copy { margin-top:7px; color:var(--text-5); font-size:10px; line-height:1.6; }
+  .source-monitor { position:absolute; left:18px; bottom:18px; z-index:3; width:min(220px,25vw); border:1px solid rgba(248,245,240,.22); border-radius:5px; overflow:hidden; background:#111; box-shadow:0 8px 30px rgba(0,0,0,.35); opacity:0; transform:translateY(8px); transition:.22s ease; }
+  .source-monitor.visible { opacity:1; transform:none; }
+  .source-monitor video { display:block; width:100%; max-height:150px; object-fit:contain; background:#080808; }
+  .monitor-label { position:absolute; top:6px; left:7px; padding:3px 5px; border-radius:3px; background:rgba(0,0,0,.68); color:#f8f5f0; font-size:8px; letter-spacing:1.4px; text-transform:uppercase; }
+  .workspace-badge { position:absolute; top:18px; left:50%; z-index:3; transform:translateX(-50%); padding:6px 9px; border:1px solid rgba(248,245,240,.14); border-radius:20px; background:rgba(10,10,10,.62); color:rgba(248,245,240,.58); font-size:8px; letter-spacing:1.5px; text-transform:uppercase; pointer-events:none; backdrop-filter:blur(8px); }
+  #dropOverlay { position:absolute; inset:14px; z-index:8; display:none; align-items:center; justify-content:center; border:1px dashed var(--accent); border-radius:8px; background:rgba(20,70,62,.68); color:#fff; font-size:12px; letter-spacing:2px; text-transform:uppercase; pointer-events:none; }
+  #depthWorkspace.dragging #dropOverlay { display:flex; }
+  #processBtn,#exportBtn,#cancelBtn { min-height:38px; }
+  #cancelBtn { display:none; }
+  body.tipo-full #depthWorkspace { width:100vw; height:100vh; }
+  body.tipo-full #depthCanvas { max-height:100vh; }
+  @media (max-width:768px) {
+    body { display:block; }
+    #depthWorkspace { width:100vw; height:100vh; }
+    #depthCanvas { width:100vw; max-width:100vw; }
+    .source-monitor { left:10px; bottom:68px; width:112px; }
+    .source-monitor video { max-height:78px; }
+    .workspace-badge { top:14px; white-space:nowrap; }
+    #processBtn,#exportBtn,#cancelBtn { min-height:44px; }
+  }
+  @media (prefers-reduced-motion:reduce) { .empty-depth { animation:none; } }
+</style>
+</head>
+<body>
+
+<aside class="tipo-panel" id="panel">
+  <h1>Video Depth Map</h1>
+
+  <div class="section">
+    <div class="section-title">Source</div>
+    <div class="btn-row">
+      <button class="btn" id="uploadBtn" type="button">Upload video</button>
+    </div>
+    <input type="file" id="fileInput" accept="video/*" hidden>
+    <div class="process-note" id="sourceMeta">MP4, MOV or WebM · processed locally · no upload</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <span class="preset-chip active" data-preset="seedance">Seedance</span>
+      <span class="preset-chip" data-preset="stable">Stable</span>
+      <span class="preset-chip" data-preset="edges">Crisp</span>
+      <span class="preset-chip" data-preset="motion">Fast motion</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Depth Engine</div>
+    <div class="range-row"><span class="range-label">Analysis</span>
+      <select id="analysisFps" class="requires-process">
+        <option value="6">6 fps · efficient</option>
+        <option value="12" selected>12 fps · balanced</option>
+        <option value="24">24 fps · maximum</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">AI Detail</span>
+      <select id="quality" class="requires-process">
+        <option value="392">Fast · 392px</option>
+        <option value="518" selected>Balanced · 518px</option>
+        <option value="700">Detail · 700px</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">Temporal</span><input data-nobhv class="requires-process" type="range" id="temporalSmooth" min="0" max="95" value="68"><span class="range-value" id="temporalSmoothVal">68</span></div>
+    <div class="range-row"><span class="range-label">Spatial</span><input data-nobhv class="post-control" type="range" id="spatialSmooth" min="0" max="8" step="0.5" value="1"><span class="range-value" id="spatialSmoothVal">1</span></div>
+    <div class="process-note">Depth Anything V2 Small. WebGPU FP16 when available; WASM q8 fallback. Temporal changes require a new pass.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Depth Range</div>
+    <div class="range-row"><span class="range-label">Black point</span><input data-nobhv class="post-control" type="range" id="nearClip" min="0" max="99" value="0"><span class="range-value" id="nearClipVal">0</span></div>
+    <div class="range-row"><span class="range-label">White point</span><input data-nobhv class="post-control" type="range" id="farClip" min="1" max="100" value="100"><span class="range-value" id="farClipVal">100</span></div>
+    <div class="range-row"><span class="range-label">Contrast</span><input data-nobhv class="post-control" type="range" id="depthContrast" min="40" max="220" value="105"><span class="range-value" id="depthContrastVal">105</span></div>
+    <div class="range-row"><span class="range-label">Gamma</span><input data-nobhv class="post-control" type="range" id="depthGamma" min="40" max="240" value="100"><span class="range-value" id="depthGammaVal">1.00</span></div>
+    <label class="checkbox-label"><input class="post-control" type="checkbox" id="invertDepth"> Invert depth</label>
+  </div>
+
+  <div class="section section-divider">
+    <div class="section-title">Export</div>
+    <div class="range-row"><span class="range-label">Frame rate</span>
+      <select id="outputFps">
+        <option value="24" selected>24 fps</option>
+        <option value="30">30 fps</option>
+      </select>
+    </div>
+    <div class="range-row"><span class="range-label">Resolution</span>
+      <select id="outputSize">
+        <option value="source" selected>Source</option>
+        <option value="1080">1080p</option>
+        <option value="720">720p</option>
+      </select>
+    </div>
+    <div class="btn-row" style="margin-top:7px;">
+      <button class="btn" id="processBtn" type="button" disabled>Generate depth</button>
+      <button class="btn btn-secondary" id="cancelBtn" type="button">Cancel</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="exportBtn" type="button" data-share-anchor disabled>Export MP4</button>
+    </div>
+    <div class="status-card" aria-live="polite">
+      <div id="modelStatus">Select a video to begin.</div>
+      <div id="progressText">Model stays unloaded until Generate depth.</div>
+      <div class="progress-track"><div id="progressBar"></div></div>
+    </div>
+    <div class="process-note">Output is grayscale, silent and keeps the source aspect ratio — ready to use as a Seedance video reference.</div>
+  </div>
+  <div style="height:42px;"></div>
+</aside>
+
+<main id="depthWorkspace">
+  <canvas id="depthCanvas" width="1280" height="720" aria-label="Depth map preview"></canvas>
+  <div class="empty-state" id="emptyState">
+    <div class="empty-inner">
+      <div class="empty-depth"></div>
+      <div class="empty-title">Video → depth reference</div>
+      <div class="empty-copy">Drop a video or use Upload. Bright pixels are closer; dark pixels are farther away.</div>
+    </div>
+  </div>
+  <div class="workspace-badge" id="workspaceBadge">Grayscale depth · Seedance reference</div>
+  <div class="source-monitor" id="sourceMonitor">
+    <video id="sourceVideo" muted playsinline preload="metadata"></video>
+    <span class="monitor-label">Source</span>
+  </div>
+  <div id="dropOverlay">Drop video</div>
+</main>
+
+<script>
+// TIPÓ — VIDEO DEPTH MAP
+// Offline AI analysis + deterministic WebCodecs export. The video never leaves
+// the browser; only the Depth Anything model files are requested on first use.
+const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
+const DEPTH_MODEL = 'onnx-community/depth-anything-v2-small';
+const MAX_ANALYSIS_FRAMES = 900;
+
+const fileInput = document.getElementById('fileInput');
+const sourceVideo = document.getElementById('sourceVideo');
+const depthCanvas = document.getElementById('depthCanvas');
+const depthCtx = depthCanvas.getContext('2d', { alpha:false, willReadFrequently:true });
+const inferenceCanvas = document.createElement('canvas');
+const inferenceCtx = inferenceCanvas.getContext('2d', { alpha:false, willReadFrequently:true });
+const lumaCanvas = document.createElement('canvas');
+const lumaCtx = lumaCanvas.getContext('2d', { alpha:false, willReadFrequently:true });
+const toneCanvas = document.createElement('canvas');
+const toneCtx = toneCanvas.getContext('2d', { alpha:false, willReadFrequently:true });
+
+let mediaUrl = null;
+let sourceFile = null;
+let depthPipeline = null;
+let transformersModule = null;
+let modelBackend = '';
+let stableFrames = [];
+let cancelRequested = false;
+let exportBusy = false;
+
+const depthMapState = window.depthMapState = {
+  phase:'empty', processedFrames:0, totalFrames:0, outputFrames:0,
+  progress:0, backend:'', outputBlob:null, cancelled:false,
+};
+
+window.DepthMapEngine = {
+  stabilize(current, previous, strength, currentLuma, previousLuma) {
+    if (!previous || !strength) return current.slice();
+    const out = new Uint8Array(current.length);
+    const base = Math.max(0, Math.min(.95, strength / 100));
+    for (let i = 0; i < current.length; i++) {
+      const motion = currentLuma && previousLuma ? Math.abs(currentLuma[i] - previousLuma[i]) / 255 : 0;
+      const history = base * (1 - Math.min(.30, motion * 1.25));
+      out[i] = Math.round(current[i] * (1 - history) + previous[i] * history);
+    }
+    return out;
+  },
+  toneLut(settings) {
+    const lut = new Uint8Array(256);
+    const low = Math.min(settings.near, settings.far - 1) / 100;
+    const high = Math.max(settings.far, settings.near + 1) / 100;
+    for (let i = 0; i < 256; i++) {
+      let x = Math.max(0, Math.min(1, (i / 255 - low) / Math.max(.01, high - low)));
+      x = Math.pow(x, 1 / Math.max(.05, settings.gamma));
+      x = Math.max(0, Math.min(1, (x - .5) * settings.contrast + .5));
+      if (settings.invert) x = 1 - x;
+      lut[i] = Math.round(x * 255);
+    }
+    return lut;
+  },
+};
+
+function setStatus(status, progress) {
+  if (status != null) document.getElementById('modelStatus').textContent = status;
+  if (progress != null) document.getElementById('progressText').textContent = progress;
+}
+
+function setProgress(value) {
+  depthMapState.progress = Math.max(0, Math.min(1, value || 0));
+  document.getElementById('progressBar').style.width = `${Math.round(depthMapState.progress * 100)}%`;
+}
+
+function setBusy(busy, label) {
+  document.getElementById('processBtn').disabled = busy || !sourceFile;
+  document.getElementById('uploadBtn').disabled = busy;
+  document.getElementById('cancelBtn').style.display = busy ? '' : 'none';
+  document.getElementById('cancelBtn').disabled = !busy;
+  if (label) document.getElementById('processBtn').textContent = label;
+  if (!busy) document.getElementById('processBtn').textContent = 'Generate depth';
+  document.querySelectorAll('.requires-process, #analysisFps, #quality').forEach(el => { el.disabled = busy; });
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds)) return '—';
+  const m = Math.floor(seconds / 60), s = Math.round(seconds % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function validVideo(file) {
+  return !!file && (file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(file.name));
+}
+
+function revokeMedia() {
+  sourceVideo.pause();
+  sourceVideo.removeAttribute('src');
+  sourceVideo.load();
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = null;
+}
+
+function resetResults() {
+  stableFrames = [];
+  depthMapState.processedFrames = 0;
+  depthMapState.totalFrames = 0;
+  depthMapState.outputFrames = 0;
+  depthMapState.outputBlob = null;
+  document.getElementById('exportBtn').disabled = true;
+  setProgress(0);
+}
+
+function loadVideoFile(file) {
+  if (!validVideo(file)) {
+    sourceFile = null;
+    resetResults();
+    depthMapState.phase = 'error';
+    setStatus('Invalid file — select a video.', 'MP4, MOV and WebM are supported when your browser can decode them.');
+    document.getElementById('processBtn').disabled = true;
+    return;
+  }
+  revokeMedia();
+  resetResults();
+  sourceFile = file;
+  mediaUrl = URL.createObjectURL(file);
+  sourceVideo.src = mediaUrl;
+  sourceVideo.load();
+  depthMapState.phase = 'loading-media';
+  setStatus('Reading video…', 'The AI model is still unloaded.');
+  sourceVideo.onloadedmetadata = () => {
+    if (!sourceVideo.videoWidth || !sourceVideo.videoHeight || !Number.isFinite(sourceVideo.duration)) {
+      sourceFile = null;
+      depthMapState.phase = 'error';
+      setStatus('This video could not be decoded.', 'Try an H.264 MP4 or WebM file.');
+      return;
+    }
+    depthMapState.phase = 'media-ready';
+    document.getElementById('processBtn').disabled = false;
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('sourceMonitor').classList.add('visible');
+    document.getElementById('sourceMeta').textContent = `${sourceVideo.videoWidth}×${sourceVideo.videoHeight} · ${formatDuration(sourceVideo.duration)} · ${file.name}`;
+    setStatus('Video ready.', 'Choose the AI detail and generate the depth pass.');
+    drawSourcePlaceholder();
+  };
+  sourceVideo.onerror = () => {
+    sourceFile = null;
+    depthMapState.phase = 'error';
+    document.getElementById('processBtn').disabled = true;
+    setStatus('This video codec is not supported by the browser.', 'Try converting it to H.264 MP4.');
+  };
+}
+
+function fitInside(width, height, maxSide) {
+  const scale = Math.min(1, maxSide / Math.max(width, height));
+  return { width:Math.max(2, Math.round(width * scale)), height:Math.max(2, Math.round(height * scale)) };
+}
+
+function drawSourcePlaceholder() {
+  const w = sourceVideo.videoWidth || 1280, h = sourceVideo.videoHeight || 720;
+  depthCanvas.width = w; depthCanvas.height = h;
+  depthCtx.fillStyle = '#0b0b0b'; depthCtx.fillRect(0,0,w,h);
+  if (sourceVideo.readyState >= 2) {
+    depthCtx.globalAlpha = .18;
+    depthCtx.drawImage(sourceVideo,0,0,w,h);
+    depthCtx.globalAlpha = 1;
+  }
+}
+
+function seekVideo(time) {
+  return new Promise((resolve, reject) => {
+    const target = Math.max(0, Math.min(time, Math.max(0, sourceVideo.duration - .001)));
+    if (Math.abs(sourceVideo.currentTime - target) < .0015 && sourceVideo.readyState >= 2) { resolve(); return; }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Video seek timed out.')); }, 10000);
+    const done = () => { cleanup(); resolve(); };
+    const fail = () => { cleanup(); reject(new Error('Could not seek this video.')); };
+    const cleanup = () => {
+      clearTimeout(timer);
+      sourceVideo.removeEventListener('seeked', done);
+      sourceVideo.removeEventListener('error', fail);
+    };
+    sourceVideo.addEventListener('seeked', done, { once:true });
+    sourceVideo.addEventListener('error', fail, { once:true });
+    sourceVideo.currentTime = target;
+  });
+}
+
+async function loadDepthModel(forceWasm = false) {
+  if (depthPipeline && (!forceWasm || modelBackend === 'WASM q8')) return depthPipeline;
+  depthMapState.phase = 'loading-model';
+  setStatus('Loading Depth Anything V2…', 'The model is downloaded only when you generate.');
+  if (!transformersModule) transformersModule = await import(TRANSFORMERS_URL);
+  const progress_callback = data => {
+    if (!data || data.status !== 'progress' || !data.total) return;
+    const p = Math.max(0, Math.min(1, data.loaded / data.total));
+    setProgress(p * .08);
+    setStatus('Loading Depth Anything V2…', `${data.file || 'Model'} · ${Math.round(p * 100)}%`);
+  };
+  let useWebGPU = false;
+  if (!forceWasm && navigator.gpu) {
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      useWebGPU = !!adapter && adapter.features.has('shader-f16');
+    } catch (error) { useWebGPU = false; }
+  }
+  try {
+    depthPipeline = await transformersModule.pipeline('depth-estimation', DEPTH_MODEL, {
+      device:useWebGPU ? 'webgpu' : 'wasm', dtype:useWebGPU ? 'fp16' : 'q8', progress_callback,
+    });
+    modelBackend = useWebGPU ? 'WebGPU FP16' : 'WASM q8';
+  } catch (error) {
+    if (!useWebGPU) throw error;
+    setStatus('WebGPU unavailable for this model. Falling back…', 'Loading the compatible WASM q8 version.');
+    depthPipeline = await transformersModule.pipeline('depth-estimation', DEPTH_MODEL, {
+      device:'wasm', dtype:'q8', progress_callback,
+    });
+    modelBackend = 'WASM q8';
+  }
+  depthMapState.backend = modelBackend;
+  return depthPipeline;
+}
+
+async function inferCurrentFrame() {
+  const size = fitInside(sourceVideo.videoWidth, sourceVideo.videoHeight, Number(document.getElementById('quality').value));
+  if (inferenceCanvas.width !== size.width || inferenceCanvas.height !== size.height) {
+    inferenceCanvas.width = size.width; inferenceCanvas.height = size.height;
+  }
+  inferenceCtx.drawImage(sourceVideo,0,0,size.width,size.height);
+  let input = inferenceCanvas;
+  if (transformersModule.RawImage && transformersModule.RawImage.fromCanvas) {
+    input = await transformersModule.RawImage.fromCanvas(inferenceCanvas);
+  }
+  let result;
+  try {
+    result = await depthPipeline(input);
+  } catch (error) {
+    if (modelBackend.startsWith('WebGPU')) {
+      depthPipeline = null;
+      await loadDepthModel(true);
+      result = await depthPipeline(input);
+    } else throw error;
+  }
+  return extractDepth(result);
+}
+
+function extractDepth(result) {
+  const tensor = result && result.predicted_depth;
+  if (tensor && tensor.data) {
+    const dims = tensor.dims || [];
+    const height = dims.at(-2), width = dims.at(-1);
+    if (!width || !height) throw new Error('The model returned an invalid depth tensor.');
+    return normalizeFloatDepth(tensor.data, width, height);
+  }
+  const visual = result && result.depth;
+  if (visual && visual.data && visual.width && visual.height) {
+    const pixels = visual.width * visual.height;
+    const channels = Math.max(1, Math.round(visual.data.length / pixels));
+    const data = new Uint8Array(pixels);
+    for (let i=0;i<pixels;i++) data[i] = visual.data[i * channels];
+    return { width:visual.width, height:visual.height, data };
+  }
+  throw new Error('The model did not return a depth map.');
+}
+
+function normalizeFloatDepth(values, width, height) {
+  let min=Infinity,max=-Infinity;
+  for (let i=0;i<values.length;i++) { const v=values[i]; if(v<min)min=v; if(v>max)max=v; }
+  const span=Math.max(1e-8,max-min),bins=new Uint32Array(512);
+  for(let i=0;i<values.length;i++) bins[Math.min(511,Math.max(0,Math.floor((values[i]-min)/span*511)))]++;
+  const lowTarget=values.length*.02,highTarget=values.length*.98;
+  let count=0,lowBin=0,highBin=511;
+  for(let i=0;i<bins.length;i++){count+=bins[i];if(count>=lowTarget){lowBin=i;break;}}
+  count=0;
+  for(let i=0;i<bins.length;i++){count+=bins[i];if(count>=highTarget){highBin=i;break;}}
+  const low=min+span*lowBin/511,high=min+span*Math.max(lowBin+1,highBin)/511,robustSpan=Math.max(1e-8,high-low);
+  const data = new Uint8Array(width*height);
+  for (let i=0;i<data.length;i++) data[i]=Math.round(Math.max(0,Math.min(1,(values[i]-low)/robustSpan))*255);
+  return { width,height,data };
+}
+
+function frameLumaAt(width,height) {
+  if(lumaCanvas.width!==width || lumaCanvas.height!==height){lumaCanvas.width=width;lumaCanvas.height=height;}
+  lumaCtx.drawImage(inferenceCanvas,0,0,width,height);
+  const rgba=lumaCtx.getImageData(0,0,width,height).data;
+  const luma=new Uint8Array(width*height);
+  for(let i=0,j=0;i<rgba.length;i+=4,j++) luma[j]=Math.round(rgba[i]*.2126+rgba[i+1]*.7152+rgba[i+2]*.0722);
+  return luma;
+}
+
+async function processDepth() {
+  if (!sourceFile || exportBusy) return;
+  cancelRequested=false;
+  depthMapState.cancelled=false;
+  depthMapState.outputBlob=null;
+  stableFrames=[];
+  const sampleFps=Number(document.getElementById('analysisFps').value);
+  const total=Math.max(1,Math.ceil(sourceVideo.duration*sampleFps));
+  if (total>MAX_ANALYSIS_FRAMES) {
+    depthMapState.phase='error';
+    setStatus('This pass is too large for browser memory.', `Choose a lower Analysis rate or a clip under ${Math.floor(MAX_ANALYSIS_FRAMES/sampleFps)}s.`);
+    return;
+  }
+  depthMapState.totalFrames=total;
+  depthMapState.processedFrames=0;
+  document.getElementById('exportBtn').disabled=true;
+  setBusy(true,'Processing…');
+  const restoreTime=sourceVideo.currentTime;
+  sourceVideo.pause();
+  const started=performance.now();
+  let previous=null, previousLuma=null;
+  try {
+    await loadDepthModel();
+    depthMapState.phase='processing';
+    setProgress(.08);
+    for(let i=0;i<total;i++) {
+      if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+      const t=Math.min(i/sampleFps,sourceVideo.duration-.001);
+      await seekVideo(t);
+      const raw=await inferCurrentFrame();
+      const luma=frameLumaAt(raw.width,raw.height);
+      const stable=window.DepthMapEngine.stabilize(raw.data,previous,Number(document.getElementById('temporalSmooth').value),luma,previousLuma);
+      const stableEntry={width:raw.width,height:raw.height,data:stable,time:t};
+      stableFrames.push(stableEntry);
+      previous=stable; previousLuma=luma;
+      depthMapState.processedFrames=i+1;
+      const pct=(i+1)/total;
+      setProgress(.08+pct*.92);
+      const elapsed=(performance.now()-started)/1000;
+      const rate=(i+1)/Math.max(.05,elapsed);
+      const eta=Math.max(0,Math.round((total-i-1)/rate));
+      setStatus(`Analyzing depth · ${modelBackend}`, `${i+1} / ${total} · ${Math.round(pct*100)}% · ${rate.toFixed(1)} fps · ~${eta}s`);
+      renderPreview(stableEntry);
+      if(i%2===0) await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    depthMapState.phase='ready';
+    setProgress(1);
+    setStatus(`Ready · ${modelBackend}`, `${total} / ${total} · 100% · Depth pass complete`);
+    document.getElementById('exportBtn').disabled=false;
+    document.getElementById('workspaceBadge').textContent=`Depth ready · ${sampleFps} AI samples/s`;
+  } catch(error) {
+    if(error && error.name==='AbortError') {
+      depthMapState.phase='cancelled'; depthMapState.cancelled=true;
+      setStatus('Processing cancelled.','No file was created.');
+    } else {
+      depthMapState.phase='error';
+      setStatus('Depth generation failed.',friendlyError(error));
+    }
+    stableFrames=[];
+    document.getElementById('exportBtn').disabled=true;
+  } finally {
+    setBusy(false);
+    try { await seekVideo(Math.min(restoreTime,sourceVideo.duration-.001)); } catch(e) {}
+  }
+}
+
+function friendlyError(error) {
+  const message=String(error && error.message || error || 'Unknown error');
+  if(/memory|alloc/i.test(message)) return 'Not enough memory. Try 6 fps or a shorter clip.';
+  if(/codec|encoder|configure|support/i.test(message)) return 'This browser cannot process that codec or resolution. Try H.264 MP4.';
+  return message.slice(0,180);
+}
+
+function settings() {
+  return {
+    near:Number(document.getElementById('nearClip').value),
+    far:Number(document.getElementById('farClip').value),
+    contrast:Number(document.getElementById('depthContrast').value)/100,
+    gamma:Number(document.getElementById('depthGamma').value)/100,
+    invert:document.getElementById('invertDepth').checked,
+    blur:Number(document.getElementById('spatialSmooth').value),
+  };
+}
+
+function renderFrame(frame,target,targetWidth,targetHeight,overrideSettings) {
+  const s=overrideSettings || settings();
+  if(toneCanvas.width!==frame.width || toneCanvas.height!==frame.height) { toneCanvas.width=frame.width; toneCanvas.height=frame.height; }
+  const image=toneCtx.createImageData(frame.width,frame.height),lut=window.DepthMapEngine.toneLut(s);
+  for(let i=0,j=0;i<frame.data.length;i++,j+=4) {
+    const v=lut[frame.data[i]]; image.data[j]=v; image.data[j+1]=v; image.data[j+2]=v; image.data[j+3]=255;
+  }
+  toneCtx.putImageData(image,0,0);
+  if(target.width!==targetWidth || target.height!==targetHeight) { target.width=targetWidth; target.height=targetHeight; }
+  const ctx=target.getContext('2d',{alpha:false});
+  ctx.save(); ctx.fillStyle='#000'; ctx.fillRect(0,0,targetWidth,targetHeight);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.filter=s.blur>0?`blur(${s.blur}px)`:'none';
+  ctx.drawImage(toneCanvas,0,0,targetWidth,targetHeight);
+  ctx.restore();
+}
+
+function renderPreview(frame) {
+  if(!frame || !sourceVideo.videoWidth) return;
+  renderFrame(frame,depthCanvas,sourceVideo.videoWidth,sourceVideo.videoHeight);
+}
+
+function blendedFrame(a,b,alpha,reuse) {
+  if(!b || alpha<=.001) return a;
+  const out=reuse && reuse.length===a.data.length?reuse:new Uint8Array(a.data.length);
+  const inv=1-alpha;
+  for(let i=0;i<out.length;i++) out[i]=Math.round(a.data[i]*inv+b.data[i]*alpha);
+  return {width:a.width,height:a.height,data:out};
+}
+
+function outputDimensions(mode) {
+  const sw=sourceVideo.videoWidth,sh=sourceVideo.videoHeight;
+  let scale=1;
+  if(mode==='1080') scale=Math.min(1,1920/Math.max(sw,sh),1080/Math.min(sw,sh));
+  if(mode==='720') scale=Math.min(1,1280/Math.max(sw,sh),720/Math.min(sw,sh));
+  let width=Math.max(2,Math.round(sw*scale)),height=Math.max(2,Math.round(sh*scale));
+  width-=width%2;height-=height%2;
+  return {width,height};
+}
+
+async function supportedEncoderConfig(width,height,fps) {
+  if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined' || typeof Mp4Muxer==='undefined') {
+    throw new Error('WebCodecs MP4 export needs current Chrome or Edge.');
+  }
+  const config={codec:width*height>1920*1088?'avc1.640033':'avc1.640028',width,height,
+    bitrate:Math.max(500000,Math.min(40000000,Math.round(width*height*fps*.12))),framerate:fps,latencyMode:'quality'};
+  const support=await VideoEncoder.isConfigSupported(config);
+  if(!support.supported) throw new Error(`H.264 encoding at ${width}×${height} is not supported. Choose a smaller output.`);
+  return support.config || config;
+}
+
+async function exportDepthVideo() {
+  if(!stableFrames.length || exportBusy) return;
+  exportBusy=true; cancelRequested=false; depthMapState.cancelled=false;
+  const btn=document.getElementById('exportBtn');
+  btn.disabled=true; document.getElementById('processBtn').disabled=true;
+  document.getElementById('cancelBtn').style.display=''; document.getElementById('cancelBtn').disabled=false;
+  const fps=Number(document.getElementById('outputFps').value);
+  const sampleFps=Number(document.getElementById('analysisFps').value);
+  const dims=outputDimensions(document.getElementById('outputSize').value);
+  const total=Math.max(1,Math.ceil(sourceVideo.duration*fps));
+  const renderCanvas=document.createElement('canvas');
+  const post={...settings()};
+  let encoder=null,encodeError=null;
+  try {
+    depthMapState.phase='exporting'; depthMapState.outputFrames=0;
+    setProgress(0); setStatus('Building depth MP4…',`${dims.width}×${dims.height} · frame 0 / ${total}`);
+    const config=await supportedEncoderConfig(dims.width,dims.height,fps);
+    const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:dims.width,height:dims.height},fastStart:'in-memory'});
+    encoder=new VideoEncoder({output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),error:error=>{encodeError=error;}});
+    encoder.configure(config);
+    const frameUs=Math.round(1e6/fps),durationUs=Math.round(sourceVideo.duration*1e6);
+    let blendBuffer=null;
+    for(let i=0;i<total;i++) {
+      if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+      const t=i/fps,pos=t*sampleFps,index=Math.min(stableFrames.length-1,Math.floor(pos));
+      const alpha=Math.min(1,Math.max(0,pos-index));
+      const a=stableFrames[index],b=stableFrames[Math.min(index+1,stableFrames.length-1)];
+      const blended=blendedFrame(a,b,alpha,blendBuffer);
+      if(blended!==a) blendBuffer=blended.data;
+      renderFrame(blended,renderCanvas,dims.width,dims.height,post);
+      const timestamp=i*frameUs;
+      const videoFrame=new VideoFrame(renderCanvas,{timestamp,duration:i===total-1?Math.max(1,durationUs-timestamp):frameUs});
+      encoder.encode(videoFrame,{keyFrame:i%fps===0}); videoFrame.close();
+      if(encodeError) throw encodeError;
+      while(encoder.encodeQueueSize>6) await new Promise(resolve=>setTimeout(resolve,4));
+      depthMapState.outputFrames=i+1;
+      if(i%3===0 || i===total-1) {
+        const p=(i+1)/total;setProgress(p);
+        setStatus('Building depth MP4…',`${i+1} / ${total} · ${Math.round(p*100)}% · ${dims.width}×${dims.height}`);
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+    }
+    await encoder.flush();
+    if(encodeError) throw encodeError;
+    muxer.finalize(); encoder.close(); encoder=null;
+    const blob=new Blob([muxer.target.buffer],{type:'video/mp4'});
+    depthMapState.outputBlob=blob; depthMapState.phase='ready';
+    setProgress(1);setStatus(`Ready · ${modelBackend}`,`MP4 complete · ${total} frames · ${(blob.size/1048576).toFixed(1)} MB`);
+    TipoUI._downloadBlob(blob,'tipo-video-depth-map.mp4');
+  } catch(error) {
+    if(encoder) { try { encoder.close(); } catch(e) {} }
+    if(error && error.name==='AbortError') {
+      depthMapState.phase='ready';depthMapState.cancelled=true;
+      setStatus('Export cancelled.','The analyzed depth pass is still ready.');
+    } else {
+      depthMapState.phase='error';setStatus('MP4 export failed.',friendlyError(error));
+    }
+  } finally {
+    exportBusy=false;document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('processBtn').disabled=!sourceFile;btn.disabled=!stableFrames.length;
+  }
+}
+
+function invalidateProcessedPass() {
+  if(!stableFrames.length || depthMapState.phase==='processing') return;
+  document.getElementById('exportBtn').disabled=true;
+  depthMapState.phase='media-ready';
+  setStatus('Settings changed — generate a new depth pass.','The model is cached; the second pass starts faster.');
+}
+
+function applyPreset(name) {
+  const presets={
+    seedance:{temporalSmooth:68,spatialSmooth:1,nearClip:0,farClip:100,depthContrast:105,depthGamma:100,invertDepth:false},
+    stable:{temporalSmooth:86,spatialSmooth:2,nearClip:3,farClip:97,depthContrast:100,depthGamma:105,invertDepth:false},
+    edges:{temporalSmooth:55,spatialSmooth:0,nearClip:5,farClip:95,depthContrast:135,depthGamma:95,invertDepth:false},
+    motion:{temporalSmooth:35,spatialSmooth:.5,nearClip:0,farClip:100,depthContrast:112,depthGamma:100,invertDepth:false},
+  };
+  const p=presets[name];if(!p)return;
+  Object.entries(p).forEach(([id,value])=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(el.type==='checkbox')el.checked=value;else el.value=value;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  document.querySelectorAll('[data-preset]').forEach(el=>el.classList.toggle('active',el.dataset.preset===name));
+  if(stableFrames.length) invalidateProcessedPass();
+}
+
+function bindControls() {
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    const label=document.getElementById(el.id+'Val');
+    const update=()=>{if(label)label.textContent=el.id==='depthGamma'?(Number(el.value)/100).toFixed(2):el.value;};
+    el.addEventListener('input',update);update();
+  });
+  document.querySelectorAll('.post-control').forEach(el=>el.addEventListener('input',()=>{
+    if(stableFrames.length) renderPreview(stableFrames.at(-1));
+  }));
+  document.querySelectorAll('.requires-process').forEach(el=>el.addEventListener('change',invalidateProcessedPass));
+  document.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('click',()=>applyPreset(el.dataset.preset)));
+}
+
+document.getElementById('uploadBtn').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>loadVideoFile(fileInput.files[0]));
+document.getElementById('processBtn').addEventListener('click',processDepth);
+document.getElementById('exportBtn').addEventListener('click',exportDepthVideo);
+document.getElementById('cancelBtn').addEventListener('click',()=>{cancelRequested=true;document.getElementById('cancelBtn').disabled=true;setStatus('Stopping…','Finishing the current AI frame safely.');});
+
+const workspace=document.getElementById('depthWorkspace');
+['dragenter','dragover'].forEach(type=>workspace.addEventListener(type,event=>{event.preventDefault();workspace.classList.add('dragging');}));
+['dragleave','drop'].forEach(type=>workspace.addEventListener(type,event=>{event.preventDefault();workspace.classList.remove('dragging');}));
+workspace.addEventListener('drop',event=>{const file=event.dataTransfer.files[0];if(file)loadVideoFile(file);});
+window.addEventListener('beforeunload',revokeMedia);
+
+bindControls();
+TipoUI.initChrome('visual');
+drawSourcePlaceholder();
+</script>
+</body>
+</html>

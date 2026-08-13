@@ -1,12 +1,21 @@
 # Tipó — Plano de Ataque
 
 ## Visao Geral
-38 ferramentas ativas: 15 visual tools + 23 kinetic type modes. (Gradient Shaper removido a pedido do Daniel em 11/07.)
+41 ferramentas ativas: 18 visual tools + 23 kinetic type modes. (Gradient Shaper removido a pedido do Daniel em 11/07.)
 Cada uma como pagina HTML independente, com shared CSS/JS.
 Landing page (index.html) como hub central.
 Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
+
+### FASE 23 — VIDEO DEPTH MAP para Seedance ✅ (2026-08-12)
+- **Pedido:** reproduzir na Tipó o fluxo do Artificial Studio (`video-depth-map`): upload de vídeo → vídeo grayscale de profundidade para usar como referência no Seedance.
+- **Ferramenta #41 / 18ª visual:** `depthmap.html`, separada do `depth.html` (o existente continua imagem/vídeo → relevo 3D). Card NOVO · AI no catálogo e contador/ticker atualizados.
+- **Motor:** Depth Anything V2 Small via Transformers.js, lazy-load somente ao clicar Generate. Escada WebGPU FP16 → WASM q8; mídia sempre local, somente os pesos do modelo são baixados.
+- **Pipeline offline próprio:** seek determinístico por timestamp → análise AI 6/12/24 amostras/s → percentis robustos P2/P98 → EMA motion-aware → interpolação temporal → WebCodecs H.264 + mp4-muxer. MP4 final é grayscale, silencioso, 24/30 fps e preserva aspecto/duração; Source/1080p/720p explícitos.
+- **Controle:** AI Detail 392/518/700px, estabilidade temporal, smoothing espacial, black/white point, contrast, gamma e invert. Presets Seedance/Stable/Crisp/Fast motion; progresso, backend usado, fps/ETA e cancelamento.
+- **Limite honesto:** o Video Depth Anything oficial é temporalmente superior, mas o Small exige janelas de 32 frames e ~6.8GB VRAM FP16 no benchmark oficial — não é alvo seguro pro browser estático. Upgrade futuro: backend cloud com Video Depth Anything/optical flow. No MVP, WASM pode levar minutos e clipes longos/4K pressionam memória.
+- **Validação:** `test-depthmap.mjs` ALL PASS — modelo mockado sem pesos, 6 frames em ordem, cache, controles sem reinferência, 2 MP4s ffmpeg-clean 160×96/1s/24 frames, grayscale exato, smoothing 85 reduziu flicker 54.1→6.6 (~88%), card/41 tools/mobile/zero runtime errors. `test-depthmap-real.mjs` PASS com os pesos reais via WebGPU FP16 (2/2 amostras, range 0–255). `test-depth.mjs` passou sem regressão do Depth 3D; `test-share-full.mjs` ALL PASS; sweep mobile marcou `depthmap: OK` (o sweep global ainda expõe falhas preexistentes em Fotograma/Studio).
 
 ### FASE 22 — SKETCH-CLASS: áudio-reatividade + Tipó Studio (referência: eng. reversa do tools.sketchdesign.club, doc no vault `sketchtools_reverse_engineering.md`, pedido do Daniel 21/07: "canvas em nodes, mudar ou implementar algo assim, especialmente visual tools")
 - **22.1 TipoAudio — áudio como fonte do TipoBehavior** ✅ (2026-07-21): 2 AnalyserNodes (FFT2048 smoothing .8 = level+bandas bass/mid/treble com blend média+pico e knee anti-sidelobe; FFT2048 smoothing 0 = spectral flux → kick 60-100Hz/snare 180-260+2.5-3.5k/hihat 10-16k com envelope de release). 7 tipos ♪ no popover do "~" (Speed vira Sens.), botão ♪ flutuante (bottom 64px right 62px, ao lado do ⏱) com popover de fonte (arquivo em loop audível / mic sem eco / desligar) + VU meter. TODAS as ~39 ferramentas ganharam sem tocar em nenhuma (contrato de input sintético). test-audio.mjs 13/13.

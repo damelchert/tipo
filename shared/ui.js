@@ -309,7 +309,7 @@ const TipoUI = {
     fotograma: 'visual',
     dithering: 'visual', reticula: 'visual', glitch: 'visual',
     datamosh: 'visual', rastro: 'visual', pixelsort: 'visual',
-    depth: 'visual', gradientmap: 'visual', riso: 'visual',
+    depth: 'visual', depthmap: 'visual', gradientmap: 'visual', riso: 'visual',
     overlay: 'visual', ascii: 'visual', audiotype: 'visual',
     pattern: 'visual', palette: 'visual', mockup: 'visual',
     // Kinetic — 3D
@@ -2419,6 +2419,12 @@ const TipoHelp = {
       'Source': 'Upload de imagem/vídeo, webcam ao vivo ou o demo animado. Tudo passa pelo stack de efeitos em tempo real.',
       'Stack': 'Cada efeito lê a SAÍDA do anterior (cadeia WebGL). ▲▼ reordenam — a ordem muda tudo (halftone→gradient ≠ gradient→halftone). Bolinha liga/desliga sem perder os ajustes; × remove.',
       'Effect Controls': 'Parâmetros do efeito selecionado no stack. O "~" de cada slider anima (osciladores ou ♪ áudio-reativo — carrega uma música e o efeito dança).',
+    },
+    depthmap: {
+      'Source': 'O vídeo fica no seu dispositivo: a Tipó lê os frames localmente e só baixa os pesos do modelo de profundidade na primeira geração.',
+      'Depth Engine': 'Analysis define quantos frames por segundo passam pela IA; o MP4 final interpola entre eles. AI Detail controla a resolução de análise. Temporal reduz flicker entre frames; Spatial suaviza bordas do mapa.',
+      'Depth Range': 'Black/White point recortam o intervalo útil; Contrast e Gamma redistribuem os tons. Branco representa perto e preto longe. Invert troca essa convenção.',
+      'Export': 'Gera um MP4 grayscale, silencioso e com o aspecto da fonte. Source preserva a resolução quando o encoder H.264 do navegador suporta; 1080p/720p reduzem memória.',
     },
     coil: {
       'Type': 'X/Y-Scale esticam o texto na horizontal/vertical (Y também dita a altura da fita). Weight engrossa o traço.',

@@ -440,6 +440,16 @@ body { overflow: hidden; }
   0%, 100% { transform: perspective(120px) rotateX(20deg) rotateY(-14deg); }
   50% { transform: perspective(120px) rotateX(-16deg) rotateY(16deg); } }
 
+.pv-depthmap { background:#111; }
+.pv-depthmap::before { content:''; position:absolute; inset:8px; border-radius:4px;
+  background:
+    radial-gradient(circle at 30% 50%,#fff 0 7%,#aaa 8% 17%,#555 18% 29%,transparent 30%),
+    linear-gradient(115deg,#151515 5%,#555 38%,#d7d7d7 64%,#fff 76%,#2b2b2b 96%);
+  background-size:120% 100%; animation:pvDepthMap calc(3s * var(--pvs)) ease-in-out infinite alternate; }
+.pv-depthmap::after { content:'AI'; position:absolute; right:6px; bottom:5px; color:#D4A040;
+  font-size:7px; font-weight:700; letter-spacing:1px; }
+@keyframes pvDepthMap { to { background-position:100% 0; filter:contrast(1.35) brightness(.82); } }
+
 .pv-gmap { background: linear-gradient(90deg, #1A1818, #2A8A7A, #D4A040, #F8F5F0, #1A1818);
   background-size: 300% 100%;
   animation: pvGmap calc(4.5s * var(--pvs)) linear infinite; }
@@ -712,7 +722,7 @@ body { overflow: hidden; }
       <span class="current">Home</span>
     </div>
     <div class="subbar-right">
-      <span class="header-stats">40 tools &bull; zero install &bull; 100% browser</span>
+      <span class="header-stats">41 tools &bull; zero install &bull; 100% browser</span>
       <a class="subbar-credit" href="https://www.danielmelchert.com.br" target="_blank" rel="noopener">made by <b>Daniel Melchert</b></a>
     </div>
   </div>
@@ -737,7 +747,7 @@ body { overflow: hidden; }
           </div>
           <div class="tipo-split-label split-text" data-text="Visual Tools">Visual Tools</div>
           <div class="tipo-split-sub split-sub">image &bull; video &bull; webcam &bull; mp4 / gif / svg</div>
-          <div class="split-ticker"><div class="split-ticker-track">Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Depth · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
+          <div class="split-ticker"><div class="split-ticker-track">Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Video Depth Map · Depth 3D · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;<!--dup-->Fotograma · Dithering · Retícula · Glitch · Datamosh · Rastro · Pixel Sort · Video Depth Map · Depth 3D · Gradient Map · Riso · ASCII · Pattern · Palette · Mockup · Overlays · AudioType&nbsp;·&nbsp;</div></div>
         </div>
         <div class="tipo-split-panel" onclick="goKineticType()">
           <div class="tipo-preview-bg">
@@ -817,6 +827,14 @@ body { overflow: hidden; }
             <div class="tipo-mode-card-title">Pixel Sort</div>
             <div class="tipo-mode-card-desc">Asendorf-style interval pixel sorting. 6 sort keys, arbitrary angle, threshold mask, randomness, animated drift.</div>
             <div class="tipo-mode-card-meta">image &bull; video &bull; webcam &bull; 7 presets &bull; export mp4/png</div>
+          </div>
+        </a>
+        <a href="depthmap.html" class="tipo-mode-card">
+          <div class="tipo-mode-card-preview pv-depthmap"></div>
+          <div class="tipo-mode-card-info">
+            <div class="tipo-mode-card-title">Video Depth Map <span style="font-size:8px;letter-spacing:1.5px;color:var(--accent-warm,#D4A040);vertical-align:middle;">NOVO &middot; AI</span></div>
+            <div class="tipo-mode-card-desc">Turn any video into a temporally stabilized grayscale depth reference for Seedance — frame-by-frame AI, fully in your browser.</div>
+            <div class="tipo-mode-card-meta">video &bull; depth anything v2 &bull; temporal control &bull; seedance &bull; export mp4</div>
           </div>
         </a>
         <a href="depth.html" class="tipo-mode-card">
@@ -2243,7 +2261,7 @@ void main(){
       .add(setLog('revelando · tipó'), 0.8)
       // ato 2 — cristalização rápida: warp morre, zoom assenta, fluxo congela
       .to(S, { amt: 0, zoomK: 1.0, speed: 0.06, duration: 1.2, ease: 'power4.inOut' }, 1.1)
-      .add(setLog('40 ferramentas · studio · 100% browser'), 2.0)
+      .add(setLog('41 ferramentas · studio · 100% browser'), 2.0)
       .to('#heroCta', { opacity: 1, duration: 0.5 }, 2.3)
       .add(() => hero.classList.add('parked'));
   });

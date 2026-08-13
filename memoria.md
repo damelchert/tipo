@@ -6,7 +6,7 @@
 - **Deploy:** Vercel (auto-deploy on push)
 - **Local:** `npx http-server -p 8080` em `/Users/danielmelchert/PROJETOS/tipo`
 - **Domínios a verificar:** tipo.tools, tipo.app, tipo.art, tipotype.io
-- **Total:** 40 ferramentas (17 visual tools + 23 kinetic type modes)
+- **Total:** 41 ferramentas (18 visual tools + 23 kinetic type modes)
 
 ## Estrutura de Arquivos
 ```
@@ -21,6 +21,7 @@
   datamosh.html                — motion-vector codec simulation, cross-mosh, keyframes (FUNCIONAL)
   rastro.html                  — Adobe-style temporal Echo Effect, motion/drawn matte, PNG alpha (FUNCIONAL)
   pixelsort.html               — Asendorf pixel sorting, arbitrary angle, threshold mask (FUNCIONAL)
+  depthmap.html                — vídeo → depth-map temporal grayscale para Seedance, AI local + MP4 offline (FUNCIONAL)
   depth.html                   — image/video → 3D depth mesh, AI/manual/luminance depth (FUNCIONAL)
   gradientmap.html             — luminance → draggable color gradient map (FUNCIONAL)
   riso.html                    — risograph + CMYK halftone simulator, plates export (FUNCIONAL)
@@ -1553,3 +1554,19 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - 60+ shapes, 10 shape presets, 24 color palettes
 - Export: PNG, SVG, MP4 (8/16 Mbps)
 - 4 iterações do sistema de gravação até chegar no v4 final
+
+---
+
+## 2026-08-12
+
+### Video Depth Map construído — ferramenta #41, 18ª visual
+- **Pedido do Daniel:** trazer para a Tipó o fluxo do Artificial Studio Video Depth Map para subir um vídeo e gerar uma referência de profundidade pro Seedance.
+- `depthmap.html` nasceu separado de `depth.html`: o antigo segue como relevo 3D interativo; o novo é um conversor de vídeo → MP4 depth grayscale.
+- **Experiência:** upload/drag & drop local, monitor pequeno da fonte, depth grande, quatro presets (Seedance/Stable/Crisp/Fast motion), progresso/ETA/backend, cancelar, resolução Source/1080p/720p e export 24/30 fps. Arquivo sai silencioso e timestampado.
+- **AI local e lazy:** `onnx-community/depth-anything-v2-small` via Transformers.js 3.5.2. Tenta WebGPU FP16 e cai para WASM q8. O vídeo não é enviado; só os pesos são baixados na primeira geração.
+- **Tratamento temporal:** análise 6/12/24 amostras/s (12 default), RawImage direto do canvas (sem JPEG/base64), preferência pelo tensor float `predicted_depth`, normalização robusta P2/P98, EMA por pixel modulada pela mudança de luminância e interpolação dos depth maps até 24/30 fps. Controles pós (black/white, contrast, gamma, invert, spatial) não reinferem.
+- **Export:** pipeline offline próprio, porque TipoRecorder descarta frames sob backpressure e TipoHQ exige render síncrono. WebCodecs H.264 + mp4-muxer, timestamps/duração determinísticos, dimensões pares, Source não reduz silenciosamente — se o encoder não suportar, usuário escolhe 1080p/720p.
+- **Decisão consciente:** não usar Video Depth Anything no browser agora. O modelo temporal oficial usa janelas de 32 frames e reporta ~6.8GB de VRAM FP16 no Small; upgrade futuro é backend cloud/optical flow. O MVP framewise estabilizado é compatível com a arquitetura estática e o Small é Apache-2.0.
+- **Integração:** card `Video Depth Map · NOVO · AI`, preview CSS próprio, contador 40→41, ticker, `_backTargets.depthmap`, TipoHelp em 4 seções e README atualizado. CSP existente já cobria jsDelivr/Hugging Face/WebGPU-WASM/blob; nenhuma mudança em `vercel.json`.
+- **Teste dedicado:** `test-depthmap.mjs` gera um H.264 sintético, intercepta o módulo Transformers com depth determinístico e prova lazy-load/cache/ordem/progresso/controles/MP4/mobile. ALL PASS: dois MP4s ffmpeg-clean, 160×96, 1s, 24 frames, grayscale sem erro de canal; temporal 85 reduziu delta médio de 54.1 para 6.6 (~88%). `test-depthmap-real.mjs` também passou com o modelo/pesos reais em WebGPU FP16 (2/2 amostras, mapa 0–255). `test-depth.mjs` e `test-share-full.mjs` passaram; `test-mobile.mjs` confirmou `depthmap: OK` (falha geral restante é preexistente em Fotograma/Studio).
+- **GOTCHAS:** WASM é lento e pode bloquear durante uma inferência; cancelar atua entre frames. O MP4 é montado em memória, então clipes longos/4K podem estourar RAM. Codec de entrada precisa ser decodificável pelo navegador; export MP4 requer WebCodecs em Chrome/Edge atual.

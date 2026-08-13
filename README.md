@@ -4,6 +4,9 @@ Suite of generative visual tools for motion type, kinetic typography, and dither
 
 ## Tools
 
+### Video Depth Map
+Convert video into a temporally stabilized grayscale depth reference for Seedance. Depth Anything V2 Small runs locally with WebGPU FP16 when available and a WASM q8 fallback; export is silent H.264 MP4 via WebCodecs.
+
 ### Dithering
 Transform images and videos into visual art using custom SVGs in place of pixels. 7-level shadow-to-highlight mapping with 60+ built-in shapes.
 
@@ -28,7 +31,10 @@ Each mode has sliders, color pickers, and presets.
 - HTML/CSS/JS (no frameworks, no build tools)
 - p5.js (WEBGL + 2D)
 - WebCodecs + mp4-muxer for MP4 recording
+- Transformers.js + Depth Anything V2 Small for local depth estimation
 - Static site — deploy anywhere
+
+Video Depth Map works best in current Chrome or Edge. Model weights are downloaded on first use; source media never leaves the browser. Depth Anything V2 Small is distributed under Apache-2.0.
 
 ## Run locally
 
