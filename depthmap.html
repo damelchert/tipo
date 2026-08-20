@@ -22,7 +22,8 @@
   .progress-track { height:3px; margin-top:7px; overflow:hidden; border-radius:2px; background:var(--border-1); }
   #progressBar { width:0; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-warm)); transition:width .18s ease; }
   #depthWorkspace { flex:1; min-width:0; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0c0c0c; }
-  #depthCanvas { display:block; width:100%; height:auto; max-height:100%; background:#070707; box-shadow:0 8px 50px rgba(0,0,0,.45); }
+  #depthCanvas { display:block; width:100%; height:auto; max-height:100%; background:#070707; box-shadow:0 8px 50px rgba(0,0,0,.45); transition:opacity .2s ease; }
+  #depthCanvas.source-previewing { opacity:0; }
   .empty-state { position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; pointer-events:none; transition:opacity .2s ease; }
   .empty-state.hidden { opacity:0; }
   .empty-inner { width:min(420px,76%); text-align:center; }
@@ -36,12 +37,18 @@
   .source-monitor { position:absolute; left:18px; bottom:18px; z-index:3; width:min(220px,25vw); border:1px solid rgba(248,245,240,.22); border-radius:5px; overflow:hidden; background:#111; box-shadow:0 8px 30px rgba(0,0,0,.35); opacity:0; transform:translateY(8px); transition:.22s ease; }
   .source-monitor.visible { opacity:1; transform:none; }
   .source-monitor video { display:block; width:100%; max-height:150px; object-fit:contain; background:#080808; }
+  .source-monitor.primary { inset:0; width:100%; border:0; border-radius:0; box-shadow:none; opacity:1; transform:none; }
+  .source-monitor.primary video { width:100%; height:100%; max-height:none; object-fit:contain; }
+  #sourceMonitor.primary { left:0; top:0; right:0; bottom:0; width:auto !important; height:auto; }
+  #sourceMonitor.primary #sourceVideo { display:block; width:100% !important; height:100% !important; max-width:none; max-height:none; object-fit:contain; }
   .monitor-label { position:absolute; top:6px; left:7px; padding:3px 5px; border-radius:3px; background:rgba(0,0,0,.68); color:#f8f5f0; font-size:8px; letter-spacing:1.4px; text-transform:uppercase; }
   .workspace-badge { position:absolute; top:18px; left:50%; z-index:3; transform:translateX(-50%); padding:6px 9px; border:1px solid rgba(248,245,240,.14); border-radius:20px; background:rgba(10,10,10,.62); color:rgba(248,245,240,.58); font-size:8px; letter-spacing:1.5px; text-transform:uppercase; pointer-events:none; backdrop-filter:blur(8px); }
   #dropOverlay { position:absolute; inset:14px; z-index:8; display:none; align-items:center; justify-content:center; border:1px dashed var(--accent); border-radius:8px; background:rgba(20,70,62,.68); color:#fff; font-size:12px; letter-spacing:2px; text-transform:uppercase; pointer-events:none; }
   #depthWorkspace.dragging #dropOverlay { display:flex; }
-  #processBtn,#exportBtn,#cancelBtn { min-height:38px; }
-  #cancelBtn { display:none; }
+  #processBtn,#exportBtn,#cancelBtn { width:100%; min-height:44px; }
+  #cancelBtn[hidden],#exportBtn[hidden] { display:none !important; }
+  .action-row { width:100%; }
+  .job-locked { opacity:.55; pointer-events:none; }
   body.tipo-full #depthWorkspace { width:100vw; height:100vh; }
   body.tipo-full #depthCanvas { max-height:100vh; }
   @media (max-width:768px) {
@@ -50,6 +57,8 @@
     #depthCanvas { width:100vw; max-width:100vw; }
     .source-monitor { left:10px; bottom:68px; width:112px; }
     .source-monitor video { max-height:78px; }
+    .source-monitor.primary { inset:0; width:100%; }
+    .source-monitor.primary video { height:100%; max-height:none; }
     .workspace-badge { top:14px; white-space:nowrap; }
     #processBtn,#exportBtn,#cancelBtn { min-height:44px; }
   }
@@ -73,10 +82,10 @@
   <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
-      <span class="preset-chip active" data-preset="seedance">Seedance</span>
-      <span class="preset-chip" data-preset="stable">Stable</span>
-      <span class="preset-chip" data-preset="edges">Crisp</span>
-      <span class="preset-chip" data-preset="motion">Fast motion</span>
+      <span class="preset-chip active" data-preset="seedance" role="button" tabindex="0" title="Balanced depth for most Seedance references">Seedance</span>
+      <span class="preset-chip" data-preset="stable" role="button" tabindex="0" title="Maximum temporal stability for static or slow shots">Stable</span>
+      <span class="preset-chip" data-preset="edges" role="button" tabindex="0" title="Crisper plane separation and stronger edges">Crisp</span>
+      <span class="preset-chip" data-preset="motion" role="button" tabindex="0" title="Less history and ghosting for fast movement">Fast motion</span>
     </div>
   </div>
 
@@ -125,24 +134,26 @@
         <option value="720">720p</option>
       </select>
     </div>
-    <div class="btn-row" style="margin-top:7px;">
-      <button class="btn" id="processBtn" type="button" disabled>Generate depth</button>
-      <button class="btn btn-secondary" id="cancelBtn" type="button">Cancel</button>
+    <div class="btn-row action-row" style="margin-top:7px;">
+      <button class="btn" id="processBtn" type="button" disabled>Generate depth MP4</button>
     </div>
-    <div class="btn-row" style="margin-top:6px;">
-      <button class="btn btn-secondary" id="exportBtn" type="button" data-share-anchor disabled>Export MP4</button>
+    <div class="btn-row action-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="cancelBtn" type="button" hidden>Cancel</button>
+    </div>
+    <div class="btn-row action-row" style="margin-top:6px;">
+      <button class="btn btn-secondary" id="exportBtn" type="button" data-share-anchor disabled hidden>Download again</button>
     </div>
     <div class="status-card" aria-live="polite">
       <div id="modelStatus">Select a video to begin.</div>
       <div id="progressText">Model stays unloaded until Generate depth.</div>
-      <div class="progress-track"><div id="progressBar"></div></div>
+      <div class="progress-track" id="progressTrack" role="progressbar" aria-label="Depth generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progressBar"></div></div>
     </div>
     <div class="process-note">Output is grayscale, silent and keeps the source aspect ratio — ready to use as a Seedance video reference.</div>
   </div>
   <div style="height:42px;"></div>
 </aside>
 
-<main id="depthWorkspace">
+<main id="depthWorkspace" aria-label="Video depth preview workspace" aria-busy="false">
   <canvas id="depthCanvas" width="1280" height="720" aria-label="Depth map preview"></canvas>
   <div class="empty-state" id="emptyState">
     <div class="empty-inner">
@@ -153,8 +164,8 @@
   </div>
   <div class="workspace-badge" id="workspaceBadge">Grayscale depth · Seedance reference</div>
   <div class="source-monitor" id="sourceMonitor">
-    <video id="sourceVideo" muted playsinline preload="metadata"></video>
-    <span class="monitor-label">Source</span>
+    <video id="sourceVideo" muted playsinline preload="auto" controls aria-label="Uploaded source video preview"></video>
+    <span class="monitor-label" id="sourceLabel">Source preview</span>
   </div>
   <div id="dropOverlay">Drop video</div>
 </main>
@@ -186,6 +197,8 @@ let modelBackend = '';
 let stableFrames = [];
 let cancelRequested = false;
 let exportBusy = false;
+let outputDirty = false;
+let lastExportSignature = '';
 
 const depthMapState = window.depthMapState = {
   phase:'empty', processedFrames:0, totalFrames:0, outputFrames:0,
@@ -226,17 +239,43 @@ function setStatus(status, progress) {
 
 function setProgress(value) {
   depthMapState.progress = Math.max(0, Math.min(1, value || 0));
-  document.getElementById('progressBar').style.width = `${Math.round(depthMapState.progress * 100)}%`;
+  const percentage = Math.round(depthMapState.progress * 100);
+  document.getElementById('progressBar').style.width = `${percentage}%`;
+  document.getElementById('progressTrack').setAttribute('aria-valuenow', String(percentage));
 }
 
 function setBusy(busy, label) {
-  document.getElementById('processBtn').disabled = busy || !sourceFile;
+  const processBtn = document.getElementById('processBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  processBtn.disabled = busy || !sourceFile;
   document.getElementById('uploadBtn').disabled = busy;
-  document.getElementById('cancelBtn').style.display = busy ? '' : 'none';
-  document.getElementById('cancelBtn').disabled = !busy;
+  fileInput.disabled = busy;
+  cancelBtn.hidden = !busy;
+  cancelBtn.disabled = !busy;
+  document.getElementById('depthWorkspace').setAttribute('aria-busy', String(busy));
+  document.getElementById('panel').setAttribute('aria-busy', String(busy));
   if (label) document.getElementById('processBtn').textContent = label;
-  if (!busy) document.getElementById('processBtn').textContent = 'Generate depth';
-  document.querySelectorAll('.requires-process, #analysisFps, #quality').forEach(el => { el.disabled = busy; });
+  if (!busy) processBtn.textContent = 'Generate depth MP4';
+  document.querySelectorAll('.requires-process, .post-control, #analysisFps, #quality, #outputFps, #outputSize').forEach(el => { el.disabled = busy; });
+  document.querySelectorAll('[data-preset]').forEach(el => {
+    el.classList.toggle('job-locked', busy);
+    el.setAttribute('aria-disabled', String(busy));
+  });
+  if (busy) exportBtn.disabled = true;
+  else if (depthMapState.outputBlob) exportBtn.disabled = false;
+}
+
+function showSourcePreview(primary) {
+  const monitor = document.getElementById('sourceMonitor');
+  monitor.classList.toggle('primary', primary);
+  monitor.classList.toggle('visible', !!sourceFile);
+  depthCanvas.classList.toggle('source-previewing', primary);
+  sourceVideo.controls = primary;
+  document.getElementById('sourceLabel').textContent = primary ? 'Source preview' : 'Source';
+  document.getElementById('workspaceBadge').textContent = primary
+    ? 'Source preview · press play to review'
+    : 'Grayscale depth · Seedance reference';
 }
 
 function formatDuration(seconds) {
@@ -259,18 +298,26 @@ function revokeMedia() {
 
 function resetResults() {
   stableFrames = [];
+  outputDirty = false;
+  lastExportSignature = '';
   depthMapState.processedFrames = 0;
   depthMapState.totalFrames = 0;
   depthMapState.outputFrames = 0;
   depthMapState.outputBlob = null;
-  document.getElementById('exportBtn').disabled = true;
+  const exportBtn = document.getElementById('exportBtn');
+  exportBtn.disabled = true;
+  exportBtn.hidden = true;
+  exportBtn.textContent = 'Download again';
   setProgress(0);
 }
 
 function loadVideoFile(file) {
   if (!validVideo(file)) {
+    revokeMedia();
     sourceFile = null;
     resetResults();
+    showSourcePreview(false);
+    document.getElementById('emptyState').classList.remove('hidden');
     depthMapState.phase = 'error';
     setStatus('Invalid file — select a video.', 'MP4, MOV and WebM are supported when your browser can decode them.');
     document.getElementById('processBtn').disabled = true;
@@ -294,9 +341,9 @@ function loadVideoFile(file) {
     depthMapState.phase = 'media-ready';
     document.getElementById('processBtn').disabled = false;
     document.getElementById('emptyState').classList.add('hidden');
-    document.getElementById('sourceMonitor').classList.add('visible');
+    showSourcePreview(true);
     document.getElementById('sourceMeta').textContent = `${sourceVideo.videoWidth}×${sourceVideo.videoHeight} · ${formatDuration(sourceVideo.duration)} · ${file.name}`;
-    setStatus('Video ready.', 'Choose the AI detail and generate the depth pass.');
+    setStatus('Video ready.', 'Review the source, then generate the finished depth MP4 in one click.');
     drawSourcePlaceholder();
   };
   sourceVideo.onerror = () => {
@@ -445,27 +492,29 @@ function frameLumaAt(width,height) {
 
 async function processDepth() {
   if (!sourceFile || exportBusy) return;
+  exportBusy=true;
   cancelRequested=false;
   depthMapState.cancelled=false;
-  depthMapState.outputBlob=null;
-  stableFrames=[];
+  resetResults();
   const sampleFps=Number(document.getElementById('analysisFps').value);
   const total=Math.max(1,Math.ceil(sourceVideo.duration*sampleFps));
   if (total>MAX_ANALYSIS_FRAMES) {
+    exportBusy=false;
     depthMapState.phase='error';
     setStatus('This pass is too large for browser memory.', `Choose a lower Analysis rate or a clip under ${Math.floor(MAX_ANALYSIS_FRAMES/sampleFps)}s.`);
     return;
   }
   depthMapState.totalFrames=total;
   depthMapState.processedFrames=0;
-  document.getElementById('exportBtn').disabled=true;
-  setBusy(true,'Processing…');
+  setBusy(true,'Processing depth + MP4…');
+  showSourcePreview(false);
   const restoreTime=sourceVideo.currentTime;
   sourceVideo.pause();
   const started=performance.now();
   let previous=null, previousLuma=null;
   try {
     await loadDepthModel();
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
     depthMapState.phase='processing';
     setProgress(.08);
     for(let i=0;i<total;i++) {
@@ -480,30 +529,45 @@ async function processDepth() {
       previous=stable; previousLuma=luma;
       depthMapState.processedFrames=i+1;
       const pct=(i+1)/total;
-      setProgress(.08+pct*.92);
+      setProgress(.08+pct*.64);
       const elapsed=(performance.now()-started)/1000;
       const rate=(i+1)/Math.max(.05,elapsed);
       const eta=Math.max(0,Math.round((total-i-1)/rate));
-      setStatus(`Analyzing depth · ${modelBackend}`, `${i+1} / ${total} · ${Math.round(pct*100)}% · ${rate.toFixed(1)} fps · ~${eta}s`);
+      setStatus(`Analyzing depth · ${modelBackend}`, `AI ${i+1} / ${total} · ${Math.round(pct*100)}% · ${rate.toFixed(1)} fps · ~${eta}s`);
       renderPreview(stableEntry);
       if(i%2===0) await new Promise(resolve=>setTimeout(resolve,0));
     }
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+    const result=await encodeDepthVideo(.72,.28);
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+    depthMapState.outputBlob=result.blob;
+    lastExportSignature=exportSignature();
+    outputDirty=false;
     depthMapState.phase='ready';
     setProgress(1);
-    setStatus(`Ready · ${modelBackend}`, `${total} / ${total} · 100% · Depth pass complete`);
-    document.getElementById('exportBtn').disabled=false;
-    document.getElementById('workspaceBadge').textContent=`Depth ready · ${sampleFps} AI samples/s`;
+    setStatus(`Ready · ${modelBackend}`, `MP4 complete · ${result.total} frames · ${(result.blob.size/1048576).toFixed(1)} MB`);
+    const exportBtn=document.getElementById('exportBtn');
+    exportBtn.textContent='Download again';
+    exportBtn.hidden=false;
+    exportBtn.disabled=false;
+    document.getElementById('workspaceBadge').textContent=`Depth MP4 ready · ${sampleFps} AI samples/s`;
+    TipoUI._downloadBlob(result.blob,'tipo-video-depth-map.mp4');
   } catch(error) {
     if(error && error.name==='AbortError') {
       depthMapState.phase='cancelled'; depthMapState.cancelled=true;
-      setStatus('Processing cancelled.','No file was created.');
+      depthMapState.outputBlob=null;
+      setStatus('Processing cancelled.','No partial file was created. You can generate again when ready.');
     } else {
       depthMapState.phase='error';
       setStatus('Depth generation failed.',friendlyError(error));
     }
-    stableFrames=[];
-    document.getElementById('exportBtn').disabled=true;
+    if(depthMapState.processedFrames<depthMapState.totalFrames) stableFrames=[];
+    const exportBtn=document.getElementById('exportBtn');
+    exportBtn.disabled=true;
+    exportBtn.hidden=true;
+    showSourcePreview(true);
   } finally {
+    exportBusy=false;
     setBusy(false);
     try { await seekVideo(Math.min(restoreTime,sourceVideo.duration-.001)); } catch(e) {}
   }
@@ -578,12 +642,16 @@ async function supportedEncoderConfig(width,height,fps) {
   return support.config || config;
 }
 
-async function exportDepthVideo() {
-  if(!stableFrames.length || exportBusy) return;
-  exportBusy=true; cancelRequested=false; depthMapState.cancelled=false;
-  const btn=document.getElementById('exportBtn');
-  btn.disabled=true; document.getElementById('processBtn').disabled=true;
-  document.getElementById('cancelBtn').style.display=''; document.getElementById('cancelBtn').disabled=false;
+function exportSignature() {
+  return JSON.stringify({
+    ...settings(),
+    fps:document.getElementById('outputFps').value,
+    size:document.getElementById('outputSize').value,
+  });
+}
+
+async function encodeDepthVideo(progressStart=0,progressSpan=1) {
+  if(!stableFrames.length) throw new Error('Generate a depth pass before encoding.');
   const fps=Number(document.getElementById('outputFps').value);
   const sampleFps=Number(document.getElementById('analysisFps').value);
   const dims=outputDimensions(document.getElementById('outputSize').value);
@@ -593,8 +661,9 @@ async function exportDepthVideo() {
   let encoder=null,encodeError=null;
   try {
     depthMapState.phase='exporting'; depthMapState.outputFrames=0;
-    setProgress(0); setStatus('Building depth MP4…',`${dims.width}×${dims.height} · frame 0 / ${total}`);
+    setProgress(progressStart); setStatus('Building depth MP4…',`${dims.width}×${dims.height} · frame 0 / ${total}`);
     const config=await supportedEncoderConfig(dims.width,dims.height,fps);
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
     const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:dims.width,height:dims.height},fastStart:'in-memory'});
     encoder=new VideoEncoder({output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),error:error=>{encodeError=error;}});
     encoder.configure(config);
@@ -612,43 +681,80 @@ async function exportDepthVideo() {
       const videoFrame=new VideoFrame(renderCanvas,{timestamp,duration:i===total-1?Math.max(1,durationUs-timestamp):frameUs});
       encoder.encode(videoFrame,{keyFrame:i%fps===0}); videoFrame.close();
       if(encodeError) throw encodeError;
-      while(encoder.encodeQueueSize>6) await new Promise(resolve=>setTimeout(resolve,4));
+      while(encoder.encodeQueueSize>6) {
+        if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+        await new Promise(resolve=>setTimeout(resolve,4));
+      }
       depthMapState.outputFrames=i+1;
       if(i%3===0 || i===total-1) {
-        const p=(i+1)/total;setProgress(p);
-        setStatus('Building depth MP4…',`${i+1} / ${total} · ${Math.round(p*100)}% · ${dims.width}×${dims.height}`);
+        const p=(i+1)/total;setProgress(progressStart+p*progressSpan);
+        setStatus('Building depth MP4…',`MP4 ${i+1} / ${total} · ${Math.round(p*100)}% · ${dims.width}×${dims.height}`);
         await new Promise(resolve=>setTimeout(resolve,0));
       }
     }
     await encoder.flush();
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
     if(encodeError) throw encodeError;
     muxer.finalize(); encoder.close(); encoder=null;
     const blob=new Blob([muxer.target.buffer],{type:'video/mp4'});
-    depthMapState.outputBlob=blob; depthMapState.phase='ready';
-    setProgress(1);setStatus(`Ready · ${modelBackend}`,`MP4 complete · ${total} frames · ${(blob.size/1048576).toFixed(1)} MB`);
-    TipoUI._downloadBlob(blob,'tipo-video-depth-map.mp4');
+    return {blob,total,width:dims.width,height:dims.height};
   } catch(error) {
     if(encoder) { try { encoder.close(); } catch(e) {} }
+    throw error;
+  }
+}
+
+async function downloadAgain() {
+  if(!depthMapState.outputBlob || exportBusy) return;
+  if(!outputDirty && lastExportSignature===exportSignature()) {
+    TipoUI._downloadBlob(depthMapState.outputBlob,'tipo-video-depth-map.mp4');
+    return;
+  }
+  exportBusy=true;
+  cancelRequested=false;
+  depthMapState.cancelled=false;
+  setBusy(true,'Updating depth MP4…');
+  showSourcePreview(false);
+  try {
+    const result=await encodeDepthVideo(0,1);
+    if(cancelRequested) throw new DOMException('Cancelled','AbortError');
+    depthMapState.outputBlob=result.blob;
+    lastExportSignature=exportSignature();
+    outputDirty=false;
+    depthMapState.phase='ready';
+    setProgress(1);
+    setStatus(`Ready · ${modelBackend}`,`Updated MP4 · ${result.total} frames · ${(result.blob.size/1048576).toFixed(1)} MB`);
+    document.getElementById('exportBtn').textContent='Download again';
+    TipoUI._downloadBlob(result.blob,'tipo-video-depth-map.mp4');
+  } catch(error) {
     if(error && error.name==='AbortError') {
-      depthMapState.phase='ready';depthMapState.cancelled=true;
-      setStatus('Export cancelled.','The analyzed depth pass is still ready.');
+      depthMapState.phase='cancelled';
+      depthMapState.cancelled=true;
+      setStatus('MP4 update cancelled.','The previous completed download is still available.');
     } else {
-      depthMapState.phase='error';setStatus('MP4 export failed.',friendlyError(error));
+      depthMapState.phase='error';
+      setStatus('MP4 update failed.',friendlyError(error));
     }
   } finally {
-    exportBusy=false;document.getElementById('cancelBtn').style.display='none';
-    document.getElementById('processBtn').disabled=!sourceFile;btn.disabled=!stableFrames.length;
+    exportBusy=false;
+    setBusy(false);
   }
 }
 
 function invalidateProcessedPass() {
-  if(!stableFrames.length || depthMapState.phase==='processing') return;
-  document.getElementById('exportBtn').disabled=true;
+  if(!stableFrames.length || exportBusy) return;
+  const exportBtn=document.getElementById('exportBtn');
+  exportBtn.disabled=true;
+  exportBtn.hidden=true;
+  depthMapState.outputBlob=null;
+  outputDirty=false;
+  lastExportSignature='';
   depthMapState.phase='media-ready';
   setStatus('Settings changed — generate a new depth pass.','The model is cached; the second pass starts faster.');
 }
 
 function applyPreset(name) {
+  if(exportBusy) return;
   const presets={
     seedance:{temporalSmooth:68,spatialSmooth:1,nearClip:0,farClip:100,depthContrast:105,depthGamma:100,invertDepth:false},
     stable:{temporalSmooth:86,spatialSmooth:2,nearClip:3,farClip:97,depthContrast:100,depthGamma:105,invertDepth:false},
@@ -672,16 +778,31 @@ function bindControls() {
     el.addEventListener('input',update);update();
   });
   document.querySelectorAll('.post-control').forEach(el=>el.addEventListener('input',()=>{
-    if(stableFrames.length) renderPreview(stableFrames.at(-1));
+    if(stableFrames.length) {
+      renderPreview(stableFrames.at(-1));
+      if(depthMapState.outputBlob) {
+        outputDirty=true;
+        document.getElementById('exportBtn').textContent='Download updated MP4';
+      }
+    }
   }));
   document.querySelectorAll('.requires-process').forEach(el=>el.addEventListener('change',invalidateProcessedPass));
+  document.querySelectorAll('#outputFps, #outputSize').forEach(el=>el.addEventListener('change',()=>{
+    if(depthMapState.outputBlob) {
+      outputDirty=true;
+      document.getElementById('exportBtn').textContent='Download updated MP4';
+    }
+  }));
   document.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('click',()=>applyPreset(el.dataset.preset)));
+  document.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('keydown',event=>{
+    if(event.key==='Enter' || event.key===' '){event.preventDefault();applyPreset(el.dataset.preset);}
+  }));
 }
 
 document.getElementById('uploadBtn').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>loadVideoFile(fileInput.files[0]));
 document.getElementById('processBtn').addEventListener('click',processDepth);
-document.getElementById('exportBtn').addEventListener('click',exportDepthVideo);
+document.getElementById('exportBtn').addEventListener('click',downloadAgain);
 document.getElementById('cancelBtn').addEventListener('click',()=>{cancelRequested=true;document.getElementById('cancelBtn').disabled=true;setStatus('Stopping…','Finishing the current AI frame safely.');});
 
 const workspace=document.getElementById('depthWorkspace');

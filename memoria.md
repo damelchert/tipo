@@ -72,6 +72,8 @@
     style.css                  — design system (#99E0D2 accent, dark/light theme, responsive)
     recorder.js                — TipoRecorder (MP4 via WebCodecs pra 2D E WEBGL; stream/WebM só como fallback)
     ui.js                      — TipoUI: sliders, presets, export, recorder init, formatters, theme toggle
+    fotograma-providers.js     — catálogo + router/adapters Google/Higgsfield do Fotograma
+  higgsfield-bridge.mjs        — bridge local privado para o CLI autenticado (opcional)
   assets/
     fonts/IBMPlexMono-Regular.ttf
     favicon.svg                — SVG favicon (T em monospace)
@@ -454,7 +456,7 @@ Fonte: `PROJETOS/_knowledge/prompts/workflow_plataforma_cinematografica.md` (fra
 - test-fotograma-scene.mjs estendido: 18/18 (texture override cor vs P&B, embrulho user-input, system DATA + BRAND & GENRE, eco de tags limpo).
 
 ### FOTOGRAMA — AUDITORIA COMPLETA do motor de direção (enquadramento/lente/stock/estética) com bateria real
-Gatilho: 4 prints do Daniel (campanha Guaraná, framing Crane) — latinha sem marca, mulher minúscula, sombra de "roda" fantasma, vórtice no P&B. Bateria A/B de 11 imagens via **Higgsfield CLI nano_banana_2 (unlimited, zero créditos)**, cada variável isolada:
+Gatilho: 4 prints do Daniel (campanha Guaraná, framing Crane) — latinha sem marca, mulher minúscula, sombra de "roda" fantasma, vórtice no P&B. Bateria A/B de 11 imagens via **Higgsfield CLI nano_banana_2** (registrada à época como Unlimited/zero créditos; o CLI atual consome créditos), cada variável isolada:
 - **RAIZ #1 — frases de framing com conceito abstrato LITERALIZAM**: "the subject small inside bold geometry" (Crane) virou padrões na areia / sombra de roda gigante / paredes abstratas / círculo de pedras nos 4 prints (e sombras geométricas na bateria). E "subject small" mata o hero comercial. Frases vagas ("elevated view from high above") são IGNORADAS (2× eye-level); "crane shot" e "drone shot" idem. **O que obedece: altura CONCRETA** — vencedor validado: `aerial high-angle view from several stories above, looking steeply down at the subject` (high-angle real + hero + lata da marca). Mesma lei do worm's eye de 16/07.
 - **RAIZ #2 — "no logos" da clean rule matava o produto de marca**: lata Guaraná virava lata genérica em metade das gerações. Clean rule nova validada: "No overlaid text or graphics, no watermarks, no film borders...; **branding may appear only where it naturally lives on products in the scene**" → lata perfeita legível. Label do checkbox atualizado ("rótulo de produto pode").
 - **"true real-world scale and proportions"** (tag fixa nova no final dos bits) — mata a lata gigante do print 2. Validada na bateria (3, 4, c2).
@@ -513,7 +515,7 @@ Gatilho: 4 prints do Daniel (campanha Guaraná, framing Crane) — latinha sem m
 - Base: system prompt v2.0 do vault `PROJETOS/nano banana testing` (framework do Marcos/HDLX: lente/posição/luz/sujeito/camadas/post modular/art direction; tags confirmadas do Nano: fine 35mm grain, lifted blacks, creamy bokeh, volumetric haze; 1 tag por categoria, effects not specs). Catálogos de `_knowledge/fotografia` viraram os selects (stocks, paletas).
 - Dois programas com FIXED/persona próprios (cinema × commercial); 12 framings com FRASES CONCRETAS (bateria provou: "worm's eye" abstrato o modelo suaviza, "shot from directly below looking straight up" obedece); regra "no text/logos" default (commercial inventa type de campanha sozinho).
 - Híbrido: template determinístico ou Diretor ✨ (Gemini Flash com systemInstruction; fallback pro template). BYO key: localStorage opcional, Esquecer, header x-goog-api-key (NUNCA query param — não vaza em URL/log), erros sanitizados. Descoberta de modelos via ListModels (labels Nano Banana Pro/Nano Banana), escada de payload (IMAGE → TEXT+IMAGE → sem imageConfig) pra variação entre gerações.
-- Bateria de validação: 8 stills reais via Higgsfield CLI nano_banana_2 (unlimited), 2k — look aprovado nos 2 programas. Demo embarcado assets/fotograma-demo.jpg (224KB).
+- Bateria de validação: 8 stills reais via Higgsfield CLI nano_banana_2 (à época registrada como Unlimited; o CLI atual consome créditos), 2k — look aprovado nos 2 programas. Demo embarcado assets/fotograma-demo.jpg (224KB).
 - Smoke mockado (Playwright fulfill em generativelanguage.googleapis.com): 12/12 — conexão, template, diretor, P&B trava paleta, chave só no header, forget limpa tudo.
 - GOTCHA sips: `-s format jpeg -s formatOptions 72` pra comprimir PNG 9MB → JPG 224KB.
 
@@ -1557,6 +1559,18 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 
 ---
 
+## 2026-07-28
+
+### Sessão Fotograma — referência multiuso, formatos do Magnific e commit/push
+- A referência deixou de ser mono-função: cada imagem agora pode carregar mais de um papel no mesmo fluxo, o que resolve casos como `Personagem + Ambiente + Composição` na mesma cena.
+- A UI de referências foi ajustada para trabalhar melhor com esse cenário e evitar o bloqueio de “precisa escolher só uma função” quando o brief pede mais de um item.
+- O suporte de `aspect ratio` foi ampliado para cobrir todos os formatos presentes no Magnific.
+- O bloqueio falso do prompt que parecia “system prompt” foi tratado como regra de segurança excessivamente sensível, não como quebra real de policy.
+- Commit registrado: `d92f06b` — `Fotograma: referências multiuso e formatos do Magnific`
+- Push concluído para `main` no remoto `github.com/damelchert/tipo`
+
+---
+
 ## 2026-08-12
 
 ### Video Depth Map construído — ferramenta #41, 18ª visual
@@ -1570,3 +1584,18 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - **Integração:** card `Video Depth Map · NOVO · AI`, preview CSS próprio, contador 40→41, ticker, `_backTargets.depthmap`, TipoHelp em 4 seções e README atualizado. CSP existente já cobria jsDelivr/Hugging Face/WebGPU-WASM/blob; nenhuma mudança em `vercel.json`.
 - **Teste dedicado:** `test-depthmap.mjs` gera um H.264 sintético, intercepta o módulo Transformers com depth determinístico e prova lazy-load/cache/ordem/progresso/controles/MP4/mobile. ALL PASS: dois MP4s ffmpeg-clean, 160×96, 1s, 24 frames, grayscale sem erro de canal; temporal 85 reduziu delta médio de 54.1 para 6.6 (~88%). `test-depthmap-real.mjs` também passou com o modelo/pesos reais em WebGPU FP16 (2/2 amostras, mapa 0–255). `test-depth.mjs` e `test-share-full.mjs` passaram; `test-mobile.mjs` confirmou `depthmap: OK` (falha geral restante é preexistente em Fotograma/Studio).
 - **GOTCHAS:** WASM é lento e pode bloquear durante uma inferência; cancelar atua entre frames. O MP4 é montado em memória, então clipes longos/4K podem estourar RAM. Codec de entrada precisa ser decodificável pelo navegador; export MP4 requer WebCodecs em Chrome/Edge atual.
+- **23.1 UX one-click (feedback do Daniel):** o source virou preview principal grande/reproduzível assim que sobe o vídeo; ao iniciar, volta a mini-monitor e o depth ocupa o workspace. `Generate depth MP4` agora orquestra análise + encode + download automático, sem a antiga segunda etapa Export. Cancel ganhou row própria logo abaixo do Generate e permanece até o fim do encode; é cooperativo entre inferências e nunca entrega parcial. Depois do sucesso aparece apenas `Download again`. Teste-first ampliado e ALL PASS; smoke real WebGPU FP16 passou até `outputBlob` (2 AI samples, 8 frames).
+
+---
+
+## 2026-08-20
+
+### Fotograma — Google padrão + Higgsfield CLI pago como provider opcional
+- **Decisão:** Vertex/AI Studio não saiu. Google continua como provedor padrão e motor do Diretor/tradução/visão; Higgsfield troca somente a imagem final quando escolhido. Isso evita transformar um CLI creditado e ainda irregular no único backend.
+- **Unlimited corrigido:** a documentação oficial atual restringe Unlimited ao site principal; CLI/MCP gastam créditos. Auditoria real na conta Creator: 1265.27 → 1258.87 em Angles, Remove BG, Outpaint, Upscale e Seedream. Custos do Fotograma: Nano Pro 2K/4K = 2/4; Nano 2 = 2/3; Seedream 5 Lite = 1; Seedream 5 Pro 2K = 3; Seedream 4.5 = 1; GPT Image 2 2K/4K = 7/12.
+- **Arquitetura:** `ProviderRouter` em `shared/fotograma-providers.js`; Google adapter preserva o fluxo atual; `HiggsfieldBridgeAdapter` chama `higgsfield-bridge.mjs` em localhost. O worker usa subprocesso sem shell, model allowlist, origin allowlist, limites de corpo/imagem/saída, hosts de download confiáveis e apaga cada diretório temporário.
+- **Bridge:** health real confirmou sessão autenticada, plano Creator, saldo e seis modelos. Referências JPEG/WebP viram PNG antes do auto-upload para contornar `SignatureDoesNotMatch` do CLI 0.1.40. Parâmetros são selects/constraints do schema real, não campos livres.
+- **Billing seguro:** custo exato por resolução aparece antes do clique; job Higgsfield faz uma única tentativa, nunca auto-retry; erro pago nunca cai silenciosamente no Google. Saldo atualiza após o job. A sessão CLI e o e-mail da conta não são enviados ao browser.
+- **Vertex endurecido:** removido o fallback de API key por query string; todas as rotas v1/v1beta1 usam exclusivamente `x-goog-api-key`.
+- **Ferramentas auditadas:** Depth Map, Multi Angle/Qwen, Expand por aspect ratio e Estilos/Retexturizar aprovados. Remove BG fica beta; Bytedance/Topaz Upscale e Expand por pixels não entram na superfície principal até nova validação/correção do CLI.
+- **Testes:** cinco suítes legadas do Fotograma ALL PASS; suíte Higgsfield prova allowlist/custos/constraints/prompt/segredo/no-retry/no-fallback; suíte do bridge prova CORS, validação antes de crédito e superfície mínima. Depth Map continua ALL PASS. Nenhuma geração extra foi feita nesta implementação.

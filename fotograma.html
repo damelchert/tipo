@@ -9,6 +9,7 @@
 <title>Tipó — Fotograma</title>
 <link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
 <script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
+<script src="shared/fotograma-providers.js?v=20260820-higgsfield1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: var(--bg-0); padding: 18px 24px 10px; }
@@ -34,7 +35,7 @@
   #lightbox img { max-width: 96vw; max-height: 96vh; box-shadow: 0 20px 80px rgba(0,0,0,.6); }
 
   /* chave */
-  #apiKey { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
+  #apiKey, #higgsBridgeUrl { width: 100%; min-width: 0; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
   .key-row { display: flex; gap: 6px; align-items: center; }
   .key-row button { flex: none; }
   #keyStatus { font-size: 10px; margin-top: 6px; min-height: 13px; letter-spacing: .5px; color: var(--text-5); }
@@ -42,6 +43,12 @@
   #keyStatus.err { color: var(--red, #CC4840); }
   .key-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
   .key-hint a { color: var(--accent); }
+  .provider-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
+  .provider-hint.paid { color: var(--accent-warm, #D4A040); }
+  .provider-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--border-2); border-radius: 12px; color: var(--text-4); font-size: 8px; letter-spacing: .6px; vertical-align: middle; }
+  .provider-badge.paid { border-color: color-mix(in srgb, var(--accent-warm, #D4A040) 55%, var(--border-2)); color: var(--accent-warm, #D4A040); }
+  .provider-divider { height: 1px; margin: 14px 0; background: var(--border-2); }
+  .fchip.unavailable { opacity: .28; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
 
   /* cena */
   #scene { width: 100%; min-height: 130px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 4px; resize: vertical; }
@@ -109,7 +116,7 @@
   #keyBtn.err { border-color: var(--red, #CC4840); }
   #keyBtn.pulse { animation: keyPulse 1.6s ease-in-out infinite; }
   @keyframes keyPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,160,64,0); } 50% { box-shadow: 0 0 0 4px rgba(212,160,64,.3); } }
-  #keyPop { position: fixed; top: 106px; right: 14px; z-index: 61; width: 320px; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
+  #keyPop { position: fixed; top: 106px; right: 14px; z-index: 61; width: min(320px, calc(100vw - 28px)); max-height: calc(100vh - 120px); overflow-y: auto; box-sizing: border-box; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
   #keyPop.open { display: block; }
 
   /* revelação: tile pendente NA GALERIA — nada bloqueia a página */
@@ -179,8 +186,17 @@
     </select>
   </div>
 
+  <div class="section" id="secProvider">
+    <div class="section-title">Provedor da imagem</div>
+    <select id="imageProvider">
+      <option value="google">Google direto</option>
+      <option value="higgsfield">Higgsfield CLI &middot; usa cr&eacute;ditos</option>
+    </select>
+    <div class="provider-hint" id="providerHint">Nano Banana pela sua chave Google.</div>
+  </div>
+
   <div class="section" id="secModel">
-    <div class="section-title">Modelo</div>
+    <div class="section-title">Modelo <span class="provider-badge" id="providerBadge">Google</span></div>
     <select id="model"><option value="">conecte a chave &mdash; &#128273; no canto superior direito</option></select>
   </div>
 
@@ -262,10 +278,10 @@
 </div>
 
 <!-- CHAVE: &iacute;cone no canto superior direito + popover -->
-<button id="keyBtn" title="Conectar chave Google">&#128273;</button>
+<button id="keyBtn" title="Conectar provedores">&#128273;</button>
 <div id="keyPop">
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-    <span style="font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:700;">Chave &mdash; Google</span>
+    <span style="font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:700;">Provedores</span>
     <button id="keyClose" style="border:none; background:transparent; color:var(--text-4); font-size:14px; cursor:pointer;">&times;</button>
   </div>
   <div class="key-row">
@@ -278,6 +294,14 @@
   </div>
   <div id="keyStatus"></div>
   <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza&hellip;, free tier) ou da <b>Agent Platform / Vertex</b> (AQ&hellip;, cr&eacute;ditos do trial). Fica s&oacute; no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave gr&aacute;tis &rarr;</a></div>
+  <div class="provider-divider"></div>
+  <div style="font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:7px;">Higgsfield CLI &middot; pago</div>
+  <div class="key-row">
+    <input type="url" id="higgsBridgeUrl" value="http://127.0.0.1:4789" aria-label="URL do Higgsfield bridge" autocomplete="off" spellcheck="false">
+    <button class="btn btn-secondary" id="higgsConnect" style="padding:7px 10px;">Testar</button>
+  </div>
+  <div id="higgsStatus" style="font-size:10px; margin-top:6px; min-height:13px; color:var(--text-5);"></div>
+  <div class="key-hint">Rode <b>node higgsfield-bridge.mjs</b> neste projeto. O bridge usa a sess&atilde;o local do CLI; nenhuma credencial Higgsfield entra nesta p&aacute;gina. O Unlimited do site n&atilde;o vale no CLI.</div>
 </div>
 
 <div id="canvasWrap">
@@ -581,6 +605,12 @@ const FALLBACK_IMG_MODELS = [
   { name: 'gemini-3.1-flash-lite-image', label: 'Nano Banana 2 Lite' },
 ];
 const TEXT_MODEL_PREFS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+const PROVIDER_API = window.TipoFotogramaProviders;
+if (!PROVIDER_API) throw new Error('Camada de provedores do Fotograma não carregou');
+const HIGGSFIELD_MODELS = PROVIDER_API.HIGGSFIELD_MODELS;
+const PROVIDER_LS = 'tipo-fotograma-image-provider';
+const HIGGS_BRIDGE_LS = 'tipo-higgsfield-bridge-url';
+const imageRouter = new PROVIDER_API.ProviderRouter();
 
 // ---- estado ----
 let state = {
@@ -591,6 +621,11 @@ let state = {
   ar: '16:9',
   connected: false,
   backend: 'studio',
+  imageProvider: 'google',
+  googleModelOptions: [],
+  higgsConnected: false,
+  higgsAdapter: null,
+  higgsAccount: null,
   textModel: null,
   lastBlob: null,
   lastPrompt: '',
@@ -604,6 +639,114 @@ let state = {
 const $ = (id) => document.getElementById(id);
 const key = () => $('apiKey').value.trim();
 
+function currentProvider() { return state.imageProvider || 'google'; }
+function currentHiggsModel() { return PROVIDER_API.modelByName($('model') && $('model').value); }
+function providerReady() {
+  // O Google ainda dirige/traduz a cena e lê referências. Higgsfield troca
+  // somente o backend de imagem final, por isso os dois precisam estar vivos.
+  return !!state.connected && (currentProvider() !== 'higgsfield' || !!state.higgsConnected);
+}
+
+function higgsStatus(message, ok) {
+  const element = $('higgsStatus');
+  if (!element) return;
+  element.textContent = message;
+  element.style.color = ok ? 'var(--accent)' : (message ? 'var(--text-5)' : '');
+}
+
+function renderProviderModels(preferred) {
+  const model = $('model');
+  if (!model) return;
+  const options = currentProvider() === 'higgsfield'
+    ? HIGGSFIELD_MODELS.map(item => {
+        const costs = [...new Set(Object.values(item.costs || { base: item.cost }))];
+        const costLabel = costs.length > 1 ? `${Math.min(...costs)}–${Math.max(...costs)}` : costs[0];
+        return { name: item.name, label: `${item.label} · ~${costLabel} cr` };
+      })
+    : state.googleModelOptions;
+  if (!options.length) {
+    model.innerHTML = '<option value="">conecte a chave — 🔑 no canto superior direito</option>';
+  } else {
+    model.innerHTML = options.map(item => `<option value="${item.name}">${item.label}</option>`).join('');
+    if (preferred && options.some(item => item.name === preferred)) model.value = preferred;
+  }
+  syncProviderConstraints();
+}
+
+function syncProviderConstraints() {
+  const isHiggs = currentProvider() === 'higgsfield';
+  const config = isHiggs ? currentHiggsModel() : null;
+  const ratios = config ? config.aspectRatios : ARS;
+  document.querySelectorAll('#arChips .fchip').forEach(chip => {
+    chip.classList.toggle('unavailable', !ratios.includes(chip.dataset.ar));
+    chip.setAttribute('aria-disabled', String(!ratios.includes(chip.dataset.ar)));
+  });
+  if (config && !ratios.includes(state.ar)) {
+    state.ar = ratios.includes('16:9') ? '16:9' : ratios[0];
+    document.querySelectorAll('#arChips .fchip').forEach(chip => chip.classList.toggle('on', chip.dataset.ar === state.ar));
+  }
+  syncResRow();
+  syncProviderHint();
+}
+
+function syncProviderHint() {
+  const isHiggs = currentProvider() === 'higgsfield';
+  const badge = $('providerBadge');
+  const hint = $('providerHint');
+  if (!badge || !hint) return;
+  badge.classList.toggle('paid', isHiggs);
+  hint.classList.toggle('paid', isHiggs);
+  if (isHiggs) {
+    const config = currentHiggsModel();
+    badge.textContent = 'Higgsfield · créditos';
+    const balance = state.higgsAccount && Number.isFinite(state.higgsAccount.credits)
+      ? ` · saldo ${state.higgsAccount.credits.toFixed(2)}` : '';
+    const cost = config ? PROVIDER_API.estimateCost(config, $('imgSize').value) : null;
+    hint.textContent = config
+      ? `${config.label} · custo estimado ~${cost} crédito${cost === 1 ? '' : 's'}${balance}. Sem fallback pago automático.`
+      : `Conecte o bridge local${balance}.`;
+  } else {
+    badge.textContent = state.backend === 'vertex' ? 'Google · Vertex' : 'Google';
+    hint.textContent = 'Imagem gerada diretamente pelo Google com a chave conectada; nenhum crédito Higgsfield é usado.';
+  }
+}
+
+function setImageProvider(value, preferredModel) {
+  state.imageProvider = value === 'higgsfield' ? 'higgsfield' : 'google';
+  $('imageProvider').value = state.imageProvider;
+  localStorage.setItem(PROVIDER_LS, state.imageProvider);
+  renderProviderModels(preferredModel);
+  syncQueueUI();
+}
+
+async function connectHiggsfield(silent) {
+  let adapter;
+  try {
+    const url = PROVIDER_API.normalizeBridgeUrl($('higgsBridgeUrl').value, location.href);
+    $('higgsBridgeUrl').value = url;
+    localStorage.setItem(HIGGS_BRIDGE_LS, url);
+    higgsStatus('testando bridge local…');
+    adapter = new PROVIDER_API.HiggsfieldBridgeAdapter(url, { timeoutMs: 30_000 });
+    const account = await adapter.health();
+    if (!account || !account.ok || !account.connected) throw new Error('CLI não autenticado');
+    state.higgsAdapter = adapter;
+    state.higgsConnected = true;
+    state.higgsAccount = account;
+    const credits = Number.isFinite(Number(account.credits)) ? ` · ${Number(account.credits).toFixed(2)} créditos` : '';
+    higgsStatus(`conectado · plano ${account.plan || 'ativo'}${credits}`, true);
+    syncProviderHint();
+    syncQueueUI();
+  } catch (error) {
+    state.higgsAdapter = null;
+    state.higgsConnected = false;
+    state.higgsAccount = null;
+    higgsStatus(silent ? 'bridge local desligado' : (error.message || 'bridge indisponível'));
+    syncProviderHint();
+    syncQueueUI();
+    if (!silent) throw error;
+  }
+}
+
 // ---- chave: guarda SÓ no browser, viaja SÓ pro Google ----
 function keyStatus(msg, cls) {
   const el = $('keyStatus');
@@ -614,7 +757,9 @@ function keyStatus(msg, cls) {
     kb.classList.toggle('ok', cls === 'ok');
     kb.classList.toggle('err', cls === 'err');
     kb.classList.toggle('pulse', cls !== 'ok');
-    if (cls === 'ok') setTimeout(() => $('keyPop').classList.remove('open'), 900);
+    if (cls === 'ok' && (currentProvider() !== 'higgsfield' || state.higgsConnected)) {
+      setTimeout(() => $('keyPop').classList.remove('open'), 900);
+    }
   }
 }
 
@@ -677,36 +822,34 @@ async function gapiUrl(url, body) {
 
 /** Vertex/Agent Platform: o endpoint global exige o caminho completo
  *  projects/-/locations/global. Escada de compat pra variações de
- *  versão/host/auth; o modo que funcionar fica memorizado pra sessão. */
+ *  versão/host; a chave permanece exclusivamente no header. */
 async function vertexCall(id, body) {
   const clean = String(id).replace(/^models\//, '');
   const suffix = `publishers/google/models/${clean}:generateContent`;
-  // cada MODO é só a FORMA (path template + auth); a URL é remontada por
+  // cada MODO é só a FORMA da rota; a URL é remontada por
   // modelo. **v1beta1 PRIMEIRO**: é a única superfície do Vertex com o
   // imageConfig completo (imageSize) — o BUG do 2K era o ping do flash
   // memorizar /v1/, que aceita chat e aspectRatio mas RECUSA imageSize
   // (400) → a escada de payload derrubava o size → sempre 1K.
   const ALL_MODES = [
-    { path: `/v1beta1/projects/-/locations/global/${suffix}`, auth: 'header' },
-    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'header' },
-    { path: `/v1/projects/-/locations/global/${suffix}`, auth: 'query' },
-    { path: `/v1/${suffix}`, auth: 'header' }, // forma curta (alguns projetos)
+    { path: `/v1beta1/projects/-/locations/global/${suffix}` },
+    { path: `/v1/projects/-/locations/global/${suffix}` },
+    { path: `/v1/${suffix}` }, // forma curta (alguns projetos)
   ];
   // modo memorizado tenta primeiro, mas 4xx NÃO trava mais a sessão:
   // os outros modos entram na sequência (o payload pode exigir outra versão)
   const memo = state._vxMode;
-  const modes = memo ? [memo, ...ALL_MODES.filter(m => m.path !== memo.path || m.auth !== memo.auth)] : ALL_MODES;
+  const modes = memo ? [memo, ...ALL_MODES.filter(m => m.path !== memo.path)] : ALL_MODES;
   let last = null;
   for (const m of modes) {
     const path = m.path.replace(/publishers\/google\/models\/[^:]+:generateContent/, suffix);
     const base = `https://aiplatform.googleapis.com${path}`;
-    const url = m.auth === 'query' ? `${base}?key=${encodeURIComponent(key())}` : base;
     try {
-      const r = await fetch(url, {
+      const r = await fetch(base, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(m.auth === 'header' ? { 'x-goog-api-key': key() } : {}),
+          'x-goog-api-key': key(),
         },
         body: JSON.stringify(body),
       });
@@ -716,7 +859,7 @@ async function vertexCall(id, body) {
         const err = new Error(sanitizeApiError(r.status, detail));
         err.status = r.status;
         err.detail = detail;
-        // 400/401/403/404 = formato de rota/versão/auth — tenta o próximo modo
+        // 400/401/403/404 = formato de rota/versão — tenta o próximo modo
         if ([400, 401, 403, 404].includes(r.status)) { last = err; continue; }
         throw err;
       }
@@ -788,14 +931,15 @@ async function connect(silent) {
     keyStatus(backend === 'vertex' ? 'conectando à Agent Platform…' : 'conectando ao AI Studio…');
     try {
       const opts = await tryConnectBackend(backend);
-      $('model').innerHTML = opts.map(m => `<option value="${m.name}">${m.label}</option>`).join('');
+      state.googleModelOptions = opts.map(m => ({ ...m }));
       state.connected = true;
       localStorage.setItem(KEY_LS, key()); // sempre linkada até 'Esquecer'
       keyStatus(backend === 'vertex'
         ? 'conectada — Agent Platform (Vertex) · Nano Pro + 2 + 2 Lite'
         : `conectada — AI Studio · ${opts.length} modelo(s)`, 'ok');
-      $('genBtn').disabled = false;
-      syncResRow();
+      if (currentProvider() === 'google') renderProviderModels();
+      syncProviderHint();
+      syncQueueUI();
       const hintState = applySceneReferenceHint($('scene').value.trim(), state.refs);
       if (hintState.changedRefs.length) renderRefs();
       for (const ref of state.refs) {
@@ -811,7 +955,10 @@ async function connect(silent) {
     }
   }
   state.connected = false;
-  $('genBtn').disabled = true;
+  state.googleModelOptions = [];
+  if (currentProvider() === 'google') renderProviderModels();
+  syncProviderHint();
+  syncQueueUI();
   const d = safeDetail(lastErr);
   let hint = '';
   if (/blocked/i.test(d)) {
@@ -826,8 +973,10 @@ function forgetKey() {
   localStorage.removeItem(KEY_LS);
   $('apiKey').value = '';
   state.connected = false;
-  $('genBtn').disabled = true;
-  $('model').innerHTML = '<option value="">conecte a chave primeiro</option>';
+  state.googleModelOptions = [];
+  if (currentProvider() === 'google') renderProviderModels();
+  syncProviderHint();
+  syncQueueUI();
   keyStatus('chave esquecida — nada ficou salvo', '');
 }
 
@@ -1556,10 +1705,16 @@ async function refHiRes(r) {
 
 function supportsImageSize(model) {
   const id = String(model || '');
+  const higgs = PROVIDER_API.modelByName(id);
+  if (higgs) return higgs.resolutions.length > 0;
   return /pro-image/i.test(id) || (/3\.1-flash-image/i.test(id) && !/lite/i.test(id));
 }
 
-function isProImage(model) { return /pro-image|nano banana pro/i.test(String(model || '')); }
+function isProImage(model) {
+  const id = String(model || '');
+  const higgs = PROVIDER_API.modelByName(id);
+  return !!(higgs && higgs.promptMode === 'measured-description') || /pro-image|nano banana pro/i.test(id);
+}
 
 async function tryImageModel(model, prompt, job, spec) {
   const isPro = isProImage(model);
@@ -1636,7 +1791,7 @@ async function tryImageModel(model, prompt, job, spec) {
   throw lastErr;
 }
 
-async function generateImage(scene, rawScene, job) {
+async function generateGoogleImage(scene, rawScene, job) {
   const catalog = (job.modelOptions && job.modelOptions.length) ? job.modelOptions : FALLBACK_IMG_MODELS;
   const chosen = job.model || catalog[0].name;
   const labelOf = v => (catalog.find(o => (o.name || o.value) === v) || {}).label || v;
@@ -1667,6 +1822,68 @@ async function generateImage(scene, rawScene, job) {
   throw lastErr;
 }
 
+function higgsfieldInputs(job, spec) {
+  const images = [];
+  const notes = [];
+  state.lastMoodAttached = false;
+  if (job.mood && (job.moodStrength ?? 100) > 0 && spec.moodAttached) {
+    const source = job.mood.crop || job.mood.full;
+    if (source && source.dataUrl) {
+      images.push({ dataUrl: source.dataUrl, role: 'style' });
+      notes.push(`INPUT IMAGE ${images.length} is a STYLE REFERENCE only. Transfer only the color, light response and texture explicitly requested in the prompt; never copy its subjects, objects, place or composition.`);
+      state.lastMoodAttached = true;
+    }
+  }
+  for (const ref of (job.refs || [])) {
+    images.push({ dataUrl: ref.dataUrl, role: 'content' });
+    notes.push(`INPUT IMAGE ${images.length} is ${referenceRolePayload(ref)}. Preserve only the assigned identity or visual function; do not lazily copy unrelated content from it.`);
+  }
+  return { images, notes };
+}
+
+async function generateHiggsfieldImage(scene, rawScene, job) {
+  if (!state.higgsConnected || !state.higgsAdapter) {
+    const error = new Error('Higgsfield bridge não está conectado');
+    error.status = 503;
+    throw error;
+  }
+  const config = PROVIDER_API.modelByName(job.model);
+  if (!config) throw new Error('Modelo Higgsfield não permitido');
+  const spec = resolvePrompt(scene, rawScene, job, config.name);
+  const refs = higgsfieldInputs(job, spec);
+  const prompt = cleanPromptText([refs.notes.join(' '), spec.text].filter(Boolean).join(' '));
+  state.lastPayloadPrompt = prompt;
+  const result = await state.higgsAdapter.generate({
+    model: config.name,
+    prompt,
+    aspectRatio: job.ar,
+    resolution: job.imgSize,
+    images: refs.images,
+  });
+  if (!result || !result.image || !result.image.data) throw new Error('Higgsfield terminou sem devolver a imagem');
+  if (Number.isFinite(Number(result.creditsRemaining))) {
+    state.higgsAccount = { ...(state.higgsAccount || {}), credits: Number(result.creditsRemaining) };
+    syncProviderHint();
+  }
+  state.lastModelLabel = config.label;
+  return {
+    inlineData: result.image,
+    prompt,
+    spec,
+    model: config.name,
+    label: `${config.label} · Higgsfield ~${result.estimatedCredits ?? config.cost} cr`,
+    provider: 'higgsfield',
+  };
+}
+
+imageRouter
+  .register('google', { generate: ({ scene, rawScene, job }) => generateGoogleImage(scene, rawScene, job) })
+  .register('higgsfield', { generate: ({ scene, rawScene, job }) => generateHiggsfieldImage(scene, rawScene, job) });
+
+function generateImage(scene, rawScene, job) {
+  return imageRouter.generate(job.provider || 'google', { scene, rawScene, job });
+}
+
 // ---- FILA DE REVELAÇÃO: até 4 aguardando, processa 1 por vez ----
 const QUEUE_MAX = 4;
 let queue = [];
@@ -1687,7 +1904,7 @@ function snapshotParams() {
     scene: $('scene').value.trim(), prog: state.prog, genero: state.genero, shotScale: state.shotScale, framing: state.framing,
     ar: state.ar, stock: $('stock').value, paleta: $('paleta').value,
     luz: $('luz').value, lente: $('lente').value, apertura: $('apertura').value, clean: $('cleanImg').checked,
-    diretor: $('diretor').checked, model: $('model').value, imgSize: $('imgSize').value,
+    diretor: $('diretor').checked, provider: currentProvider(), model: $('model').value, imgSize: $('imgSize').value,
     modelOptions: [...$('model').options].filter(o => o.value).map(o => ({ name: o.value, label: o.textContent })),
     // Clones rasos dos binários e profundos dos metadados: mudar função,
     // referência ou Emulsão enquanto a fila roda não contamina o job.
@@ -1698,6 +1915,7 @@ function snapshotParams() {
 
 function applyParams(pr) {
   $('scene').value = pr.scene;
+  setImageProvider(pr.provider || 'google', pr.model);
   state.genero = pr.genero || 'geral';
   $('genero').value = state.genero;
   syncGeneroHint();
@@ -1737,14 +1955,15 @@ function syncQueueUI() {
   $('genBtn').textContent = busy
     ? (n ? `Revelando… (${n} na fila)` : 'Revelando…')
     : 'Revelar Fotograma';
-  $('genBtn').disabled = !state.connected || (busy && n >= QUEUE_MAX);
+  $('genBtn').disabled = !providerReady() || (busy && n >= QUEUE_MAX);
 }
 
 function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
-  if (!state.connected) { TipoUI.showToast('Conecte sua chave — 🔑 no canto superior direito'); $('keyPop').classList.add('open'); return; }
+  if (!state.connected) { TipoUI.showToast('Conecte a chave Google para o Diretor — 🔑'); $('keyPop').classList.add('open'); return; }
+  if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast('Ligue e teste o Higgsfield bridge — 🔑'); $('keyPop').classList.add('open'); return; }
   if (busy && queue.length >= QUEUE_MAX) { TipoUI.showToast(`Fila cheia (${QUEUE_MAX}) — espera uma revelar`); return; }
   const hintState = applySceneReferenceHint(subject, state.refs);
   if (hintState.changedRefs.length) {
@@ -1844,8 +2063,11 @@ async function revealJob(job) {
     // na resolução pedida (padrão da casa: nunca entregar abaixo de 2K
     // em silêncio). 3 tentativas; só avisa se todas vierem baixas.
     const asked = { '2K': 2048, '4K': 4096 }[job.imgSize] || 0;
+    // Higgsfield cobra cada job do CLI. Uma saída paga abaixo do tamanho pedido
+    // é sinalizada, nunca repetida automaticamente sem consentimento.
+    const maxAttempts = job.provider === 'higgsfield' ? 1 : 3;
     let result = null, blob = null, gotW = 0, gotH = 0;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       result = await generateImage(scene, job.scene, job);
       const img = result.inlineData;
       state.lastPrompt = result.prompt;
@@ -1858,14 +2080,15 @@ async function revealJob(job) {
         bmp.close();
       } catch (e) { break; }
       if (Math.max(gotW, gotH) >= asked * 0.9) break;
-      if (attempt < 3) {
-        devMsg(`saiu ${gotW}×${gotH} — repuxando em ${job.imgSize} (${attempt + 1}/3)…`);
+      if (attempt < maxAttempts) {
+        devMsg(`saiu ${gotW}×${gotH} — repuxando em ${job.imgSize} (${attempt + 1}/${maxAttempts})…`);
         state.lastCfgNote = '';
       }
     }
     state.lastBlob = blob;
     if (asked >= 2048 && gotW && Math.max(gotW, gotH) < asked * 0.9 && result && supportsImageSize(result.model)) {
-      state.lastCfgNote = [state.lastCfgNote, `saiu ${gotW}×${gotH} após 3 tentativas (pedido ${job.imgSize})`].filter(Boolean).join(' · ');
+      const attemptNote = maxAttempts === 1 ? 'sem repetição paga' : `após ${maxAttempts} tentativas`;
+      state.lastCfgNote = [state.lastCfgNote, `saiu ${gotW}×${gotH} (${attemptNote}; pedido ${job.imgSize})`].filter(Boolean).join(' · ');
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
@@ -1886,7 +2109,8 @@ async function revealJob(job) {
     console.error('[fotograma]', e.detail || e.message);
     TipoUI.showToast(e.message || 'Falhou — tente de novo');
     const d = safeDetail(e);
-    $('genStatus').textContent = d ? `Google: ${d}` : (e.message || '');
+    const providerName = job.provider === 'higgsfield' ? 'Higgsfield' : 'Google';
+    $('genStatus').textContent = `${providerName}: ${d || e.message || 'falhou'}`;
   } finally {
     state.pending = state.pending.filter(x => x.id !== pid);
     currentPendingId = null;
@@ -2055,7 +2279,7 @@ function reorderPanelForDirectionFlow() {
     'secAspect', 'secScale', 'secFraming',
     'secLente', 'secApertura',
     'emulsaoSection', 'secLuz', 'secStock', 'secPaleta', 'adNote',
-    'secFicha', 'secModel', 'resSection', 'secPreview', 'secGenerate',
+    'secFicha', 'secProvider', 'secModel', 'resSection', 'secPreview', 'secGenerate',
   ].forEach(id => {
     const el = $(id);
     if (el) panel.insertBefore(el, spacer);
@@ -2116,6 +2340,7 @@ function buildChips() {
     c.textContent = ar;
     c.dataset.ar = ar;
     c.addEventListener('click', () => {
+      if (c.classList.contains('unavailable')) return;
       state.ar = ar;
       ac.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === ar));
     });
@@ -2605,7 +2830,15 @@ $('moodClear').addEventListener('click', () => {
 });
 
 function syncResRow() {
-  $('resSection').style.display = supportsImageSize($('model').value) ? '' : 'none';
+  const isHiggs = currentProvider() === 'higgsfield';
+  const config = isHiggs ? currentHiggsModel() : null;
+  const allowed = config ? config.resolutions : [];
+  const visible = isHiggs ? allowed.length > 0 : supportsImageSize($('model').value);
+  $('resSection').style.display = visible ? '' : 'none';
+  [...$('imgSize').options].forEach(option => {
+    option.disabled = isHiggs && allowed.length > 0 && !allowed.includes(option.value);
+  });
+  if (isHiggs && allowed.length && !allowed.includes($('imgSize').value)) $('imgSize').value = allowed[0];
 }
 
 // bindings — chave no popover 🔑
@@ -2619,12 +2852,17 @@ document.addEventListener('click', (e) => {
 });
 $('keyConnect').addEventListener('click', () => connect(false));
 $('keyForget').addEventListener('click', forgetKey);
+$('higgsConnect').addEventListener('click', () => {
+  connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
+});
 $('keyEye').addEventListener('click', () => {
   const k = $('apiKey');
   k.type = k.type === 'password' ? 'text' : 'password';
 });
 $('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') connect(false); });
-$('model').addEventListener('change', syncResRow);
+$('imageProvider').addEventListener('change', e => setImageProvider(e.target.value));
+$('model').addEventListener('change', syncProviderConstraints);
+$('imgSize').addEventListener('change', syncProviderHint);
 $('genBtn').addEventListener('click', revelar);
 // tela cheia: clica na imagem principal (ou Esc/clique pra sair)
 $('stillImg').addEventListener('click', () => {
@@ -2658,6 +2896,11 @@ buildSelects();
 buildProgRow();
 buildGeneroSel();
 setProg('cinema');
+
+const savedBridge = localStorage.getItem(HIGGS_BRIDGE_LS);
+if (savedBridge) $('higgsBridgeUrl').value = savedBridge;
+setImageProvider(localStorage.getItem(PROVIDER_LS) || 'google');
+if (currentProvider() === 'higgsfield') connectHiggsfield(true);
 
 // chave salva? reconecta em silêncio
 const saved = localStorage.getItem(KEY_LS);

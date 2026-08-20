@@ -20,7 +20,11 @@ await ctx.route('**/*', async route => {
     const isBeta = url.pathname.startsWith('/v1beta1/');
     const hasSize = !!(body.generationConfig && body.generationConfig.imageConfig && body.generationConfig.imageConfig.imageSize);
     const isImage = url.pathname.includes('image');
-    calls.push({ v: isBeta ? 'v1beta1' : 'v1', hasSize, isImage });
+    calls.push({
+      v: isBeta ? 'v1beta1' : 'v1', hasSize, isImage,
+      queryKey: url.searchParams.has('key'),
+      headerKey: route.request().headers()['x-goog-api-key'] || '',
+    });
     // v1: chat ok, imagem com imageSize → 400 (o comportamento real da Vertex)
     if (!isBeta && isImage && hasSize) {
       return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid JSON payload received. Unknown name "imageSize"' } }) });
@@ -61,6 +65,7 @@ const dims = await page.evaluate(async () => {
 check('take saiu 2K (2048x1152)', dims === '2048x1152', `(${dims})`);
 const imgOnBeta = calls.filter(c => c.isImage && c.hasSize && c.v === 'v1beta1').length;
 check('imageSize foi entregue via v1beta1', imgOnBeta >= 1, `(calls: ${JSON.stringify(calls.slice(-4))})`);
+check('chave Vertex viaja só no header', calls.length > 0 && calls.every(c => !c.queryKey && c.headerKey === 'AQ.vertextestkey123456'));
 const cap = await page.evaluate(() => document.getElementById('stillCaption').textContent);
 check('legenda sem warning de resolução', !cap.includes('saiu') && !cap.includes('caiu'), `(${cap.slice(0,80)})`);
 check('zero pageerrors', errs.length === 0, errs.join('|').slice(0,150));

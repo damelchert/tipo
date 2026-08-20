@@ -13,6 +13,7 @@ const root = process.cwd();
 const fixture = '/tmp/tipo-depthmap-fixture.mp4';
 const rawOutput = '/tmp/tipo-depthmap-raw.mp4';
 const stableOutput = '/tmp/tipo-depthmap-stable.mp4';
+const repeatOutput = '/tmp/tipo-depthmap-repeat.mp4';
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 
 let fails = 0;
@@ -80,7 +81,9 @@ const MOCK_TRANSFORMERS = String.raw`
         }
       }
       telemetry.outputMeans.push(base);
-      await new Promise(resolve => setTimeout(resolve, 5));
+      // Long enough for the test to click Cancel while an inference is in
+      // flight, but still short enough to keep this suite fast.
+      await new Promise(resolve => setTimeout(resolve, 18));
       return { depth: { width, height, data } };
     };
   }
@@ -165,7 +168,7 @@ async function setControl(page, id, value) {
   await page.waitForTimeout(80);
 }
 
-async function processVideo(page) {
+async function observeProgress(page) {
   await page.evaluate(() => {
     globalThis.__depthProgressLog = [];
     const progress = document.getElementById('progressText');
@@ -173,22 +176,54 @@ async function processVideo(page) {
     observer.observe(progress, { childList: true, subtree: true, characterData: true });
     globalThis.__depthProgressObserver = observer;
   });
-
-  await page.click('#processBtn');
-  await page.waitForFunction(() => {
-    const state = globalThis.depthMapState;
-    return state && (state.phase === 'ready' || state.phase === 'done') && state.processedFrames === state.totalFrames;
-  }, null, { timeout: 30000 });
-  await page.evaluate(() => globalThis.__depthProgressObserver?.disconnect());
 }
 
-async function exportMp4(page, output) {
+async function generateAndDownload(page, output, { inspectExport = false } = {}) {
+  await observeProgress(page);
+  const downloadPromise = page.waitForEvent('download', { timeout: 30000 });
+  await page.click('#processBtn');
+
+  let exportLayout = null;
+  if (inspectExport) {
+    await page.waitForFunction(() => globalThis.depthMapState?.phase === 'exporting', null, { timeout: 30000 });
+    exportLayout = await actionLayout(page);
+  }
+
+  const download = await downloadPromise;
+  await download.saveAs(output);
+  await page.waitForFunction(() => {
+    const state = globalThis.depthMapState;
+    return state && (state.phase === 'ready' || state.phase === 'done') &&
+      state.processedFrames === state.totalFrames && state.outputFrames > 0 && state.outputBlob;
+  }, null, { timeout: 30000 });
+  await page.evaluate(() => globalThis.__depthProgressObserver?.disconnect());
+  return { suggestedFilename: download.suggestedFilename(), exportLayout };
+}
+
+async function downloadAgain(page, output) {
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 30000 }),
     page.click('#exportBtn'),
   ]);
   await download.saveAs(output);
   return download.suggestedFilename();
+}
+
+async function actionLayout(page) {
+  return page.evaluate(() => {
+    const process = document.getElementById('processBtn').getBoundingClientRect();
+    const cancel = document.getElementById('cancelBtn').getBoundingClientRect();
+    const style = getComputedStyle(document.getElementById('cancelBtn'));
+    return {
+      phase: globalThis.depthMapState?.phase || '',
+      visible: style.display !== 'none' && style.visibility !== 'hidden' && cancel.width > 0 && cancel.height > 0,
+      belowGenerate: cancel.top >= process.bottom - .5 && cancel.top - process.bottom <= 18,
+      followsGenerate: Boolean(document.getElementById('processBtn').compareDocumentPosition(document.getElementById('cancelBtn')) & Node.DOCUMENT_POSITION_FOLLOWING),
+      touchTarget: cancel.width >= 44 && cancel.height >= 44,
+      process: { top: process.top, bottom: process.bottom, width: process.width, height: process.height },
+      cancel: { top: cancel.top, bottom: cancel.bottom, width: cancel.width, height: cancel.height },
+    };
+  });
 }
 
 function probeMp4(file) {
@@ -260,8 +295,10 @@ await installRoutes(context, traffic);
 const page = await context.newPage();
 const pageErrors = [];
 const consoleErrors = [];
+let downloadEvents = 0;
 page.on('pageerror', error => pageErrors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+page.on('download', () => { downloadEvents++; });
 
 await page.goto('http://localhost/depthmap.html', { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => typeof TipoUI !== 'undefined');
@@ -270,10 +307,11 @@ await page.waitForFunction(() => typeof TipoUI !== 'undefined');
 const initial = await page.evaluate(() => ({
   accept: document.getElementById('fileInput').accept,
   processDisabled: document.getElementById('processBtn').disabled,
-  exportDisabled: document.getElementById('exportBtn').disabled,
+  exportDisabled: !document.getElementById('exportBtn') || document.getElementById('exportBtn').disabled,
   canvas: !!document.getElementById('depthCanvas'),
+  cancel: !!document.getElementById('cancelBtn'),
 }));
-check('video input + processing UI exists', /video/i.test(initial.accept) && initial.canvas);
+check('video input + processing UI exists', /video/i.test(initial.accept) && initial.canvas && initial.cancel);
 check('actions disabled before upload', initial.processDisabled && initial.exportDisabled);
 check('model is lazy (zero module requests at boot)', traffic.transformersModules === 0);
 
@@ -294,47 +332,117 @@ await page.waitForFunction(() => {
 });
 const loaded = await page.evaluate(() => {
   const video = document.getElementById('sourceVideo');
+  const workspace = document.getElementById('depthWorkspace').getBoundingClientRect();
+  const preview = video.getBoundingClientRect();
+  const style = getComputedStyle(video);
   return {
     width: video.videoWidth,
     height: video.videoHeight,
     duration: video.duration,
     processEnabled: !document.getElementById('processBtn').disabled,
+    controls: video.controls,
+    visible: style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > .5,
+    inWorkspace: document.getElementById('depthWorkspace').contains(video),
+    preview: { width: preview.width, height: preview.height },
+    workspace: { width: workspace.width, height: workspace.height },
   };
 });
 check('synthetic MP4 loads with its native metadata', loaded.width === 160 && loaded.height === 96 && Math.abs(loaded.duration - 1) < 0.15, JSON.stringify(loaded));
+check('uploaded source becomes the large primary workspace preview',
+  loaded.visible && loaded.inWorkspace && loaded.preview.width >= loaded.workspace.width * .60 && loaded.preview.height >= loaded.workspace.height * .42,
+  JSON.stringify({ preview: loaded.preview, workspace: loaded.workspace, visible: loaded.visible }));
+check('source preview exposes native playback controls', loaded.controls, JSON.stringify(loaded));
+
+await page.evaluate(async () => {
+  const video = document.getElementById('sourceVideo');
+  video.currentTime = 0;
+  await video.play();
+});
+await page.waitForFunction(() => document.getElementById('sourceVideo').currentTime > .03, null, { timeout: 3000 });
+const playback = await page.evaluate(() => {
+  const video = document.getElementById('sourceVideo');
+  const result = { advanced: video.currentTime > .03, ended: video.ended };
+  video.pause(); video.currentTime = 0;
+  return result;
+});
+check('uploaded source preview is playable', playback.advanced, JSON.stringify(playback));
 check('upload still does not load the model', traffic.transformersModules === 0);
 
-// 2) Lazy model load + ordered, complete frame processing.
+// 2) Cancel is a dedicated row directly below Generate and interrupts safely
+// between AI frames without creating a partial download.
 await setControl(page, 'temporalSmooth', 0);
 await setControl(page, 'analysisFps', 6);
-await processVideo(page);
+await observeProgress(page);
+await page.click('#processBtn');
+await page.waitForFunction(() => globalThis.depthMapState?.phase === 'processing' && globalThis.__depthMock?.inferenceCalls > 0, null, { timeout: 30000 });
+const processingLayout = await actionLayout(page);
+await page.click('#cancelBtn');
+await page.waitForFunction(() => globalThis.depthMapState?.phase === 'cancelled', null, { timeout: 30000 });
+await page.evaluate(() => globalThis.__depthProgressObserver?.disconnect());
+const cancelled = await page.evaluate(() => ({
+  state: { ...globalThis.depthMapState },
+  inferenceCalls: globalThis.__depthMock.inferenceCalls,
+  processDisabled: document.getElementById('processBtn').disabled,
+}));
+check('model loads lazily on the first Generate click', traffic.transformersModules === 1 && (await page.evaluate(() => globalThis.__depthMock.factoryCalls)) === 1);
+check('Cancel is a 44px touch target on the line immediately below Generate while processing',
+  processingLayout.visible && processingLayout.belowGenerate && processingLayout.followsGenerate && processingLayout.touchTarget,
+  JSON.stringify(processingLayout));
+check('Cancel stops between frames without producing an MP4',
+  cancelled.state.cancelled && cancelled.state.processedFrames < cancelled.state.totalFrames &&
+  cancelled.inferenceCalls <= cancelled.state.processedFrames + 1 && !cancelled.state.outputBlob && downloadEvents === 0 && !cancelled.processDisabled,
+  JSON.stringify({ cancelled, downloadEvents }));
+
+// 3) One click performs AI analysis, encodes the MP4 and starts the download.
+// There is no mandatory second click on an Export action.
+const callsBeforeRaw = await page.evaluate(() => globalThis.__depthMock.inferenceCalls);
+const rawDownload = await generateAndDownload(page, rawOutput, { inspectExport: true });
 const processed = await page.evaluate(() => ({
   state: { ...globalThis.depthMapState },
   mock: { ...globalThis.__depthMock },
   progress: [...globalThis.__depthProgressLog],
   status: document.getElementById('modelStatus').textContent,
   processDisabled: document.getElementById('processBtn').disabled,
-  exportDisabled: document.getElementById('exportBtn').disabled,
+  downloadAgain: document.getElementById('exportBtn') ? {
+    disabled: document.getElementById('exportBtn').disabled,
+    text: document.getElementById('exportBtn').textContent.trim(),
+  } : null,
 }));
-const timestamps = processed.mock.timestamps.slice(0, processed.state.totalFrames);
+const timestamps = processed.mock.timestamps.slice(callsBeforeRaw, callsBeforeRaw + processed.state.totalFrames);
 const ordered = timestamps.every((time, index) => index === 0 || time > timestamps[index - 1] - 0.001);
-check('model loads once, only after Process', traffic.transformersModules === 1 && processed.mock.factoryCalls === 1);
+check('model is reused after cancellation', traffic.transformersModules === 1 && processed.mock.factoryCalls === 1);
 check('correct depth pipeline/model options',
   processed.mock.task === 'depth-estimation' && /depth|video/i.test(processed.mock.model) && /q8|fp16/.test(processed.mock.options?.dtype || ''),
   JSON.stringify({ task: processed.mock.task, model: processed.mock.model, options: processed.mock.options }));
 check('video is processed frame by frame',
   processed.state.totalFrames >= 5 && processed.state.totalFrames <= 8 &&
   processed.state.processedFrames === processed.state.totalFrames &&
-  processed.mock.inferenceCalls === processed.state.totalFrames,
-  JSON.stringify({ state: processed.state, inferenceCalls: processed.mock.inferenceCalls }));
+  processed.mock.inferenceCalls - callsBeforeRaw === processed.state.totalFrames,
+  JSON.stringify({ state: processed.state, callsBeforeRaw, inferenceCalls: processed.mock.inferenceCalls }));
 check('frame timestamps are ordered across the take', ordered && timestamps[0] < 0.08 && timestamps.at(-1) > 0.7, JSON.stringify(timestamps));
-check('progress reaches completion and unlocks export',
+check('progress covers analysis and automatic MP4 export',
   processed.progress.some(text => /100%|6\s*\/\s*6|ready|pronto/i.test(text)) &&
-  !processed.processDisabled && !processed.exportDisabled && /ready|pronto|conclu|complete/i.test(processed.status),
+  !processed.processDisabled && processed.state.outputFrames > 0 && processed.state.outputBlob && /ready|pronto|conclu|complete/i.test(processed.status),
   JSON.stringify({ progress: processed.progress, status: processed.status }));
+check('Cancel stays directly below Generate and remains touch-sized during automatic export',
+  rawDownload.exportLayout?.phase === 'exporting' && rawDownload.exportLayout.visible &&
+  rawDownload.exportLayout.belowGenerate && rawDownload.exportLayout.touchTarget,
+  JSON.stringify(rawDownload.exportLayout));
+check('Generate automatically downloads the completed MP4',
+  /depth/i.test(rawDownload.suggestedFilename) && /\.mp4$/i.test(rawDownload.suggestedFilename) &&
+  downloadEvents === 1 && fs.existsSync(rawOutput) && fs.statSync(rawOutput).size > 1500,
+  JSON.stringify({ filename: rawDownload.suggestedFilename, downloadEvents, bytes: fs.existsSync(rawOutput) ? fs.statSync(rawOutput).size : 0 }));
+check('optional secondary action is clearly Download again, never a required Export step',
+  !processed.downloadAgain || (!processed.downloadAgain.disabled && /download again|baixar novamente/i.test(processed.downloadAgain.text)),
+  JSON.stringify(processed.downloadAgain));
 check('no actual model weights touched the network', traffic.modelWeightRequests.length === 0, JSON.stringify(traffic.modelWeightRequests));
 
-// 3) Post controls must alter the current depth without re-running inference.
+const repeatName = processed.downloadAgain ? await downloadAgain(page, repeatOutput) : '';
+check('Download again re-delivers the finished MP4 when present',
+  !processed.downloadAgain || (/\.mp4$/i.test(repeatName) && fs.statSync(repeatOutput).size > 1500),
+  processed.downloadAgain ? `(${repeatName}, ${fs.existsSync(repeatOutput) ? fs.statSync(repeatOutput).size : 0} bytes)` : '(action omitted)');
+
+// 4) Post controls must alter the current depth without re-running inference.
 const baseHash = await canvasHash(page);
 const callsBeforeControls = processed.mock.inferenceCalls;
 await setControl(page, 'invertDepth', true);
@@ -348,22 +456,20 @@ check('invert and near/far controls change the depth preview', baseHash !== inve
   JSON.stringify({ baseHash, invertedHash, clippedHash }));
 check('post controls do not re-run the neural model', callsAfterControls === callsBeforeControls, `(${callsBeforeControls} -> ${callsAfterControls})`);
 
-// Reset post controls, export raw/flickery result.
+// The automatically downloaded first pass is the raw/flickery reference.
 await setControl(page, 'nearClip', 0);
 await setControl(page, 'farClip', 100);
-const rawName = await exportMp4(page, rawOutput);
 const rawProbe = probeMp4(rawOutput);
 const rawStats = decodedGrayStats(rawOutput);
-check('raw MP4 download contract', /depth/i.test(rawName) && /\.mp4$/i.test(rawName) && fs.statSync(rawOutput).size > 1500, `(${rawName}, ${fs.statSync(rawOutput).size} bytes)`);
 check('raw MP4 preserves source geometry/duration', rawProbe.width === 160 && rawProbe.height === 96 && Math.abs(rawProbe.seconds - 1) < 0.25, JSON.stringify(rawProbe));
 check('raw MP4 decodes clean and is grayscale', rawProbe.clean && rawStats.frames >= 5 && rawStats.maxChannelError <= 5,
   JSON.stringify({ probe: rawProbe, frames: rawStats.frames, channelError: rawStats.maxChannelError }));
 
-// 4) A second pass reuses the model; high temporal smoothing must measurably
+// 5) A second one-click pass reuses the model; high temporal smoothing must measurably
 // reduce frame-to-frame brightness jumps in the actual exported MP4.
 await setControl(page, 'temporalSmooth', 85);
 const callsBeforeStable = await page.evaluate(() => globalThis.__depthMock.inferenceCalls);
-await processVideo(page);
+const stableDownload = await generateAndDownload(page, stableOutput);
 const secondPass = await page.evaluate(() => ({
   factoryCalls: globalThis.__depthMock.factoryCalls,
   inferenceCalls: globalThis.__depthMock.inferenceCalls,
@@ -372,16 +478,15 @@ const secondPass = await page.evaluate(() => ({
 check('second pass reuses cached model', traffic.transformersModules === 1 && secondPass.factoryCalls === 1);
 check('second pass processes every frame again', secondPass.inferenceCalls - callsBeforeStable === secondPass.totalFrames, JSON.stringify(secondPass));
 
-const stableName = await exportMp4(page, stableOutput);
 const stableProbe = probeMp4(stableOutput);
 const stableStats = decodedGrayStats(stableOutput);
-check('stable MP4 exports and decodes cleanly', /\.mp4$/i.test(stableName) && stableProbe.clean && fs.statSync(stableOutput).size > 1500,
-  JSON.stringify({ name: stableName, probe: stableProbe }));
+check('stable MP4 auto-downloads and decodes cleanly', /\.mp4$/i.test(stableDownload.suggestedFilename) && stableProbe.clean && fs.statSync(stableOutput).size > 1500,
+  JSON.stringify({ name: stableDownload.suggestedFilename, probe: stableProbe }));
 check('temporal smoothing reduces real exported-frame flicker',
   rawStats.transitionMean > 20 && stableStats.transitionMean < rawStats.transitionMean * 0.65,
   JSON.stringify({ rawDelta: rawStats.transitionMean, stableDelta: stableStats.transitionMean }));
 
-// 5) Landing-page and mobile integration.
+// 6) Landing-page and mobile integration.
 const index = await context.newPage();
 await index.goto('http://localhost/index.html#visual', { waitUntil: 'domcontentloaded' });
 await index.waitForFunction(() => document.getElementById('levelVisual')?.classList.contains('active'));
@@ -414,21 +519,27 @@ await mobile.locator('#fileInput').setInputFiles(fixture);
 await mobile.waitForFunction(() => document.getElementById('sourceVideo')?.videoWidth > 0);
 const mobileLayout = await mobile.evaluate(() => {
   const canvas = document.getElementById('depthCanvas').getBoundingClientRect();
+  const source = document.getElementById('sourceVideo');
+  const sourceBox = source.getBoundingClientRect();
   const panel = document.querySelector('.tipo-panel');
   const grip = document.querySelector('.tipo-sheet-grip')?.getBoundingClientRect();
   const touch = id => {
-    const box = document.getElementById(id).getBoundingClientRect();
+    const element = document.getElementById(id);
+    if (!element) return true;
+    const box = element.getBoundingClientRect();
     return box.width >= 44 && box.height >= 44;
   };
   return {
     grip: !!grip && grip.top >= 0 && grip.bottom <= innerHeight,
     canvasFits: canvas.width > 100 && canvas.height > 50 && canvas.left >= -1 && canvas.right <= innerWidth + 1,
+    sourceIsPrimaryPreview: source.controls && sourceBox.width >= innerWidth * .75 && sourceBox.height >= 150 && sourceBox.left >= -1 && sourceBox.right <= innerWidth + 1,
     noHorizontalOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
     startsClosed: !panel.classList.contains('sheet-open'),
-    touchTargets: touch('processBtn') && touch('exportBtn'),
+    touchTargets: touch('processBtn'),
+    cancelCssTarget: parseFloat(getComputedStyle(document.getElementById('cancelBtn')).minHeight) >= 44,
   };
 });
-check('mobile layout fits and has usable touch targets', Object.values(mobileLayout).every(Boolean), JSON.stringify(mobileLayout));
+check('mobile layout keeps the playable source preview primary and touch-safe', Object.values(mobileLayout).every(Boolean), JSON.stringify(mobileLayout));
 await mobile.tap('.tipo-sheet-grip');
 await mobile.waitForTimeout(400);
 check('mobile bottom sheet opens in one tap', await mobile.evaluate(() => document.querySelector('.tipo-panel').classList.contains('sheet-open')));
