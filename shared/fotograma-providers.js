@@ -116,6 +116,10 @@
     generate(input) {
       return this.request('/generate', { method: 'POST', body: JSON.stringify(input) });
     }
+
+    runTool(input) {
+      return this.request('/tool', { method: 'POST', body: JSON.stringify(input) });
+    }
   }
 
   class ProviderRouter {

@@ -8,11 +8,14 @@ import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { HIGGSFIELD_MODELS, estimateCost, modelByName } = require('./shared/fotograma-providers.js');
+const { EXPAND_RATIOS, TOOL_COSTS } = require('./shared/fotograma-tools.js');
 
 const HOST = process.env.TIPO_HIGGSFIELD_HOST || '127.0.0.1';
 const PORT = Number(process.env.TIPO_HIGGSFIELD_PORT || 4789);
 const CLI = process.env.TIPO_HIGGSFIELD_BIN || '/usr/local/bin/higgsfield';
-const FFMPEG = process.env.TIPO_FFMPEG_BIN || 'ffmpeg';
+const FFMPEG = process.env.TIPO_FFMPEG_BIN || (() => {
+  try { return require('ffmpeg-static'); } catch (error) { return 'ffmpeg'; }
+})();
 const MAX_BODY_BYTES = 64 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
@@ -21,6 +24,7 @@ const DEFAULT_ORIGINS = [
   'http://127.0.0.1:3000', 'http://localhost:3000',
   'http://127.0.0.1:8080', 'http://localhost:8080',
   'http://localhost',
+  'https://tipo-steel.vercel.app',
 ];
 const configuredOrigins = String(process.env.TIPO_HIGGSFIELD_ORIGINS || '')
   .split(',').map(value => value.trim()).filter(Boolean);
@@ -192,6 +196,61 @@ function cliArgs(input, imageFiles) {
   return args;
 }
 
+function strictInteger(value, min, max, label) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < min || number > max) {
+    throw inputError(`${label} precisa estar entre ${min} e ${max}`);
+  }
+  return number;
+}
+
+function validateTool(body) {
+  const tool = String(body && body.tool || '');
+  const images = Array.isArray(body && body.images) ? body.images : [];
+  if (images.length !== 1) throw inputError('A ferramenta precisa de exatamente uma imagem');
+
+  if (tool === 'multiAngle') {
+    return {
+      tool,
+      images,
+      label: 'Multi Angle',
+      cost: TOOL_COSTS.multiAngle,
+      rotate: strictInteger(body.rotate ?? 0, -180, 180, 'Rotação'),
+      vertical: strictInteger(body.vertical ?? 0, -90, 90, 'Ângulo vertical'),
+      forward: strictInteger(body.forward ?? 0, -10, 10, 'Aproximação'),
+      removeBg: body.removeBg === true,
+    };
+  }
+  if (tool === 'expand') {
+    const aspectRatio = String(body.aspectRatio || '16:9');
+    if (!EXPAND_RATIOS.includes(aspectRatio)) throw inputError('Aspect ratio indisponível no Expand');
+    return { tool, images, label: 'Expand Frame', cost: TOOL_COSTS.expand, aspectRatio };
+  }
+  if (tool === 'removeBg') {
+    return { tool, images, label: 'Remove BG · beta', cost: TOOL_COSTS.removeBg };
+  }
+  throw inputError('Ferramenta Higgsfield não permitida');
+}
+
+function toolCliArgs(input, imageFile) {
+  let args;
+  if (input.tool === 'multiAngle') {
+    args = [
+      'generate', 'create', 'qwen_camera_control', '--image', imageFile,
+      '--rotate_degree', String(input.rotate),
+      '--vertical_angle', String(input.vertical),
+      '--move_forward_level', String(input.forward),
+    ];
+    if (input.removeBg) args.push('--remove_bg', 'true');
+  } else if (input.tool === 'expand') {
+    args = ['generate', 'create', 'outpaint', '--image', imageFile, '--aspect_ratio', input.aspectRatio];
+  } else {
+    args = ['generate', 'create', 'image_background_remover', '--image', imageFile];
+  }
+  args.push('--wait', '--wait-timeout', '20m', '--wait-interval', '3s', '--json');
+  return args;
+}
+
 async function accountStatus() {
   const result = await run(CLI, ['account', 'status', '--json'], { timeoutMs: 30_000 });
   const parsed = parseCliJson(result.stdout);
@@ -253,6 +312,39 @@ async function generate(body) {
   }
 }
 
+async function runTool(body) {
+  if (activeJob) {
+    const error = new Error('Já existe um job Higgsfield em processamento neste bridge');
+    error.status = 409;
+    throw error;
+  }
+  const input = validateTool(body);
+  const directory = await mkdtemp(join(tmpdir(), 'tipo-higgsfield-tool-'));
+  activeJob = { model: input.tool, startedAt: Date.now() };
+  try {
+    const files = await materializeImages(input.images, directory);
+    const result = await run(CLI, toolCliArgs(input, files[0]), { cwd: directory });
+    const parsed = parseCliJson(result.stdout);
+    const job = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!job || job.status !== 'completed' || !job.result_url) throw new Error('A ferramenta terminou sem imagem utilizável');
+    const image = await downloadOutput(job.result_url);
+    let account = null;
+    try { account = await accountStatus(); } catch (error) {}
+    return {
+      id: job.id,
+      status: job.status,
+      tool: input.tool,
+      label: input.label,
+      estimatedCredits: input.cost,
+      creditsRemaining: account && account.credits,
+      image,
+    };
+  } finally {
+    activeJob = null;
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 export function createHiggsfieldBridgeServer() {
   return http.createServer(async (req, res) => {
     const origin = req.headers.origin;
@@ -285,6 +377,11 @@ export function createHiggsfieldBridgeServer() {
       if (req.method === 'POST' && url.pathname === '/generate') {
         const payload = await readJson(req);
         const result = await generate(payload);
+        return sendJson(req, res, 200, result);
+      }
+      if (req.method === 'POST' && url.pathname === '/tool') {
+        const payload = await readJson(req);
+        const result = await runTool(payload);
         return sendJson(req, res, 200, result);
       }
       return sendJson(req, res, 404, { error: 'Rota inexistente' });

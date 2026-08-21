@@ -8,7 +8,7 @@ Suite of generative visual tools for motion type, kinetic typography, AI stills,
 Convert video into a temporally stabilized grayscale depth reference for Seedance. Depth Anything V2 Small runs locally with WebGPU FP16 when available and a WASM q8 fallback; export is silent H.264 MP4 via WebCodecs.
 
 ### Fotograma
-Create cinematic, advertising, and music-video stills. Google AI Studio/Vertex remains responsible for visual direction and can also generate the final image. An optional Higgsfield provider exposes Nano Banana Pro/2, Seedream 4.5/5, and GPT Image 2 with the estimated CLI credit cost shown before generation.
+Create cinematic, advertising, and music-video stills. A permanent tool rail also exposes the audited Higgsfield workflows: Multi Angle, Animation Styles, aspect-ratio Expand, and Remove BG (beta), plus a shortcut to Video Depth Map. Google AI Studio/Vertex remains responsible for visual direction and can also generate the final image. An optional Higgsfield provider exposes Nano Banana Pro/2, Seedream 4.5/5, and GPT Image 2 with the estimated CLI credit cost shown before generation.
 
 ### Dithering
 Transform images and videos into visual art using custom SVGs in place of pixels. 7-level shadow-to-highlight mapping with 60+ built-in shapes.
@@ -50,13 +50,13 @@ Open `http://localhost:8080`
 
 ### Optional Higgsfield provider
 
-The Higgsfield CLI must already be installed and authenticated, and `ffmpeg` must be available on `PATH` for JPEG/WebP reference normalization. Start the private bridge in a second terminal:
+The Higgsfield CLI must already be installed and authenticated. JPEG/WebP normalization uses the local `ffmpeg-static` package when installed, otherwise `ffmpeg` must be available on `PATH`. Start the private bridge in a second terminal:
 
 ```bash
 node higgsfield-bridge.mjs
 ```
 
-In Fotograma, open the key/provider popover, test `http://127.0.0.1:4789`, and select **Higgsfield CLI** as the image provider. Google stays connected for the Director and reference analysis. The bridge accepts only the curated model allowlist, converts JPEG/WebP references to PNG before upload, and never sends the Higgsfield session to the browser.
+In Fotograma, open the key/provider popover and test `http://127.0.0.1:4789`. Select **Higgsfield CLI** inside Create, or open one of the specialized tools in the left rail. Google stays connected for the Director and reference analysis, but is not required for the specialized Higgsfield tools. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, and never sends the Higgsfield session to the browser. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
 
 For a deployed Tipó origin, explicitly allow that exact HTTPS origin when starting the bridge:
 

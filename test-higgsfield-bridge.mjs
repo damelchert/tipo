@@ -24,6 +24,12 @@ try {
   });
   check('preflight permitido somente para origin aprovada', preflight.status === 204 && preflight.headers.get('access-control-allow-origin') === 'http://localhost:3000');
 
+  const productionPreflight = await fetch(`${base}/tool`, {
+    method: 'OPTIONS',
+    headers: { Origin: 'https://tipo-steel.vercel.app', 'Access-Control-Request-Method': 'POST' },
+  });
+  check('produção oficial alcança o bridge local', productionPreflight.status === 204 && productionPreflight.headers.get('access-control-allow-origin') === 'https://tipo-steel.vercel.app');
+
   const invalid = await fetch(`${base}/generate`, {
     method: 'POST',
     headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' },
@@ -39,8 +45,22 @@ try {
   });
   check('aspect ratio inválido morre antes de gastar créditos', badRatio.status === 400, `(${badRatio.status})`);
 
+  const badTool = await fetch(`${base}/tool`, {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool: 'upscale_fake', images: [{ dataUrl: 'data:image/png;base64,AA==' }] }),
+  });
+  check('ferramenta não auditada morre antes do CLI', badTool.status === 400, `(${badTool.status})`);
+
+  const badAngle = await fetch(`${base}/tool`, {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool: 'multiAngle', rotate: 999, vertical: 0, forward: 0, images: [{ dataUrl: 'data:image/png;base64,AA==' }] }),
+  });
+  check('parâmetro de câmera fora da allowlist morre antes do crédito', badAngle.status === 400, `(${badAngle.status})`);
+
   const missing = await fetch(`${base}/missing`, { headers: { Origin: 'http://localhost:3000' } });
-  check('bridge expõe somente health/generate', missing.status === 404, `(${missing.status})`);
+  check('bridge expõe somente health/generate/tool', missing.status === 404, `(${missing.status})`);
 } finally {
   await new Promise(resolve => server.close(resolve));
 }
