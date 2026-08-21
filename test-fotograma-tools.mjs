@@ -79,7 +79,7 @@ await page.goto('http://localhost/fotograma.html', { waitUntil: 'load' });
 await page.evaluate(() => document.getElementById('keyPop').classList.remove('open'));
 
 const railLabels = await page.locator('[data-fotograma-tool]').allTextContents();
-check('sidebar expõe somente os quatro fluxos aprovados além do Create', railLabels.length === 5 && railLabels.some(text => /Multi Angle/.test(text)) && railLabels.some(text => /Animation/.test(text)) && !railLabels.some(text => /Upscale/.test(text)), railLabels.join(' | '));
+check('sidebar expõe o bloco funcional Create, Cast, Product e Sheets', railLabels.length === 8 && ['Create', 'Cast', 'Product', 'Sheets'].every(label => railLabels.some(text => text.includes(label))) && !railLabels.some(text => /Upscale/.test(text)), railLabels.join(' | '));
 check('Depth Map fica acessível como ferramenta irmã', await page.locator('a[href="depthmap.html"]').count() === 1);
 
 await page.click('[data-fotograma-tool="multiAngle"]');
@@ -106,6 +106,51 @@ const styleRequest = generationBodies[0] || {};
 check('Animation usa modelo selecionado e referência', styleRequest.model === 'seedream_v5_lite' && styleRequest.images?.length === 1);
 check('Animation tem prompt próprio com fidelidade explícita', /Japanese animated feature-film frame/.test(styleRequest.prompt || '') && /Fidelity is mandatory/.test(styleRequest.prompt || '') && /paleta noturna azul e âmbar/.test(styleRequest.prompt || ''));
 
+await page.click('[data-fotograma-tool="cast"]');
+await page.evaluate(() => {
+  utilityState.image = null;
+  renderUtilityDrop();
+  utilityButtonState();
+});
+check('Cast aceita começar por descrição sem imagem', await page.locator('#utilityGenerate').isDisabled());
+await page.fill('#castDescription', 'mulher brasileira de 38 anos, cabelo cacheado curto, jaqueta azul');
+await page.click('[data-cast-style="cinematic"]');
+await page.click('[data-cast-background="studioGrey"]');
+await page.selectOption('#styleModel', 'nano_banana_2');
+await page.waitForFunction(() => !document.getElementById('utilityGenerate').disabled);
+await page.click('#utilityGenerate');
+await page.waitForFunction(() => !utilityState.busy && /Cast/.test(document.getElementById('stillCaption').textContent), null, { timeout: 10_000 });
+const castRequest = generationBodies[1] || {};
+check('Cast funciona sem referência e usa formato de retrato', castRequest.images?.length === 0 && castRequest.aspectRatio === '3:4');
+check('Cast tem prompt próprio de identidade e não inventa pessoa extra', /one canonical adult character/i.test(castRequest.prompt || '') && /do not add a second person/i.test(castRequest.prompt || '') && /mulher brasileira de 38 anos/i.test(castRequest.prompt || ''));
+
+await page.click('[data-fotograma-tool="product"]');
+await page.setInputFiles('#utilityFile', { name: 'product.png', mimeType: 'image/png', buffer: pngBuffer });
+await page.fill('#productDirection', 'campanha premium sobre superfície de pedra escura');
+await page.click('[data-product-style="campaign"]');
+await page.waitForFunction(() => !document.getElementById('utilityGenerate').disabled);
+await page.click('#utilityGenerate');
+await page.waitForFunction(() => !utilityState.busy && /Product/.test(document.getElementById('stillCaption').textContent), null, { timeout: 10_000 });
+const productRequest = generationBodies[2] || {};
+check('Product usa a referência e um enquadramento quadrado', productRequest.images?.length === 1 && productRequest.aspectRatio === '1:1');
+check('Product trava geometria, material e branding sem inventar rótulo', /exact product geometry/i.test(productRequest.prompt || '') && /preserve every legible brand mark/i.test(productRequest.prompt || '') && /do not invent or rewrite label text/i.test(productRequest.prompt || ''));
+
+await page.click('[data-fotograma-tool="sheets"]');
+await page.evaluate(() => {
+  utilityState.image = null;
+  renderUtilityDrop();
+  utilityButtonState();
+});
+check('Sheets bloqueia geração sem uma origem', await page.locator('#utilityGenerate').isDisabled());
+await page.setInputFiles('#utilityFile', { name: 'sheet-source.png', mimeType: 'image/png', buffer: pngBuffer });
+await page.click('[data-sheet-type="productViews"]');
+await page.fill('#sheetDirection', 'mostrar também o detalhe do mecanismo lateral');
+await page.click('#utilityGenerate');
+await page.waitForFunction(() => !utilityState.busy && /Sheets/.test(document.getElementById('stillCaption').textContent), null, { timeout: 10_000 });
+const sheetRequest = generationBodies[3] || {};
+check('Sheets usa a origem e formato horizontal', sheetRequest.images?.length === 1 && sheetRequest.aspectRatio === '16:9');
+check('Sheets gera uma prancha do mesmo produto, não produtos diferentes', /same single product in every panel/i.test(sheetRequest.prompt || '') && /front, three-quarter, side, rear and detail views/i.test(sheetRequest.prompt || '') && /mecanismo lateral/i.test(sheetRequest.prompt || ''));
+
 await page.click('[data-fotograma-tool="expand"]');
 await page.click('#expandRatios [data-ratio="21:9"]');
 await page.click('#utilityGenerate');
@@ -119,6 +164,24 @@ check('Remove BG permanece funcional e marcado beta', toolBodies.some(body => bo
 check('nenhuma credencial entra nos payloads Higgsfield', !JSON.stringify([...toolBodies, ...generationBodies]).match(/AIza|AQ\./));
 check('bridge é pareado uma vez e reutilizado', healthCalls === 1, `health=${healthCalls}`);
 
+check('cards não exibem mais botão redundante de expandir', await page.locator('#gallery [data-a="zoom"]').count() === 0);
+const castCard = page.locator('#gallery .take').filter({ hasText: 'Cast ·' }).first();
+await castCard.locator('img').click();
+const expanded = await page.evaluate(() => ({
+  open: document.getElementById('lightbox').classList.contains('open'),
+  closeVisible: getComputedStyle(document.getElementById('lightboxClose')).display !== 'none',
+  actions: [...document.querySelectorAll('#lightboxActions button')].map(button => button.textContent.trim()),
+}));
+check('clique em qualquer parte da imagem abre o inspector completo', expanded.open && expanded.closeVisible && ['Baixar', 'Prompt', 'Curtir', 'Reusar', 'Usar no Sheets'].every(label => expanded.actions.some(action => action.includes(label))), JSON.stringify(expanded));
+await page.click('#lightboxPromptToggle');
+check('prompt completo permanece acessível no modo expandido', await page.locator('#lightboxPromptPanel').isVisible() && /one canonical adult character/i.test(await page.locator('#lightboxPromptText').textContent()));
+await page.click('#lightboxClose');
+check('X fecha o modo expandido', await page.locator('#lightbox').isHidden());
+await castCard.locator('img').click();
+await page.click('#lightboxToSheets');
+await page.waitForFunction(() => utilityState.active === 'sheets' && !!utilityState.image);
+check('inspector envia qualquer resultado diretamente para Sheets', await page.locator('[data-fotograma-tool="sheets"]').evaluate(button => button.classList.contains('on')) && await page.locator('#utilityDrop img').count() === 1);
+
 const galleryDesktop = await page.evaluate(() => ({
   heroDisplay: getComputedStyle(document.getElementById('stillFrame')).display,
   galleryDisplay: getComputedStyle(document.getElementById('gallery')).display,
@@ -128,7 +191,7 @@ const galleryDesktop = await page.evaluate(() => ({
   sceneFont: parseFloat(getComputedStyle(document.getElementById('scene')).fontSize),
   chipFont: parseFloat(getComputedStyle(document.querySelector('.fchip')).fontSize),
 }));
-check('imagem-demo saiu e galeria virou o workspace principal', galleryDesktop.heroDisplay === 'none' && galleryDesktop.galleryDisplay === 'grid' && galleryDesktop.cards === 4, JSON.stringify(galleryDesktop));
+check('imagem-demo saiu e galeria virou o workspace principal', galleryDesktop.heroDisplay === 'none' && galleryDesktop.galleryDisplay === 'grid' && galleryDesktop.cards === 7, JSON.stringify(galleryDesktop));
 check('grid responsivo abre mais de uma coluna no desktop', galleryDesktop.columns >= 2, `columns=${galleryDesktop.columns}`);
 check('controles principais ganharam leitura real', galleryDesktop.railFont >= 11 && galleryDesktop.sceneFont >= 14 && galleryDesktop.chipFont >= 10, JSON.stringify(galleryDesktop));
 
@@ -146,15 +209,21 @@ const filteredGallery = await page.evaluate(() => ({
   cards: document.querySelectorAll('#gallery .take:not(.pending)').length,
   count: document.getElementById('galleryCount').textContent,
 }));
-check('busca filtra a galeria por metadados', filteredGallery.cards === 1 && /^1 de 4 imagens$/.test(filteredGallery.count), JSON.stringify(filteredGallery));
+check('busca filtra a galeria por metadados', filteredGallery.cards === 1 && /^1 de 7 imagens$/.test(filteredGallery.count), JSON.stringify(filteredGallery));
 await page.fill('#gallerySearch', '');
 
 if (process.argv.includes('--screenshot')) {
   await page.setViewportSize({ width: 2048, height: 1152 });
+  await page.click('[data-fotograma-tool="cast"]');
   await page.locator('#gridDensity').fill('3');
   await page.locator('#gridDensity').dispatchEvent('input');
   await page.screenshot({ path: '/private/tmp/tipo-fotograma-gallery.png' });
+  await page.locator('#gallery .take img').first().click();
+  await page.click('#lightboxPromptToggle');
+  await page.screenshot({ path: '/private/tmp/tipo-fotograma-lightbox.png' });
+  await page.click('#lightboxClose');
   console.log('screenshot: /private/tmp/tipo-fotograma-gallery.png');
+  console.log('screenshot: /private/tmp/tipo-fotograma-lightbox.png');
 }
 
 await page.setViewportSize({ width: 390, height: 780 });

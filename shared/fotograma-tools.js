@@ -52,6 +52,34 @@
     }),
   ]);
 
+  const CAST_STYLES = Object.freeze([
+    Object.freeze({ id: 'natural', label: 'Natural', note: 'casting realista e direto', prompt: 'Natural documentary casting portrait, believable skin, restrained grooming, ordinary human asymmetry and honest wardrobe texture.' }),
+    Object.freeze({ id: 'cinematic', label: 'Cinematic', note: 'presença e luz de longa', prompt: 'Cinematic character portrait with motivated light, dimensional separation, restrained color and the presence of a narrative-film casting still.' }),
+    Object.freeze({ id: 'editorial', label: 'Editorial', note: 'moda e atitude controlada', prompt: 'Editorial casting portrait with intentional styling, confident posture, precise silhouette, material detail and sophisticated magazine restraint.' }),
+    Object.freeze({ id: 'advertising', label: 'Advertising', note: 'polimento de campanha', prompt: 'Contemporary advertising casting portrait with approachable expression, clean commercial finish, controlled highlights and premium but believable polish.' }),
+  ]);
+
+  const CAST_BACKGROUNDS = Object.freeze([
+    Object.freeze({ id: 'white', label: 'Branco', note: 'recorte limpo', prompt: 'seamless warm-white casting backdrop with a soft contact shadow' }),
+    Object.freeze({ id: 'studioGrey', label: 'Cinza estúdio', note: 'volume neutro', prompt: 'neutral mid-grey studio sweep with subtle tonal falloff and grounded contact shadow' }),
+    Object.freeze({ id: 'location', label: 'Locação', note: 'contexto discreto', prompt: 'restrained real location related to the character, softly separated and never competing with the person' }),
+    Object.freeze({ id: 'night', label: 'Noturno', note: 'practical motivado', prompt: 'minimal night environment with one motivated practical source and deep readable separation' }),
+  ]);
+
+  const PRODUCT_STYLES = Object.freeze([
+    Object.freeze({ id: 'studio', label: 'Studio', note: 'catálogo premium', prompt: 'Premium studio product photograph with controlled gradients, exact edges, honest materials and a physically plausible contact shadow.' }),
+    Object.freeze({ id: 'campaign', label: 'Campaign', note: 'key visual publicitário', prompt: 'High-end campaign key visual with authored art direction, decisive composition, sculpted light and a premium contemporary finish.' }),
+    Object.freeze({ id: 'lifestyle', label: 'Lifestyle', note: 'produto em contexto', prompt: 'Believable lifestyle product photograph in a purposeful real environment, with the product remaining the clear hero and all interactions physically plausible.' }),
+    Object.freeze({ id: 'macro', label: 'Macro detail', note: 'matéria e acabamento', prompt: 'Precision macro product photograph emphasizing construction, surface finish, seams and functional details without deforming the object.' }),
+  ]);
+
+  const SHEET_TYPES = Object.freeze([
+    Object.freeze({ id: 'characterTurnaround', label: 'Character 360°', note: 'frente, ¾, perfil e costas', prompt: 'Create a clean character turnaround sheet showing the same single character in front, three-quarter, side and back views.' }),
+    Object.freeze({ id: 'expressions', label: 'Expressões', note: 'seis estados faciais', prompt: 'Create a six-panel facial expression sheet of the same single character: neutral, joy, concern, anger, surprise and quiet concentration.' }),
+    Object.freeze({ id: 'poses', label: 'Poses', note: 'seis poses de corpo inteiro', prompt: 'Create a six-panel full-body pose sheet of the same single character with varied natural actions while preserving body, face, wardrobe and proportions.' }),
+    Object.freeze({ id: 'productViews', label: 'Produto 360°', note: 'vistas e detalhe técnico', prompt: 'Create a clean multi-view sheet showing the same single product in every panel: front, three-quarter, side, rear and detail views.' }),
+  ]);
+
   const PRESERVATION_SUFFIX = ' Fidelity is mandatory: do not add, remove or replace people, limbs, wardrobe pieces, products, props or architecture. Do not change ethnicity, age, body shape, gaze, gesture or framing. No text, captions, logos, borders or watermarks.';
 
   function styleById(id) {
@@ -67,6 +95,39 @@
     return `${style.prompt}${directionClause}${PRESERVATION_SUFFIX}`;
   }
 
+  function byId(items, id) {
+    return items.find(item => item.id === id) || items[0];
+  }
+
+  function directionClause(value, label = 'Additional direction') {
+    const clean = String(value || '').trim().slice(0, 1600);
+    return clean ? ` ${label}: ${clean}.` : '';
+  }
+
+  function buildCastPrompt(options = {}) {
+    const style = byId(CAST_STYLES, options.styleId);
+    const background = byId(CAST_BACKGROUNDS, options.backgroundId);
+    const hasReference = options.hasReference === true;
+    const identity = hasReference
+      ? 'Image 1 is the sole identity authority. Preserve the exact recognizable face, age, ethnicity, skin tone, hair, body proportions and distinctive features.'
+      : 'Create one canonical adult character from the written brief, with a specific recognizable face, coherent anatomy and stable identity.';
+    return `CAST — canonical character design. ${identity}${directionClause(options.description, 'Character brief')} ${style.prompt} Use a ${background.prompt}. Produce one person in one finished portrait, not a contact sheet. Do not add a second person, duplicate the subject, merge faces, beautify away distinctive features or alter requested wardrobe. Keep hands and anatomy coherent. No text, captions, logos, borders or watermarks.`;
+  }
+
+  function buildProductPrompt(options = {}) {
+    const style = byId(PRODUCT_STYLES, options.styleId);
+    const hasReference = options.hasReference === true;
+    const authority = hasReference
+      ? 'Image 1 is the sole product authority. Preserve the exact product geometry, proportions, construction, materials, colors, surface finish, components and orientation. Preserve every legible brand mark and packaging feature exactly where it exists; do not invent or rewrite label text.'
+      : 'Create one original product exactly from the written brief, with coherent construction, manufacturable geometry and physically believable materials. Do not invent brand names or label text.';
+    return `PRODUCT — faithful commercial image. ${authority}${directionClause(options.direction, 'Campaign direction')} ${style.prompt} Show one canonical product unless the brief explicitly requests a set. Lighting, environment and camera may change, but the product itself may not be redesigned, simplified, duplicated or accessorized. No floating typography, captions, borders or watermarks.`;
+  }
+
+  function buildSheetPrompt(options = {}) {
+    const type = byId(SHEET_TYPES, options.typeId);
+    return `SHEETS — controlled reference board. Image 1 is the sole identity and design authority. ${type.prompt} Use a consistent neutral studio background, equal panel sizing, stable scale, matched lighting and clear separation between panels. Every panel must depict the same canonical subject — never relatives, variants or multiple products. Preserve exact facial identity, body proportions, wardrobe, product geometry, materials, colors, branding and distinctive details wherever applicable.${directionClause(options.direction, 'Additional sheet direction')} No decorative layout, labels, typography, borders, watermarks or cropped limbs.`;
+  }
+
   function clampInteger(value, min, max, fallback = 0) {
     const number = Number(value);
     if (!Number.isFinite(number)) return fallback;
@@ -75,8 +136,15 @@
 
   return {
     EXPAND_RATIOS,
+    CAST_BACKGROUNDS,
+    CAST_STYLES,
+    PRODUCT_STYLES,
+    SHEET_TYPES,
     STYLE_PRESETS,
     TOOL_COSTS,
+    buildCastPrompt,
+    buildProductPrompt,
+    buildSheetPrompt,
     buildStylePrompt,
     clampInteger,
     styleById,

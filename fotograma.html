@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
 <script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
 <script src="shared/fotograma-providers.js?v=20260820-higgsfield1"></script>
-<script src="shared/fotograma-tools.js?v=20260820-tools1"></script>
+<script src="shared/fotograma-tools.js?v=20260820-tools2"></script>
 <style>
   body { display: flex; height: 100vh; }
   #fotogramaRail { flex: 0 0 190px; height: 100vh; box-sizing: border-box; overflow-y: auto; background: color-mix(in srgb, var(--bg-1) 92%, #000); border-right: 1px solid var(--border-2); padding: 22px 12px 18px; font-family: var(--font-ui); }
@@ -72,10 +72,27 @@
   .gallery-empty-title { color: var(--text-1); font: 650 15px/1.3 var(--font-ui); }
   .gallery-empty-copy { margin-top: 9px; font: 11px/1.6 var(--font-ui); }
 
-  /* tela cheia */
-  #lightbox { position: fixed; inset: 0; z-index: 200; background: rgba(8,8,8,.96); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  /* inspector em tela cheia */
+  #lightbox { position: fixed; inset: 0; z-index: 10000; display: none; flex-direction: column; gap: 14px; padding: 22px; background: rgba(8,8,8,.97); color: #eeeae4; }
   #lightbox.open { display: flex; }
-  #lightbox img { max-width: 96vw; max-height: 96vh; box-shadow: 0 20px 80px rgba(0,0,0,.6); }
+  #lightboxViewport { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #lightboxImg { max-width: 96vw; max-height: 100%; object-fit: contain; box-shadow: 0 20px 80px rgba(0,0,0,.68); }
+  #lightboxClose { position: fixed; top: 18px; right: 18px; z-index: 2; width: 46px; height: 46px; border: 1px solid rgba(255,255,255,.24); border-radius: 50%; background: rgba(20,20,20,.86); color: #f5f2ec; font: 300 27px/1 var(--font-ui); cursor: pointer; }
+  #lightboxClose:hover, #lightboxClose:focus-visible { border-color: var(--accent); color: var(--accent-brand); outline: none; }
+  #lightboxInspector { width: min(1120px, 96vw); flex: none; align-self: center; padding: 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(20,20,18,.94); box-shadow: 0 10px 36px rgba(0,0,0,.42); }
+  .lightbox-summary { display: flex; align-items: center; gap: 14px; }
+  .lightbox-meta { min-width: 0; flex: 1; }
+  #lightboxTitle { color: #f4f0e8; font: 650 12px/1.4 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lightboxDate { margin-top: 4px; color: #8d8982; font: 9px/1.3 var(--font-ui); }
+  #lightboxActions { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+  .lightbox-action { min-height: 44px; padding: 0 15px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(255,255,255,.055); color: #d9d5cd; font: 11.5px/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+  .lightbox-action:hover, .lightbox-action:focus-visible, .lightbox-action.on { border-color: var(--accent); color: var(--accent-brand); outline: none; }
+  .lightbox-action.danger:hover, .lightbox-action.danger:focus-visible { border-color: var(--red, #CC4840); color: #ef7770; }
+  #lightboxPromptPanel { max-height: 32vh; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); overflow: auto; }
+  #lightboxPromptPanel[hidden] { display: none; }
+  .lightbox-prompt-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; color: #aaa69e; font: 9px/1.3 var(--font-ui); letter-spacing: 1.2px; text-transform: uppercase; }
+  #lightboxPromptCopy { min-height: 34px; padding: 0 11px; }
+  #lightboxPromptText { color: #c8c4bc; font: 10.5px/1.62 var(--font-ui); white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* chave */
   #apiKey, #higgsBridgeUrl { width: 100%; min-width: 0; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
@@ -152,6 +169,8 @@
   .tool-intro-title { display: flex; justify-content: space-between; gap: 8px; color: var(--text-1); font-size: 13px; font-weight: 650; letter-spacing: 1.1px; text-transform: uppercase; }
   .tool-intro-badge { color: var(--accent-warm, #D4A040); font-size: 9px; white-space: nowrap; }
   .tool-intro-copy { margin-top: 8px; color: var(--text-3); font-size: 11px; line-height: 1.6; }
+  .utility-textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); border-radius: 6px; padding: 11px; font: 12px/1.5 var(--font-ui); }
+  .utility-textarea:focus-visible { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); outline-offset: 1px; }
   #utilityDrop { min-height: 132px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--text-4); text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
   #utilityDrop:hover, #utilityDrop.dropping { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--bg-2)); }
   #utilityDrop img { width: 100%; max-height: 176px; object-fit: contain; border-radius: 4px; }
@@ -195,6 +214,14 @@
     .take-date { font-size: 9.5px; }
     #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
     body #keyPop { right: 14px; }
+    #lightbox { gap: 10px; padding: 12px 10px calc(12px + env(safe-area-inset-bottom)); }
+    #lightboxClose { top: 10px; right: 10px; width: 44px; height: 44px; }
+    #lightboxImg { max-width: 100%; }
+    #lightboxInspector { width: 100%; padding: 10px; }
+    .lightbox-summary { align-items: flex-start; flex-direction: column; gap: 9px; }
+    #lightboxActions { width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }
+    .lightbox-action { min-height: 44px; }
+    #lightboxPromptPanel { max-height: 30vh; }
   }
 
   /* O seletor universal de formato é para canvases; numa galeria ele só cria ruído. */
@@ -230,6 +257,9 @@
   <div class="rail-group">
     <div class="rail-label">Criar</div>
     <button class="rail-tool on" type="button" data-fotograma-tool="create"><span class="rail-icon">✦</span> Create</button>
+    <button class="rail-tool" type="button" data-fotograma-tool="cast"><span class="rail-icon">♙</span> Cast</button>
+    <button class="rail-tool" type="button" data-fotograma-tool="product"><span class="rail-icon">⬡</span> Product</button>
+    <button class="rail-tool" type="button" data-fotograma-tool="sheets"><span class="rail-icon">▦</span> Sheets</button>
   </div>
   <div class="rail-group">
     <div class="rail-label">Direção</div>
@@ -402,12 +432,53 @@
     </div>
 
     <div class="section" data-mobile-open>
-      <div class="section-title">Imagem de origem</div>
+      <div class="section-title" id="utilitySourceTitle">Imagem de origem</div>
       <div id="utilityDrop" role="button" tabindex="0" aria-label="Adicionar imagem de origem">
         <div class="utility-drop-main">Solte uma imagem ou clique para escolher</div>
-        <div class="utility-drop-sub">PNG, JPEG ou WebP · até 16 MB</div>
+        <div class="utility-drop-sub" id="utilitySourceHint">PNG, JPEG ou WebP · até 16 MB</div>
       </div>
+      <button class="btn btn-secondary" id="utilityClear" type="button" hidden>Tirar imagem</button>
       <input id="utilityFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+    </div>
+
+    <div class="utility-pane" id="castPane" hidden>
+      <div class="section" data-mobile-open>
+        <div class="section-title">Descrição do personagem</div>
+        <textarea class="utility-textarea" id="castDescription" placeholder="idade, origem, rosto, cabelo, corpo, figurino e presença…" spellcheck="false"></textarea>
+        <div class="stock-hint">A referência é opcional. Sem imagem, o brief cria uma identidade original; com imagem, o rosto e os traços ficam travados.</div>
+      </div>
+      <div class="section">
+        <div class="section-title">Linguagem</div>
+        <div class="tool-grid" id="castStyleChoices"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Fundo</div>
+        <div class="tool-grid" id="castBackgroundChoices"></div>
+      </div>
+    </div>
+
+    <div class="utility-pane" id="productPane" hidden>
+      <div class="section" data-mobile-open>
+        <div class="section-title">Direção do produto</div>
+        <textarea class="utility-textarea" id="productDirection" placeholder="produto, campanha, superfície, ambiente, luz ou acabamento desejado…" spellcheck="false"></textarea>
+        <div class="stock-hint">Com referência, geometria, material e branding do produto são autoridade. Sem imagem, descreva o produto completo.</div>
+      </div>
+      <div class="section">
+        <div class="section-title">Tipo de imagem</div>
+        <div class="tool-grid" id="productStyleChoices"></div>
+      </div>
+    </div>
+
+    <div class="utility-pane" id="sheetsPane" hidden>
+      <div class="section" data-mobile-open>
+        <div class="section-title">Tipo de prancha</div>
+        <div class="tool-grid" id="sheetTypeChoices"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Direção adicional</div>
+        <textarea class="utility-textarea" id="sheetDirection" placeholder="opcional: figurino, poses, detalhe técnico ou prioridade da prancha…" spellcheck="false"></textarea>
+        <div class="stock-hint">Sheets exige uma imagem e mantém a mesma identidade ou o mesmo produto em todos os quadros.</div>
+      </div>
     </div>
 
     <div class="utility-pane" id="multiAnglePane">
@@ -437,14 +508,7 @@
       </div>
       <div class="section">
         <div class="section-title">Direção adicional</div>
-        <textarea id="styleDirection" placeholder="opcional: paleta, época, matéria, clima…" spellcheck="false" style="width:100%; min-height:76px; box-sizing:border-box; resize:vertical; background:var(--bg-2); color:var(--text-1); border:1px solid var(--border-2); border-radius:4px; padding:8px; font:10px/1.45 var(--font-ui);"></textarea>
-      </div>
-      <div class="section">
-        <div class="section-title">Engine</div>
-        <select id="styleModel"></select>
-        <select id="styleRatio" style="margin-top:6px;"></select>
-        <select id="styleResolution" style="margin-top:6px;"><option value="2K">2K</option><option value="4K">4K</option></select>
-        <div class="tool-cost-note" id="styleCost"></div>
+        <textarea class="utility-textarea" id="styleDirection" placeholder="opcional: paleta, época, matéria, clima…" spellcheck="false"></textarea>
       </div>
     </div>
 
@@ -462,6 +526,14 @@
         <div class="tool-intro-copy">Remove o fundo e devolve PNG. Funciona melhor com sujeito ou produto bem separado; cabelo, vidro e sombra de contato ainda exigem conferência.</div>
         <div class="tool-cost-note">Image Background Remover · 1 crédito.</div>
       </div>
+    </div>
+
+    <div class="section" id="generatorSettings" data-mobile-open hidden>
+      <div class="section-title">Engine</div>
+      <select id="styleModel"></select>
+      <select id="styleRatio" style="margin-top:6px;"></select>
+      <select id="styleResolution" style="margin-top:6px;"><option value="2K">2K</option><option value="4K">4K</option></select>
+      <div class="tool-cost-note" id="styleCost"></div>
     </div>
 
     <div class="section section-divider" data-mobile-open>
@@ -530,7 +602,30 @@
     <div class="gallery-empty-copy">Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.</div>
   </div>
 </div>
-<div id="lightbox"><img id="lightboxImg" alt=""></div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem expandida" aria-hidden="true">
+  <button id="lightboxClose" type="button" aria-label="Fechar imagem expandida">&times;</button>
+  <div id="lightboxViewport"><img id="lightboxImg" alt="Resultado expandido"></div>
+  <div id="lightboxInspector">
+    <div class="lightbox-summary">
+      <div class="lightbox-meta">
+        <div id="lightboxTitle">Fotograma</div>
+        <div id="lightboxDate"></div>
+      </div>
+      <div id="lightboxActions">
+        <button class="lightbox-action" id="lightboxDownload" type="button">Baixar</button>
+        <button class="lightbox-action" id="lightboxPromptToggle" type="button" aria-expanded="false">Prompt</button>
+        <button class="lightbox-action" id="lightboxLike" type="button">Curtir</button>
+        <button class="lightbox-action" id="lightboxReuse" type="button">Reusar</button>
+        <button class="lightbox-action" id="lightboxToSheets" type="button">Usar no Sheets</button>
+        <button class="lightbox-action danger" id="lightboxDelete" type="button">Excluir</button>
+      </div>
+    </div>
+    <div id="lightboxPromptPanel" hidden>
+      <div class="lightbox-prompt-head"><span>Prompt completo</span><button class="lightbox-action" id="lightboxPromptCopy" type="button">Copiar prompt</button></div>
+      <div id="lightboxPromptText"></div>
+    </div>
+  </div>
+</div>
 <div class="tipo-toast" id="toast"></div>
 
 <script>
@@ -2467,6 +2562,124 @@ if ('ResizeObserver' in window) {
 }
 syncGalleryGrid();
 
+let selectedTakeId = '';
+let lightboxTakeId = '';
+let lightboxPreviousFocus = null;
+
+function takePromptText(take) {
+  return (take && take.params && (take.params.prompt || take.params.scene)) || '';
+}
+
+function downloadTake(take) {
+  if (!take) return;
+  const anchor = document.createElement('a');
+  anchor.href = take.url;
+  anchor.download = exportName();
+  anchor.click();
+}
+
+function reuseTake(take) {
+  if (!take) return;
+  if (take.params && take.params.utilityTool) {
+    reuseUtilityTake(take);
+  } else {
+    applyParams(take.params);
+    TipoUI.showToast('Parâmetros do take restaurados — ajusta e revela');
+  }
+}
+
+function selectTake(take) {
+  if (!take) return;
+  selectedTakeId = take.id;
+  document.querySelectorAll('#gallery .take').forEach(card => card.classList.toggle('sel', card.dataset.takeId === take.id));
+  $('stillImg').src = take.url;
+  $('stillCaption').textContent = take.caption;
+  state.lastBlob = take.blob;
+  $('dlBtn').disabled = false;
+  showPrompt(takePromptText(take));
+}
+
+function lightboxTake() {
+  return state.takes.find(take => take.id === lightboxTakeId) || null;
+}
+
+function syncLightbox(take) {
+  if (!take) return;
+  $('lightboxImg').src = take.url;
+  $('lightboxTitle').textContent = take.caption || 'Fotograma';
+  $('lightboxDate').textContent = new Date(take.ts || Date.now()).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  $('lightboxPromptText').textContent = takePromptText(take) || 'Este processamento não usa prompt textual.';
+  $('lightboxLike').textContent = take.liked ? '♥ Curtido' : '♡ Curtir';
+  $('lightboxLike').classList.toggle('on', !!take.liked);
+}
+
+function openTakeLightbox(take) {
+  if (!take) return;
+  selectTake(take);
+  lightboxTakeId = take.id;
+  lightboxPreviousFocus = document.activeElement;
+  $('lightboxPromptPanel').hidden = true;
+  $('lightboxPromptToggle').classList.remove('on');
+  $('lightboxPromptToggle').setAttribute('aria-expanded', 'false');
+  syncLightbox(take);
+  $('lightbox').classList.add('open');
+  $('lightbox').setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => $('lightboxClose').focus());
+}
+
+function closeLightbox() {
+  if (!$('lightbox').classList.contains('open')) return;
+  $('lightbox').classList.remove('open');
+  $('lightbox').setAttribute('aria-hidden', 'true');
+  lightboxTakeId = '';
+  if (lightboxPreviousFocus && document.contains(lightboxPreviousFocus)) lightboxPreviousFocus.focus();
+  lightboxPreviousFocus = null;
+}
+
+function deleteTake(take) {
+  if (!take) return;
+  const index = state.takes.findIndex(item => item.id === take.id);
+  if (index < 0) return;
+  URL.revokeObjectURL(take.url);
+  idbDelete(take.id);
+  state.takes.splice(index, 1);
+  if (lightboxTakeId === take.id) closeLightbox();
+  if (selectedTakeId === take.id) selectedTakeId = '';
+  renderGallery(-1);
+}
+
+$('lightboxClose').addEventListener('click', closeLightbox);
+$('lightboxDownload').addEventListener('click', () => downloadTake(lightboxTake()));
+$('lightboxPromptToggle').addEventListener('click', () => {
+  const open = $('lightboxPromptPanel').hidden;
+  $('lightboxPromptPanel').hidden = !open;
+  $('lightboxPromptToggle').classList.toggle('on', open);
+  $('lightboxPromptToggle').setAttribute('aria-expanded', String(open));
+});
+$('lightboxPromptCopy').addEventListener('click', () => copyPromptText(takePromptText(lightboxTake())));
+$('lightboxLike').addEventListener('click', () => {
+  const take = lightboxTake();
+  if (!take) return;
+  take.liked = !take.liked;
+  idbPut({ id: take.id, caption: take.caption, params: take.params, liked: take.liked, ts: take.ts, blob: take.blob });
+  renderGallery(state.takes.indexOf(take));
+  syncLightbox(take);
+});
+$('lightboxReuse').addEventListener('click', () => { const take = lightboxTake(); closeLightbox(); reuseTake(take); });
+$('lightboxToSheets').addEventListener('click', async () => {
+  const take = lightboxTake();
+  if (!take) return;
+  closeLightbox();
+  setFotogramaTool('sheets');
+  try {
+    await setUtilityFile(new File([take.blob], 'origem-sheets.png', { type: take.blob.type || 'image/png' }));
+    TipoUI.showToast('Imagem carregada no Sheets');
+  } catch (error) {
+    TipoUI.showToast(error.message || 'Não consegui enviar para Sheets');
+  }
+});
+$('lightboxDelete').addEventListener('click', () => deleteTake(lightboxTake()));
+
 function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
@@ -2496,11 +2709,11 @@ function renderGallery(selIdx = -1) {
   });
   visibleTakes.forEach(({ take: t, index: i }) => {
     const d = document.createElement('div');
-    d.className = 'take' + (i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
+    d.className = 'take' + (t.id === selectedTakeId || i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
+    d.dataset.takeId = t.id;
     d.innerHTML = `<div class="take-media">
-        <img src="${t.url}" alt="Resultado do Fotograma">
+        <img src="${t.url}" alt="${t.caption ? 'Resultado: ' + t.caption.replace(/"/g, '&quot;') : 'Resultado do Fotograma'}">
         <div class="take-acts">
-          <button data-a="zoom" title="abrir em tela cheia" aria-label="Abrir imagem em tela cheia">↗</button>
           <button data-a="like" title="curtir" aria-label="${t.liked ? 'Descurtir' : 'Curtir'} imagem">${t.liked ? '♥' : '♡'}</button>
           <button data-a="copy" title="copiar prompt" aria-label="Copiar prompt">⧉</button>
           <button data-a="dl" title="baixar" aria-label="Baixar imagem">⬇</button>
@@ -2521,20 +2734,7 @@ function renderGallery(selIdx = -1) {
     date.textContent = new Date(t.ts || Date.now()).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     meta.append(caption, prompt, date);
     d.appendChild(meta);
-    d.querySelector('img').addEventListener('click', () => {
-      if (t.params && t.params.utilityTool) {
-        setFotogramaTool(t.params.utilityTool);
-        utilityState.result = { blob: t.blob, url: t.url, caption: t.caption };
-        utilityState.workspaces[t.params.utilityTool] = { src: t.url, caption: t.caption };
-        $('utilityDownload').disabled = false;
-      }
-      $('stillImg').src = t.url;
-      $('stillCaption').textContent = t.caption;
-      state.lastBlob = t.blob;
-      $('dlBtn').disabled = false;
-      showPrompt(t.params && (t.params.prompt || t.params.scene));
-      renderGallery(i);
-    });
+    d.querySelector('img').addEventListener('click', () => openTakeLightbox(t));
     // arrastar o take pra REFERÊNCIAS ou EMULSÃO (Daniel 23/07)
     const im = d.querySelector('img');
     im.draggable = true;
@@ -2542,32 +2742,11 @@ function renderGallery(selIdx = -1) {
       e.dataTransfer.setData('application/x-tipo-take', t.id);
       e.dataTransfer.effectAllowed = 'copy';
     });
-    d.querySelector('[data-a="zoom"]').addEventListener('click', () => {
-      $('lightboxImg').src = t.url;
-      $('lightbox').classList.add('open');
-    });
     d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; idbPut({ id: t.id, caption: t.caption, params: t.params, liked: t.liked, ts: t.ts, blob: t.blob }); renderGallery(selIdx); });
     d.querySelector('[data-a="copy"]').addEventListener('click', () => copyPromptText(t.params && (t.params.prompt || t.params.scene)));
-    d.querySelector('[data-a="dl"]').addEventListener('click', () => {
-      const a2 = document.createElement('a');
-      a2.href = t.url;
-      a2.download = exportName();
-      a2.click();
-    });
-    d.querySelector('[data-a="reuse"]').addEventListener('click', () => {
-      if (t.params && t.params.utilityTool) {
-        reuseUtilityTake(t);
-      } else {
-        applyParams(t.params);
-        TipoUI.showToast('Parâmetros do take restaurados — ajusta e revela');
-      }
-    });
-    d.querySelector('[data-a="del"]').addEventListener('click', () => {
-      URL.revokeObjectURL(t.url);
-      idbDelete(t.id);
-      state.takes.splice(i, 1);
-      renderGallery(-1);
-    });
+    d.querySelector('[data-a="dl"]').addEventListener('click', () => downloadTake(t));
+    d.querySelector('[data-a="reuse"]').addEventListener('click', () => reuseTake(t));
+    d.querySelector('[data-a="del"]').addEventListener('click', () => deleteTake(t));
     g.appendChild(d);
   });
 }
@@ -3133,6 +3312,26 @@ $('moodClear').addEventListener('click', () => {
 
 // ---- Fotograma Lab: ferramentas especializadas auditadas ----
 const UTILITY_META = Object.freeze({
+  cast: {
+    title: 'Cast',
+    description: 'Cria uma identidade de personagem limpa e reutilizável. Parte de um brief, de uma referência ou dos dois; rosto e traços distintivos permanecem canônicos.',
+    button: 'Gerar personagem',
+    optionalImage: true,
+    generator: true,
+  },
+  product: {
+    title: 'Product',
+    description: 'Produz imagens comerciais sem redesenhar o objeto. Geometria, materiais, componentes e branding da referência permanecem autoridade.',
+    button: 'Gerar imagem de produto',
+    optionalImage: true,
+    generator: true,
+  },
+  sheets: {
+    title: 'Sheets',
+    description: 'Transforma uma identidade ou produto em uma prancha controlada de vistas, poses ou expressões mantendo o mesmo sujeito em todos os quadros.',
+    button: 'Gerar prancha',
+    generator: true,
+  },
   multiAngle: {
     title: 'Multi Angle',
     description: 'Reposiciona a câmera ao redor da mesma imagem com o modelo Qwen Angles. O motor trabalha com geometria de câmera; não depende de system prompt.',
@@ -3142,6 +3341,7 @@ const UTILITY_META = Object.freeze({
     title: 'Animation Styles',
     description: 'Retexturiza uma imagem em uma linguagem de animação completa. Cada estilo usa uma direção própria e preserva identidade, composição e objetos.',
     button: 'Retexturizar imagem',
+    generator: true,
   },
   expand: {
     title: 'Expand Frame',
@@ -3159,9 +3359,19 @@ const utilityState = {
   active: 'create',
   image: null,
   styleId: TOOL_API.STYLE_PRESETS[0].id,
+  castStyleId: TOOL_API.CAST_STYLES[0].id,
+  castBackgroundId: TOOL_API.CAST_BACKGROUNDS[0].id,
+  productStyleId: TOOL_API.PRODUCT_STYLES[0].id,
+  sheetTypeId: TOOL_API.SHEET_TYPES[0].id,
   expandRatio: '21:9',
   busy: false,
   result: null,
+  generationSettings: {
+    styleShift: { model: 'seedream_v5_lite', ratio: '16:9', resolution: '2K' },
+    cast: { model: 'nano_banana_2', ratio: '3:4', resolution: '2K' },
+    product: { model: 'nano_banana_2', ratio: '1:1', resolution: '2K' },
+    sheets: { model: 'nano_banana_2', ratio: '16:9', resolution: '2K' },
+  },
   workspaces: {
     create: { src: $('stillImg').src, caption: $('stillCaption').textContent },
   },
@@ -3179,10 +3389,17 @@ function utilityStatus(message, error = false) {
 function utilityButtonState() {
   const button = $('utilityGenerate');
   if (utilityState.active === 'create') return;
-  button.disabled = utilityState.busy || !utilityState.image;
+  const meta = UTILITY_META[utilityState.active];
+  const writtenBrief = utilityState.active === 'cast'
+    ? $('castDescription').value.trim()
+    : (utilityState.active === 'product' ? $('productDirection').value.trim() : '');
+  const ready = utilityState.image || (meta.optionalImage && writtenBrief);
+  button.disabled = utilityState.busy || !ready;
+  const config = meta.generator ? styleConfig() : null;
+  const cost = config ? PROVIDER_API.estimateCost(config, $('styleResolution').value) : null;
   button.textContent = utilityState.busy
     ? 'Processando no Higgsfield…'
-    : (utilityState.image ? UTILITY_META[utilityState.active].button : 'Escolha uma imagem');
+    : (ready ? `${meta.button}${cost ? ` · ${cost} cr` : ''}` : (meta.optionalImage ? 'Descreva ou adicione uma imagem' : 'Escolha uma imagem'));
 }
 
 function cacheCurrentWorkspace() {
@@ -3209,7 +3426,8 @@ function restoreWorkspace(name) {
 
 function setFotogramaTool(name) {
   const next = name === 'create' || UTILITY_META[name] ? name : 'create';
-  if (next !== utilityState.active) cacheCurrentWorkspace();
+  const changed = next !== utilityState.active;
+  if (changed) cacheCurrentWorkspace();
   utilityState.active = next;
   document.querySelectorAll('[data-fotograma-tool]').forEach(button => button.classList.toggle('on', button.dataset.fotogramaTool === next));
   const isCreate = next === 'create';
@@ -3218,6 +3436,7 @@ function setFotogramaTool(name) {
   $('fotogramaPanelTitle').textContent = isCreate ? 'Fotograma' : UTILITY_META[next].title;
   if (isCreate) {
     restoreWorkspace('create');
+    if (changed) $('panel').scrollTop = 0;
     return;
   }
   Object.keys(UTILITY_META).forEach(tool => {
@@ -3227,24 +3446,32 @@ function setFotogramaTool(name) {
   $('utilityTitle').textContent = UTILITY_META[next].title;
   $('utilityDescription').textContent = UTILITY_META[next].description;
   $('utilityBadge').textContent = next === 'removeBg' ? 'Higgsfield · beta' : 'Higgsfield · créditos';
+  const optionalImage = UTILITY_META[next].optionalImage === true;
+  $('utilitySourceTitle').textContent = optionalImage ? 'Referência · opcional' : (next === 'sheets' ? 'Origem da prancha · obrigatória' : 'Imagem de origem');
+  $('generatorSettings').hidden = !UTILITY_META[next].generator;
+  if (UTILITY_META[next].generator) loadGenerationSettings(next);
   restoreWorkspace(next);
   utilityStatus('');
   utilityButtonState();
+  if (changed) $('panel').scrollTop = 0;
 }
 
 function renderUtilityDrop() {
   const drop = $('utilityDrop');
   drop.innerHTML = '';
   if (!utilityState.image) {
+    $('utilityClear').hidden = true;
     const main = document.createElement('div');
     main.className = 'utility-drop-main';
-    main.textContent = 'Solte uma imagem ou clique para escolher';
+    const optional = UTILITY_META[utilityState.active] && UTILITY_META[utilityState.active].optionalImage;
+    main.textContent = optional ? 'Referência opcional · clique ou solte' : 'Solte uma imagem ou clique para escolher';
     const sub = document.createElement('div');
     sub.className = 'utility-drop-sub';
-    sub.textContent = 'PNG, JPEG ou WebP · até 16 MB';
+    sub.textContent = optional ? 'Ou gere somente a partir da descrição' : 'PNG, JPEG ou WebP · até 16 MB';
     drop.append(main, sub);
     return;
   }
+  $('utilityClear').hidden = false;
   const image = document.createElement('img');
   image.src = utilityState.image.dataUrl;
   image.alt = 'Imagem de origem';
@@ -3281,18 +3508,32 @@ function styleConfig() {
   return PROVIDER_API.modelByName($('styleModel').value) || HIGGSFIELD_MODELS[0];
 }
 
-function syncStyleOptions(preferredRatio) {
+function activeGenerationSettings() {
+  return utilityState.generationSettings[utilityState.active] || utilityState.generationSettings.styleShift;
+}
+
+function loadGenerationSettings(tool) {
+  const settings = utilityState.generationSettings[tool] || utilityState.generationSettings.styleShift;
+  $('styleModel').value = settings.model;
+  syncStyleOptions(settings.ratio, settings.resolution);
+}
+
+function syncStyleOptions(preferredRatio, preferredResolution) {
   const config = styleConfig();
-  const previousResolution = $('styleResolution').value;
+  const settings = activeGenerationSettings();
+  const previousResolution = preferredResolution || settings.resolution || $('styleResolution').value;
   $('styleRatio').innerHTML = config.aspectRatios.map(ratio => `<option value="${ratio}">${ratio}</option>`).join('');
-  const sourceRatio = preferredRatio || $('styleRatio').dataset.selected || '16:9';
+  const sourceRatio = preferredRatio || settings.ratio || '16:9';
   $('styleRatio').value = config.aspectRatios.includes(sourceRatio) ? sourceRatio : (config.aspectRatios.includes('16:9') ? '16:9' : config.aspectRatios[0]);
-  $('styleRatio').dataset.selected = $('styleRatio').value;
   const resolutions = config.resolutions.length ? config.resolutions : ['2K'];
   $('styleResolution').innerHTML = resolutions.map(res => `<option value="${res}">${res}</option>`).join('');
-  if (resolutions.includes(previousResolution)) $('styleResolution').value = previousResolution;
+  $('styleResolution').value = resolutions.includes(previousResolution) ? previousResolution : resolutions[0];
+  settings.model = config.name;
+  settings.ratio = $('styleRatio').value;
+  settings.resolution = $('styleResolution').value;
   const cost = PROVIDER_API.estimateCost(config, $('styleResolution').value);
   $('styleCost').textContent = `${config.label} · custo estimado ${cost} crédito${cost === 1 ? '' : 's'} · uma tentativa, sem fallback pago.`;
+  utilityButtonState();
 }
 
 function renderStyleChoices() {
@@ -3309,6 +3550,36 @@ function renderStyleChoices() {
     });
     $('styleChoices').appendChild(button);
   });
+}
+
+function renderToolChoices(containerId, items, dataName, selected, onSelect) {
+  const container = $(containerId);
+  container.innerHTML = '';
+  items.forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `tool-choice${item.id === selected ? ' on' : ''}`;
+    button.dataset[dataName] = item.id;
+    button.innerHTML = `${item.label}<span>${item.note}</span>`;
+    button.addEventListener('click', () => {
+      onSelect(item.id);
+      container.querySelectorAll('.tool-choice').forEach(choice => choice.classList.toggle('on', choice.dataset[dataName] === item.id));
+    });
+    container.appendChild(button);
+  });
+}
+
+function renderCastChoices() {
+  renderToolChoices('castStyleChoices', TOOL_API.CAST_STYLES, 'castStyle', utilityState.castStyleId, id => { utilityState.castStyleId = id; });
+  renderToolChoices('castBackgroundChoices', TOOL_API.CAST_BACKGROUNDS, 'castBackground', utilityState.castBackgroundId, id => { utilityState.castBackgroundId = id; });
+}
+
+function renderProductChoices() {
+  renderToolChoices('productStyleChoices', TOOL_API.PRODUCT_STYLES, 'productStyle', utilityState.productStyleId, id => { utilityState.productStyleId = id; });
+}
+
+function renderSheetChoices() {
+  renderToolChoices('sheetTypeChoices', TOOL_API.SHEET_TYPES, 'sheetType', utilityState.sheetTypeId, id => { utilityState.sheetTypeId = id; });
 }
 
 function renderExpandRatios() {
@@ -3328,10 +3599,16 @@ function renderExpandRatios() {
 }
 
 function utilityParams(prompt) {
+  const generation = utilityState.generationSettings[utilityState.active];
   return {
     utilityTool: utilityState.active,
     styleId: utilityState.styleId,
+    castStyleId: utilityState.castStyleId,
+    castBackgroundId: utilityState.castBackgroundId,
+    productStyleId: utilityState.productStyleId,
+    sheetTypeId: utilityState.sheetTypeId,
     expandRatio: utilityState.expandRatio,
+    generation: generation ? { ...generation } : null,
     prompt: prompt || '',
   };
 }
@@ -3343,7 +3620,7 @@ async function showUtilityResult(result, prompt) {
   const blob = new Blob([bytes], { type: mime });
   const url = URL.createObjectURL(blob);
   const meta = UTILITY_META[utilityState.active];
-  const engine = utilityState.active === 'styleShift' ? styleConfig().label : result.label;
+  const engine = UTILITY_META[utilityState.active].generator ? styleConfig().label : result.label;
   const caption = `${meta.title} · ${engine} · ${result.estimatedCredits ?? '?'} cr`;
   utilityState.result = { blob, url, caption };
   utilityState.workspaces[utilityState.active] = { src: url, caption };
@@ -3360,7 +3637,7 @@ async function showUtilityResult(result, prompt) {
 }
 
 async function generateUtility() {
-  if (utilityState.busy || !utilityState.image || utilityState.active === 'create') return;
+  if (utilityState.busy || utilityState.active === 'create' || $('utilityGenerate').disabled) return;
   utilityState.busy = true;
   utilityButtonState();
   $('utilityDownload').disabled = true;
@@ -3370,9 +3647,26 @@ async function generateUtility() {
     const adapter = await ensureHiggsfieldForTool();
     utilityStatus('Processando no Higgsfield · sem retry automático…');
     let result;
-    if (utilityState.active === 'styleShift') {
+    if (UTILITY_META[utilityState.active].generator) {
       const config = styleConfig();
-      prompt = TOOL_API.buildStylePrompt(utilityState.styleId, $('styleDirection').value);
+      if (utilityState.active === 'styleShift') {
+        prompt = TOOL_API.buildStylePrompt(utilityState.styleId, $('styleDirection').value);
+      } else if (utilityState.active === 'cast') {
+        prompt = TOOL_API.buildCastPrompt({
+          description: $('castDescription').value,
+          styleId: utilityState.castStyleId,
+          backgroundId: utilityState.castBackgroundId,
+          hasReference: !!utilityState.image,
+        });
+      } else if (utilityState.active === 'product') {
+        prompt = TOOL_API.buildProductPrompt({
+          direction: $('productDirection').value,
+          styleId: utilityState.productStyleId,
+          hasReference: !!utilityState.image,
+        });
+      } else {
+        prompt = TOOL_API.buildSheetPrompt({ typeId: utilityState.sheetTypeId, direction: $('sheetDirection').value });
+      }
       result = await adapter.generate({
         model: config.name,
         prompt,
@@ -3412,6 +3706,17 @@ async function reuseUtilityTake(take) {
     utilityState.styleId = params.styleId;
     renderStyleChoices();
   }
+  if (params.castStyleId) utilityState.castStyleId = params.castStyleId;
+  if (params.castBackgroundId) utilityState.castBackgroundId = params.castBackgroundId;
+  if (params.productStyleId) utilityState.productStyleId = params.productStyleId;
+  if (params.sheetTypeId) utilityState.sheetTypeId = params.sheetTypeId;
+  if (params.generation && utilityState.generationSettings[params.utilityTool]) {
+    utilityState.generationSettings[params.utilityTool] = { ...utilityState.generationSettings[params.utilityTool], ...params.generation };
+    loadGenerationSettings(params.utilityTool);
+  }
+  renderCastChoices();
+  renderProductChoices();
+  renderSheetChoices();
   if (params.expandRatio) {
     utilityState.expandRatio = params.expandRatio;
     renderExpandRatios();
@@ -3432,6 +3737,14 @@ $('utilityFile').addEventListener('change', event => {
   event.target.value = '';
   setUtilityFile(file).catch(error => utilityStatus(error.message, true));
 });
+$('utilityClear').addEventListener('click', () => {
+  utilityState.image = null;
+  utilityState.result = null;
+  $('utilityDownload').disabled = true;
+  renderUtilityDrop();
+  utilityStatus(UTILITY_META[utilityState.active].optionalImage ? 'Referência removida. A geração usará somente a descrição.' : 'Imagem removida. Escolha uma origem para continuar.');
+  utilityButtonState();
+});
 $('utilityDrop').addEventListener('dragover', event => { event.preventDefault(); $('utilityDrop').classList.add('dropping'); });
 $('utilityDrop').addEventListener('dragleave', () => $('utilityDrop').classList.remove('dropping'));
 $('utilityDrop').addEventListener('drop', event => {
@@ -3451,10 +3764,21 @@ document.querySelectorAll('[data-angle]').forEach(button => button.addEventListe
   $('angleForward').value = forward; $('angleForwardVal').textContent = String(forward);
 }));
 $('styleModel').innerHTML = HIGGSFIELD_MODELS.map(model => `<option value="${model.name}">${model.label}</option>`).join('');
-$('styleModel').value = 'seedream_v5_lite';
-$('styleModel').addEventListener('change', () => syncStyleOptions($('styleRatio').value));
-$('styleRatio').addEventListener('change', () => { $('styleRatio').dataset.selected = $('styleRatio').value; });
-$('styleResolution').addEventListener('change', () => syncStyleOptions($('styleRatio').value));
+$('styleModel').value = utilityState.generationSettings.styleShift.model;
+$('styleModel').addEventListener('change', () => {
+  activeGenerationSettings().model = $('styleModel').value;
+  syncStyleOptions(activeGenerationSettings().ratio, activeGenerationSettings().resolution);
+});
+$('styleRatio').addEventListener('change', () => {
+  activeGenerationSettings().ratio = $('styleRatio').value;
+  utilityButtonState();
+});
+$('styleResolution').addEventListener('change', () => {
+  activeGenerationSettings().resolution = $('styleResolution').value;
+  syncStyleOptions($('styleRatio').value, $('styleResolution').value);
+});
+$('castDescription').addEventListener('input', utilityButtonState);
+$('productDirection').addEventListener('input', utilityButtonState);
 $('utilityGenerate').addEventListener('click', generateUtility);
 $('utilityDownload').addEventListener('click', () => {
   if (!utilityState.result) return;
@@ -3466,8 +3790,11 @@ $('utilityDownload').addEventListener('click', () => {
   anchor.click();
 });
 renderStyleChoices();
+renderCastChoices();
+renderProductChoices();
+renderSheetChoices();
 renderExpandRatios();
-syncStyleOptions('16:9');
+loadGenerationSettings('styleShift');
 renderUtilityDrop();
 
 function syncResRow() {
@@ -3505,15 +3832,9 @@ $('imageProvider').addEventListener('change', e => setImageProvider(e.target.val
 $('model').addEventListener('change', syncProviderConstraints);
 $('imgSize').addEventListener('change', syncProviderHint);
 $('genBtn').addEventListener('click', revelar);
-// tela cheia: clica na imagem principal (ou Esc/clique pra sair)
-$('stillImg').addEventListener('click', () => {
-  $('lightboxImg').src = $('stillImg').src;
-  $('lightbox').classList.add('open');
-});
-$('lightbox').addEventListener('click', () => $('lightbox').classList.remove('open'));
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  $('lightbox').classList.remove('open');
+  closeLightbox();
   const picker = document.querySelector('.ref-role-picker[open]');
   if (picker) {
     picker.open = false;

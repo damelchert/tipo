@@ -99,6 +99,14 @@ Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a
 - ✅ Cards ganharam metadados, data e ações de zoom/like/download/reuso/exclusão. Controles principais, chips, campos, botões e rail cresceram; ações aparecem com hover, foco por teclado e sempre no touch.
 - ✅ Ruídos do shell genérico foram removidos desta tela (seletor FREE de formato) e os botões flutuantes deixaram de colidir com marca/header. Mobile fica em uma coluna, sem scroll horizontal, com rail acessível acima do bottom sheet.
 - ✅ `test-fotograma-tools.mjs` agora prova ausência da hero, grid principal, densidade persistente, busca, tipografia mínima, uma coluna mobile e zero `pageerror`.
+#### 21.12 — CAST + PRODUCT + SHEETS + INSPECTOR — ✅ (2026-08-20)
+- ✅ O bloco Criar ganhou **Cast, Product e Sheets** como fluxos reais via `/generate` do Higgsfield, cada um com prompt autoral próprio em `shared/fotograma-tools.js`, custo calculado antes do clique e uma única tentativa paga.
+- ✅ **Cast:** referência opcional ou brief textual, quatro linguagens e quatro fundos; com imagem, identidade/idade/etnia/traços ficam canônicos; sem imagem, cria uma única identidade adulta original. Default 3:4.
+- ✅ **Product:** referência opcional ou descrição completa, Studio/Campaign/Lifestyle/Macro; trava geometria, construção, materiais, componentes e branding, sem inventar/regravar rótulo. Default 1:1.
+- ✅ **Sheets:** origem obrigatória e quatro pranchas — Character 360°, Expressões, Poses e Produto 360° — mantendo o mesmo sujeito/produto em todos os quadros. Default 16:9.
+- ✅ Referência pode ser removida, engine/ratio/resolução ficam por ferramenta e o resultado pode ser enviado diretamente ao Sheets pelo inspector.
+- ✅ Clicar na imagem inteira abre o inspector; botão redundante de expandir saiu do card. O modo expandido mantém Baixar, Prompt completo/Copiar, Curtir, Reusar, Usar no Sheets e Excluir, com `X` e Esc para fechar.
+- ✅ Test-first ampliado: payloads, referências opcionais/obrigatórias, prompts especializados, ratios, handoff, lightbox, ações, grid e mobile passaram sem rede/geração real e sem consumir créditos.
 
 ### FASE 20 — REPAGINADA PREMIUM (auditoria de UI 13/07, lente de juiz Awwwards)
 **Veredito da auditoria** (27 capturas: hero, home light/dark, catálogo, 14 ferramentas, timeline, mobile): Creativity 8.5 / Design 6.5 / Usability 7 / Content 8 — "produto premium vestindo partes de produtinho". Premium: hero, entradas curadas (riso/depth/morisawa/overlay), sistema do painel, palette. Produtinho: catálogo de cards genérico, dark mode quebrado (canvas cream + faixa exposta no field, cinzas divergentes na home), controles nativos do browser, header com nav ilegível, idioma misturado (hero PT × site EN × pílulas PT), pill "FREE" ambígua, dithering abre vazio + anatomia divergente, badge entry bagunçada.
