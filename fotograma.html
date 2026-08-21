@@ -13,34 +13,64 @@
 <script src="shared/fotograma-tools.js?v=20260820-tools1"></script>
 <style>
   body { display: flex; height: 100vh; }
-  #fotogramaRail { flex: 0 0 166px; height: 100vh; box-sizing: border-box; overflow-y: auto; background: color-mix(in srgb, var(--bg-1) 92%, #000); border-right: 1px solid var(--border-2); padding: 18px 10px 16px; font-family: var(--font-ui); }
-  .rail-brand { padding: 4px 10px 18px; color: var(--text-1); font-size: 13px; font-weight: 750; letter-spacing: 1.2px; text-transform: uppercase; }
-  .rail-brand span { display: block; margin-top: 4px; color: var(--accent); font-size: 8px; font-weight: 500; letter-spacing: 1.8px; }
-  .rail-group { margin: 4px 0 16px; }
-  .rail-label { padding: 0 10px 7px; color: var(--text-5); font-size: 7px; letter-spacing: 1.6px; text-transform: uppercase; }
-  .rail-tool { width: 100%; min-height: 38px; display: flex; align-items: center; gap: 9px; padding: 7px 9px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-4); font: 9px/1.2 var(--font-ui); text-align: left; cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
+  #fotogramaRail { flex: 0 0 190px; height: 100vh; box-sizing: border-box; overflow-y: auto; background: color-mix(in srgb, var(--bg-1) 92%, #000); border-right: 1px solid var(--border-2); padding: 22px 12px 18px; font-family: var(--font-ui); }
+  .rail-brand { padding: 4px 11px 22px 35px; color: var(--text-1); font-size: 15px; font-weight: 750; letter-spacing: 1.2px; text-transform: uppercase; }
+  .rail-brand span { display: block; margin-top: 5px; color: var(--accent); font-size: 9px; font-weight: 600; letter-spacing: 1.8px; }
+  .rail-group { margin: 5px 0 20px; }
+  .rail-label { padding: 0 11px 8px; color: var(--text-4); font-size: 8px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; }
+  .rail-tool { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-3); font: 11px/1.25 var(--font-ui); text-align: left; cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
   .rail-tool:hover { color: var(--text-1); background: var(--bg-2); }
   .rail-tool.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 34%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-  .rail-tool .rail-icon { width: 17px; flex: none; color: currentColor; font-size: 13px; text-align: center; }
-  .rail-tool .rail-beta { margin-left: auto; padding: 2px 4px; border: 1px solid var(--border-2); border-radius: 8px; color: var(--accent-warm, #D4A040); font-size: 6px; letter-spacing: .7px; text-transform: uppercase; }
+  .rail-tool .rail-icon { width: 18px; flex: none; color: currentColor; font-size: 14px; text-align: center; }
+  .rail-tool .rail-beta { margin-left: auto; padding: 2px 5px; border: 1px solid var(--border-2); border-radius: 8px; color: var(--accent-warm, #D4A040); font-size: 7px; letter-spacing: .7px; text-transform: uppercase; }
   .rail-tool-link { text-decoration: none; box-sizing: border-box; }
-  #panel { flex: 0 0 320px; }
-  #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: var(--bg-0); padding: 18px 24px 10px; }
-  .back-link { font-size: 9px; color: var(--text-5); text-decoration: none; letter-spacing: 1px; }
+  #panel { width: 390px; min-width: 390px; flex: 0 0 390px; padding: 24px; gap: 24px; }
+  #panel h1 { font-size: 16px; }
+  #panel .section { gap: 10px; }
+  #panel .section-title { font-size: 12px; line-height: 1.35; }
+  #panel .back-link { font-size: 10px; color: var(--text-4); text-decoration: none; letter-spacing: 1px; }
+  #panel select { min-height: 42px; padding: 9px 11px; font-size: 13px; }
+  #panel .btn { min-height: 42px; font-size: 12px; }
+  #panel .stock-hint, #panel .provider-hint, #panel .key-hint { font-size: 10.5px; line-height: 1.55; color: var(--text-3); }
+  #panel .toggle-label, #panel .checkbox-label { font-size: 12px; line-height: 1.45; }
+  #panel .range-label { min-width: 92px; font-size: 11px; color: var(--text-3); }
+  #panel .range-value { font-size: 12px; color: var(--text-3); }
+  #canvasWrap { --gallery-cols: 3; flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; display: block; background: var(--bg-0); padding: 0; }
 
-  /* resultado: imagem em ~2/3, galeria na faixa de baixo (~1/3) */
-  #stillFrame { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
-  #stillImg { max-width: 100%; max-height: 100%; display: block; box-shadow: 0 12px 60px rgba(0,0,0,.4); background: #111; cursor: zoom-in; }
-  #stillCaption { flex: none; margin: 8px 0 4px; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-5); text-align: center; }
-  #gallery { flex: none; width: 100%; height: 24vh; min-height: 130px; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; align-items: center; padding: 8px 2px; }
-  #gallery .take { position: relative; flex: none; height: calc(100% - 14px); }
-  #gallery .take img { height: 100%; width: auto; border: 1px solid var(--border-2); border-radius: 4px; cursor: pointer; opacity: .82; transition: opacity .2s, border-color .2s; display: block; }
-  #gallery .take:hover img, #gallery .take.sel img { opacity: 1; border-color: var(--accent); }
-  #gallery .take.liked img { border-color: var(--accent-warm, #D4A040); border-width: 2px; }
-  .take-acts { position: absolute; inset: auto 0 0 0; display: flex; justify-content: center; gap: 8px; padding: 7px 4px; background: linear-gradient(transparent, rgba(10,10,10,.85)); border-radius: 0 0 4px 4px; opacity: 0; transition: opacity .15s; }
-  #gallery .take:hover .take-acts { opacity: 1; }
-  .take-acts button { border: none; background: rgba(20,20,20,.6); border-radius: 6px; color: #f2efe6; font-size: 16px; cursor: pointer; padding: 5px 10px; line-height: 1.2; }
+  /* workspace = galeria; a imagem-demo existe apenas como estado interno */
+  #stillFrame, #stillCaption, #stillPrompt { display: none !important; }
+  #stillImg { display: none; }
+  #workspaceHeader { position: sticky; top: 0; z-index: 20; min-height: 78px; display: flex; align-items: center; gap: 18px; padding: 18px 110px 18px 24px; border-bottom: 1px solid var(--border-1); background: color-mix(in srgb, var(--bg-0) 92%, transparent); backdrop-filter: blur(14px); }
+  .workspace-heading { min-width: 150px; }
+  .workspace-title { color: var(--text-0); font: 700 17px/1.2 var(--font-ui); letter-spacing: 1.2px; text-transform: uppercase; }
+  #galleryCount { margin-top: 4px; color: var(--text-3); font: 10px/1.3 var(--font-ui); }
+  .gallery-search-wrap { flex: 1; max-width: 460px; position: relative; }
+  #gallerySearch { width: 100%; height: 42px; padding: 0 14px 0 38px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--bg-1); color: var(--text-1); font: 12px var(--font-ui); outline: none; }
+  #gallerySearch:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .gallery-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-4); font-size: 13px; pointer-events: none; }
+  .grid-control { margin-left: auto; display: flex; align-items: center; gap: 9px; min-width: 170px; color: var(--text-3); font: 10px var(--font-ui); }
+  #gridDensity { width: 94px; }
+  #gridDensityValue { min-width: 18px; color: var(--accent); font-weight: 700; text-align: center; }
+  #gallery { width: 100%; display: grid; grid-template-columns: repeat(var(--gallery-cols), minmax(0, 1fr)); align-items: start; gap: 22px 16px; padding: 22px 24px 40px; }
+  #gallery .take { min-width: 0; position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .take-media { position: relative; overflow: hidden; border: 1px solid var(--border-2); border-radius: 7px; background: var(--bg-2); }
+  #gallery .take img { width: 100%; height: auto; min-height: 150px; max-height: 520px; object-fit: cover; cursor: pointer; opacity: 1; transition: transform .22s, border-color .2s; display: block; }
+  #gallery .take:hover .take-media, #gallery .take.sel .take-media { border-color: var(--accent); }
+  #gallery .take:hover img { transform: scale(1.012); }
+  #gallery .take.liked .take-media { border-color: var(--accent-warm, #D4A040); border-width: 2px; }
+  .take-acts { position: absolute; inset: auto 0 0 0; display: flex; justify-content: flex-end; gap: 6px; padding: 24px 8px 8px; background: linear-gradient(transparent, rgba(10,10,10,.88)); border-radius: 0 0 6px 6px; opacity: 0; transition: opacity .15s; }
+  #gallery .take:hover .take-acts, #gallery .take:focus-within .take-acts { opacity: 1; }
+  .take-acts button { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.18); background: rgba(20,20,20,.76); border-radius: 7px; color: #f2efe6; font-size: 15px; cursor: pointer; padding: 0; line-height: 1; }
   .take-acts button:hover { color: var(--accent-warm, #D4A040); background: rgba(20,20,20,.9); }
+  .take-acts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .take-meta { min-width: 0; padding: 0 2px; }
+  .take-caption { color: var(--text-2); font: 600 11px/1.45 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .take-prompt { min-height: 32px; margin-top: 4px; color: var(--text-4); font: 10px/1.55 var(--font-ui); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .take-date { margin-top: 6px; color: var(--text-5); font: 9px/1.3 var(--font-ui); letter-spacing: .4px; }
+  #galleryEmpty { margin: 72px auto; max-width: 460px; padding: 38px; border: 1px dashed var(--border-2); border-radius: 10px; color: var(--text-3); text-align: center; }
+  #galleryEmpty[hidden] { display: none; }
+  .gallery-empty-title { color: var(--text-1); font: 650 15px/1.3 var(--font-ui); }
+  .gallery-empty-copy { margin-top: 9px; font: 11px/1.6 var(--font-ui); }
 
   /* tela cheia */
   #lightbox { position: fixed; inset: 0; z-index: 200; background: rgba(8,8,8,.96); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
@@ -56,28 +86,28 @@
   #keyStatus.err { color: var(--red, #CC4840); }
   .key-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
   .key-hint a { color: var(--accent); }
-  .provider-hint { font-size: 9px; color: var(--text-5); margin-top: 6px; line-height: 1.5; }
+  .provider-hint { font-size: 10.5px; color: var(--text-3); margin-top: 7px; line-height: 1.5; }
   .provider-hint.paid { color: var(--accent-warm, #D4A040); }
-  .provider-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 2px 6px; border: 1px solid var(--border-2); border-radius: 12px; color: var(--text-4); font-size: 8px; letter-spacing: .6px; vertical-align: middle; }
+  .provider-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 3px 7px; border: 1px solid var(--border-2); border-radius: 12px; color: var(--text-3); font-size: 9px; letter-spacing: .6px; vertical-align: middle; }
   .provider-badge.paid { border-color: color-mix(in srgb, var(--accent-warm, #D4A040) 55%, var(--border-2)); color: var(--accent-warm, #D4A040); }
   .provider-divider { height: 1px; margin: 14px 0; background: var(--border-2); }
   .fchip.unavailable { opacity: .28; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
 
   /* cena */
-  #scene { width: 100%; min-height: 130px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 4px; resize: vertical; }
+  #scene { width: 100%; min-height: 150px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 12px; font-size: 14px; line-height: 1.5; font-family: var(--font-ui); border-radius: 6px; resize: vertical; }
 
   /* chips */
   .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .fchip { appearance: none; background: transparent; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 5px 9px; border: 1px solid var(--border-2); border-radius: 20px; cursor: pointer; color: var(--text-4); transition: all .15s; user-select: none; font-family: var(--font-ui); }
+  .fchip { appearance: none; min-height: 34px; background: transparent; font-size: 10.5px; letter-spacing: .8px; text-transform: uppercase; padding: 7px 11px; border: 1px solid var(--border-2); border-radius: 20px; cursor: pointer; color: var(--text-3); transition: all .15s; user-select: none; font-family: var(--font-ui); }
   .fchip:hover { border-color: var(--accent); color: var(--accent); }
   .fchip.on { background: var(--accent); border-color: var(--accent); color: var(--bg-0); }
   .fchip.dice { border-style: dashed; }
 
   /* programa */
   .prog-row { display: flex; flex-direction: column; gap: 6px; }
-  .prog-btn { padding: 9px 10px; border: 1px solid var(--border-2); border-radius: 6px; background: transparent; cursor: pointer; text-align: left; font-family: var(--font-ui); transition: all .15s; display: flex; align-items: baseline; gap: 8px; }
-  .prog-btn .p-name { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-2); font-weight: 700; flex: none; }
-  .prog-btn .p-sub { font-size: 8px; letter-spacing: .8px; color: var(--text-5); text-transform: uppercase; }
+  .prog-btn { min-height: 46px; padding: 10px 12px; border: 1px solid var(--border-2); border-radius: 6px; background: transparent; cursor: pointer; text-align: left; font-family: var(--font-ui); transition: all .15s; display: flex; align-items: baseline; gap: 9px; }
+  .prog-btn .p-name { font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-2); font-weight: 700; flex: none; }
+  .prog-btn .p-sub { font-size: 9px; line-height: 1.4; letter-spacing: .5px; color: var(--text-4); text-transform: uppercase; }
   .prog-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .prog-btn.on .p-name { color: var(--accent); }
 
@@ -112,45 +142,63 @@
   .ficha-grid label { display: block; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-5); font-family: var(--font-ui); }
   .ficha-grid input { width: 100%; margin-top: 3px; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 10.5px; font-family: var(--font-ui); border-radius: 4px; box-sizing: border-box; }
   .ficha-grid input:not(:placeholder-shown) { border-color: var(--accent); }
-  .stock-hint { font-size: 9px; color: var(--text-5); margin-top: 4px; min-height: 12px; }
+  .stock-hint { font-size: 10.5px; line-height: 1.55; color: var(--text-3); margin-top: 5px; min-height: 14px; }
 
   #genBtn { width: 100%; padding: 12px; font-size: 12px; letter-spacing: 2px; }
   #genBtn:disabled { opacity: .45; cursor: default; }
 
   #utilityControls[hidden], .utility-pane[hidden] { display: none !important; }
   .tool-intro { margin: -2px 0 12px; padding: 12px; border: 1px solid var(--border-2); border-radius: 6px; background: color-mix(in srgb, var(--bg-2) 74%, transparent); }
-  .tool-intro-title { display: flex; justify-content: space-between; gap: 8px; color: var(--text-1); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; }
-  .tool-intro-badge { color: var(--accent-warm, #D4A040); font-size: 7px; white-space: nowrap; }
-  .tool-intro-copy { margin-top: 7px; color: var(--text-4); font-size: 9px; line-height: 1.55; }
+  .tool-intro-title { display: flex; justify-content: space-between; gap: 8px; color: var(--text-1); font-size: 13px; font-weight: 650; letter-spacing: 1.1px; text-transform: uppercase; }
+  .tool-intro-badge { color: var(--accent-warm, #D4A040); font-size: 9px; white-space: nowrap; }
+  .tool-intro-copy { margin-top: 8px; color: var(--text-3); font-size: 11px; line-height: 1.6; }
   #utilityDrop { min-height: 132px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--text-4); text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
   #utilityDrop:hover, #utilityDrop.dropping { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--bg-2)); }
   #utilityDrop img { width: 100%; max-height: 176px; object-fit: contain; border-radius: 4px; }
-  .utility-drop-main { color: var(--text-2); font-size: 10px; letter-spacing: .8px; }
-  .utility-drop-sub { color: var(--text-5); font-size: 8px; }
+  .utility-drop-main { color: var(--text-2); font-size: 12px; letter-spacing: .5px; }
+  .utility-drop-sub { color: var(--text-4); font-size: 10px; }
   .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
-  .tool-choice { min-height: 50px; padding: 8px; border: 1px solid var(--border-2); border-radius: 5px; background: transparent; color: var(--text-3); font: 9px/1.3 var(--font-ui); text-align: left; cursor: pointer; }
-  .tool-choice span { display: block; margin-top: 3px; color: var(--text-5); font-size: 7px; }
+  .tool-choice { min-height: 64px; padding: 10px; border: 1px solid var(--border-2); border-radius: 6px; background: transparent; color: var(--text-2); font: 11px/1.35 var(--font-ui); text-align: left; cursor: pointer; }
+  .tool-choice span { display: block; margin-top: 4px; color: var(--text-4); font-size: 9px; line-height: 1.4; }
   .tool-choice.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
-  .tool-cost-note { margin-top: 7px; color: var(--accent-warm, #D4A040); font: 8px/1.45 var(--font-ui); }
-  #utilityGenerate { width: 100%; padding: 12px; font-size: 11px; letter-spacing: 1.4px; }
+  .tool-cost-note { margin-top: 8px; color: var(--accent-warm, #D4A040); font: 10px/1.5 var(--font-ui); }
+  #utilityGenerate { width: 100%; padding: 13px; font-size: 12px; letter-spacing: 1.2px; }
   #utilityGenerate:disabled { opacity: .42; cursor: default; }
-  #utilityStatus { min-height: 15px; margin-top: 7px; color: var(--text-4); font: 9px/1.5 var(--font-ui); }
+  #utilityStatus { min-height: 17px; margin-top: 8px; color: var(--text-3); font: 10.5px/1.5 var(--font-ui); }
   #utilityStatus.err { color: var(--red, #CC4840); }
   #utilityDownload { width: 100%; margin-top: 7px; }
   .angle-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
-  .angle-presets button { padding: 5px 7px; border: 1px solid var(--border-2); border-radius: 14px; background: transparent; color: var(--text-4); font: 8px var(--font-ui); cursor: pointer; }
+  .angle-presets button { min-height: 34px; padding: 7px 9px; border: 1px solid var(--border-2); border-radius: 17px; background: transparent; color: var(--text-3); font: 10px var(--font-ui); cursor: pointer; }
   .angle-presets button:hover { border-color: var(--accent); color: var(--accent); }
 
   @media (max-width: 760px) {
-    #fotogramaRail { position: fixed; z-index: 85; left: 0; right: 0; bottom: 0; width: auto; height: 58px; padding: 5px 8px calc(5px + env(safe-area-inset-bottom)); display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--border-2); border-right: none; }
+    #fotogramaRail { position: fixed; z-index: 320; left: 0; right: 0; bottom: 0; width: auto; height: 64px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--border-2); border-right: none; }
     .rail-brand, .rail-label { display: none; }
     .rail-group { display: contents; }
-    .rail-tool { width: auto; min-width: 70px; min-height: 46px; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 7px; white-space: nowrap; text-align: center; font-size: 7px; }
+    .rail-tool { width: auto; min-width: 82px; min-height: 50px; flex-direction: column; justify-content: center; gap: 3px; padding: 5px 9px; white-space: nowrap; text-align: center; font-size: 9px; }
     .rail-tool .rail-icon { height: 14px; }
     .rail-tool .rail-beta { display: none; }
-    #panel { flex-basis: min(340px, 88vw); padding-bottom: 66px; }
-    #canvasWrap { padding-bottom: 68px; }
+    #panel { bottom: 64px; flex-basis: min(340px, 88vw); padding-bottom: 22px; }
+    #canvasWrap { padding-bottom: 74px; }
+    #workspaceHeader { min-height: 0; flex-wrap: wrap; gap: 12px; padding: 14px 100px 13px 14px; }
+    .workspace-heading { min-width: 0; flex: 1; }
+    .workspace-title { font-size: 15px; }
+    #galleryCount { font-size: 10px; }
+    .gallery-search-wrap { order: 3; flex-basis: calc(100% + 86px); width: calc(100% + 86px); max-width: none; margin-right: -86px; }
+    #gallerySearch { height: 44px; font-size: 12px; }
+    .grid-control { min-width: 142px; gap: 7px; font-size: 10px; }
+    #gridDensity { width: 72px; }
+    #gallery { grid-template-columns: repeat(var(--gallery-cols), minmax(0, 1fr)); gap: 20px; padding: 16px 14px 34px; }
+    .take-acts { opacity: 1; }
+    .take-caption { font-size: 12px; }
+    .take-prompt { font-size: 10.5px; }
+    .take-date { font-size: 9.5px; }
+    #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
+    body #keyPop { right: 14px; }
   }
+
+  /* O seletor universal de formato é para canvases; numa galeria ele só cria ruído. */
+  body .tipo-fmt-btn { display: none !important; }
 
 
   .section.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; border-radius: 6px; }
@@ -158,20 +206,21 @@
   .toggle-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-3); cursor: pointer; margin-top: 8px; }
 
   /* chave no canto superior direito */
-  #keyBtn { position: fixed; top: 62px; right: 14px; z-index: 60; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-2); background: var(--bg-1); cursor: pointer; font-size: 15px; line-height: 1; box-shadow: 0 2px 10px rgba(0,0,0,.2); transition: border-color .2s; }
+  #keyBtn { position: fixed; top: 12px; right: 54px; z-index: 210; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-2); background: var(--bg-1); cursor: pointer; font-size: 15px; line-height: 1; box-shadow: 0 2px 10px rgba(0,0,0,.2); transition: border-color .2s; }
   #keyBtn:hover { border-color: var(--accent); }
   #keyBtn.ok { border-color: var(--accent); }
   #keyBtn.err { border-color: var(--red, #CC4840); }
   #keyBtn.pulse { animation: keyPulse 1.6s ease-in-out infinite; }
   @keyframes keyPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,160,64,0); } 50% { box-shadow: 0 0 0 4px rgba(212,160,64,.3); } }
-  #keyPop { position: fixed; top: 106px; right: 14px; z-index: 61; width: min(320px, calc(100vw - 28px)); max-height: calc(100vh - 120px); overflow-y: auto; box-sizing: border-box; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
+  #keyPop { position: fixed; top: 56px; right: 54px; z-index: 211; width: min(320px, calc(100vw - 28px)); max-height: calc(100vh - 72px); overflow-y: auto; box-sizing: border-box; background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 8px; padding: 14px; box-shadow: 0 10px 36px rgba(0,0,0,.4); display: none; }
   #keyPop.open { display: block; }
 
   /* revelação: tile pendente NA GALERIA — nada bloqueia a página */
-  .take.pending { width: 200px; height: calc(100% - 14px); min-height: 110px; border: 1.5px dashed var(--accent); border-radius: 3px; position: relative; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: var(--bg-2); flex: none; }
-  .take.pending::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 40%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
+  .take.pending { min-width: 0; position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .take.pending .take-media { min-height: 190px; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--accent); overflow: hidden; }
+  .take.pending .take-media::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 40%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
   @keyframes devSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  .pending-msg { position: relative; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-4); font-family: var(--font-ui); padding: 3px 2px; text-align: center; line-height: 1.3; }
+  .pending-msg { position: relative; z-index: 1; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); font-family: var(--font-ui); padding: 18px; text-align: center; line-height: 1.45; }
 </style>
 </head>
 <body>
@@ -452,6 +501,21 @@
 </div>
 
 <div id="canvasWrap">
+  <header id="workspaceHeader">
+    <div class="workspace-heading">
+      <div class="workspace-title">Sua galeria</div>
+      <div id="galleryCount" aria-live="polite">carregando imagens…</div>
+    </div>
+    <label class="gallery-search-wrap" for="gallerySearch">
+      <span class="gallery-search-icon" aria-hidden="true">⌕</span>
+      <input id="gallerySearch" type="search" placeholder="Buscar por prompt, modelo ou estética…" autocomplete="off">
+    </label>
+    <label class="grid-control" for="gridDensity">
+      <span>Colunas</span>
+      <input id="gridDensity" type="range" min="1" max="4" step="1" value="3" data-nobhv aria-label="Número de colunas da galeria">
+      <output id="gridDensityValue" for="gridDensity">3</output>
+    </label>
+  </header>
   <div id="stillFrame">
     <img id="stillImg" src="assets/fotograma-demo.jpg" alt="Fotograma">
   </div>
@@ -461,6 +525,10 @@
     <button id="promptCopy" class="btn btn-secondary" style="flex:none; font-size:9px; padding:4px 10px; letter-spacing:1px;">copiar</button>
   </div>
   <div id="gallery"></div>
+  <div id="galleryEmpty" hidden>
+    <div class="gallery-empty-title">Sua galeria começa aqui</div>
+    <div class="gallery-empty-copy">Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.</div>
+  </div>
 </div>
 <div id="lightbox"><img id="lightboxImg" alt=""></div>
 <div class="tipo-toast" id="toast"></div>
@@ -2347,8 +2415,8 @@ function showPrompt(scene) {
   $('stillPromptTxt').textContent = scene;
   box.dataset.scene = scene;
 }
-$('promptCopy').addEventListener('click', async () => {
-  const t = $('stillPrompt').dataset.scene || '';
+async function copyPromptText(text) {
+  const t = text || '';
   try {
     await navigator.clipboard.writeText(t);
     TipoUI.showToast('Prompt copiado');
@@ -2361,28 +2429,98 @@ $('promptCopy').addEventListener('click', async () => {
     ta.remove();
     TipoUI.showToast('Prompt copiado');
   }
+}
+$('promptCopy').addEventListener('click', () => copyPromptText($('stillPrompt').dataset.scene));
+
+const GALLERY_GRID_LS = 'tipo_fotograma_gallery_columns';
+let galleryQuery = '';
+let galleryColumns = Math.min(4, Math.max(1, Number(localStorage.getItem(GALLERY_GRID_LS)) || 3));
+
+function syncGalleryGrid() {
+  const canvas = $('canvasWrap');
+  const available = canvas.clientWidth || window.innerWidth;
+  const maxForViewport = Math.min(4, Math.max(1, Math.floor((available - 48 + 16) / 276)));
+  const effective = Math.min(galleryColumns, maxForViewport);
+  canvas.style.setProperty('--gallery-cols', effective);
+  $('gridDensity').value = String(galleryColumns);
+  $('gridDensityValue').value = String(effective);
+  $('gridDensityValue').textContent = String(effective);
+  $('gridDensity').setAttribute('aria-valuetext', `${effective} ${effective === 1 ? 'coluna visível' : 'colunas visíveis'}`);
+  $('gridDensity').title = effective === galleryColumns
+    ? `${effective} ${effective === 1 ? 'coluna' : 'colunas'}`
+    : `${galleryColumns} solicitadas · ${effective} cabem nesta largura`;
+}
+
+$('gallerySearch').addEventListener('input', event => {
+  galleryQuery = event.target.value;
+  renderGallery(-1);
 });
+$('gridDensity').addEventListener('input', event => {
+  galleryColumns = Math.min(4, Math.max(1, Number(event.target.value) || 3));
+  localStorage.setItem(GALLERY_GRID_LS, String(galleryColumns));
+  syncGalleryGrid();
+});
+if ('ResizeObserver' in window) {
+  new ResizeObserver(syncGalleryGrid).observe($('canvasWrap'));
+} else {
+  window.addEventListener('resize', syncGalleryGrid);
+}
+syncGalleryGrid();
 
 function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
+  const normalizedQuery = galleryQuery.trim().toLowerCase();
+  const visibleTakes = state.takes
+    .map((take, index) => ({ take, index }))
+    .filter(({ take }) => {
+      if (!normalizedQuery) return true;
+      const params = take.params || {};
+      return [take.caption, params.prompt, params.scene, params.utilityTool, params.model]
+        .filter(Boolean).join(' ').toLowerCase().includes(normalizedQuery);
+    });
+  $('galleryCount').textContent = normalizedQuery
+    ? `${visibleTakes.length} de ${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}`
+    : `${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}`;
+  $('galleryEmpty').hidden = state.pending.length > 0 || visibleTakes.length > 0;
+  $('galleryEmpty').querySelector('.gallery-empty-title').textContent = normalizedQuery ? 'Nenhum resultado encontrado' : 'Sua galeria começa aqui';
+  $('galleryEmpty').querySelector('.gallery-empty-copy').textContent = normalizedQuery
+    ? 'Tente buscar por outro trecho do prompt, modelo ou estética.'
+    : 'Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.';
   state.pending.forEach(pn => {
     const d = document.createElement('div');
     d.className = 'take pending';
     d.dataset.pid = pn.id;
-    d.innerHTML = `<div class="pending-msg">${pn.msg}</div>`;
+    d.innerHTML = `<div class="take-media"><div class="pending-msg">${pn.msg}</div></div><div class="take-meta"><div class="take-caption">Revelando fotograma</div><div class="take-prompt">O resultado entra automaticamente neste grid.</div></div>`;
     g.appendChild(d);
   });
-  state.takes.forEach((t, i) => {
+  visibleTakes.forEach(({ take: t, index: i }) => {
     const d = document.createElement('div');
     d.className = 'take' + (i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
-    d.innerHTML = `<img src="${t.url}" title="${t.caption}">
-      <div class="take-acts">
-        <button data-a="like" title="curtir">${t.liked ? '♥' : '♡'}</button>
-        <button data-a="dl" title="baixar">⬇</button>
-        <button data-a="reuse" title="reusar estes parâmetros">↺</button>
-        <button data-a="del" title="excluir">✕</button>
+    d.innerHTML = `<div class="take-media">
+        <img src="${t.url}" alt="Resultado do Fotograma">
+        <div class="take-acts">
+          <button data-a="zoom" title="abrir em tela cheia" aria-label="Abrir imagem em tela cheia">↗</button>
+          <button data-a="like" title="curtir" aria-label="${t.liked ? 'Descurtir' : 'Curtir'} imagem">${t.liked ? '♥' : '♡'}</button>
+          <button data-a="copy" title="copiar prompt" aria-label="Copiar prompt">⧉</button>
+          <button data-a="dl" title="baixar" aria-label="Baixar imagem">⬇</button>
+          <button data-a="reuse" title="reusar estes parâmetros" aria-label="Reusar parâmetros">↺</button>
+          <button data-a="del" title="excluir" aria-label="Excluir imagem">✕</button>
+        </div>
       </div>`;
+    const meta = document.createElement('div');
+    meta.className = 'take-meta';
+    const caption = document.createElement('div');
+    caption.className = 'take-caption';
+    caption.textContent = t.caption || 'Fotograma';
+    const prompt = document.createElement('div');
+    prompt.className = 'take-prompt';
+    prompt.textContent = (t.params && (t.params.prompt || t.params.scene)) || 'Processamento especializado a partir de imagem.';
+    const date = document.createElement('div');
+    date.className = 'take-date';
+    date.textContent = new Date(t.ts || Date.now()).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    meta.append(caption, prompt, date);
+    d.appendChild(meta);
     d.querySelector('img').addEventListener('click', () => {
       if (t.params && t.params.utilityTool) {
         setFotogramaTool(t.params.utilityTool);
@@ -2404,7 +2542,12 @@ function renderGallery(selIdx = -1) {
       e.dataTransfer.setData('application/x-tipo-take', t.id);
       e.dataTransfer.effectAllowed = 'copy';
     });
+    d.querySelector('[data-a="zoom"]').addEventListener('click', () => {
+      $('lightboxImg').src = t.url;
+      $('lightbox').classList.add('open');
+    });
     d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; idbPut({ id: t.id, caption: t.caption, params: t.params, liked: t.liked, ts: t.ts, blob: t.blob }); renderGallery(selIdx); });
+    d.querySelector('[data-a="copy"]').addEventListener('click', () => copyPromptText(t.params && (t.params.prompt || t.params.scene)));
     d.querySelector('[data-a="dl"]').addEventListener('click', () => {
       const a2 = document.createElement('a');
       a2.href = t.url;

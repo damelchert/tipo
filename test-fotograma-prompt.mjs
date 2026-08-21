@@ -93,8 +93,8 @@ const p2 = await page.evaluate(() => ({
 check('clique na galeria mostra o prompt final DAQUELE take',
   p2.shown === p2.expected && p2.shown.includes('A neighborhood bakery with pigeons gathering outside at dawn') &&
   !p2.shown.includes('padaria com pombas ao amanhecer'), `(${p2.shown})`);
-// copiar
-await page.click('#promptCopy');
+// copiar pela ação visível do card (o estado legado do prompt fica invisível)
+await page.click('#gallery .take.sel [data-a="copy"]');
 await page.waitForTimeout(200);
 const clip = await page.evaluate(() => navigator.clipboard.readText());
 check('botão copiar joga o prompt final exato no clipboard', clip === p2.shown, `(${clip})`);

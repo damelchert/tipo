@@ -1607,3 +1607,11 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - **Custos reais verificados sem geração:** Qwen Angles 0,2; Outpaint 2; Background Remover 1. Seedream 5 Lite permanece 1 para Animation. O rail mostra custos antes do clique.
 - **Bridge:** `/tool` aceita somente `multiAngle`, `expand` e `removeBg`; ranges de câmera e ratios são validados antes do CLI. `https://tipo-steel.vercel.app` está na allowlist padrão e `ffmpeg-static` é usado automaticamente quando instalado.
 - **Validação:** `test-fotograma-tools.mjs`, `test-fotograma-higgsfield.mjs`, `test-higgsfield-bridge.mjs` e as cinco regressões históricas passaram. Health real a partir da origem publicada devolveu plano Creator, 1258.87 créditos e `busy:false`; nenhum crédito foi consumido.
+
+### Fotograma — galeria vira o workspace principal
+- **Feedback do Daniel:** a hero fixa da bailarina ocupava quase toda a tela sem função, a galeria horizontal parecia secundária e os rótulos/botões eram pequenos demais. A anatomia ainda estava distante da referência apesar do rail de ferramentas.
+- **Mudança estrutural:** `stillFrame`, caption e prompt continuam apenas como estado legado invisível para não quebrar seleção/cópia/testes; visualmente, o canvas inteiro virou uma galeria vertical em grid. O header reúne “Sua galeria”, contador, busca e controle de 1–4 colunas.
+- **Densidade inteligente:** preferência salva em `localStorage`; a quantidade efetiva é reduzida conforme a largura para preservar cards com cerca de 260 px ou mais. Em mobile o resultado é sempre uma coluna legível.
+- **Cards:** imagem, título do processamento/modelo/custo, trecho do prompt, data e ações de tela cheia, curtir, baixar, reusar e excluir. Ações aparecem em hover/foco e ficam visíveis no touch.
+- **Leitura e colisões:** rail 190 px, painel 390 px, textarea 14 px, chips ≥10,5 px, botões ≥42 px; botão global `FREE` escondido porque formato de canvas não se aplica à galeria; voltar não invade a marca; chave e tema ocupam uma área reservada do header; rail mobile fica acima do bottom sheet.
+- **Validação:** suíte mockada confirma quatro ferramentas sem gasto, hero invisível, grid principal, busca por metadados, densidade persistente, tipografia mínima, mobile sem overflow e zero `pageerror`. Captura local 2048×1152 revisada visualmente.

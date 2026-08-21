@@ -119,12 +119,53 @@ check('Remove BG permanece funcional e marcado beta', toolBodies.some(body => bo
 check('nenhuma credencial entra nos payloads Higgsfield', !JSON.stringify([...toolBodies, ...generationBodies]).match(/AIza|AQ\./));
 check('bridge é pareado uma vez e reutilizado', healthCalls === 1, `health=${healthCalls}`);
 
+const galleryDesktop = await page.evaluate(() => ({
+  heroDisplay: getComputedStyle(document.getElementById('stillFrame')).display,
+  galleryDisplay: getComputedStyle(document.getElementById('gallery')).display,
+  cards: document.querySelectorAll('#gallery .take:not(.pending)').length,
+  columns: getComputedStyle(document.getElementById('gallery')).gridTemplateColumns.split(' ').length,
+  railFont: parseFloat(getComputedStyle(document.querySelector('.rail-tool')).fontSize),
+  sceneFont: parseFloat(getComputedStyle(document.getElementById('scene')).fontSize),
+  chipFont: parseFloat(getComputedStyle(document.querySelector('.fchip')).fontSize),
+}));
+check('imagem-demo saiu e galeria virou o workspace principal', galleryDesktop.heroDisplay === 'none' && galleryDesktop.galleryDisplay === 'grid' && galleryDesktop.cards === 4, JSON.stringify(galleryDesktop));
+check('grid responsivo abre mais de uma coluna no desktop', galleryDesktop.columns >= 2, `columns=${galleryDesktop.columns}`);
+check('controles principais ganharam leitura real', galleryDesktop.railFont >= 11 && galleryDesktop.sceneFont >= 14 && galleryDesktop.chipFont >= 10, JSON.stringify(galleryDesktop));
+
+await page.locator('#gridDensity').fill('1');
+await page.locator('#gridDensity').dispatchEvent('input');
+const oneColumn = await page.evaluate(() => ({
+  columns: getComputedStyle(document.getElementById('gallery')).gridTemplateColumns.split(' ').length,
+  saved: localStorage.getItem('tipo_fotograma_gallery_columns'),
+  output: document.getElementById('gridDensityValue').textContent,
+}));
+check('controle de densidade ajusta e persiste o grid', oneColumn.columns === 1 && oneColumn.saved === '1' && oneColumn.output === '1', JSON.stringify(oneColumn));
+
+await page.fill('#gallerySearch', 'Animation Styles');
+const filteredGallery = await page.evaluate(() => ({
+  cards: document.querySelectorAll('#gallery .take:not(.pending)').length,
+  count: document.getElementById('galleryCount').textContent,
+}));
+check('busca filtra a galeria por metadados', filteredGallery.cards === 1 && /^1 de 4 imagens$/.test(filteredGallery.count), JSON.stringify(filteredGallery));
+await page.fill('#gallerySearch', '');
+
+if (process.argv.includes('--screenshot')) {
+  await page.setViewportSize({ width: 2048, height: 1152 });
+  await page.locator('#gridDensity').fill('3');
+  await page.locator('#gridDensity').dispatchEvent('input');
+  await page.screenshot({ path: '/private/tmp/tipo-fotograma-gallery.png' });
+  console.log('screenshot: /private/tmp/tipo-fotograma-gallery.png');
+}
+
 await page.setViewportSize({ width: 390, height: 780 });
+await page.waitForFunction(() => getComputedStyle(document.getElementById('gallery')).gridTemplateColumns.split(' ').length === 1);
 const mobileRail = await page.evaluate(() => {
   const rail = document.getElementById('fotogramaRail').getBoundingClientRect();
-  return { left: rail.left, right: rail.right, bottom: rail.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: document.documentElement.scrollWidth };
+  const columns = getComputedStyle(document.getElementById('gallery')).gridTemplateColumns.split(' ').length;
+  return { left: rail.left, right: rail.right, bottom: rail.bottom, columns, viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: document.documentElement.scrollWidth };
 });
 check('navegação continua acessível no mobile', mobileRail.left >= 0 && mobileRail.right <= mobileRail.viewportWidth && mobileRail.bottom <= mobileRail.viewportHeight, JSON.stringify(mobileRail));
+check('galeria vira uma coluna legível no mobile', mobileRail.columns === 1, JSON.stringify(mobileRail));
 check('nova interface não cria scroll horizontal no mobile', mobileRail.scrollWidth <= mobileRail.viewportWidth + 1, JSON.stringify(mobileRail));
 check('zero pageerrors', pageErrors.length === 0, pageErrors.join(' | '));
 
