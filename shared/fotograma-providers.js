@@ -75,6 +75,8 @@
     constructor(baseUrl, options) {
       this.baseUrl = normalizeBridgeUrl(baseUrl);
       this.timeoutMs = (options && options.timeoutMs) || 22 * 60 * 1000;
+      const hostname = new URL(this.baseUrl).hostname;
+      this.targetAddressSpace = ['127.0.0.1', 'localhost', '[::1]'].includes(hostname) ? 'local' : null;
     }
 
     async request(path, options) {
@@ -83,6 +85,7 @@
       try {
         const response = await fetch(`${this.baseUrl}${path}`, {
           ...(options || {}),
+          ...(this.targetAddressSpace ? { targetAddressSpace: this.targetAddressSpace } : {}),
           signal: controller.signal,
           headers: {
             Accept: 'application/json',

@@ -1625,3 +1625,14 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - **Estado/UX:** modelo, ratio e resolução ficam salvos por ferramenta durante a sessão; referência opcional agora pode ser removida; troca de ferramenta volta o painel ao topo.
 - **Inspector:** clique em qualquer área da imagem abre tela cheia. A ação de zoom saiu dos cards; no expandido permanecem imagem, Baixar, Prompt expansível + Copiar, Curtir, Reusar, Usar no Sheets, Excluir e `X`; Esc também fecha. Botões têm 44 px e labels explícitos.
 - **Validação:** `test-fotograma-tools.mjs` cobre sete saídas mockadas, contratos de prompt/payload, Cast sem imagem, Sheets bloqueado sem origem, handoff, inspector e mobile. `test-fotograma-prompt.mjs` confirma que seleção e clipboard históricos continuam íntegros. Capturas 2048×1152 da galeria/Cast e do inspector foram revisadas. Nenhum crédito real foi consumido.
+
+---
+
+## 2026-08-21
+
+### Fotograma — drag interno completo e conexão Higgsfield no Chrome
+- **Drag interno:** o identificador `application/x-tipo-take` já saía dos cards, mas `#utilityDrop` lia apenas `dataTransfer.files`. O drop compartilhado agora converte o take persistido em `File` antes de passar por `setUtilityFile`, habilitando a mesma origem em Cast, Product, Sheets, Multi Angle, Animation, Expand e Remove BG.
+- **Causa real do link quebrado:** o CLI estava autenticado (Creator, 1258,87) e o bridge respondia ao terminal, porém a página HTTPS era bloqueada pelo Local Network Access do Chrome ao tentar alcançar `127.0.0.1`. O bloqueio foi reproduzido no navegador publicado; com permissão concedida, a mesma build conectou sem erro.
+- **Compatibilidade de rede local:** `HiggsfieldBridgeAdapter` marca o destino como `targetAddressSpace: local`; o OPTIONS do bridge devolve `Access-Control-Allow-Private-Network: true` somente depois da allowlist de origem. A UI explica como liberar “Acesso à rede local” ou iniciar `node higgsfield-bridge.mjs`, em vez de exibir apenas “não consegui alcançar”.
+- **UX de conexão:** todas as ferramentas exibem um status Higgsfield próprio e tentam parear ao serem abertas; quando conectado, mostram plano/saldo e ocultam o botão redundante. O popover de providers continua disponível para diagnóstico manual.
+- **Validação:** oito suítes passaram, incluindo drop da galeria nas sete ferramentas, pareamento único reutilizado, preflight privado, CORS/allowlists, providers Google/Vertex/Higgsfield, prompts, grid, inspector e mobile. Bridge real reiniciado; nenhuma geração nem consumo de créditos.

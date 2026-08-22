@@ -56,7 +56,9 @@ The Higgsfield CLI must already be installed and authenticated. JPEG/WebP normal
 node higgsfield-bridge.mjs
 ```
 
-In Fotograma, open the key/provider popover and test `http://127.0.0.1:4789`. Select **Higgsfield CLI** inside Create, or open one of the specialized tools in the left rail. Google stays connected for the Director and reference analysis, but is not required for the specialized Higgsfield tools. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, and never sends the Higgsfield session to the browser. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
+In Fotograma, select **Higgsfield CLI** inside Create or open one of the specialized tools in the left rail. The panel tests `http://127.0.0.1:4789` automatically and shows the connection state beside the tool. On Chrome 142+, allow **Local network access** when prompted; if it was previously denied, reopen the page permissions from the address-bar lock/settings icon and enable it. Google stays connected for the Director and reference analysis, but is not required for the specialized Higgsfield tools. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, and never sends the Higgsfield session to the browser. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
+
+Every specialized-tool upload accepts both files from the computer and images dragged directly from the Fotograma gallery.
 
 For a deployed Tipó origin, explicitly allow that exact HTTPS origin when starting the bridge:
 

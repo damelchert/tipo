@@ -84,6 +84,8 @@ check('Depth Map fica acessível como ferramenta irmã', await page.locator('a[h
 
 await page.click('[data-fotograma-tool="multiAngle"]');
 check('troca visual realmente substitui o painel antigo', await page.locator('#createControls').isHidden() && await page.locator('#utilityControls').isVisible());
+await page.waitForTimeout(80);
+check('ferramenta tenta parear o Higgsfield e mostra o estado no próprio painel', await page.evaluate(() => state.higgsConnected && /conectado/i.test(document.getElementById('utilityBridgeStatus')?.textContent || '')));
 await page.setInputFiles('#utilityFile', { name: 'source.png', mimeType: 'image/png', buffer: pngBuffer });
 await page.waitForFunction(() => !document.getElementById('utilityGenerate').disabled);
 await page.evaluate(() => {
@@ -95,6 +97,26 @@ await page.click('#utilityGenerate');
 await page.waitForFunction(() => !utilityState.busy && utilityState.result, null, { timeout: 10_000 });
 check('Multi Angle envia apenas controles reais', toolBodies[0]?.tool === 'multiAngle' && toolBodies[0]?.rotate === 45 && toolBodies[0]?.vertical === -15 && toolBodies[0]?.forward === 2);
 check('Multi Angle faz uma única chamada paga', toolBodies.filter(body => body.tool === 'multiAngle').length === 1);
+
+const internalDropCoverage = await page.evaluate(async () => {
+  const tools = ['cast', 'product', 'sheets', 'multiAngle', 'styleShift', 'expand', 'removeBg'];
+  const source = document.querySelector('#gallery .take img');
+  const results = {};
+  for (const tool of tools) {
+    setFotogramaTool(tool);
+    utilityState.image = null;
+    renderUtilityDrop();
+    utilityButtonState();
+    const transfer = new DataTransfer();
+    source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+    document.getElementById('utilityDrop').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+    const started = Date.now();
+    while (!utilityState.image && Date.now() - started < 1500) await new Promise(resolve => setTimeout(resolve, 10));
+    results[tool] = !!utilityState.image && document.querySelectorAll('#utilityDrop img').length === 1;
+  }
+  return results;
+});
+check('take da galeria pode ser arrastado para o upload de todas as ferramentas', Object.values(internalDropCoverage).length === 7 && Object.values(internalDropCoverage).every(Boolean), JSON.stringify(internalDropCoverage));
 
 await page.click('[data-fotograma-tool="styleShift"]');
 await page.click('[data-style="animefilm"]');

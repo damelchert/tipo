@@ -26,9 +26,14 @@ try {
 
   const productionPreflight = await fetch(`${base}/tool`, {
     method: 'OPTIONS',
-    headers: { Origin: 'https://tipo-steel.vercel.app', 'Access-Control-Request-Method': 'POST' },
+    headers: {
+      Origin: 'https://tipo-steel.vercel.app',
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Private-Network': 'true',
+    },
   });
   check('produção oficial alcança o bridge local', productionPreflight.status === 204 && productionPreflight.headers.get('access-control-allow-origin') === 'https://tipo-steel.vercel.app');
+  check('preflight autoriza explicitamente o endereço loopback', productionPreflight.headers.get('access-control-allow-private-network') === 'true');
 
   const invalid = await fetch(`${base}/generate`, {
     method: 'POST',

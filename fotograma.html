@@ -9,7 +9,7 @@
 <title>Tipó — Fotograma</title>
 <link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
 <script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
-<script src="shared/fotograma-providers.js?v=20260820-higgsfield1"></script>
+<script src="shared/fotograma-providers.js?v=20260821-higgsfield2"></script>
 <script src="shared/fotograma-tools.js?v=20260820-tools2"></script>
 <style>
   body { display: flex; height: 100vh; }
@@ -169,6 +169,14 @@
   .tool-intro-title { display: flex; justify-content: space-between; gap: 8px; color: var(--text-1); font-size: 13px; font-weight: 650; letter-spacing: 1.1px; text-transform: uppercase; }
   .tool-intro-badge { color: var(--accent-warm, #D4A040); font-size: 9px; white-space: nowrap; }
   .tool-intro-copy { margin-top: 8px; color: var(--text-3); font-size: 11px; line-height: 1.6; }
+  .utility-bridge { min-height: 38px; display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--border-2); color: var(--text-4); font: 10px/1.35 var(--font-ui); }
+  .utility-bridge::before { content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--text-5); }
+  .utility-bridge.ok { color: var(--accent); }
+  .utility-bridge.ok::before { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .utility-bridge.err { color: var(--accent-warm, #D4A040); }
+  .utility-bridge.err::before { background: var(--accent-warm, #D4A040); }
+  #utilityBridgeStatus { min-width: 0; flex: 1; }
+  #utilityBridgeConnect { min-height: 32px; flex: none; padding: 6px 9px; font-size: 9px; }
   .utility-textarea { width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); border-radius: 6px; padding: 11px; font: 12px/1.5 var(--font-ui); }
   .utility-textarea:focus-visible { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); outline-offset: 1px; }
   #utilityDrop { min-height: 132px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed var(--border-2); border-radius: 7px; background: var(--bg-2); color: var(--text-4); text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
@@ -213,6 +221,7 @@
     .take-prompt { font-size: 10.5px; }
     .take-date { font-size: 9.5px; }
     #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
+    #utilityBridgeConnect { min-height: 44px; }
     body #keyPop { right: 14px; }
     #lightbox { gap: 10px; padding: 12px 10px calc(12px + env(safe-area-inset-bottom)); }
     #lightboxClose { top: 10px; right: 10px; width: 44px; height: 44px; }
@@ -429,6 +438,10 @@
     <div class="tool-intro">
       <div class="tool-intro-title"><span id="utilityTitle">Multi Angle</span><span class="tool-intro-badge" id="utilityBadge">Higgsfield · créditos</span></div>
       <div class="tool-intro-copy" id="utilityDescription"></div>
+      <div class="utility-bridge" id="utilityBridgeState">
+        <span id="utilityBridgeStatus">Higgsfield ainda não verificado</span>
+        <button class="btn btn-secondary" id="utilityBridgeConnect" type="button">Conectar</button>
+      </div>
     </div>
 
     <div class="section" data-mobile-open>
@@ -961,9 +974,42 @@ function providerReady() {
 
 function higgsStatus(message, ok) {
   const element = $('higgsStatus');
-  if (!element) return;
-  element.textContent = message;
-  element.style.color = ok ? 'var(--accent)' : (message ? 'var(--text-5)' : '');
+  if (element) {
+    element.textContent = message;
+    element.style.color = ok ? 'var(--accent)' : (message ? 'var(--text-5)' : '');
+  }
+  const utilityStateElement = $('utilityBridgeState');
+  const utilityMessage = $('utilityBridgeStatus');
+  const utilityConnect = $('utilityBridgeConnect');
+  if (utilityStateElement && utilityMessage && utilityConnect) {
+    utilityMessage.textContent = message || 'Higgsfield ainda não verificado';
+    utilityStateElement.classList.toggle('ok', ok === true);
+    utilityStateElement.classList.toggle('err', ok === false);
+    utilityConnect.hidden = ok === true;
+    utilityConnect.disabled = /testando|conectando/i.test(message || '');
+  }
+}
+
+async function localNetworkPermissionState() {
+  if (!navigator.permissions || typeof navigator.permissions.query !== 'function') return 'unknown';
+  try {
+    return (await navigator.permissions.query({ name: 'local-network-access' })).state;
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+async function higgsConnectionMessage(error) {
+  const permission = await localNetworkPermissionState();
+  if (permission === 'denied') {
+    return 'Chrome bloqueou a rede local. No cadeado da página, libere “Acesso à rede local” e conecte novamente.';
+  }
+  const publicSecurePage = location.protocol === 'https:' && !['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
+  if (publicSecurePage && (!error || !error.status)) {
+    return 'Permita o acesso à rede local no Chrome e deixe “node higgsfield-bridge.mjs” aberto neste Mac.';
+  }
+  if (!error || !error.status) return 'Bridge local desligado. No Terminal, rode “node higgsfield-bridge.mjs” e conecte novamente.';
+  return error.message || 'Bridge Higgsfield indisponível';
 }
 
 function renderProviderModels(preferred) {
@@ -1031,7 +1077,15 @@ function setImageProvider(value, preferredModel) {
   syncQueueUI();
 }
 
-async function connectHiggsfield(silent) {
+let higgsConnectPromise = null;
+
+function connectHiggsfield(silent) {
+  if (higgsConnectPromise) return higgsConnectPromise;
+  higgsConnectPromise = connectHiggsfieldAttempt(silent).finally(() => { higgsConnectPromise = null; });
+  return higgsConnectPromise;
+}
+
+async function connectHiggsfieldAttempt(silent) {
   let adapter;
   try {
     const url = PROVIDER_API.normalizeBridgeUrl($('higgsBridgeUrl').value, location.href);
@@ -1045,17 +1099,18 @@ async function connectHiggsfield(silent) {
     state.higgsConnected = true;
     state.higgsAccount = account;
     const credits = Number.isFinite(Number(account.credits)) ? ` · ${Number(account.credits).toFixed(2)} créditos` : '';
-    higgsStatus(`conectado · plano ${account.plan || 'ativo'}${credits}`, true);
+    higgsStatus(`Higgsfield conectado · plano ${account.plan || 'ativo'}${credits}`, true);
     syncProviderHint();
     syncQueueUI();
   } catch (error) {
     state.higgsAdapter = null;
     state.higgsConnected = false;
     state.higgsAccount = null;
-    higgsStatus(silent ? 'bridge local desligado' : (error.message || 'bridge indisponível'));
+    const message = await higgsConnectionMessage(error);
+    higgsStatus(message, false);
     syncProviderHint();
     syncQueueUI();
-    if (!silent) throw error;
+    if (!silent) throw new Error(message);
   }
 }
 
@@ -3453,6 +3508,7 @@ function setFotogramaTool(name) {
   restoreWorkspace(next);
   utilityStatus('');
   utilityButtonState();
+  if (!state.higgsConnected) connectHiggsfield(true);
   if (changed) $('panel').scrollTop = 0;
 }
 
@@ -3464,10 +3520,10 @@ function renderUtilityDrop() {
     const main = document.createElement('div');
     main.className = 'utility-drop-main';
     const optional = UTILITY_META[utilityState.active] && UTILITY_META[utilityState.active].optionalImage;
-    main.textContent = optional ? 'Referência opcional · clique ou solte' : 'Solte uma imagem ou clique para escolher';
+    main.textContent = optional ? 'Referência opcional · clique ou arraste' : 'Clique ou arraste uma imagem aqui';
     const sub = document.createElement('div');
     sub.className = 'utility-drop-sub';
-    sub.textContent = optional ? 'Ou gere somente a partir da descrição' : 'PNG, JPEG ou WebP · até 16 MB';
+    sub.textContent = optional ? 'Aceita a galeria ou seu Mac · ou gere só pelo texto' : 'Da galeria ou do seu Mac · PNG, JPEG ou WebP';
     drop.append(main, sub);
     return;
   }
@@ -3749,8 +3805,13 @@ $('utilityDrop').addEventListener('dragover', event => { event.preventDefault();
 $('utilityDrop').addEventListener('dragleave', () => $('utilityDrop').classList.remove('dropping'));
 $('utilityDrop').addEventListener('drop', event => {
   event.preventDefault();
+  event.stopPropagation();
   $('utilityDrop').classList.remove('dropping');
-  const file = Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/'));
+  const file = takeDropFile(event) || Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/'));
+  if (!file) {
+    utilityStatus('Arraste uma imagem da galeria ou escolha PNG, JPEG ou WebP.', true);
+    return;
+  }
   setUtilityFile(file).catch(error => utilityStatus(error.message, true));
 });
 
@@ -3821,6 +3882,9 @@ document.addEventListener('click', (e) => {
 $('keyConnect').addEventListener('click', () => connect(false));
 $('keyForget').addEventListener('click', forgetKey);
 $('higgsConnect').addEventListener('click', () => {
+  connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
+});
+$('utilityBridgeConnect').addEventListener('click', () => {
   connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
 });
 $('keyEye').addEventListener('click', () => {
