@@ -110,7 +110,7 @@ Ferramenta #39, inspirada no Cinematic Studio (Marcos/HDLX) e denoised.ai, com a
 #### 21.13 — DRAG GALERIA→FERRAMENTAS + LINK HIGGSFIELD — ✅ (2026-08-21)
 - ✅ Todo take da galeria agora pode ser arrastado para a área de origem de **Cast, Product, Sheets, Multi Angle, Animation, Expand e Remove BG**. O mesmo drop continua aceitando PNG/JPEG/WebP do sistema.
 - ✅ Cada ferramenta tenta parear o bridge ao ser aberta e mostra o estado Higgsfield no próprio painel, sem obrigar o usuário a procurar o popover da chave. O botão Conectar permanece disponível quando há falha.
-- ✅ Causa raiz da conexão publicada reproduzida: Chrome 142+ exige permissão de **Acesso à rede local** para uma origem pública alcançar loopback. O adapter declara `targetAddressSpace: local`; o bridge responde ao preflight PNA com `Access-Control-Allow-Private-Network: true`; erro distingue permissão negada de processo local desligado.
+- ✅ Causa raiz da conexão publicada reproduzida: Chrome 142+ exige permissão de **Acesso à rede local** para uma origem pública alcançar loopback. O adapter declara `targetAddressSpace: loopback`; o bridge responde ao preflight PNA com `Access-Control-Allow-Private-Network: true`; erro distingue permissão negada de processo local desligado.
 - ✅ CLI real permaneceu autenticado no plano Creator com saldo 1258,87; bridge reiniciado em `127.0.0.1:4789`. Nenhuma imagem foi gerada e nenhum crédito foi consumido.
 - ✅ Oito suítes Fotograma/bridge passaram. A suíte de ferramentas prova o drop interno nas sete áreas e a suíte do bridge prova o handshake privado sem afrouxar a allowlist de origem.
 

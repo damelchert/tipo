@@ -115,6 +115,7 @@ await page.click('#keyConnect');
 await page.waitForFunction(() => state.connected === true);
 
 check('Google continua sendo o provedor padrão', await page.inputValue('#imageProvider') === 'google');
+check('adapter classifica 127.0.0.1 como loopback no Chrome', await page.evaluate(() => new TipoFotogramaProviders.HiggsfieldBridgeAdapter('http://127.0.0.1:4789').targetAddressSpace === 'loopback'));
 await page.selectOption('#imageProvider', 'higgsfield');
 check('Higgsfield expõe somente a allowlist aprovada', (await page.locator('#model option').allTextContents()).length === 6);
 check('custos aparecem antes da geração', (await page.locator('#model option').allTextContents()).every(text => /~\d+(?:–\d+)? cr/.test(text)));
