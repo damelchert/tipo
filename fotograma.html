@@ -35,6 +35,34 @@
   #panel .toggle-label, #panel .checkbox-label { font-size: 12px; line-height: 1.45; }
   #panel .range-label { min-width: 92px; font-size: 11px; color: var(--text-3); }
   #panel .range-value { font-size: 12px; color: var(--text-3); }
+  #createControls { display: flex; flex-direction: column; gap: 14px; }
+  #createControls[hidden] { display: none !important; }
+  #createControls > .section { margin: 0; }
+  .create-card { padding: 14px; border: 1px solid var(--border-2); border-radius: 8px; background: color-mix(in srgb, var(--bg-2) 62%, transparent); }
+  .create-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+  .create-card-title { color: var(--text-1); font: 700 11px/1.3 var(--font-ui); letter-spacing: 1.25px; text-transform: uppercase; }
+  .create-card-copy { color: var(--text-4); font: 9px/1.35 var(--font-ui); text-align: right; }
+  #engineGroupBody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 10px; }
+  #engineGroupBody .section { min-width: 0; margin: 0; padding: 0; border: 0; }
+  #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection { grid-column: 1 / -1; }
+  #engineGroupBody #arChips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  #engineGroupBody #arChips .fchip { min-width: 0; min-height: 34px; padding: 6px 2px; font-size: 10.5px; letter-spacing: .25px; text-align: center; }
+  #advancedDirection { overflow: hidden; border: 1px solid var(--border-2); border-radius: 8px; background: color-mix(in srgb, var(--bg-2) 38%, transparent); }
+  #advancedDirection > summary { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; box-sizing: border-box; color: var(--text-2); font: 700 11px/1.35 var(--font-ui); letter-spacing: 1.15px; text-transform: uppercase; cursor: pointer; list-style: none; }
+  #advancedDirection > summary::-webkit-details-marker { display: none; }
+  #advancedDirection > summary::after { content: '+'; flex: none; color: var(--accent); font-size: 18px; font-weight: 400; }
+  #advancedDirection[open] > summary::after { content: '−'; }
+  .advanced-summary-copy { margin-left: auto; color: var(--text-4); font-size: 8.5px; font-weight: 500; letter-spacing: .35px; text-transform: none; }
+  #advancedDirectionBody { display: flex; flex-direction: column; gap: 18px; padding: 4px 14px 16px; border-top: 1px solid var(--border-1); }
+  #advancedDirectionBody .section { margin: 0; }
+  .provider-action { width: 100%; min-height: 36px !important; margin-top: 9px; }
+  #secGenerate { position: sticky; bottom: -24px; z-index: 15; margin: 2px -24px -24px !important; padding: 16px 24px calc(18px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border-2); background: color-mix(in srgb, var(--bg-1) 96%, transparent); box-shadow: 0 -14px 32px rgba(0,0,0,.13); backdrop-filter: blur(14px); }
+  #genRequirement { min-height: 16px; margin-top: 8px; color: var(--text-3); font: 10.5px/1.45 var(--font-ui); }
+  #genRequirement.ready { color: var(--accent); }
+  #genStatus { min-height: 0; margin-top: 7px; color: var(--red, #CC4840); font: 11px/1.5 var(--font-ui); }
+  #genStatus:empty, #generationRecovery[hidden] { display: none; }
+  #generationRecovery { width: 100%; min-height: 38px; margin-top: 8px; }
+  #lastDownloadRow { display: none; }
   #canvasWrap { --gallery-cols: 3; flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; display: block; background: var(--bg-0); padding: 0; }
 
   /* workspace = galeria; a imagem-demo existe apenas como estado interno */
@@ -222,6 +250,12 @@
     .take-date { font-size: 9.5px; }
     #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
     #utilityBridgeConnect { min-height: 44px; }
+    #engineGroupBody { grid-template-columns: 1fr; }
+    #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection { grid-column: auto; }
+    #engineGroupBody #arChips { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    #secGenerate { bottom: -22px; margin-right: -22px !important; margin-left: -22px !important; padding-right: 22px; padding-left: 22px; }
+    #advancedDirection > summary { min-height: 52px; }
+    .advanced-summary-copy { display: none; }
     body #keyPop { right: 14px; }
     #lightbox { gap: 10px; padding: 12px 10px calc(12px + env(safe-area-inset-bottom)); }
     #lightboxClose { top: 10px; right: 10px; width: 44px; height: 44px; }
@@ -291,7 +325,7 @@
   <div class="section" id="secScene" data-mobile-open>
     <div class="section-title">Cena</div>
     <textarea id="scene" placeholder="descreva simples: &ldquo;padaria antiga lotada de manh&atilde;&rdquo; &mdash; o Fotograma dirige o resto" spellcheck="false"></textarea>
-    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Dire&ccedil;&atilde;o criativa &#10024; <span style="font-size:9px;color:var(--text-5);">(a cena sempre &eacute; traduzida e limpa; ligada, tamb&eacute;m materializa um brief esparso sem alterar tuas ordens)</span></label>
+    <label class="toggle-label"><input type="checkbox" id="diretor" checked> Dire&ccedil;&atilde;o criativa &#10024; <span style="font-size:9px;color:var(--text-5);">(com Google conectado, amplia briefs esparsos; sem ele, a dire&ccedil;&atilde;o da Tip&oacute; continua localmente)</span></label>
   </div>
 
   <div class="section" id="emulsaoSection">
@@ -350,6 +384,7 @@
       <option value="higgsfield">Higgsfield CLI &middot; usa cr&eacute;ditos</option>
     </select>
     <div class="provider-hint" id="providerHint">Nano Banana pela sua chave Google.</div>
+    <button class="btn btn-secondary provider-action" id="providerAction" type="button">Conectar provedor</button>
   </div>
 
   <div class="section" id="secModel">
@@ -366,16 +401,6 @@
   <div class="section" id="secApertura">
     <div class="section-title">Profundidade</div>
     <select id="apertura"></select>
-  </div>
-
-  <div class="section" id="secScale">
-    <div class="section-title">Escala do plano</div>
-    <div class="chip-grid" id="scaleChips"></div>
-  </div>
-
-  <div class="section" id="secFraming">
-    <div class="section-title">Ponto de vista</div>
-    <div class="chip-grid" id="framingChips"></div>
   </div>
 
   <div class="section" id="secLuz">
@@ -413,6 +438,16 @@
     </div>
   </div>
 
+  <section class="create-card" id="engineGroup" aria-labelledby="engineGroupTitle">
+    <div class="create-card-head"><div class="create-card-title" id="engineGroupTitle">Motor da imagem</div><div class="create-card-copy">provedor, modelo e formato</div></div>
+    <div id="engineGroupBody"></div>
+  </section>
+
+  <details id="advancedDirection">
+    <summary>Dire&ccedil;&atilde;o avan&ccedil;ada <span class="advanced-summary-copy">emuls&atilde;o, lente, luz, textura e ficha</span></summary>
+    <div id="advancedDirectionBody"></div>
+  </details>
+
   <div class="section" id="secPreview" data-mobile-own-toggle>
     <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">Prompt da imagem <button type="button" id="pvToggle" style="background:none; border:1px solid var(--border-2); border-radius:4px; color:var(--text-3); font-family:var(--font-ui); font-size:9px; padding:2px 8px; cursor:pointer;">ver</button></div>
     <div id="pvBody" style="display:none;">
@@ -425,11 +460,13 @@
   <div class="section section-divider" id="secGenerate" data-mobile-open>
     <div class="section-title">Gerar</div>
     <button class="btn" id="genBtn" disabled>Revelar Fotograma</button>
-    <div id="genStatus" style="font-size:9px; color:var(--red,#CC4840); margin-top:6px; line-height:1.5; font-family:var(--font-ui); min-height:0;"></div>
-    <div class="btn-row" style="margin-top:8px;">
+    <div id="genRequirement" aria-live="polite">Conecte um provedor para gerar.</div>
+    <div id="genStatus" role="alert" aria-live="assertive"></div>
+    <button class="btn btn-secondary" id="generationRecovery" type="button" hidden>Tentar reconectar</button>
+    <div class="btn-row" id="lastDownloadRow" style="margin-top:8px;">
       <button class="btn btn-secondary" id="dlBtn" disabled>Baixar PNG</button>
     </div>
-    <label class="checkbox-label" style="margin-top:8px;"><input type="checkbox" id="cleanImg" checked> sem texto solto / marca d'&aacute;gua (r&oacute;tulo de produto pode)</label>
+    <label class="checkbox-label" id="cleanOption" style="margin-top:8px;"><input type="checkbox" id="cleanImg" checked> sem texto solto / marca d'&aacute;gua (r&oacute;tulo de produto pode)</label>
   </div>
   <div style="height:40px;"></div>
   </div>
@@ -967,9 +1004,9 @@ const key = () => $('apiKey').value.trim();
 function currentProvider() { return state.imageProvider || 'google'; }
 function currentHiggsModel() { return PROVIDER_API.modelByName($('model') && $('model').value); }
 function providerReady() {
-  // O Google ainda dirige/traduz a cena e lê referências. Higgsfield troca
-  // somente o backend de imagem final, por isso os dois precisam estar vivos.
-  return !!state.connected && (currentProvider() !== 'higgsfield' || !!state.higgsConnected);
+  // Cada motor final é autônomo. O Google pode enriquecer a direção de um job
+  // Higgsfield quando estiver conectado, mas nunca deve bloquear o CLI.
+  return currentProvider() === 'higgsfield' ? !!state.higgsConnected : !!state.connected;
 }
 
 function higgsStatus(message, ok) {
@@ -1051,6 +1088,7 @@ function syncProviderHint() {
   const isHiggs = currentProvider() === 'higgsfield';
   const badge = $('providerBadge');
   const hint = $('providerHint');
+  const action = $('providerAction');
   if (!badge || !hint) return;
   badge.classList.toggle('paid', isHiggs);
   hint.classList.toggle('paid', isHiggs);
@@ -1063,9 +1101,19 @@ function syncProviderHint() {
     hint.textContent = config
       ? `${config.label} · custo estimado ~${cost} crédito${cost === 1 ? '' : 's'}${balance}. Sem fallback pago automático.`
       : `Conecte o bridge local${balance}.`;
+    if (action) {
+      action.hidden = !!state.higgsConnected;
+      action.textContent = 'Conectar Higgsfield CLI';
+    }
   } else {
     badge.textContent = state.backend === 'vertex' ? 'Google · Vertex' : 'Google';
-    hint.textContent = 'Imagem gerada diretamente pelo Google com a chave conectada; nenhum crédito Higgsfield é usado.';
+    hint.textContent = state.connected
+      ? 'Google conectado. A imagem e a direção criativa usam somente a sua chave.'
+      : 'Conecte uma chave Google para gerar diretamente pelo Nano Banana.';
+    if (action) {
+      action.hidden = !!state.connected;
+      action.textContent = 'Conectar chave Google';
+    }
   }
 }
 
@@ -1074,7 +1122,10 @@ function setImageProvider(value, preferredModel) {
   $('imageProvider').value = state.imageProvider;
   localStorage.setItem(PROVIDER_LS, state.imageProvider);
   renderProviderModels(preferredModel);
+  $('genStatus').textContent = '';
+  $('generationRecovery').hidden = true;
   syncQueueUI();
+  if (state.imageProvider === 'higgsfield' && !state.higgsConnected) connectHiggsfield(true);
 }
 
 let higgsConnectPromise = null;
@@ -1768,6 +1819,16 @@ function saneExpansion(txt) {
   return t;
 }
 
+/** Caminho local e determinístico quando o Diretor Google não está disponível.
+ *  O filtro de injeção já rodou antes da fila; aqui apenas normalizamos o texto
+ *  para que o motor de imagem receba uma cena válida, inclusive em pt-BR. */
+function localSceneForImage(txt) {
+  const scene = cleanPromptText(String(txt || '').replace(/<\/?(?:user-input|reference-briefs)>/gi, ''));
+  if (scene.length < 3) throw new Error('A cena ficou vazia depois da limpeza. Revise o texto e tente novamente.');
+  if (scene.length > 1800) throw new Error('A cena está longa demais. Resuma para até 1.800 caracteres.');
+  return scene;
+}
+
 // ---- EMULSÃO: transfere a química da referência (Gemini vision) ----
 const EMULSAO_SYSTEM = `You are a master film colorist. Analyze the image and write a COLOR GRADE SPEC precise enough for another artist to replicate the exact look on a different scene.
 COLORS: 4-6 precise hue names WITH approximate proportions of the frame (e.g. "lavender-violet ~50%, titanium white ~20%, ultramarine ~15%, blush pink ~10%, deep plum accents"). Name hues exactly — hot pink is not red, lavender is not purple.
@@ -2131,7 +2192,8 @@ async function tryImageModel(model, prompt, job, spec) {
   // escada: NUNCA derruba o aspect ratio antes da última tentativa —
   // e se cair na última, avisa (era o "virou a imagem")
   const attempts = [
-    { body: mk(['IMAGE'], 'full'), note: '' },
+    // Vertex exige TEXT + IMAGE; começar por IMAGE desperdiçava uma chamada
+    // recusada antes de toda geração feita com chave AQ.
     { body: mk(['TEXT', 'IMAGE'], 'full'), note: '' },
     { body: mk(['TEXT', 'IMAGE'], 'ar'), note: supportsImageSize(model) ? 'resolução caiu pro padrão do modelo (API recusou o imageSize) — tente revelar de novo' : '' },
     { body: mk(['TEXT', 'IMAGE'], 'none'), note: 'formato caiu pro default do modelo' },
@@ -2276,6 +2338,7 @@ function snapshotParams() {
     // Clones rasos dos binários e profundos dos metadados: mudar função,
     // referência ou Emulsão enquanto a fila roda não contamina o job.
     refs, mood, moodStrength: state.moodStrength,
+    googleAssist: !!state.connected && !!key(),
     ficha: { ...fichaVals() },
   };
 }
@@ -2287,13 +2350,11 @@ function applyParams(pr) {
   $('genero').value = state.genero;
   syncGeneroHint();
   setProg(pr.prog);
-  // Compatibilidade: takes antigos guardavam Wide/XCU/Macro dentro de
-  // framing; agora escala e ponto de vista são eixos combináveis.
+  // Compatibilidade: takes antigos ainda podem reproduzir a composição salva,
+  // embora os dois grupos de presets não façam mais parte da interface.
   const legacyScale = { xcu: 'xcu', macro: 'macro', widens: 'wide' }[pr.framing];
   state.shotScale = pr.shotScale || legacyScale || 'auto';
   state.framing = legacyScale ? 'auto' : (pr.framing || 'auto');
-  document.querySelectorAll('#scaleChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.id === state.shotScale));
-  document.querySelectorAll('#framingChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.id === state.framing));
   state.ar = pr.ar;
   document.querySelectorAll('#arChips .fchip').forEach(x => x.classList.toggle('on', x.dataset.ar === pr.ar));
   $('stock').value = pr.stock; syncStockHint();
@@ -2319,17 +2380,27 @@ function applyParams(pr) {
 
 function syncQueueUI() {
   const n = queue.length;
+  const ready = providerReady();
   $('genBtn').textContent = busy
     ? (n ? `Revelando… (${n} na fila)` : 'Revelando…')
     : 'Revelar Fotograma';
-  $('genBtn').disabled = !providerReady() || (busy && n >= QUEUE_MAX);
+  $('genBtn').disabled = !ready || (busy && n >= QUEUE_MAX);
+  const requirement = $('genRequirement');
+  requirement.classList.toggle('ready', ready);
+  if (busy) requirement.textContent = n ? `${n} job${n === 1 ? '' : 's'} aguardando; você pode continuar ajustando o painel.` : 'Processando; o resultado entra automaticamente na galeria.';
+  else if (ready) requirement.textContent = currentProvider() === 'higgsfield'
+    ? 'Higgsfield conectado. Google é opcional para a direção criativa.'
+    : `Google conectado${state.backend === 'vertex' ? ' via Vertex' : ''}. Pronto para gerar.`;
+  else requirement.textContent = currentProvider() === 'higgsfield'
+    ? 'Conecte o bridge local do Higgsfield para liberar a geração.'
+    : 'Conecte uma chave Google para liberar a geração.';
 }
 
 function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
-  if (!state.connected) { TipoUI.showToast('Conecte a chave Google para o Diretor — 🔑'); $('keyPop').classList.add('open'); return; }
+  if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
   if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast('Ligue e teste o Higgsfield bridge — 🔑'); $('keyPop').classList.add('open'); return; }
   if (busy && queue.length >= QUEUE_MAX) { TipoUI.showToast(`Fila cheia (${QUEUE_MAX}) — espera uma revelar`); return; }
   const hintState = applySceneReferenceHint(subject, state.refs);
@@ -2375,18 +2446,20 @@ async function revealJob(job) {
     modelOptions: (job.modelOptions || []).map(x => ({ ...x })),
   };
   $('genStatus').textContent = '';
+  $('generationRecovery').hidden = true;
   const pid = 'p' + Date.now() + '-' + Math.round(performance.now());
   currentPendingId = pid;
   state.pending.unshift({ id: pid, msg: 'revelando…' });
   renderGallery(-1);
   try {
-    if (job.mood && !job.mood.desc) {
+    const canUseGoogleAssist = !!job.googleAssist && !!state.connected && !!key();
+    if (job.mood && !job.mood.desc && canUseGoogleAssist) {
       devMsg('lendo a emulsão da referência…');
       try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
     }
     const jobHintState = applySceneReferenceHint(job.scene, job.refs || []);
     const needsRefAnalysis = r => !r.desc && refIsAuto(r) && !r.inferredRole;
-    if (job.refs && job.refs.some(needsRefAnalysis)) {
+    if (canUseGoogleAssist && job.refs && job.refs.some(needsRefAnalysis)) {
       devMsg('entendendo a função das referências…');
       for (const ref of job.refs) {
         if (!needsRefAnalysis(ref)) continue;
@@ -2395,7 +2468,7 @@ async function revealJob(job) {
     }
     const unresolved = (job.refs || []).filter(r => refIsAuto(r) && !r.inferredRole);
     if (unresolved.length) throw new Error(`Não consegui identificar ${unresolved.length} referência${unresolved.length > 1 ? 's' : ''}. Escolha a função de cada uma antes de revelar.`);
-    if (fichaCount(job.ficha)) {
+    if (fichaCount(job.ficha) && canUseGoogleAssist) {
       devMsg('traduzindo a Ficha técnica…');
       try { await normalizeFicha(job); }
       catch (e) {
@@ -2404,17 +2477,23 @@ async function revealJob(job) {
       }
     }
 
-    // A passagem de linguagem roda sempre: com Direção Criativa ligada ela
-    // também materializa briefs esparsos; desligada, só traduz e limpa.
-    let scene = '';
-    devMsg(job.diretor ? 'diretor decupando a cena…' : 'traduzindo e limpando a cena…');
-    try {
-      const expanded = saneExpansion(await diretor(job.scene, job));
-      if (!expanded) throw new Error('resposta vazia, conversacional ou malformada');
-      scene = expanded;
-    } catch (e) {
-      console.warn('[fotograma] diretor:', e.detail || e.message);
-      throw new Error('Não consegui traduzir e limpar a cena. Tente revelar novamente; o texto cru não foi enviado ao modelo de imagem.');
+    // O Diretor é um aprimoramento, não um ponto único de falha. Quando a
+    // chave está ausente/instável, a montagem determinística da Tipó segue com
+    // a cena limpa — tanto no Google quanto no Higgsfield.
+    let scene = localSceneForImage(job.scene);
+    if (canUseGoogleAssist) {
+      devMsg(job.diretor ? 'diretor decupando a cena…' : 'traduzindo e limpando a cena…');
+      try {
+        const expanded = saneExpansion(await diretor(job.scene, job));
+        if (!expanded) throw new Error('resposta vazia, conversacional ou malformada');
+        scene = expanded;
+      } catch (e) {
+        console.warn('[fotograma] diretor:', e.detail || e.message);
+        devMsg('Diretor indisponível — seguindo com a direção local…');
+        TipoUI.showToast('Diretor Google indisponível; seguindo com a direção local da Tipó');
+      }
+    } else {
+      devMsg('montando a direção local da Tipó…');
     }
 
     const previewSpec = resolvePrompt(scene, job.scene, job, job.model);
@@ -2462,7 +2541,7 @@ async function revealJob(job) {
     const P = PROGRAMAS[job.prog] || PROGRAMAS.cinema;
     const g = GENEROS.find(x => x.id === job.genero);
     const lock = result.spec.locks;
-    const cap = `${P.nome.toLowerCase()}${job.prog === 'commercial' && job.genero !== 'geral' && g ? ' · ' + g.label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : (job.prog === 'commercial' ? 'grade de campanha' : currentStock(job).label.toLowerCase())} · ${lock.scale ? 'escala do texto' : currentShotScale(job).label.toLowerCase()} · ${lock.framing ? 'ponto de vista do texto' : currentFraming(job).label.toLowerCase()} · ${job.ar} · ${result.label}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${fichaCount(job.ficha) ? ' · ficha ✍' + fichaCount(job.ficha) : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
+    const cap = `${P.nome.toLowerCase()}${job.prog === 'commercial' && job.genero !== 'geral' && g ? ' · ' + g.label.toLowerCase() : ''} · ${(job.mood && (job.moodStrength ?? 100) >= 50) ? 'grade da referência' : (job.prog === 'commercial' ? 'grade de campanha' : currentStock(job).label.toLowerCase())} · ${job.ar} · ${result.label}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${fichaCount(job.ficha) ? ' · ficha ✍' + fichaCount(job.ficha) : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
     showPrompt(result.prompt);
     $('pvTxt').textContent = result.prompt;
@@ -2478,6 +2557,8 @@ async function revealJob(job) {
     const d = safeDetail(e);
     const providerName = job.provider === 'higgsfield' ? 'Higgsfield' : 'Google';
     $('genStatus').textContent = `${providerName}: ${d || e.message || 'falhou'}`;
+    $('generationRecovery').hidden = false;
+    $('generationRecovery').textContent = job.provider === 'higgsfield' ? 'Reconectar Higgsfield' : 'Revisar conexão Google';
   } finally {
     state.pending = state.pending.filter(x => x.id !== pid);
     currentPendingId = null;
@@ -2810,12 +2891,19 @@ function renderGallery(selIdx = -1) {
 function reorderPanelForDirectionFlow() {
   const panel = $('createControls');
   const spacer = panel.lastElementChild;
+  const engineBody = $('engineGroupBody');
+  const advancedBody = $('advancedDirectionBody');
+  ['secProvider', 'secModel', 'secAspect', 'resSection'].forEach(id => {
+    const el = $(id);
+    if (el) engineBody.appendChild(el);
+  });
+  ['emulsaoSection', 'secLente', 'secApertura', 'secLuz', 'secStock', 'secPaleta', 'adNote', 'secFicha', 'cleanOption'].forEach(id => {
+    const el = $(id);
+    if (el) advancedBody.appendChild(el);
+  });
   [
-    'secProgram', 'secScene', 'refsSection',
-    'secAspect', 'secScale', 'secFraming',
-    'secLente', 'secApertura',
-    'emulsaoSection', 'secLuz', 'secStock', 'secPaleta', 'adNote',
-    'secFicha', 'secProvider', 'secModel', 'resSection', 'secPreview', 'secGenerate',
+    'secScene', 'secProgram', 'refsSection', 'engineGroup',
+    'advancedDirection', 'secPreview', 'secGenerate',
   ].forEach(id => {
     const el = $(id);
     if (el) panel.insertBefore(el, spacer);
@@ -2823,52 +2911,6 @@ function reorderPanelForDirectionFlow() {
 }
 
 function buildChips() {
-  const sc = $('scaleChips');
-  SHOT_SCALES.forEach(s => {
-    const c = document.createElement('span');
-    c.className = 'fchip' + (s.id === state.shotScale ? ' on' : '');
-    c.textContent = s.label;
-    c.dataset.id = s.id;
-    c.addEventListener('click', () => {
-      state.shotScale = s.id;
-      sc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === s.id));
-    });
-    sc.appendChild(c);
-  });
-
-  const fc = $('framingChips');
-  FRAMINGS.forEach(f => {
-    const c = document.createElement('span');
-    c.className = 'fchip' + (f.id === state.framing ? ' on' : '');
-    c.textContent = f.label;
-    c.dataset.id = f.id;
-    c.addEventListener('click', () => {
-      state.framing = f.id;
-      fc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === f.id));
-    });
-    fc.appendChild(c);
-  });
-  const dice = document.createElement('span');
-  dice.className = 'fchip dice';
-  dice.textContent = '🎲 surpreenda';
-  dice.title = 'sorteia um enquadramento não-óbvio';
-  dice.addEventListener('click', () => {
-    const bold = FRAMINGS.filter(f => !['auto', 'eye', 'xcu'].includes(f.id));
-    const pick = bold[Math.floor(Math.random() * bold.length)];
-    const scaleRecipes = {
-      lowhero: ['full', 'threeq'], worms: ['full', 'threeq'], knee: ['full', 'threeq'],
-      birds: ['wide', 'full'], crane: ['wide', 'full'],
-      dutch: ['medium', 'threeq'], ots: ['medium'], glass: ['medium', 'threeq'],
-    };
-    const pool = scaleRecipes[pick.id] || ['threeq', 'medium'];
-    state.shotScale = pool[Math.floor(Math.random() * pool.length)];
-    state.framing = pick.id;
-    sc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === state.shotScale));
-    fc.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.id === pick.id));
-    TipoUI.showToast(`${byId(SHOT_SCALES, state.shotScale).label} · ${pick.label}`);
-  });
-  fc.appendChild(dice);
-
   const ac = $('arChips');
   ARS.forEach(ar => {
     const c = document.createElement('span');
@@ -2965,8 +3007,7 @@ function refreshPreview() {
   const dir = spec.locks;
   const moodCmd = !!state.mood && (state.moodStrength ?? 100) >= 50;
   const w = [];
-  if (dir.scale) w.push('⚠ cena ocupa ESCALA DO PLANO → chip fica em espera');
-  if (dir.framing) w.push('⚠ cena ocupa PONTO DE VISTA → chip fica em espera');
+  if (dir.scale || dir.framing) w.push('↳ enquadramento descrito na Cena assume a composição');
   if (dir.optics) w.push('⚠ cena ocupa ÓTICA → lente fica em espera');
   if (dir.dof) w.push('⚠ cena ocupa FOCO → profundidade fica em espera');
   if (dir.light && !moodCmd) w.push('⚠ cena ocupa LUZ → seletor fica em espera');
@@ -2992,12 +3033,9 @@ function refreshPreview() {
   if (sceneWins.length) w.push(`⚠ Cena vence a Ficha em: ${sceneWins.join(', ')}`);
   if (state.refs.length) w.push(`🖼 ${state.refs.length} referência${state.refs.length > 1 ? 's' : ''} com função semântica no payload`);
   if (/lite/i.test($('model').value || '') && state.refs.length > 1) w.push('⚠ Nano Banana 2 Lite não é a melhor escolha para múltiplas identidades; prefira Pro ou Nano Banana 2');
-  if (state.framing === 'worms' && state.refs.some(r => refHasRole(r, 'environment'))) {
-    w.push('↳ Worm’s Eye direto privilegia céu/sola e reduz o horizonte; para manter o platô legível, Low Hero costuma ser mais compatível');
-  }
-  w.push($('diretor').checked
-    ? '✨ prévia antes da Direção Criativa; depois de revelar, este painel mostra o prompt exato enviado'
-    : '↳ a cena ainda será apenas traduzida e limpa; sem expansão criativa');
+  w.push($('diretor').checked && state.connected
+    ? '✨ prévia antes da Direção Criativa Google; depois de gerar, este painel mostra o prompt exato enviado'
+    : '↳ direção determinística local da Tipó; o texto pode permanecer em pt-BR');
   $('pvWarn').innerHTML = w.join('<br>');
 }
 
@@ -3893,6 +3931,27 @@ $('keyEye').addEventListener('click', () => {
 });
 $('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') connect(false); });
 $('imageProvider').addEventListener('change', e => setImageProvider(e.target.value));
+$('providerAction').addEventListener('click', () => {
+  if (currentProvider() === 'higgsfield') {
+    connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
+    return;
+  }
+  $('keyPop').classList.add('open');
+  if (key()) connect(false);
+});
+$('generationRecovery').addEventListener('click', () => {
+  $('genStatus').textContent = '';
+  $('generationRecovery').hidden = true;
+  if (currentProvider() === 'higgsfield') {
+    connectHiggsfield(false).catch(error => {
+      $('genStatus').textContent = `Higgsfield: ${error.message || 'não consegui reconectar'}`;
+      $('generationRecovery').hidden = false;
+    });
+  } else {
+    $('keyPop').classList.add('open');
+    if (key()) connect(false);
+  }
+});
 $('model').addEventListener('change', syncProviderConstraints);
 $('imgSize').addEventListener('change', syncProviderHint);
 $('genBtn').addEventListener('click', revelar);

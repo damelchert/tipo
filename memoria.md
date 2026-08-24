@@ -1636,3 +1636,15 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - **Compatibilidade de rede local:** `HiggsfieldBridgeAdapter` marca `127.0.0.1` como `targetAddressSpace: loopback` (não `local`, que o Chrome rejeita por mismatch); o OPTIONS do bridge devolve `Access-Control-Allow-Private-Network: true` somente depois da allowlist de origem. A UI explica como liberar “Acesso à rede local” ou iniciar `node higgsfield-bridge.mjs`, em vez de exibir apenas “não consegui alcançar”.
 - **UX de conexão:** todas as ferramentas exibem um status Higgsfield próprio e tentam parear ao serem abertas; quando conectado, mostram plano/saldo e ocultam o botão redundante. O popover de providers continua disponível para diagnóstico manual.
 - **Validação:** oito suítes passaram, incluindo drop da galeria nas sete ferramentas, pareamento único reutilizado, preflight privado, CORS/allowlists, providers Google/Vertex/Higgsfield, prompts, grid, inspector e mobile. Bridge real reiniciado; nenhuma geração nem consumo de créditos.
+
+---
+
+## 2026-08-24
+
+### Fotograma — Higgsfield standalone, fallback local e Create simplificado
+- **Causa da geração quebrada nos dois caminhos:** o Create tratava o Google como dependência obrigatória mesmo com Higgsfield selecionado e sempre passava pelo Diretor/tradutor antes do backend final. Assim, uma chave Vertex ausente/instável bloqueava também um bridge Higgsfield saudável.
+- **Desacoplamento:** `providerReady()` agora valida somente o motor final selecionado. Higgsfield conectado gera sem chave Google e sem qualquer request Google; se Google estiver disponível, continua enriquecendo direção e classificando referências Auto como assistência opcional.
+- **Disponibilidade:** resposta vazia/inválida ou falha do Diretor não interrompe mais Google/Vertex nem Higgsfield. A cena passa por limpeza local determinística e recebe normalmente a gramática visual, os locks e as regras físicas da Tipó. Anti-injection continua antes da fila.
+- **Vertex:** a primeira chamada de imagem usa `responseModalities: [TEXT, IMAGE]`, compatível com a documentação atual, preservando `imageConfig`/2K/4K e chave exclusivamente em `x-goog-api-key`.
+- **UI/UX:** removidos da superfície os presets Escala do plano e Ponto de vista; composição explícita na cena/Ficha/ref continua válida e takes legados permanecem reproduzíveis. Create virou um fluxo curto com Motor da imagem agrupado, Direção avançada recolhida, aspect ratios compactos e dock de geração menor com requisito/recuperação contextual.
+- **Validação:** oito suítes Playwright/bridge passaram. Testes novos provam Higgsfield standalone com zero chamadas Google, Vertex sem tentativa IMAGE-only, ausência dos presets e estados de UI acessíveis. Health real: Creator conectado, saldo 1255,87, seis modelos; contrato do `generate create` conferido via `--help`. Nenhuma geração real foi feita e nenhum crédito foi consumido.

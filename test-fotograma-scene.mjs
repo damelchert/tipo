@@ -62,7 +62,7 @@ check('prompt autoral entra na íntegra', p.includes('five separate knitted toes
 check('low hero do seletor se cala', !p.includes('low hero angle from near ground height'));
 check('golden hour do seletor se cala', !p.includes('golden hour, low warm raking light'));
 let cap = await page.evaluate(() => document.getElementById('stillCaption').textContent);
-check('legenda mostra "ponto de vista do texto"', cap.includes('ponto de vista do texto'), `(${cap})`);
+check('legenda enxuta remove os dois metadados de preset', !/ponto de vista|escala do/i.test(cap) && cap.includes('16:9'), `(${cap})`);
 
 // 2) Diretor OFF + cena vaga com framing PT: framing muta, luz do seletor entra
 await page.fill('#scene', 'campanha onírica de gucci, grande angular debaixo');

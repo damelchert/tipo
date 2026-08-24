@@ -754,16 +754,21 @@ try {
     !/[\r\n\t]|```|<\/?[^>]+>|do not be lazy/i.test(snapshotPrompt));
 
   const imageCountBeforeInvalidDirector = imageRequests.length;
+  const takeCountBeforeInvalidDirector = await page.evaluate(() => state.takes.length);
   directorReply = 'ok';
   await page.evaluate(() => {
     document.getElementById('diretor').checked = false;
-    document.getElementById('scene').value = 'texto cru que não pode vazar para o modelo';
+    document.getElementById('scene').value = 'uma cena local segura em um galpão de concreto';
   });
   await page.click('#genBtn');
-  await page.waitForFunction(() => /texto cru não foi enviado/i.test(document.getElementById('genStatus').textContent));
-  const failedClosed = await page.evaluate(() => document.getElementById('genStatus').textContent);
-  check('tradutor inválido falha fechado antes do modelo de imagem',
-    imageRequests.length === imageCountBeforeInvalidDirector && /texto cru não foi enviado/i.test(failedClosed));
+  await page.waitForFunction(before => state.takes.length > before && !busy, takeCountBeforeInvalidDirector);
+  const localFallback = await page.evaluate(() => ({ prompt: state.lastPrompt, error: document.getElementById('genStatus').textContent }));
+  check('Diretor inválido cai na montagem local e não bloqueia o modelo de imagem',
+    imageRequests.length > imageCountBeforeInvalidDirector
+      && /uma cena local segura em um galpão de concreto/i.test(localFallback.prompt)
+      && /Physical realism:/.test(localFallback.prompt)
+      && !localFallback.error,
+    JSON.stringify({ delta: imageRequests.length - imageCountBeforeInvalidDirector, prompt: localFallback.prompt.slice(0, 120), error: localFallback.error }));
 
   // 12. Mobile: disclosures próprios não entram em conflito com o colapso
   // genérico, e o botão de remover referência mantém alvo tátil de 44 px.

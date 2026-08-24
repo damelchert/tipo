@@ -25,6 +25,7 @@ const check = (name, ok, detail = '') => {
 
 let bridgeGenerations = 0;
 let googleImageGenerations = 0;
+let googleTextGenerations = 0;
 let bridgeFailure = false;
 const bridgeBodies = [];
 const unexpectedExternal = [];
@@ -80,6 +81,7 @@ await context.route('**/*', async route => {
       googleImageGenerations++;
       return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Google image should not be called' } }) });
     }
+    googleTextGenerations++;
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -154,6 +156,20 @@ await page.click('#genBtn');
 await page.waitForFunction(() => !busy && document.getElementById('genStatus').textContent.includes('Higgsfield'), null, { timeout: 10_000 });
 check('falha paga não cai silenciosamente no Google', bridgeGenerations === 2 && googleImageGenerations === 0, `bridge=${bridgeGenerations}, googleImage=${googleImageGenerations}`);
 check('erro pago identifica o provedor correto', /Higgsfield/.test(await page.locator('#genStatus').textContent()));
+
+// O CLI precisa funcionar sozinho. Antes deste teste, o Create ficava
+// desabilitado sem uma chave Google e ainda chamava o Diretor do Google.
+bridgeFailure = false;
+const googleCallsBeforeStandalone = googleTextGenerations + googleImageGenerations;
+await page.evaluate(() => forgetKey());
+await page.fill('#scene', 'uma casa modernista isolada na mata depois da chuva');
+check('Higgsfield fica pronto sem chave Google', await page.locator('#genBtn').isEnabled());
+await page.click('#genBtn');
+await page.waitForFunction(() => state.takes.length >= 2 && !busy, null, { timeout: 10_000 });
+const standaloneRequest = bridgeBodies[2] || {};
+check('Higgsfield standalone não chama texto nem imagem do Google', googleTextGenerations + googleImageGenerations === googleCallsBeforeStandalone);
+check('Higgsfield standalone envia a cena ao CLI com a direção determinística', /casa modernista isolada na mata depois da chuva/i.test(standaloneRequest.prompt || '') && /Physical realism:/.test(standaloneRequest.prompt || ''));
+check('Higgsfield standalone conclui sem erro de geração', !(await page.locator('#genStatus').textContent()));
 await page.setViewportSize({ width: 320, height: 700 });
 await page.evaluate(() => document.getElementById('keyPop').classList.add('open'));
 const mobilePopover = await page.evaluate(() => {

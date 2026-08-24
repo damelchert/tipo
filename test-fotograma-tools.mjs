@@ -81,6 +81,9 @@ await page.evaluate(() => document.getElementById('keyPop').classList.remove('op
 const railLabels = await page.locator('[data-fotograma-tool]').allTextContents();
 check('sidebar expõe o bloco funcional Create, Cast, Product e Sheets', railLabels.length === 8 && ['Create', 'Cast', 'Product', 'Sheets'].every(label => railLabels.some(text => text.includes(label))) && !railLabels.some(text => /Upscale/.test(text)), railLabels.join(' | '));
 check('Depth Map fica acessível como ferramenta irmã', await page.locator('a[href="depthmap.html"]').count() === 1);
+check('Create removeu os presets redundantes de escala e ponto de vista', await page.locator('#secScale, #secFraming, #scaleChips, #framingChips').count() === 0);
+check('Create expõe o motor e recolhe a direção técnica avançada', await page.locator('#engineGroup').isVisible() && await page.locator('#advancedDirection').isVisible() && !(await page.locator('#advancedDirection').getAttribute('open')));
+check('status de geração é legível e anunciado por acessibilidade', await page.locator('#genStatus').getAttribute('role') === 'alert' && await page.locator('#genRequirement').count() === 1);
 
 await page.click('[data-fotograma-tool="multiAngle"]');
 check('troca visual realmente substitui o painel antigo', await page.locator('#createControls').isHidden() && await page.locator('#utilityControls').isVisible());
