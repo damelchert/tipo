@@ -30,7 +30,13 @@ const configuredOrigins = String(process.env.TIPO_HIGGSFIELD_ORIGINS || '')
   .split(',').map(value => value.trim()).filter(Boolean);
 const ALLOWED_ORIGINS = new Set([...DEFAULT_ORIGINS, ...configuredOrigins]);
 
-let activeJob = null;
+const MAX_ACTIVE_GENERATIONS = 4;
+const activeGenerations = new Map();
+let activeTool = null;
+
+function bridgeBusy() {
+  return !!activeTool || activeGenerations.size > 0;
+}
 
 function inputError(message, status = 400) {
   const error = new Error(message);
@@ -280,15 +286,22 @@ async function downloadOutput(url) {
 }
 
 async function generate(body) {
-  if (activeJob) {
-    const error = new Error('Já existe um job Higgsfield em processamento neste bridge');
+  const input = validateGenerate(body);
+  if (activeTool) {
+    const error = new Error('Uma ferramenta Higgsfield está em processamento neste bridge');
     error.status = 409;
     throw error;
   }
-  const input = validateGenerate(body);
-  const directory = await mkdtemp(join(tmpdir(), 'tipo-higgsfield-'));
-  activeJob = { model: input.model.name, startedAt: Date.now() };
+  if (activeGenerations.size >= MAX_ACTIVE_GENERATIONS) {
+    const error = new Error(`O bridge já está processando ${MAX_ACTIVE_GENERATIONS} gerações Higgsfield`);
+    error.status = 409;
+    throw error;
+  }
+  const slot = Symbol(input.model.name);
+  activeGenerations.set(slot, { model: input.model.name, startedAt: Date.now() });
+  let directory = null;
   try {
+    directory = await mkdtemp(join(tmpdir(), 'tipo-higgsfield-'));
     const files = await materializeImages(input.images, directory);
     const result = await run(CLI, cliArgs(input, files), { cwd: directory });
     const parsed = parseCliJson(result.stdout);
@@ -307,21 +320,22 @@ async function generate(body) {
       image,
     };
   } finally {
-    activeJob = null;
-    await rm(directory, { recursive: true, force: true });
+    activeGenerations.delete(slot);
+    if (directory) await rm(directory, { recursive: true, force: true });
   }
 }
 
 async function runTool(body) {
-  if (activeJob) {
+  const input = validateTool(body);
+  if (bridgeBusy()) {
     const error = new Error('Já existe um job Higgsfield em processamento neste bridge');
     error.status = 409;
     throw error;
   }
-  const input = validateTool(body);
-  const directory = await mkdtemp(join(tmpdir(), 'tipo-higgsfield-tool-'));
-  activeJob = { model: input.tool, startedAt: Date.now() };
+  activeTool = { model: input.tool, startedAt: Date.now() };
+  let directory = null;
   try {
+    directory = await mkdtemp(join(tmpdir(), 'tipo-higgsfield-tool-'));
     const files = await materializeImages(input.images, directory);
     const result = await run(CLI, toolCliArgs(input, files[0]), { cwd: directory });
     const parsed = parseCliJson(result.stdout);
@@ -340,8 +354,8 @@ async function runTool(body) {
       image,
     };
   } finally {
-    activeJob = null;
-    await rm(directory, { recursive: true, force: true });
+    activeTool = null;
+    if (directory) await rm(directory, { recursive: true, force: true });
   }
 }
 
@@ -373,7 +387,9 @@ export function createHiggsfieldBridgeServer() {
         return sendJson(req, res, 200, {
           ok: true,
           ...account,
-          busy: !!activeJob,
+          busy: bridgeBusy(),
+          activeGenerations: activeGenerations.size,
+          maxParallelGenerations: MAX_ACTIVE_GENERATIONS,
           models: HIGGSFIELD_MODELS.map(({ name, label, cost, costs }) => ({ name, label, cost, costs: costs || null })),
         });
       }

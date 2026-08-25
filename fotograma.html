@@ -44,7 +44,7 @@
   .create-card-copy { color: var(--text-4); font: 9px/1.35 var(--font-ui); text-align: right; }
   #engineGroupBody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 10px; }
   #engineGroupBody .section { min-width: 0; margin: 0; padding: 0; border: 0; }
-  #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection { grid-column: 1 / -1; }
+  #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection, #engineGroupBody #batchSection { grid-column: 1 / -1; }
   #engineGroupBody #arChips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
   #engineGroupBody #arChips .fchip { min-width: 0; min-height: 34px; padding: 6px 2px; font-size: 10.5px; letter-spacing: .25px; text-align: center; }
   #advancedDirection { overflow: hidden; border: 1px solid var(--border-2); border-radius: 8px; background: color-mix(in srgb, var(--bg-2) 38%, transparent); }
@@ -63,6 +63,15 @@
   #genStatus:empty, #generationRecovery[hidden] { display: none; }
   #generationRecovery { width: 100%; min-height: 38px; margin-top: 8px; }
   #lastDownloadRow { display: none; }
+  .scene-counter-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -4px; color: var(--text-5); font: 9px/1.4 var(--font-ui); }
+  #sceneCount { flex: none; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  #sceneCount.near { color: var(--accent-warm, #D4A040); }
+  #sceneCount.over { color: var(--red, #CC4840); }
+  .batch-picker { display: grid; grid-template-columns: 1fr 34px; align-items: center; gap: 10px; }
+  #generationCount { width: 100%; }
+  #generationCountValue { min-width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border-2); border-radius: 7px; color: var(--accent); background: var(--bg-1); font: 700 14px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+  #batchHint { margin-top: 7px; }
+  #batchSection[hidden] { display: none !important; }
   #canvasWrap { --gallery-cols: 3; flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; display: block; background: var(--bg-0); padding: 0; }
 
   /* workspace = galeria; a imagem-demo existe apenas como estado interno */
@@ -251,7 +260,7 @@
     #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
     #utilityBridgeConnect { min-height: 44px; }
     #engineGroupBody { grid-template-columns: 1fr; }
-    #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection { grid-column: auto; }
+    #engineGroupBody #secProvider, #engineGroupBody #secModel, #engineGroupBody #secAspect, #engineGroupBody #resSection, #engineGroupBody #batchSection { grid-column: auto; }
     #engineGroupBody #arChips { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     #secGenerate { bottom: -22px; margin-right: -22px !important; margin-left: -22px !important; padding-right: 22px; padding-left: 22px; }
     #advancedDirection > summary { min-height: 52px; }
@@ -287,10 +296,21 @@
 
   /* revelação: tile pendente NA GALERIA — nada bloqueia a página */
   .take.pending { min-width: 0; position: relative; display: flex; flex-direction: column; gap: 10px; }
-  .take.pending .take-media { min-height: 190px; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--accent); overflow: hidden; }
-  .take.pending .take-media::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 40%, transparent) 50%, transparent 70%); animation: devSweep 1.4s ease-in-out infinite; }
+  .take.pending .take-media { min-height: 190px; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border-2)); overflow: hidden; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 44%), var(--bg-2); }
+  .take.pending .take-media::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 22%, transparent) 50%, transparent 70%); animation: devSweep 1.8s ease-in-out infinite; }
+  .take.pending[data-status="queued"] .take-media { border-style: dashed; border-color: var(--border-3, var(--border-2)); }
+  .take.pending[data-status="queued"] .take-media::before { animation: none; opacity: .3; }
   @keyframes devSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  .pending-msg { position: relative; z-index: 1; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); font-family: var(--font-ui); padding: 18px; text-align: center; line-height: 1.45; }
+  .pending-stage { position: relative; z-index: 1; width: min(82%, 410px); display: flex; flex-direction: column; align-items: center; padding: 18px; text-align: center; font-family: var(--font-ui); }
+  .pending-spinner { width: 38px; height: 38px; margin-bottom: 16px; border: 4px solid color-mix(in srgb, var(--accent) 16%, var(--border-2)); border-top-color: var(--accent); border-radius: 50%; animation: pendingSpin .95s linear infinite; }
+  .take.pending[data-status="queued"] .pending-spinner { animation: none; border-color: var(--border-2); border-top-color: var(--text-4); opacity: .65; }
+  @keyframes pendingSpin { to { transform: rotate(360deg); } }
+  .pending-msg { font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text-2); line-height: 1.45; }
+  .pending-progress-track { width: 100%; height: 5px; margin-top: 17px; overflow: hidden; border-radius: 99px; background: var(--border-1); }
+  .pending-progress-bar { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #a25385 55%, var(--accent)); transition: width .6s ease; }
+  .pending-progress-meta { width: 100%; display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--text-4); font: 9px/1.35 var(--font-ui); font-variant-numeric: tabular-nums; }
+  .pending-progress-meta span:last-child { text-align: right; }
+  .pending-batch { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -325,6 +345,7 @@
   <div class="section" id="secScene" data-mobile-open>
     <div class="section-title">Cena</div>
     <textarea id="scene" placeholder="descreva simples: &ldquo;padaria antiga lotada de manh&atilde;&rdquo; &mdash; o Fotograma dirige o resto" spellcheck="false"></textarea>
+    <div class="scene-counter-row"><span>briefs longos permanecem completos</span><span id="sceneCount">0 / 12000</span></div>
     <label class="toggle-label"><input type="checkbox" id="diretor" checked> Dire&ccedil;&atilde;o criativa &#10024; <span style="font-size:9px;color:var(--text-5);">(com Google conectado, amplia briefs esparsos; sem ele, a dire&ccedil;&atilde;o da Tip&oacute; continua localmente)</span></label>
   </div>
 
@@ -375,6 +396,15 @@
       <option value="2K" selected>2K</option>
       <option value="4K">4K</option>
     </select>
+  </div>
+
+  <div class="section" id="batchSection" hidden>
+    <div class="section-title">Imagens por gera&ccedil;&atilde;o</div>
+    <div class="batch-picker">
+      <input type="range" id="generationCount" min="1" max="4" step="1" value="1" data-nobhv aria-label="Quantidade de imagens Higgsfield">
+      <output id="generationCountValue" for="generationCount">1</output>
+    </div>
+    <div class="provider-hint" id="batchHint">1 imagem por vez.</div>
   </div>
 
   <div class="section" id="secProvider">
@@ -972,6 +1002,9 @@ if (!TOOL_API) throw new Error('Camada de ferramentas do Fotograma não carregou
 const HIGGSFIELD_MODELS = PROVIDER_API.HIGGSFIELD_MODELS;
 const PROVIDER_LS = 'tipo-fotograma-image-provider';
 const HIGGS_BRIDGE_LS = 'tipo-higgsfield-bridge-url';
+const GENERATION_COUNT_LS = 'tipo-fotograma-generation-count';
+const GENERATION_TIMES_LS = 'tipo-fotograma-generation-times-v1';
+const MAX_SCENE_CHARS = 12_000;
 const imageRouter = new PROVIDER_API.ProviderRouter();
 
 // ---- estado ----
@@ -992,7 +1025,8 @@ let state = {
   lastBlob: null,
   lastPrompt: '',
   takes: [], // { url, caption }
-  pending: [], // { id, msg } — tiles de revelação na galeria
+  pending: [], // { id, msg, status, startedAt, expectedMs, batchIndex, batchTotal }
+  generationCount: Math.min(4, Math.max(1, Number(localStorage.getItem(GENERATION_COUNT_LS)) || 1)),
   moodStrength: 100, // potência da emulsão (0-100; ≥50 anula os seletores)
   refs: [],  // { dataUrl, mime } — referências de cena (máx 4)
   mood: null, // { full: {dataUrl,mime}, crop: {dataUrl,mime}|null, desc: string|null, img: Image }
@@ -1003,6 +1037,7 @@ const key = () => $('apiKey').value.trim();
 
 function currentProvider() { return state.imageProvider || 'google'; }
 function currentHiggsModel() { return PROVIDER_API.modelByName($('model') && $('model').value); }
+function selectedGenerationCount() { return currentProvider() === 'higgsfield' ? state.generationCount : 1; }
 function providerReady() {
   // Cada motor final é autônomo. O Google pode enriquecer a direção de um job
   // Higgsfield quando estiver conectado, mas nunca deve bloquear o CLI.
@@ -1080,8 +1115,31 @@ function syncProviderConstraints() {
     state.ar = ratios.includes('16:9') ? '16:9' : ratios[0];
     document.querySelectorAll('#arChips .fchip').forEach(chip => chip.classList.toggle('on', chip.dataset.ar === state.ar));
   }
+  if ($('batchSection')) $('batchSection').hidden = !isHiggs;
   syncResRow();
   syncProviderHint();
+}
+
+function syncBatchControl() {
+  const count = Math.min(4, Math.max(1, Number($('generationCount') && $('generationCount').value) || state.generationCount || 1));
+  state.generationCount = count;
+  if ($('generationCount')) $('generationCount').value = String(count);
+  if ($('generationCountValue')) $('generationCountValue').textContent = String(count);
+  localStorage.setItem(GENERATION_COUNT_LS, String(count));
+  const config = currentHiggsModel();
+  const cost = config ? PROVIDER_API.estimateCost(config, $('imgSize').value) : null;
+  if ($('batchHint')) $('batchHint').textContent = cost == null
+    ? `${count} ${count === 1 ? 'imagem' : 'imagens'} por geração.`
+    : `${count} ${count === 1 ? 'imagem' : 'imagens'} · ~${cost * count} crédito${cost * count === 1 ? '' : 's'} no total · jobs independentes`;
+  syncQueueUI();
+}
+
+function syncSceneCount() {
+  const count = $('scene').value.length;
+  const output = $('sceneCount');
+  output.textContent = `${count.toLocaleString('pt-BR')} / ${MAX_SCENE_CHARS.toLocaleString('pt-BR').replace('.', '')}`;
+  output.classList.toggle('near', count > MAX_SCENE_CHARS * .85 && count <= MAX_SCENE_CHARS);
+  output.classList.toggle('over', count > MAX_SCENE_CHARS);
 }
 
 function syncProviderHint() {
@@ -1098,9 +1156,13 @@ function syncProviderHint() {
     const balance = state.higgsAccount && Number.isFinite(state.higgsAccount.credits)
       ? ` · saldo ${state.higgsAccount.credits.toFixed(2)}` : '';
     const cost = config ? PROVIDER_API.estimateCost(config, $('imgSize').value) : null;
+    const count = selectedGenerationCount();
     hint.textContent = config
-      ? `${config.label} · custo estimado ~${cost} crédito${cost === 1 ? '' : 's'}${balance}. Sem fallback pago automático.`
+      ? `${config.label} · ~${cost} crédito${cost === 1 ? '' : 's'} por imagem${count > 1 ? ` · ~${cost * count} no lote` : ''}${balance}. Sem fallback pago automático.`
       : `Conecte o bridge local${balance}.`;
+    if ($('batchHint')) $('batchHint').textContent = config
+      ? `${count} ${count === 1 ? 'imagem' : 'imagens'} · ~${cost * count} crédito${cost * count === 1 ? '' : 's'} no total · jobs independentes`
+      : `${count} ${count === 1 ? 'imagem' : 'imagens'} por geração.`;
     if (action) {
       action.hidden = !!state.higgsConnected;
       action.textContent = 'Conectar Higgsfield CLI';
@@ -1827,7 +1889,7 @@ function saneExpansion(txt) {
 function localSceneForImage(txt) {
   const scene = cleanPromptText(String(txt || '').replace(/<\/?(?:user-input|reference-briefs)>/gi, ''));
   if (scene.length < 3) throw new Error('A cena ficou vazia depois da limpeza. Revise o texto e tente novamente.');
-  if (scene.length > 1800) throw new Error('A cena está longa demais. Resuma para até 1.800 caracteres.');
+  if (scene.length > MAX_SCENE_CHARS) throw new Error(`A cena ultrapassou ${MAX_SCENE_CHARS.toLocaleString('pt-BR')} caracteres. Reduza apenas o excedente para preservar a direção completa.`);
   return scene;
 }
 
@@ -2104,9 +2166,12 @@ async function diretor(subject, job) {
 }
 
 // ---- geração ----
-function devMsg(m) {
-  const el = document.querySelector(`.take.pending[data-pid="${currentPendingId}"] .pending-msg`);
-  if (el) el.textContent = m;
+function devMsg(message, jobOrId) {
+  const id = typeof jobOrId === 'string' ? jobOrId : jobOrId && jobOrId.pendingId;
+  const pending = state.pending.find(item => item.id === id);
+  if (pending) pending.msg = message;
+  const el = id && document.querySelector(`.take.pending[data-pid="${id}"] .pending-msg`);
+  if (el) el.textContent = message;
 }
 
 /** garante ref ≥2048 no lado maior (upscale suave) — âncora de resolução
@@ -2245,7 +2310,7 @@ async function generateGoogleImage(scene, rawScene, job) {
       if (![403, 404, 429].includes(e.status)) throw e;
       const next = order[i + 1];
       if (next) {
-        devMsg(`sem cota — revelando no ${labelOf(next).toLowerCase()}…`);
+        devMsg(`sem cota — revelando no ${labelOf(next).toLowerCase()}…`, job);
         TipoUI.showToast(`Modelo sem cota nessa chave — tentando ${labelOf(next)}`);
       }
     }
@@ -2315,11 +2380,92 @@ function generateImage(scene, rawScene, job) {
   return imageRouter.generate(job.provider || 'google', { scene, rawScene, job });
 }
 
-// ---- FILA DE REVELAÇÃO: até 4 aguardando, processa 1 por vez ----
+// ---- LOTE DE REVELAÇÃO: até 4 jobs Higgsfield independentes em paralelo ----
 const QUEUE_MAX = 4;
 let queue = [];
 let busy = false;
-let currentPendingId = null;
+let activeJobs = 0;
+let pendingTicker = null;
+
+function generationTimes() {
+  try { return JSON.parse(localStorage.getItem(GENERATION_TIMES_LS) || '{}') || {}; }
+  catch (error) { return {}; }
+}
+
+function expectedGenerationMs(model) {
+  const measured = Number(generationTimes()[model]);
+  return Number.isFinite(measured) ? Math.min(10 * 60_000, Math.max(20_000, measured)) : 120_000;
+}
+
+function rememberGenerationTime(model, durationMs) {
+  if (!model || !Number.isFinite(durationMs) || durationMs < 1_000) return;
+  const times = generationTimes();
+  const previous = Number(times[model]);
+  times[model] = Math.round(previous ? previous * .65 + durationMs * .35 : durationMs);
+  localStorage.setItem(GENERATION_TIMES_LS, JSON.stringify(times));
+}
+
+function formatDuration(ms) {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest ? `${minutes}m ${rest}s` : `${minutes}m`;
+}
+
+function pendingProgress(pending, now = Date.now()) {
+  if (pending.status !== 'running' || !pending.startedAt) return { percent: 0, time: 'aguardando início' };
+  const elapsed = Math.max(0, now - pending.startedAt);
+  const expected = pending.expectedMs || 120_000;
+  const percent = Math.min(92, Math.max(3, Math.round((elapsed / expected) * 90)));
+  const remaining = expected - elapsed;
+  return {
+    percent,
+    time: remaining > 0 ? `~${formatDuration(remaining)} restante` : `finalizando · ${formatDuration(elapsed)} decorridos`,
+  };
+}
+
+function updatePendingProgress() {
+  const now = Date.now();
+  state.pending.forEach(pending => {
+    const card = document.querySelector(`.take.pending[data-pid="${pending.id}"]`);
+    if (!card) return;
+    const progress = pendingProgress(pending, now);
+    const bar = card.querySelector('.pending-progress-bar');
+    const percent = card.querySelector('.pending-percent');
+    const time = card.querySelector('.pending-time');
+    if (bar) bar.style.width = `${progress.percent}%`;
+    if (percent) percent.textContent = pending.status === 'running' ? `${progress.percent}% estimado` : 'na fila';
+    if (time) time.textContent = progress.time;
+  });
+  if (!state.pending.length && pendingTicker) {
+    clearInterval(pendingTicker);
+    pendingTicker = null;
+  }
+}
+
+function ensurePendingTicker() {
+  updatePendingProgress();
+  if (state.pending.length && !pendingTicker) pendingTicker = setInterval(updatePendingProgress, 1000);
+}
+
+function setPendingRunning(job) {
+  const pending = state.pending.find(item => item.id === job.pendingId);
+  if (!pending) return;
+  pending.status = 'running';
+  pending.startedAt = Date.now();
+  pending.expectedMs = expectedGenerationMs(job.model);
+  pending.msg = job.batchTotal > 1 ? `revelando ${job.batchIndex}/${job.batchTotal}` : 'revelando fotograma';
+  const card = document.querySelector(`.take.pending[data-pid="${pending.id}"]`);
+  if (card) {
+    card.dataset.status = 'running';
+    const message = card.querySelector('.pending-msg');
+    const prompt = card.querySelector('.take-prompt');
+    if (message) message.textContent = pending.msg;
+    if (prompt) prompt.textContent = 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.';
+  }
+  updatePendingProgress();
+}
 
 function snapshotParams() {
   const refs = state.refs.map(r => ({
@@ -2347,6 +2493,7 @@ function snapshotParams() {
 
 function applyParams(pr) {
   $('scene').value = pr.scene;
+  syncSceneCount();
   setImageProvider(pr.provider || 'google', pr.model);
   state.genero = pr.genero || 'geral';
   $('genero').value = state.genero;
@@ -2389,15 +2536,16 @@ function syncQueueUI() {
     providerButton.classList.toggle('pulse', !ready);
     if (ready) providerButton.classList.remove('err');
   }
+  const count = selectedGenerationCount();
   $('genBtn').textContent = busy
-    ? (n ? `Revelando… (${n} na fila)` : 'Revelando…')
-    : 'Revelar Fotograma';
-  $('genBtn').disabled = !ready || (busy && n >= QUEUE_MAX);
+    ? `Revelando ${activeJobs + n} fotograma${activeJobs + n === 1 ? '' : 's'}…`
+    : (count > 1 ? `Revelar ${count} fotogramas` : 'Revelar Fotograma');
+  $('genBtn').disabled = !ready || busy;
   const requirement = $('genRequirement');
   requirement.classList.toggle('ready', ready);
-  if (busy) requirement.textContent = n ? `${n} job${n === 1 ? '' : 's'} aguardando; você pode continuar ajustando o painel.` : 'Processando; o resultado entra automaticamente na galeria.';
+  if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} aguardando` : ''}. Os resultados entram automaticamente na galeria.`;
   else if (ready) requirement.textContent = currentProvider() === 'higgsfield'
-    ? 'Higgsfield conectado. Google é opcional para a direção criativa.'
+    ? `${count} ${count === 1 ? 'saída' : 'saídas'} por clique. Google é opcional para a direção criativa.`
     : `Google conectado${state.backend === 'vertex' ? ' via Vertex' : ''}. Pronto para gerar.`;
   else requirement.textContent = currentProvider() === 'higgsfield'
     ? 'Conecte o bridge local do Higgsfield para liberar a geração.'
@@ -2410,7 +2558,13 @@ function revelar() {
   if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
   if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
   if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast('Ligue e teste o Higgsfield bridge — 🔑'); $('keyPop').classList.add('open'); return; }
-  if (busy && queue.length >= QUEUE_MAX) { TipoUI.showToast(`Fila cheia (${QUEUE_MAX}) — espera uma revelar`); return; }
+  if (busy) { TipoUI.showToast('Espere o lote atual terminar antes de iniciar outro'); return; }
+  try { localSceneForImage(subject); }
+  catch (error) {
+    $('genStatus').textContent = error.message;
+    TipoUI.showToast(error.message);
+    return;
+  }
   const hintState = applySceneReferenceHint(subject, state.refs);
   if (hintState.changedRefs.length) {
     renderRefs();
@@ -2418,24 +2572,111 @@ function revelar() {
       if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
     }
   }
-  queue.push(snapshotParams());
-  if (busy) TipoUI.showToast(`Na fila — posição ${queue.length}`);
+  const count = Math.min(QUEUE_MAX, selectedGenerationCount());
+  const batchId = `b${Date.now()}-${Math.round(performance.now())}`;
+  const jobs = Array.from({ length: count }, (_, index) => ({
+    ...snapshotParams(),
+    batchId,
+    batchIndex: index + 1,
+    batchTotal: count,
+    pendingId: `${batchId}-${index + 1}`,
+  }));
+  queue.push(...jobs);
+  state.pending.push(...jobs.map(job => ({
+    id: job.pendingId,
+    msg: count > 1 ? `preparando ${job.batchIndex}/${count}` : 'preparando fotograma',
+    status: 'queued',
+    queuedAt: Date.now(),
+    startedAt: 0,
+    expectedMs: expectedGenerationMs(job.model),
+    batchIndex: job.batchIndex,
+    batchTotal: count,
+    model: job.model,
+    ar: job.ar,
+  })));
+  renderGallery(-1);
+  ensurePendingTicker();
   syncQueueUI();
   pump();
 }
 
-async function pump() {
-  if (busy) return;
-  const job = queue.shift();
-  if (!job) { syncQueueUI(); return; }
-  busy = true;
-  syncQueueUI();
-  try {
-    await revealJob(job);
-  } finally {
-    busy = false;
-    pump();
+function pump() {
+  if (!queue.length) { busy = activeJobs > 0; syncQueueUI(); return; }
+  const next = queue[0];
+  const concurrency = next.provider === 'higgsfield' ? QUEUE_MAX : 1;
+  while (queue.length && activeJobs < concurrency && queue[0].provider === next.provider) {
+    const job = queue.shift();
+    activeJobs++;
+    busy = true;
+    setPendingRunning(job);
+    syncQueueUI();
+    revealJob(job).finally(() => {
+      activeJobs--;
+      busy = activeJobs > 0 || queue.length > 0;
+      syncQueueUI();
+      pump();
+    });
   }
+}
+
+const batchPreparations = new Map();
+
+async function prepareJobForGeneration(job) {
+  const canUseGoogleAssist = !!job.googleAssist && !!state.connected && !!key();
+  if (job.mood && !job.mood.desc && canUseGoogleAssist) {
+    devMsg('lendo a emulsão da referência…', job);
+    try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
+  }
+  const jobHintState = applySceneReferenceHint(job.scene, job.refs || []);
+  const needsRefAnalysis = ref => !ref.desc && refIsAuto(ref) && !ref.inferredRole;
+  if (canUseGoogleAssist && job.refs && job.refs.some(needsRefAnalysis)) {
+    devMsg('entendendo a função das referências…', job);
+    for (const ref of job.refs) {
+      if (!needsRefAnalysis(ref)) continue;
+      try { await analisarRef(ref, ref.sceneRoleHint || jobHintState.role); } catch (e) { console.warn('[fotograma] referência:', e.detail || e.message); }
+    }
+  }
+  const unresolved = (job.refs || []).filter(ref => refIsAuto(ref) && !ref.inferredRole);
+  if (unresolved.length) throw new Error(`Não consegui identificar ${unresolved.length} referência${unresolved.length > 1 ? 's' : ''}. Escolha a função de cada uma antes de revelar.`);
+  if (fichaCount(job.ficha) && canUseGoogleAssist) {
+    devMsg('traduzindo a Ficha técnica…', job);
+    try { await normalizeFicha(job); }
+    catch (e) {
+      console.warn('[fotograma] ficha:', e.detail || e.message);
+      throw new Error('Não consegui traduzir a Ficha técnica sem perder valores. Revise os campos e tente novamente.');
+    }
+  }
+
+  let scene = localSceneForImage(job.scene);
+  if (canUseGoogleAssist) {
+    devMsg(job.diretor ? 'diretor decupando a cena…' : 'traduzindo e limpando a cena…', job);
+    try {
+      const expanded = saneExpansion(await diretor(job.scene, job));
+      if (!expanded) throw new Error('resposta vazia, conversacional ou malformada');
+      scene = expanded;
+    } catch (e) {
+      console.warn('[fotograma] diretor:', e.detail || e.message);
+      devMsg('Diretor indisponível — seguindo com a direção local…', job);
+      TipoUI.showToast('Diretor Google indisponível; seguindo com a direção local da Tipó');
+    }
+  } else {
+    devMsg('montando a direção local da Tipó…', job);
+  }
+  return { scene, ficha: job.ficha, refs: job.refs, mood: job.mood };
+}
+
+function sharedBatchPreparation(job) {
+  if (!job.batchId || job.batchTotal <= 1) return prepareJobForGeneration(job);
+  let preparation = batchPreparations.get(job.batchId);
+  if (!preparation) {
+    preparation = prepareJobForGeneration(job);
+    batchPreparations.set(job.batchId, preparation);
+    preparation.then(
+      () => batchPreparations.delete(job.batchId),
+      () => batchPreparations.delete(job.batchId),
+    );
+  }
+  return preparation;
 }
 
 async function revealJob(job) {
@@ -2455,54 +2696,27 @@ async function revealJob(job) {
   };
   $('genStatus').textContent = '';
   $('generationRecovery').hidden = true;
-  const pid = 'p' + Date.now() + '-' + Math.round(performance.now());
-  currentPendingId = pid;
-  state.pending.unshift({ id: pid, msg: 'revelando…' });
-  renderGallery(-1);
+  const pid = job.pendingId || ('p' + Date.now() + '-' + Math.round(performance.now()));
+  if (!state.pending.some(item => item.id === pid)) {
+    state.pending.unshift({ id: pid, msg: 'revelando fotograma', status: 'running', startedAt: Date.now(), expectedMs: expectedGenerationMs(job.model), batchIndex: 1, batchTotal: 1, model: job.model, ar: job.ar });
+    job.pendingId = pid;
+    renderGallery(-1);
+    ensurePendingTicker();
+  }
+  let completed = false;
   try {
-    const canUseGoogleAssist = !!job.googleAssist && !!state.connected && !!key();
-    if (job.mood && !job.mood.desc && canUseGoogleAssist) {
-      devMsg('lendo a emulsão da referência…');
-      try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
-    }
-    const jobHintState = applySceneReferenceHint(job.scene, job.refs || []);
-    const needsRefAnalysis = r => !r.desc && refIsAuto(r) && !r.inferredRole;
-    if (canUseGoogleAssist && job.refs && job.refs.some(needsRefAnalysis)) {
-      devMsg('entendendo a função das referências…');
-      for (const ref of job.refs) {
-        if (!needsRefAnalysis(ref)) continue;
-        try { await analisarRef(ref, ref.sceneRoleHint || jobHintState.role); } catch (e) { console.warn('[fotograma] referência:', e.detail || e.message); }
-      }
-    }
-    const unresolved = (job.refs || []).filter(r => refIsAuto(r) && !r.inferredRole);
-    if (unresolved.length) throw new Error(`Não consegui identificar ${unresolved.length} referência${unresolved.length > 1 ? 's' : ''}. Escolha a função de cada uma antes de revelar.`);
-    if (fichaCount(job.ficha) && canUseGoogleAssist) {
-      devMsg('traduzindo a Ficha técnica…');
-      try { await normalizeFicha(job); }
-      catch (e) {
-        console.warn('[fotograma] ficha:', e.detail || e.message);
-        throw new Error('Não consegui traduzir a Ficha técnica sem perder valores. Revise os campos e tente novamente.');
-      }
-    }
-
-    // O Diretor é um aprimoramento, não um ponto único de falha. Quando a
-    // chave está ausente/instável, a montagem determinística da Tipó segue com
-    // a cena limpa — tanto no Google quanto no Higgsfield.
-    let scene = localSceneForImage(job.scene);
-    if (canUseGoogleAssist) {
-      devMsg(job.diretor ? 'diretor decupando a cena…' : 'traduzindo e limpando a cena…');
-      try {
-        const expanded = saneExpansion(await diretor(job.scene, job));
-        if (!expanded) throw new Error('resposta vazia, conversacional ou malformada');
-        scene = expanded;
-      } catch (e) {
-        console.warn('[fotograma] diretor:', e.detail || e.message);
-        devMsg('Diretor indisponível — seguindo com a direção local…');
-        TipoUI.showToast('Diretor Google indisponível; seguindo com a direção local da Tipó');
-      }
-    } else {
-      devMsg('montando a direção local da Tipó…');
-    }
+    // A preparação (Diretor, visão e Ficha) é compartilhada pelo lote. Só a
+    // geração final multiplica jobs/créditos; todas as saídas recebem a mesma
+    // direção consolidada e nenhuma análise Google é repetida quatro vezes.
+    const prepared = await sharedBatchPreparation(job);
+    const scene = prepared.scene;
+    job.ficha = { ...(prepared.ficha || {}) };
+    job.refs = (prepared.refs || []).map(ref => ({ ...ref, roles: [...manualRefRoleIds(ref)] }));
+    job.mood = prepared.mood ? {
+      ...prepared.mood,
+      full: prepared.mood.full ? { ...prepared.mood.full } : null,
+      crop: prepared.mood.crop ? { ...prepared.mood.crop } : null,
+    } : null;
 
     const previewSpec = resolvePrompt(scene, job.scene, job, job.model);
     if (job.mood) TipoUI.showToast('Emulsão assumiu a paleta — seletor de cor em espera');
@@ -2511,7 +2725,7 @@ async function revealJob(job) {
       TipoUI.showToast(`Teu texto assumiu ${o} — seletor em espera`);
     }
 
-    devMsg('revelando o fotograma…');
+    devMsg('revelando o fotograma…', job);
     state.lastCfgNote = '';
     // a API às vezes derruba/ignora o imageSize — REPUXA sozinho até vir
     // na resolução pedida (padrão da casa: nunca entregar abaixo de 2K
@@ -2535,7 +2749,7 @@ async function revealJob(job) {
       } catch (e) { break; }
       if (Math.max(gotW, gotH) >= asked * 0.9) break;
       if (attempt < maxAttempts) {
-        devMsg(`saiu ${gotW}×${gotH} — repuxando em ${job.imgSize} (${attempt + 1}/${maxAttempts})…`);
+        devMsg(`saiu ${gotW}×${gotH} — repuxando em ${job.imgSize} (${attempt + 1}/${maxAttempts})…`, job);
         state.lastCfgNote = '';
       }
     }
@@ -2558,6 +2772,7 @@ async function revealJob(job) {
     // params enxutos pro take/IDB: sem os dataURLs de refs/emulsão (peso)
     const slim = { ...originalJob, prompt: result.prompt, generatedModel: result.model }; delete slim.refs; delete slim.mood; delete slim.modelOptions;
     addTake(url, cap, blob, slim);
+    completed = true;
     TipoUI.showToast('Fotograma revelado');
   } catch (e) {
     console.error('[fotograma]', e.detail || e.message);
@@ -2568,9 +2783,11 @@ async function revealJob(job) {
     $('generationRecovery').hidden = false;
     $('generationRecovery').textContent = job.provider === 'higgsfield' ? 'Reconectar Higgsfield' : 'Revisar conexão Google';
   } finally {
+    const pending = state.pending.find(item => item.id === pid);
+    if (completed && pending && pending.startedAt) rememberGenerationTime(job.model, Date.now() - pending.startedAt);
     state.pending = state.pending.filter(x => x.id !== pid);
-    currentPendingId = null;
     renderGallery(state.pending.length ? -1 : 0);
+    ensurePendingTicker();
     syncQueueUI();
   }
 }
@@ -2836,9 +3053,10 @@ function renderGallery(selIdx = -1) {
       return [take.caption, params.prompt, params.scene, params.utilityTool, params.model]
         .filter(Boolean).join(' ').toLowerCase().includes(normalizedQuery);
     });
+  const pendingLabel = state.pending.length ? ` · ${state.pending.length} gerando` : '';
   $('galleryCount').textContent = normalizedQuery
-    ? `${visibleTakes.length} de ${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}`
-    : `${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}`;
+    ? `${visibleTakes.length} de ${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}${pendingLabel}`
+    : `${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}${pendingLabel}`;
   $('galleryEmpty').hidden = state.pending.length > 0 || visibleTakes.length > 0;
   $('galleryEmpty').querySelector('.gallery-empty-title').textContent = normalizedQuery ? 'Nenhum resultado encontrado' : 'Sua galeria começa aqui';
   $('galleryEmpty').querySelector('.gallery-empty-copy').textContent = normalizedQuery
@@ -2848,7 +3066,19 @@ function renderGallery(selIdx = -1) {
     const d = document.createElement('div');
     d.className = 'take pending';
     d.dataset.pid = pn.id;
-    d.innerHTML = `<div class="take-media"><div class="pending-msg">${pn.msg}</div></div><div class="take-meta"><div class="take-caption">Revelando fotograma</div><div class="take-prompt">O resultado entra automaticamente neste grid.</div></div>`;
+    d.dataset.status = pn.status || 'queued';
+    d.setAttribute('aria-live', 'polite');
+    d.innerHTML = `<div class="take-media"><div class="pending-stage"><div class="pending-spinner" aria-hidden="true"></div><div class="pending-msg"></div><div class="pending-progress-track"><div class="pending-progress-bar"></div></div><div class="pending-progress-meta"><span class="pending-percent"></span><span class="pending-time"></span></div></div></div><div class="take-meta"><div class="take-caption"></div><div class="take-prompt"></div></div>`;
+    const config = PROVIDER_API.modelByName(pn.model);
+    const progress = pendingProgress(pn);
+    d.querySelector('.pending-msg').textContent = pn.msg;
+    d.querySelector('.pending-progress-bar').style.width = `${progress.percent}%`;
+    d.querySelector('.pending-percent').textContent = pn.status === 'running' ? `${progress.percent}% estimado` : 'na fila';
+    d.querySelector('.pending-time').textContent = progress.time;
+    d.querySelector('.take-caption').textContent = `${config ? config.label : 'Fotograma'}${pn.batchTotal > 1 ? ` · ${pn.batchIndex}/${pn.batchTotal}` : ''}${pn.ar ? ` · ${pn.ar}` : ''}`;
+    d.querySelector('.take-prompt').textContent = pn.status === 'running'
+      ? 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.'
+      : 'Aguardando um espaço de processamento no bridge.';
     g.appendChild(d);
   });
   visibleTakes.forEach(({ take: t, index: i }) => {
@@ -2901,7 +3131,7 @@ function reorderPanelForDirectionFlow() {
   const spacer = panel.lastElementChild;
   const engineBody = $('engineGroupBody');
   const advancedBody = $('advancedDirectionBody');
-  ['secProvider', 'secModel', 'secAspect', 'resSection'].forEach(id => {
+  ['secProvider', 'secModel', 'secAspect', 'resSection', 'batchSection'].forEach(id => {
     const el = $(id);
     if (el) engineBody.appendChild(el);
   });
@@ -3962,6 +4192,8 @@ $('generationRecovery').addEventListener('click', () => {
 });
 $('model').addEventListener('change', syncProviderConstraints);
 $('imgSize').addEventListener('change', syncProviderHint);
+$('generationCount').addEventListener('input', syncBatchControl);
+$('scene').addEventListener('input', syncSceneCount);
 $('genBtn').addEventListener('click', revelar);
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
@@ -3984,6 +4216,9 @@ $('dlBtn').addEventListener('click', () => {
 });
 
 reorderPanelForDirectionFlow();
+$('generationCount').value = String(state.generationCount);
+syncBatchControl();
+syncSceneCount();
 buildChips();
 buildSelects();
 buildProgRow();

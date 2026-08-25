@@ -1648,3 +1648,14 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 - **Vertex:** a primeira chamada de imagem usa `responseModalities: [TEXT, IMAGE]`, compatível com a documentação atual, preservando `imageConfig`/2K/4K e chave exclusivamente em `x-goog-api-key`.
 - **UI/UX:** removidos da superfície os presets Escala do plano e Ponto de vista; composição explícita na cena/Ficha/ref continua válida e takes legados permanecem reproduzíveis. Create virou um fluxo curto com Motor da imagem agrupado, Direção avançada recolhida, aspect ratios compactos e dock de geração menor com requisito/recuperação contextual.
 - **Validação:** oito suítes Playwright/bridge passaram. Testes novos provam Higgsfield standalone com zero chamadas Google, Vertex sem tentativa IMAGE-only, ausência dos presets e estados de UI acessíveis. Health real: Creator conectado, saldo 1255,87, seis modelos; contrato do `generate create` conferido via `--help`. Nenhuma geração real foi feita e nenhum crédito foi consumido.
+
+---
+
+## 2026-08-25
+
+### Fotograma — briefs longos, lote Higgsfield 1–4 e progresso na galeria
+- **Causa do erro de 1.800:** o bridge já aceitava 24.000 caracteres, mas `localSceneForImage()` recusava a cena no browser antes de qualquer provider. O teto local agora é 12.000, comunicado por contador; acima disso falha antes da fila e sem consumo. Um brief de regressão com 6.043 caracteres chegou completo aos três jobs (payload final 8.217 em cada).
+- **Lote correto:** o slider 1–4 só aparece no Higgsfield, persiste em `localStorage` e multiplica o custo estimado na UI. Cada saída é um request/job independente — não usa `batch_size` opaco — para sempre devolver arquivos separados. Diretor, visão de referências e tradução da Ficha rodam uma única vez e são compartilhados entre as saídas.
+- **Paralelismo:** o scheduler do Create e o bridge aceitam até quatro gerações simultâneas. O bridge troca o singleton por slots de geração isolados, conserva exclusividade das ferramentas e recusa o quinto pedido antes do CLI.
+- **Feedback:** placeholders entram juntos no grid, com índice 1/N, modelo, ratio, spinner, barra, `% estimado` e ETA. Como o CLI não transmite progresso real, a UI diz explicitamente que é estimativa local; parte de 2 min, aprende duração por modelo após sucessos e nunca ultrapassa 92% antes da resposta.
+- **Validação:** dez suítes Fotograma/bridge ALL PASS. Novas: `test-fotograma-batch.mjs` (prompt longo, custo, 3 requests concorrentes, 3 arquivos, persistência, desktop/mobile, zero rede externa) e `test-higgsfield-bridge-concurrency.mjs` (4 ativos, 5º=409, 4 imagens via CLI simulado). Captura `/private/tmp/fotograma-batch-progress.png` revisada. Nenhum job real nem crédito foi usado.
