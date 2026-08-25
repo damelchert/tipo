@@ -1172,9 +1172,11 @@ function keyStatus(msg, cls) {
   el.className = cls || '';
   const kb = $('keyBtn');
   if (kb) {
-    kb.classList.toggle('ok', cls === 'ok');
-    kb.classList.toggle('err', cls === 'err');
-    kb.classList.toggle('pulse', cls !== 'ok');
+    const googleIsActive = currentProvider() === 'google';
+    const ready = providerReady();
+    kb.classList.toggle('ok', googleIsActive ? cls === 'ok' : ready);
+    kb.classList.toggle('err', googleIsActive && cls === 'err');
+    kb.classList.toggle('pulse', googleIsActive ? cls !== 'ok' : !ready);
     if (cls === 'ok' && (currentProvider() !== 'higgsfield' || state.higgsConnected)) {
       setTimeout(() => $('keyPop').classList.remove('open'), 900);
     }
@@ -2381,6 +2383,12 @@ function applyParams(pr) {
 function syncQueueUI() {
   const n = queue.length;
   const ready = providerReady();
+  const providerButton = $('keyBtn');
+  if (providerButton) {
+    providerButton.classList.toggle('ok', ready);
+    providerButton.classList.toggle('pulse', !ready);
+    if (ready) providerButton.classList.remove('err');
+  }
   $('genBtn').textContent = busy
     ? (n ? `Revelando… (${n} na fila)` : 'Revelando…')
     : 'Revelar Fotograma';

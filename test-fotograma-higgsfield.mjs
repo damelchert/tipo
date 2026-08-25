@@ -164,6 +164,7 @@ const googleCallsBeforeStandalone = googleTextGenerations + googleImageGeneratio
 await page.evaluate(() => forgetKey());
 await page.fill('#scene', 'uma casa modernista isolada na mata depois da chuva');
 check('Higgsfield fica pronto sem chave Google', await page.locator('#genBtn').isEnabled());
+check('indicador de provedor reconhece o Higgsfield standalone', await page.locator('#keyBtn').evaluate(button => button.classList.contains('ok') && !button.classList.contains('pulse')));
 await page.click('#genBtn');
 await page.waitForFunction(() => state.takes.length >= 2 && !busy, null, { timeout: 10_000 });
 const standaloneRequest = bridgeBodies[2] || {};
