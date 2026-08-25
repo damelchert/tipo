@@ -134,16 +134,29 @@ const pending = await page.evaluate(() => ({
   hasBars: document.querySelectorAll('#gallery .pending-progress-bar').length,
   text: [...document.querySelectorAll('#gallery .take.pending')].map(card => card.textContent).join(' | '),
   buttonDisabled: document.getElementById('genBtn').disabled,
+  buttonText: document.getElementById('genBtn').textContent,
 }));
-await page.screenshot({ path: '/private/tmp/fotograma-batch-progress.png', fullPage: false });
 check('três cartões entram imediatamente no topo da galeria', pending.count === 3, JSON.stringify(pending));
 check('três jobs Higgsfield rodam em paralelo', pending.running === 3 && bridgeMaxActive === 3, `cards=${pending.running}, requests=${bridgeMaxActive}`);
 check('cada cartão mostra progresso, percentual e tempo estimados', pending.hasBars === 3 && /% estimado/i.test(pending.text) && /restante/i.test(pending.text), pending.text);
-check('botão bloqueia envio duplicado durante o lote', pending.buttonDisabled);
+check('botão continua disponível para acrescentar outro lote', !pending.buttonDisabled && /Revelar \+3/i.test(pending.buttonText), JSON.stringify(pending));
 
-await page.waitForFunction(() => state.takes.length === 3 && !busy, null, { timeout: 10_000 });
-check('lote entrega três arquivos independentes', bridgeBodies.length === 3 && await page.locator('#gallery .take:not(.pending)').count() === 3, `requests=${bridgeBodies.length}`);
-check('prompt longo chega inteiro aos três jobs', bridgeBodies.every(body => body.prompt.length > 1800 && body.prompt.includes('Terracotta roofs')), bridgeBodies.map(body => body.prompt.length).join(','));
+await page.click('#genBtn');
+await page.waitForFunction(() => state.pending.length === 6);
+await new Promise(resolve => setTimeout(resolve, 80));
+const secondBatch = await page.evaluate(() => ({
+  pending: document.querySelectorAll('#gallery .take.pending').length,
+  running: document.querySelectorAll('#gallery .take.pending[data-status="running"]').length,
+  queued: document.querySelectorAll('#gallery .take.pending[data-status="queued"]').length,
+  queueText: [...document.querySelectorAll('#gallery .take.pending[data-status="queued"] .pending-msg')].map(element => element.textContent),
+}));
+await page.screenshot({ path: '/private/tmp/fotograma-continuous-queue.png', fullPage: false });
+check('novo clique acrescenta cartões sem apagar o lote em andamento', secondBatch.pending === 6, JSON.stringify(secondBatch));
+check('bridge mantém quatro ativos e deixa o excedente visível na fila', secondBatch.running === 4 && secondBatch.queued === 2 && bridgeMaxActive === 4 && secondBatch.queueText.some(text => /posição 1/i.test(text)), JSON.stringify(secondBatch));
+
+await page.waitForFunction(() => state.takes.length === 6 && !busy, null, { timeout: 10_000 });
+check('dois cliques entregam seis arquivos independentes', bridgeBodies.length === 6 && await page.locator('#gallery .take:not(.pending)').count() === 6, `requests=${bridgeBodies.length}`);
+check('prompt longo chega inteiro aos seis jobs', bridgeBodies.every(body => body.prompt.length > 1800 && body.prompt.includes('Terracotta roofs')), bridgeBodies.map(body => body.prompt.length).join(','));
 check('quantidade fica persistida', await page.evaluate(() => localStorage.getItem('tipo-fotograma-generation-count')) === '3');
 
 await page.click('#keyBtn');
@@ -152,8 +165,40 @@ await page.click('#keyConnect');
 await page.waitForFunction(() => state.connected === true);
 await page.fill('#scene', 'uma mulher atravessa uma estação de concreto vazia sob uma luz fluorescente prática');
 await page.click('#genBtn');
-await page.waitForFunction(() => state.takes.length === 6 && !busy, null, { timeout: 10_000 });
-check('Diretor e análise preparam o lote uma vez, não uma vez por imagem', googleTextCalls === 1, `Google text calls=${googleTextCalls}`);
+await page.waitForFunction(() => state.pending.length === 3);
+await page.click('#genBtn');
+await page.waitForFunction(() => state.pending.length === 6);
+await page.waitForFunction(() => state.takes.length === 12 && !busy, null, { timeout: 10_000 });
+check('Diretor prepara uma vez por clique mesmo com o segundo lote parcialmente na fila', googleTextCalls === 2, `Google text calls=${googleTextCalls}`);
+
+await page.waitForFunction(async () => (await idbAll()).length >= 12);
+await page.evaluate(async pngBase64 => {
+  const bytes = Uint8Array.from(atob(pngBase64), character => character.charCodeAt(0));
+  const database = await db();
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction('takes', 'readwrite');
+    const store = transaction.objectStore('takes');
+    for (let index = 0; index < 26; index++) {
+      store.put({
+        id: `persist-old-${index}`,
+        caption: `Fotograma persistente ${index + 1}`,
+        params: { scene: `imagem antiga ${index + 1}`, model: 'nano_banana_2' },
+        liked: index === 25,
+        ts: Date.now() - 100_000 - index,
+        buf: bytes.buffer.slice(0),
+        mime: 'image/png',
+      });
+    }
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}, PNG1K);
+await page.reload({ waitUntil: 'load' });
+await page.waitForFunction(() => state.takes.length === 38);
+check('reload recupera também imagens além do antigo corte de 30', await page.locator('#gallery .take:not(.pending)').count() === 38 && await page.evaluate(() => state.takes.some(take => take.id === 'persist-old-25')));
+check('imagens da galeria usam decodificação lazy para históricos grandes', await page.locator('#gallery .take:not(.pending) img[loading="lazy"][decoding="async"]').count() === 38);
+check('interface explica que a galeria é salva neste navegador', /salva neste navegador|armazenamento local protegido/i.test(await page.locator('#galleryStorage').textContent()));
 
 await page.selectOption('#imageProvider', 'google');
 check('Google continua com geração unitária e sem controle irrelevante', await page.locator('#batchSection').isHidden());

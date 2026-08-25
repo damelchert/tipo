@@ -81,6 +81,7 @@
   .workspace-heading { min-width: 150px; }
   .workspace-title { color: var(--text-0); font: 700 17px/1.2 var(--font-ui); letter-spacing: 1.2px; text-transform: uppercase; }
   #galleryCount { margin-top: 4px; color: var(--text-3); font: 10px/1.3 var(--font-ui); }
+  #galleryStorage { margin-top: 3px; color: var(--text-5); font: 8px/1.25 var(--font-ui); letter-spacing: .35px; text-transform: uppercase; }
   .gallery-search-wrap { flex: 1; max-width: 460px; position: relative; }
   #gallerySearch { width: 100%; height: 42px; padding: 0 14px 0 38px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--bg-1); color: var(--text-1); font: 12px var(--font-ui); outline: none; }
   #gallerySearch:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
@@ -657,6 +658,7 @@
     <div class="workspace-heading">
       <div class="workspace-title">Sua galeria</div>
       <div id="galleryCount" aria-live="polite">carregando imagens…</div>
+      <div id="galleryStorage" title="As imagens ficam no IndexedDB deste navegador; limpar os dados do site ainda remove o histórico.">salva neste navegador</div>
     </div>
     <label class="gallery-search-wrap" for="gallerySearch">
       <span class="gallery-search-icon" aria-hidden="true">⌕</span>
@@ -2380,8 +2382,9 @@ function generateImage(scene, rawScene, job) {
   return imageRouter.generate(job.provider || 'google', { scene, rawScene, job });
 }
 
-// ---- LOTE DE REVELAÇÃO: até 4 jobs Higgsfield independentes em paralelo ----
-const QUEUE_MAX = 4;
+// ---- FILA CONTÍNUA: quatro jobs Higgsfield em paralelo, novos lotes aguardam ----
+const MAX_PARALLEL_JOBS = 4;
+const MAX_PENDING_JOBS = 48;
 let queue = [];
 let busy = false;
 let activeJobs = 0;
@@ -2467,6 +2470,20 @@ function setPendingRunning(job) {
   updatePendingProgress();
 }
 
+function syncQueuedPendingPositions() {
+  queue.forEach((job, index) => {
+    const pending = state.pending.find(item => item.id === job.pendingId);
+    if (!pending || pending.status !== 'queued') return;
+    pending.msg = `na fila · posição ${index + 1}`;
+    const card = document.querySelector(`.take.pending[data-pid="${pending.id}"]`);
+    if (!card) return;
+    const message = card.querySelector('.pending-msg');
+    const time = card.querySelector('.pending-time');
+    if (message) message.textContent = pending.msg;
+    if (time) time.textContent = 'aguardando um dos 4 espaços';
+  });
+}
+
 function snapshotParams() {
   const refs = state.refs.map(r => ({
     dataUrl: r.dataUrl, mime: r.mime, role: manualRefRoleIds(r)[0] || 'auto', roles: [...manualRefRoleIds(r)],
@@ -2537,13 +2554,15 @@ function syncQueueUI() {
     if (ready) providerButton.classList.remove('err');
   }
   const count = selectedGenerationCount();
+  const occupied = activeJobs + n;
+  const canAddBatch = occupied + count <= MAX_PENDING_JOBS;
   $('genBtn').textContent = busy
-    ? `Revelando ${activeJobs + n} fotograma${activeJobs + n === 1 ? '' : 's'}…`
+    ? `Revelar +${count} fotograma${count === 1 ? '' : 's'}`
     : (count > 1 ? `Revelar ${count} fotogramas` : 'Revelar Fotograma');
-  $('genBtn').disabled = !ready || busy;
+  $('genBtn').disabled = !ready || !canAddBatch;
   const requirement = $('genRequirement');
   requirement.classList.toggle('ready', ready);
-  if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} aguardando` : ''}. Os resultados entram automaticamente na galeria.`;
+  if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} na fila` : ''}. Você pode ajustar a cena e revelar mais.`;
   else if (ready) requirement.textContent = currentProvider() === 'higgsfield'
     ? `${count} ${count === 1 ? 'saída' : 'saídas'} por clique. Google é opcional para a direção criativa.`
     : `Google conectado${state.backend === 'vertex' ? ' via Vertex' : ''}. Pronto para gerar.`;
@@ -2558,13 +2577,18 @@ function revelar() {
   if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
   if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
   if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast('Ligue e teste o Higgsfield bridge — 🔑'); $('keyPop').classList.add('open'); return; }
-  if (busy) { TipoUI.showToast('Espere o lote atual terminar antes de iniciar outro'); return; }
   try { localSceneForImage(subject); }
   catch (error) {
     $('genStatus').textContent = error.message;
     TipoUI.showToast(error.message);
     return;
   }
+  const count = Math.min(MAX_PARALLEL_JOBS, selectedGenerationCount());
+  if (activeJobs + queue.length + count > MAX_PENDING_JOBS) {
+    TipoUI.showToast(`Fila cheia (${MAX_PENDING_JOBS} imagens). Espere alguns resultados entrarem na galeria.`);
+    return;
+  }
+  ensureGalleryPersistence();
   const hintState = applySceneReferenceHint(subject, state.refs);
   if (hintState.changedRefs.length) {
     renderRefs();
@@ -2572,7 +2596,6 @@ function revelar() {
       if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
     }
   }
-  const count = Math.min(QUEUE_MAX, selectedGenerationCount());
   const batchId = `b${Date.now()}-${Math.round(performance.now())}`;
   const jobs = Array.from({ length: count }, (_, index) => ({
     ...snapshotParams(),
@@ -2596,6 +2619,7 @@ function revelar() {
   })));
   renderGallery(-1);
   ensurePendingTicker();
+  syncQueuedPendingPositions();
   syncQueueUI();
   pump();
 }
@@ -2603,7 +2627,7 @@ function revelar() {
 function pump() {
   if (!queue.length) { busy = activeJobs > 0; syncQueueUI(); return; }
   const next = queue[0];
-  const concurrency = next.provider === 'higgsfield' ? QUEUE_MAX : 1;
+  const concurrency = next.provider === 'higgsfield' ? MAX_PARALLEL_JOBS : 1;
   while (queue.length && activeJobs < concurrency && queue[0].provider === next.provider) {
     const job = queue.shift();
     activeJobs++;
@@ -2617,6 +2641,7 @@ function pump() {
       pump();
     });
   }
+  syncQueuedPendingPositions();
 }
 
 const batchPreparations = new Map();
@@ -2667,16 +2692,23 @@ async function prepareJobForGeneration(job) {
 
 function sharedBatchPreparation(job) {
   if (!job.batchId || job.batchTotal <= 1) return prepareJobForGeneration(job);
-  let preparation = batchPreparations.get(job.batchId);
-  if (!preparation) {
-    preparation = prepareJobForGeneration(job);
-    batchPreparations.set(job.batchId, preparation);
-    preparation.then(
-      () => batchPreparations.delete(job.batchId),
-      () => batchPreparations.delete(job.batchId),
-    );
+  let batch = batchPreparations.get(job.batchId);
+  if (!batch) {
+    batch = {
+      preparation: prepareJobForGeneration(job),
+      remaining: job.batchTotal,
+    };
+    batchPreparations.set(job.batchId, batch);
   }
-  return preparation;
+  return batch.preparation;
+}
+
+function releaseBatchPreparation(job) {
+  if (!job.batchId || job.batchTotal <= 1) return;
+  const batch = batchPreparations.get(job.batchId);
+  if (!batch) return;
+  batch.remaining--;
+  if (batch.remaining <= 0) batchPreparations.delete(job.batchId);
 }
 
 async function revealJob(job) {
@@ -2783,6 +2815,7 @@ async function revealJob(job) {
     $('generationRecovery').hidden = false;
     $('generationRecovery').textContent = job.provider === 'higgsfield' ? 'Reconectar Higgsfield' : 'Revisar conexão Google';
   } finally {
+    releaseBatchPreparation(job);
     const pending = state.pending.find(item => item.id === pid);
     if (completed && pending && pending.startedAt) rememberGenerationTime(job.model, Date.now() - pending.startedAt);
     state.pending = state.pending.filter(x => x.id !== pid);
@@ -2795,6 +2828,20 @@ async function revealJob(job) {
 // ---- persistência da galeria (IndexedDB — blobs + params) ----
 const DB_NAME = 'tipo-fotograma';
 let _db = null;
+let persistenceRequested = false;
+let storageWarningShown = false;
+
+function ensureGalleryPersistence() {
+  if (persistenceRequested || !navigator.storage || typeof navigator.storage.persist !== 'function') return;
+  persistenceRequested = true;
+  navigator.storage.persist().then(granted => {
+    document.documentElement.dataset.galleryStorage = granted ? 'persistent' : 'best-effort';
+    if ($('galleryStorage')) $('galleryStorage').textContent = granted ? 'armazenamento local protegido' : 'salva neste navegador';
+  }).catch(() => {
+    document.documentElement.dataset.galleryStorage = 'best-effort';
+  });
+}
+
 function db() {
   if (_db) return Promise.resolve(_db);
   return new Promise((resolve, reject) => {
@@ -2815,7 +2862,15 @@ async function idbPut(rec) {
       tx.objectStore('takes').put(row);
       tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
     });
-  } catch (e) { console.warn('[fotograma] idbPut:', e && e.message); }
+    return true;
+  } catch (e) {
+    console.warn('[fotograma] idbPut:', e && e.message);
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      TipoUI.showToast('O armazenamento local está cheio. Baixe ou exclua imagens antigas para continuar salvando a galeria.');
+    }
+    return false;
+  }
 }
 async function idbDelete(id) {
   try { const d = await db(); d.transaction('takes', 'readwrite').objectStore('takes').delete(id); } catch (e) {}
@@ -2833,7 +2888,7 @@ async function idbAll() {
 async function loadGallery() {
   const rows = await idbAll();
   rows.sort((a, b) => b.ts - a.ts);
-  state.takes = rows.slice(0, 30).map(r => {
+  state.takes = rows.map(r => {
     // compat: linhas antigas podem ter .blob; novas têm .buf + .mime
     const blob = r.blob || new Blob([r.buf], { type: r.mime || 'image/png' });
     return { id: r.id, caption: r.caption, params: r.params, liked: !!r.liked, ts: r.ts, blob, url: URL.createObjectURL(blob) };
@@ -2847,19 +2902,6 @@ function addTake(url, caption, blob, params) {
   const take = { id, url, caption, blob, params, liked: false, ts: Date.now() };
   state.takes.unshift(take);
   idbPut({ id, caption, params, liked: false, ts: take.ts, blob });
-  const MAX_TAKES = 120;
-  while (state.takes.length > MAX_TAKES) {
-    // despeja o mais ANTIGO sem ♥ (curtida é permanente); avisa sempre
-    let idx = -1;
-    for (let j = state.takes.length - 1; j >= 0; j--) {
-      if (!state.takes[j].liked) { idx = j; break; }
-    }
-    if (idx < 0) idx = state.takes.length - 1;
-    const dead = state.takes.splice(idx, 1)[0];
-    URL.revokeObjectURL(dead.url);
-    idbDelete(dead.id);
-    TipoUI.showToast(`Galeria cheia (${MAX_TAKES}) — o take mais antigo sem ♥ saiu`);
-  }
   renderGallery(0);
 }
 
@@ -3057,6 +3099,7 @@ function renderGallery(selIdx = -1) {
   $('galleryCount').textContent = normalizedQuery
     ? `${visibleTakes.length} de ${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}${pendingLabel}`
     : `${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}${pendingLabel}`;
+  $('galleryCount').title = 'Galeria salva localmente neste navegador via IndexedDB. Recarregar a página não apaga as imagens.';
   $('galleryEmpty').hidden = state.pending.length > 0 || visibleTakes.length > 0;
   $('galleryEmpty').querySelector('.gallery-empty-title').textContent = normalizedQuery ? 'Nenhum resultado encontrado' : 'Sua galeria começa aqui';
   $('galleryEmpty').querySelector('.gallery-empty-copy').textContent = normalizedQuery
@@ -3086,7 +3129,7 @@ function renderGallery(selIdx = -1) {
     d.className = 'take' + (t.id === selectedTakeId || i === selIdx ? ' sel' : '') + (t.liked ? ' liked' : '');
     d.dataset.takeId = t.id;
     d.innerHTML = `<div class="take-media">
-        <img src="${t.url}" alt="${t.caption ? 'Resultado: ' + t.caption.replace(/"/g, '&quot;') : 'Resultado do Fotograma'}">
+        <img src="${t.url}" loading="lazy" decoding="async" alt="${t.caption ? 'Resultado: ' + t.caption.replace(/"/g, '&quot;') : 'Resultado do Fotograma'}">
         <div class="take-acts">
           <button data-a="like" title="curtir" aria-label="${t.liked ? 'Descurtir' : 'Curtir'} imagem">${t.liked ? '♥' : '♡'}</button>
           <button data-a="copy" title="copiar prompt" aria-label="Copiar prompt">⧉</button>
