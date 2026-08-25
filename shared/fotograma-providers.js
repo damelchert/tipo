@@ -74,14 +74,18 @@
   class HiggsfieldBridgeAdapter {
     constructor(baseUrl, options) {
       this.baseUrl = normalizeBridgeUrl(baseUrl);
-      this.timeoutMs = (options && options.timeoutMs) || 22 * 60 * 1000;
+      // O health precisa falhar rápido, mas uma geração CLI pode levar muitos
+      // minutos. Manter relógios separados evita transformar o probe de 30s
+      // num cancelamento prematuro de toda imagem.
+      this.timeoutMs = (options && options.timeoutMs) || 23 * 60 * 1000;
+      this.healthTimeoutMs = (options && options.healthTimeoutMs) || 30 * 1000;
       const hostname = new URL(this.baseUrl).hostname;
       this.targetAddressSpace = ['127.0.0.1', 'localhost', '[::1]'].includes(hostname) ? 'loopback' : null;
     }
 
-    async request(path, options) {
+    async request(path, options, timeoutMs = this.timeoutMs) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetch(`${this.baseUrl}${path}`, {
           ...(options || {}),
@@ -113,7 +117,7 @@
     }
 
     health() {
-      return this.request('/health', { method: 'GET' });
+      return this.request('/health', { method: 'GET' }, this.healthTimeoutMs);
     }
 
     generate(input) {

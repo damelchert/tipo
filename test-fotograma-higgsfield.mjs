@@ -125,6 +125,11 @@ check('custos aparecem antes da geração', (await page.locator('#model option')
 await page.click('#higgsConnect');
 await page.waitForFunction(() => state.higgsConnected === true);
 check('bridge pareado sem credencial no browser', await page.evaluate(() => state.higgsConnected && !document.body.textContent.includes('Bearer')));
+const adapterTimeouts = await page.evaluate(() => ({
+  generation: state.higgsAdapter && state.higgsAdapter.timeoutMs,
+  health: state.higgsAdapter && state.higgsAdapter.healthTimeoutMs,
+}));
+check('health usa 30s sem encurtar a geração de 23 minutos', adapterTimeouts.health === 30_000 && adapterTimeouts.generation === 23 * 60_000, JSON.stringify(adapterTimeouts));
 check('saldo do Higgsfield fica visível', /1258\.87/.test(await page.locator('#providerHint').textContent()));
 
 await page.selectOption('#model', 'seedream_v5_lite');

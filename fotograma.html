@@ -9,7 +9,7 @@
 <title>Tipó — Fotograma</title>
 <link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
 <script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
-<script src="shared/fotograma-providers.js?v=20260821-higgsfield3"></script>
+<script src="shared/fotograma-providers.js?v=20260825-higgsfield4"></script>
 <script src="shared/fotograma-tools.js?v=20260820-tools2"></script>
 <style>
   body { display: flex; height: 100vh; }
@@ -1205,7 +1205,7 @@ async function connectHiggsfieldAttempt(silent) {
     $('higgsBridgeUrl').value = url;
     localStorage.setItem(HIGGS_BRIDGE_LS, url);
     higgsStatus('testando bridge local…');
-    adapter = new PROVIDER_API.HiggsfieldBridgeAdapter(url, { timeoutMs: 30_000 });
+    adapter = new PROVIDER_API.HiggsfieldBridgeAdapter(url, { healthTimeoutMs: 30_000 });
     const account = await adapter.health();
     if (!account || !account.ok || !account.connected) throw new Error('CLI não autenticado');
     state.higgsAdapter = adapter;
