@@ -1,4 +1,5 @@
-import { createHiggsfieldBridgeServer } from './higgsfield-bridge.mjs';
+process.env.TIPO_HIGGSFIELD_ORIGINS = 'http://localhost:3000';
+const { createHiggsfieldBridgeServer } = await import('./higgsfield-bridge.mjs');
 
 let fails = 0;
 const check = (name, ok, detail = '') => {
@@ -15,14 +16,30 @@ const address = server.address();
 const base = `http://127.0.0.1:${address.port}`;
 
 try {
+  const live = await fetch(`${base}/live`);
+  const liveBody = await live.json();
+  check('liveness local não depende da sessão do CLI', live.status === 200 && liveBody.ok === true && liveBody.service === 'tipo-higgsfield-bridge');
+
   const denied = await fetch(`${base}/health`, { headers: { Origin: 'https://evil.example' } });
   check('origin externa é recusada antes do CLI', denied.status === 403, `(${denied.status})`);
+
+  const missingOriginMutation = await fetch(`${base}/auth/login`, { method: 'POST' });
+  check('endpoint de login exige uma origin aprovada', missingOriginMutation.status === 403, `(${missingOriginMutation.status})`);
+
+  const deniedAuth = await fetch(`${base}/auth/login`, { method: 'POST', headers: { Origin: 'https://evil.example' } });
+  check('origin externa não consegue abrir autenticação local', deniedAuth.status === 403, `(${deniedAuth.status})`);
 
   const preflight = await fetch(`${base}/generate`, {
     method: 'OPTIONS',
     headers: { Origin: 'http://localhost:3000', 'Access-Control-Request-Method': 'POST' },
   });
   check('preflight permitido somente para origin aprovada', preflight.status === 204 && preflight.headers.get('access-control-allow-origin') === 'http://localhost:3000');
+
+  const unconfiguredDevOrigin = await fetch(`${base}/generate`, {
+    method: 'OPTIONS',
+    headers: { Origin: 'http://localhost:8080', 'Access-Control-Request-Method': 'POST' },
+  });
+  check('origin local de desenvolvimento exige opt-in explícito', unconfiguredDevOrigin.status === 403, `(${unconfiguredDevOrigin.status})`);
 
   const productionPreflight = await fetch(`${base}/tool`, {
     method: 'OPTIONS',
@@ -65,7 +82,7 @@ try {
   check('parâmetro de câmera fora da allowlist morre antes do crédito', badAngle.status === 400, `(${badAngle.status})`);
 
   const missing = await fetch(`${base}/missing`, { headers: { Origin: 'http://localhost:3000' } });
-  check('bridge expõe somente health/generate/tool', missing.status === 404, `(${missing.status})`);
+  check('bridge não expõe rotas fora da allowlist', missing.status === 404, `(${missing.status})`);
 } finally {
   await new Promise(resolve => server.close(resolve));
 }

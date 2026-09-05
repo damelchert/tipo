@@ -52,17 +52,25 @@ Open `http://localhost:8080`
 
 ### Optional Higgsfield provider
 
-The Higgsfield CLI must already be installed and authenticated. JPEG/WebP normalization uses the local `ffmpeg-static` package when installed, otherwise `ffmpeg` must be available on `PATH`. Start the private bridge in a second terminal:
+The Higgsfield CLI must be installed on the Mac. JPEG/WebP normalization uses the local `ffmpeg-static` package when installed, otherwise `ffmpeg` must be available on `PATH`. Install the private bridge once as a macOS background service:
 
 ```bash
-node higgsfield-bridge.mjs
+./support/macos/install-higgsfield-bridge.zsh
 ```
 
-In Fotograma, select **Higgsfield CLI** inside Create or open one of the specialized tools in the left rail. The panel tests `http://127.0.0.1:4789` automatically and shows the connection state beside the tool. On Chrome 142+, allow **Local network access** when prompted; if it was previously denied, reopen the page permissions from the address-bar lock/settings icon and enable it. Google is optional when Higgsfield is selected: when connected it can enrich the Director and analyze automatic references; without it, Create uses the deterministic local direction and asks you to assign reference roles manually. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, runs at most four image jobs concurrently, and never sends the Higgsfield session to the browser. Connection checks time out after 30 seconds, while image jobs may remain open for up to 23 minutes. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
+The LaunchAgent starts at login and restarts the bridge if it exits, so no terminal has to remain open. Fotograma reconnects on boot, focus, restored network and a periodic health check. If the CLI session expires, **Entrar** launches Higgsfield's official browser OAuth flow; the page never asks for or receives a password, code or token. On current Chrome versions, allow **Local network access** once when prompted. If it was denied, reopen the page permissions from the address-bar lock/settings icon and enable it.
+
+The always-on service trusts only the official Tipó origin by default. To use the local development URL, reinstall it with that origin explicitly enabled:
+
+```bash
+TIPO_HIGGSFIELD_ORIGINS=http://localhost:8080 ./support/macos/install-higgsfield-bridge.zsh
+```
+
+Select **Higgsfield** inside Create or open a specialized tool in the left rail. Google is optional when Higgsfield is selected: when connected it can enrich the Director and analyze automatic references; without it, Create uses deterministic local direction and asks you to assign reference roles manually. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, runs at most four image jobs concurrently, and never sends the Higgsfield session to the browser. Connection checks time out after 30 seconds, while image jobs may remain open for up to 23 minutes. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
 
 Every specialized-tool upload accepts both files from the computer and images dragged directly from the Fotograma gallery.
 
-For a deployed Tipó origin, explicitly allow that exact HTTPS origin when starting the bridge:
+For a different deployed Tipó origin, add that exact HTTPS origin to the LaunchAgent environment before loading the service, or use it while running the bridge manually:
 
 ```bash
 TIPO_HIGGSFIELD_ORIGINS=https://your-tipo.example node higgsfield-bridge.mjs

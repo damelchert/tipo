@@ -9,7 +9,7 @@
 <title>Tipó — Fotograma</title>
 <link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
 <script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
-<script src="shared/fotograma-providers.js?v=20260825-higgsfield4"></script>
+<script src="shared/fotograma-providers.js?v=20260905-higgsfield5"></script>
 <script src="shared/fotograma-tools.js?v=20260820-tools2"></script>
 <style>
   body { display: flex; height: 100vh; }
@@ -146,6 +146,12 @@
   .provider-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 3px 7px; border: 1px solid var(--border-2); border-radius: 12px; color: var(--text-3); font-size: 9px; letter-spacing: .6px; vertical-align: middle; }
   .provider-badge.paid { border-color: color-mix(in srgb, var(--accent-warm, #D4A040) 55%, var(--border-2)); color: var(--accent-warm, #D4A040); }
   .provider-divider { height: 1px; margin: 14px 0; background: var(--border-2); }
+  .higgs-auto-row { display: flex; align-items: center; gap: 8px; }
+  #higgsStatus { flex: 1; min-width: 0; color: var(--text-5); font-size: 10px; line-height: 1.45; }
+  #higgsLogin { flex: none; width: auto; min-height: 34px; padding: 7px 10px; }
+  #higgsAdvanced { margin-top: 9px; color: var(--text-5); font-size: 9px; }
+  #higgsAdvanced > summary { cursor: pointer; color: var(--text-4); letter-spacing: .5px; }
+  #higgsAdvanced[open] > summary { margin-bottom: 7px; }
   .fchip.unavailable { opacity: .28; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
 
   /* cena */
@@ -412,7 +418,7 @@
     <div class="section-title">Provedor da imagem</div>
     <select id="imageProvider">
       <option value="google">Google direto</option>
-      <option value="higgsfield">Higgsfield CLI &middot; usa cr&eacute;ditos</option>
+      <option value="higgsfield">Higgsfield &middot; usa cr&eacute;ditos</option>
     </select>
     <div class="provider-hint" id="providerHint">Nano Banana pela sua chave Google.</div>
     <button class="btn btn-secondary provider-action" id="providerAction" type="button">Conectar provedor</button>
@@ -507,8 +513,8 @@
       <div class="tool-intro-title"><span id="utilityTitle">Multi Angle</span><span class="tool-intro-badge" id="utilityBadge">Higgsfield · créditos</span></div>
       <div class="tool-intro-copy" id="utilityDescription"></div>
       <div class="utility-bridge" id="utilityBridgeState">
-        <span id="utilityBridgeStatus">Higgsfield ainda não verificado</span>
-        <button class="btn btn-secondary" id="utilityBridgeConnect" type="button">Conectar</button>
+        <span id="utilityBridgeStatus">Higgsfield conectando automaticamente&hellip;</span>
+        <button class="btn btn-secondary" id="utilityBridgeConnect" type="button">Reconectar</button>
       </div>
     </div>
 
@@ -644,13 +650,20 @@
   <div id="keyStatus"></div>
   <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza&hellip;, free tier) ou da <b>Agent Platform / Vertex</b> (AQ&hellip;, cr&eacute;ditos do trial). Fica s&oacute; no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave gr&aacute;tis &rarr;</a></div>
   <div class="provider-divider"></div>
-  <div style="font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:7px;">Higgsfield CLI &middot; pago</div>
-  <div class="key-row">
-    <input type="url" id="higgsBridgeUrl" value="http://127.0.0.1:4789" aria-label="URL do Higgsfield bridge" autocomplete="off" spellcheck="false">
-    <button class="btn btn-secondary" id="higgsConnect" style="padding:7px 10px;">Testar</button>
+  <div style="font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:7px;">Higgsfield &middot; conex&atilde;o autom&aacute;tica</div>
+  <div class="higgs-auto-row">
+    <div id="higgsStatus" role="status">verificando o servi&ccedil;o local&hellip;</div>
+    <button class="btn" id="higgsLogin" type="button" hidden>Entrar</button>
   </div>
-  <div id="higgsStatus" style="font-size:10px; margin-top:6px; min-height:13px; color:var(--text-5);"></div>
-  <div class="key-hint">Rode <b>node higgsfield-bridge.mjs</b> neste projeto. O bridge usa a sess&atilde;o local do CLI; nenhuma credencial Higgsfield entra nesta p&aacute;gina. O Unlimited do site n&atilde;o vale no CLI.</div>
+  <div class="key-hint">A Tip&oacute; reconecta sozinha. Se a sess&atilde;o expirar, <b>Entrar</b> abre o acesso oficial no navegador; nenhuma credencial Higgsfield entra nesta p&aacute;gina.</div>
+  <details id="higgsAdvanced">
+    <summary>Diagn&oacute;stico avan&ccedil;ado</summary>
+    <div class="key-row">
+      <input type="url" id="higgsBridgeUrl" value="http://127.0.0.1:4789" aria-label="URL do Higgsfield bridge" autocomplete="off" spellcheck="false">
+      <button class="btn btn-secondary" id="higgsConnect" type="button" style="padding:7px 10px;">Verificar</button>
+    </div>
+    <div class="key-hint">Servi&ccedil;o privado neste Mac, acess&iacute;vel somente em loopback. O Unlimited do site n&atilde;o vale no CLI.</div>
+  </details>
 </div>
 
 <div id="canvasWrap">
@@ -1004,9 +1017,21 @@ if (!TOOL_API) throw new Error('Camada de ferramentas do Fotograma não carregou
 const HIGGSFIELD_MODELS = PROVIDER_API.HIGGSFIELD_MODELS;
 const PROVIDER_LS = 'tipo-fotograma-image-provider';
 const HIGGS_BRIDGE_LS = 'tipo-higgsfield-bridge-url';
+const HIGGS_AUTO_LS = 'tipo-higgsfield-autoconnect';
 const GENERATION_COUNT_LS = 'tipo-fotograma-generation-count';
 const GENERATION_TIMES_LS = 'tipo-fotograma-generation-times-v1';
 const MAX_SCENE_CHARS = 12_000;
+const HIGGS_CONNECTION_CONFIG = Object.freeze({
+  retryBaseMs: 2_000,
+  retryMaxMs: 60_000,
+  retryFactor: 2,
+  retryJitter: .12,
+  retryDelaysMs: null,
+  healthyPollMs: 90_000,
+  eventDedupeMs: 250,
+  freshHealthMs: 45_000,
+  ...(window.__TIPO_HIGGSFIELD_TEST_CONFIG__ || {}),
+});
 const imageRouter = new PROVIDER_API.ProviderRouter();
 
 // ---- estado ----
@@ -1021,8 +1046,10 @@ let state = {
   imageProvider: 'google',
   googleModelOptions: [],
   higgsConnected: false,
+  higgsConnectionState: 'idle',
   higgsAdapter: null,
   higgsAccount: null,
+  higgsLastHealthAt: 0,
   textModel: null,
   lastBlob: null,
   lastPrompt: '',
@@ -1046,11 +1073,18 @@ function providerReady() {
   return currentProvider() === 'higgsfield' ? !!state.higgsConnected : !!state.connected;
 }
 
-function higgsStatus(message, ok) {
+function higgsStatus(message, ok, connectionState) {
+  if (connectionState) state.higgsConnectionState = connectionState;
   const element = $('higgsStatus');
   if (element) {
     element.textContent = message;
     element.style.color = ok ? 'var(--accent)' : (message ? 'var(--text-5)' : '');
+  }
+  const login = $('higgsLogin');
+  if (login) {
+    login.hidden = !['auth-required', 'authenticating'].includes(state.higgsConnectionState);
+    login.disabled = state.higgsConnectionState === 'authenticating';
+    login.textContent = state.higgsConnectionState === 'authenticating' ? 'Aguardando…' : 'Entrar';
   }
   const utilityStateElement = $('utilityBridgeState');
   const utilityMessage = $('utilityBridgeStatus');
@@ -1060,7 +1094,8 @@ function higgsStatus(message, ok) {
     utilityStateElement.classList.toggle('ok', ok === true);
     utilityStateElement.classList.toggle('err', ok === false);
     utilityConnect.hidden = ok === true;
-    utilityConnect.disabled = /testando|conectando/i.test(message || '');
+    utilityConnect.textContent = state.higgsConnectionState === 'auth-required' ? 'Entrar' : 'Reconectar';
+    utilityConnect.disabled = ['connecting', 'authenticating'].includes(state.higgsConnectionState);
   }
 }
 
@@ -1074,15 +1109,18 @@ async function localNetworkPermissionState() {
 }
 
 async function higgsConnectionMessage(error) {
+  if ((error && error.status === 401) || /(?:not authenticated|session expired|authentication required|unauthorized)/i.test(String(error && error.message || ''))) {
+    return 'Sessão do Higgsfield expirada. Entre novamente pelo navegador.';
+  }
   const permission = await localNetworkPermissionState();
   if (permission === 'denied') {
     return 'Chrome bloqueou a rede local. No cadeado da página, libere “Acesso à rede local” e conecte novamente.';
   }
   const publicSecurePage = location.protocol === 'https:' && !['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
   if (publicSecurePage && (!error || !error.status)) {
-    return 'Permita o acesso à rede local no Chrome e deixe “node higgsfield-bridge.mjs” aberto neste Mac.';
+    return 'Serviço local indisponível. A Tipó continuará tentando; confira a permissão “Acesso à rede local” do Chrome.';
   }
-  if (!error || !error.status) return 'Bridge local desligado. No Terminal, rode “node higgsfield-bridge.mjs” e conecte novamente.';
+  if (!error || !error.status) return 'Serviço local indisponível. A Tipó continuará tentando automaticamente.';
   return error.message || 'Bridge Higgsfield indisponível';
 }
 
@@ -1161,13 +1199,13 @@ function syncProviderHint() {
     const count = selectedGenerationCount();
     hint.textContent = config
       ? `${config.label} · ~${cost} crédito${cost === 1 ? '' : 's'} por imagem${count > 1 ? ` · ~${cost * count} no lote` : ''}${balance}. Sem fallback pago automático.`
-      : `Conecte o bridge local${balance}.`;
+      : `Aguardando o Higgsfield${balance}.`;
     if ($('batchHint')) $('batchHint').textContent = config
       ? `${count} ${count === 1 ? 'imagem' : 'imagens'} · ~${cost * count} crédito${cost * count === 1 ? '' : 's'} no total · jobs independentes`
       : `${count} ${count === 1 ? 'imagem' : 'imagens'} por geração.`;
     if (action) {
       action.hidden = !!state.higgsConnected;
-      action.textContent = 'Conectar Higgsfield CLI';
+      action.textContent = state.higgsConnectionState === 'auth-required' ? 'Entrar no Higgsfield' : 'Reconectar Higgsfield';
     }
   } else {
     badge.textContent = state.backend === 'vertex' ? 'Google · Vertex' : 'Google';
@@ -1189,44 +1227,255 @@ function setImageProvider(value, preferredModel) {
   $('genStatus').textContent = '';
   $('generationRecovery').hidden = true;
   syncQueueUI();
-  if (state.imageProvider === 'higgsfield' && !state.higgsConnected) connectHiggsfield(true);
+  if (state.imageProvider === 'higgsfield') {
+    localStorage.setItem(HIGGS_AUTO_LS, '1');
+    startHiggsfieldSupervisor();
+    if (!state.higgsConnected) connectHiggsfield(true);
+    else scheduleHiggsfieldProbe(true);
+  }
 }
 
 let higgsConnectPromise = null;
+let higgsConnectUrl = '';
+let higgsConnectionEpoch = 0;
+let higgsReconnectTimer = null;
+let higgsRetryAttempt = 0;
+let higgsSupervisorStarted = false;
+let higgsAuthPromise = null;
+
+function wantsHiggsfieldConnection() {
+  const activeTool = document.querySelector('[data-fotograma-tool].on')?.dataset.fotogramaTool;
+  return localStorage.getItem(HIGGS_AUTO_LS) === '1'
+    || currentProvider() === 'higgsfield'
+    || (!!activeTool && activeTool !== 'create');
+}
+
+function canProbeHiggsfield() {
+  return document.visibilityState !== 'hidden' && navigator.onLine !== false;
+}
+
+function clearHiggsfieldReconnect() {
+  if (!higgsReconnectTimer) return;
+  clearTimeout(higgsReconnectTimer);
+  higgsReconnectTimer = null;
+}
+
+function higgsfieldRetryDelay() {
+  const configured = HIGGS_CONNECTION_CONFIG.retryDelaysMs;
+  let delay;
+  if (Array.isArray(configured) && configured.length) {
+    delay = Number(configured[Math.min(higgsRetryAttempt, configured.length - 1)]);
+  } else {
+    delay = Number(HIGGS_CONNECTION_CONFIG.retryBaseMs)
+      * Math.pow(Number(HIGGS_CONNECTION_CONFIG.retryFactor) || 2, higgsRetryAttempt);
+  }
+  delay = Math.min(Number(HIGGS_CONNECTION_CONFIG.retryMaxMs) || 60_000, Math.max(0, delay || 0));
+  const jitter = Number(HIGGS_CONNECTION_CONFIG.retryJitter) || 0;
+  return Math.max(0, Math.round(delay * (1 + (Math.random() * 2 - 1) * jitter)));
+}
+
+function scheduleHiggsfieldProbe(healthy = state.higgsConnected) {
+  clearHiggsfieldReconnect();
+  if (!higgsSupervisorStarted || !wantsHiggsfieldConnection() || !canProbeHiggsfield()) return;
+  if (['auth-required', 'authenticating'].includes(state.higgsConnectionState)) return;
+  const delay = healthy
+    ? Number(HIGGS_CONNECTION_CONFIG.healthyPollMs) || 90_000
+    : higgsfieldRetryDelay();
+  if (!healthy) higgsRetryAttempt++;
+  higgsReconnectTimer = setTimeout(() => {
+    higgsReconnectTimer = null;
+    connectHiggsfield(true);
+  }, delay);
+}
+
+function invalidateHiggsfield(message, connectionState = 'disconnected', retry = true) {
+  clearHiggsfieldReconnect();
+  state.higgsAdapter = null;
+  state.higgsConnected = false;
+  state.higgsAccount = null;
+  state.higgsLastHealthAt = 0;
+  higgsStatus(message, false, connectionState);
+  if (connectionState === 'auth-required' && higgsfieldSurfaceActive()) $('keyPop').classList.add('open');
+  syncProviderHint();
+  syncQueueUI();
+  if (retry && connectionState !== 'auth-required') scheduleHiggsfieldProbe(false);
+}
+
+function higgsfieldSurfaceActive() {
+  const activeTool = document.querySelector('[data-fotograma-tool].on')?.dataset.fotogramaTool;
+  return currentProvider() === 'higgsfield' || (!!activeTool && activeTool !== 'create');
+}
+
+function isHiggsfieldAuthError(error) {
+  return (error && error.status === 401)
+    || /(?:not authenticated|session expired|authentication required|unauthorized)/i.test(String(error && error.message || ''));
+}
+
+function handleHiggsfieldOperationError(error, operationAdapter = null) {
+  // Uma requisição iniciada na conexão A pode falhar depois que o supervisor já
+  // validou a conexão B. Nesse caso, o erro antigo não é dono do estado atual e
+  // não pode derrubar a sessão nova.
+  if (operationAdapter && state.higgsAdapter !== operationAdapter) return false;
+  if (isHiggsfieldAuthError(error)) {
+    invalidateHiggsfield('Sessão do Higgsfield expirada. Entre novamente pelo navegador.', 'auth-required');
+    return true;
+  }
+  if (!error || !error.status) {
+    invalidateHiggsfield('Conexão local interrompida · reconectando automaticamente…');
+    return true;
+  }
+  // Erros de negócio (400/409/429) mantêm a sessão. Em erro de servidor,
+  // apenas revalidamos o health; jamais repetimos o job que pode ter cobrado.
+  if (error.status >= 500) {
+    clearHiggsfieldReconnect();
+    higgsReconnectTimer = setTimeout(() => {
+      higgsReconnectTimer = null;
+      connectHiggsfield(true);
+    }, Number(HIGGS_CONNECTION_CONFIG.retryBaseMs) || 2_000);
+  }
+  return false;
+}
+
+function applyHiggsfieldConnection(adapter, account) {
+  state.higgsAdapter = adapter;
+  state.higgsConnected = true;
+  state.higgsAccount = account;
+  state.higgsLastHealthAt = Date.now();
+  state.higgsConnectionState = 'connected';
+  localStorage.setItem(HIGGS_AUTO_LS, '1');
+  higgsRetryAttempt = 0;
+  const credits = Number.isFinite(Number(account.credits)) ? ` · ${Number(account.credits).toFixed(2)} créditos` : '';
+  higgsStatus(`Higgsfield conectado · plano ${account.plan || 'ativo'}${credits}`, true, 'connected');
+  syncProviderHint();
+  syncQueueUI();
+  scheduleHiggsfieldProbe(true);
+  if (queue.length) pump();
+  return true;
+}
 
 function connectHiggsfield(silent) {
-  if (higgsConnectPromise) return higgsConnectPromise;
-  higgsConnectPromise = connectHiggsfieldAttempt(silent).finally(() => { higgsConnectPromise = null; });
+  startHiggsfieldSupervisor();
+  if (higgsAuthPromise) return higgsAuthPromise;
+  if (!canProbeHiggsfield()) {
+    scheduleHiggsfieldProbe(false);
+    return Promise.resolve(false);
+  }
+  let url;
+  try { url = PROVIDER_API.normalizeBridgeUrl($('higgsBridgeUrl').value, location.href); }
+  catch (error) { return Promise.reject(error); }
+  if (higgsConnectPromise && higgsConnectUrl === url) return higgsConnectPromise;
+  const epoch = ++higgsConnectionEpoch;
+  higgsConnectUrl = url;
+  const attempt = connectHiggsfieldAttempt(silent, url, epoch);
+  const wrapped = attempt.finally(() => {
+    if (higgsConnectPromise === wrapped) {
+      higgsConnectPromise = null;
+      higgsConnectUrl = '';
+    }
+  });
+  higgsConnectPromise = wrapped;
   return higgsConnectPromise;
 }
 
-async function connectHiggsfieldAttempt(silent) {
+async function connectHiggsfieldAttempt(silent, url, epoch) {
   let adapter;
   try {
-    const url = PROVIDER_API.normalizeBridgeUrl($('higgsBridgeUrl').value, location.href);
     $('higgsBridgeUrl').value = url;
     localStorage.setItem(HIGGS_BRIDGE_LS, url);
-    higgsStatus('testando bridge local…');
-    adapter = new PROVIDER_API.HiggsfieldBridgeAdapter(url, { healthTimeoutMs: 30_000 });
+    clearHiggsfieldReconnect();
+    higgsStatus('conectando automaticamente…', null, 'connecting');
+    // O adapter é stateless. Reutilizá-lo nos heartbeats da mesma URL mantém a
+    // identidade das operações longas; só boot, reconexão real, OAuth ou troca
+    // de endereço inauguram uma nova conexão.
+    adapter = state.higgsConnected && state.higgsAdapter?.baseUrl === url
+      ? state.higgsAdapter
+      : new PROVIDER_API.HiggsfieldBridgeAdapter(url, { healthTimeoutMs: 30_000 });
     const account = await adapter.health();
     if (!account || !account.ok || !account.connected) throw new Error('CLI não autenticado');
-    state.higgsAdapter = adapter;
-    state.higgsConnected = true;
-    state.higgsAccount = account;
-    const credits = Number.isFinite(Number(account.credits)) ? ` · ${Number(account.credits).toFixed(2)} créditos` : '';
-    higgsStatus(`Higgsfield conectado · plano ${account.plan || 'ativo'}${credits}`, true);
-    syncProviderHint();
-    syncQueueUI();
+    if (epoch !== higgsConnectionEpoch || $('higgsBridgeUrl').value !== url) return false;
+    return applyHiggsfieldConnection(adapter, account);
   } catch (error) {
-    state.higgsAdapter = null;
-    state.higgsConnected = false;
-    state.higgsAccount = null;
+    if (epoch !== higgsConnectionEpoch) return false;
     const message = await higgsConnectionMessage(error);
-    higgsStatus(message, false);
-    syncProviderHint();
-    syncQueueUI();
-    if (!silent) throw new Error(message);
+    const connectionState = isHiggsfieldAuthError(error) ? 'auth-required' : 'disconnected';
+    invalidateHiggsfield(`${message}${connectionState === 'disconnected' ? ' · reconectando automaticamente…' : ''}`, connectionState);
+    if (!silent) {
+      const surfaced = new Error(message);
+      surfaced.status = error && error.status;
+      surfaced.code = error && error.code;
+      throw surfaced;
+    }
+    return false;
   }
+}
+
+async function ensureHiggsfieldConnection() {
+  const fresh = state.higgsConnected && state.higgsAdapter
+    && Date.now() - state.higgsLastHealthAt < Number(HIGGS_CONNECTION_CONFIG.freshHealthMs || 45_000);
+  if (fresh) return state.higgsAdapter;
+  try {
+    await connectHiggsfield(false);
+  } catch (error) {
+    error.higgsfieldRequestNotSent = true;
+    throw error;
+  }
+  if (!state.higgsConnected || !state.higgsAdapter) {
+    const error = new Error('Higgsfield ainda não está conectado');
+    error.higgsfieldRequestNotSent = true;
+    throw error;
+  }
+  return state.higgsAdapter;
+}
+
+function startHiggsfieldSupervisor() {
+  if (higgsSupervisorStarted) return;
+  higgsSupervisorStarted = true;
+  const resume = () => {
+    if (!wantsHiggsfieldConnection() || !canProbeHiggsfield()) return;
+    if (['auth-required', 'authenticating'].includes(state.higgsConnectionState)) return;
+    if (state.higgsConnected
+      && Date.now() - state.higgsLastHealthAt < Number(HIGGS_CONNECTION_CONFIG.freshHealthMs || 45_000)) return;
+    clearHiggsfieldReconnect();
+    connectHiggsfield(true);
+  };
+  window.addEventListener('focus', resume);
+  window.addEventListener('online', resume);
+  window.addEventListener('pageshow', resume);
+  window.addEventListener('offline', () => {
+    clearHiggsfieldReconnect();
+    if (state.higgsConnected) invalidateHiggsfield('Sem internet · a Tipó reconecta quando a rede voltar.', 'disconnected', false);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resume();
+    else clearHiggsfieldReconnect();
+  });
+}
+
+function loginHiggsfield() {
+  if (higgsAuthPromise) return higgsAuthPromise;
+  startHiggsfieldSupervisor();
+  clearHiggsfieldReconnect();
+  localStorage.setItem(HIGGS_AUTO_LS, '1');
+  const url = PROVIDER_API.normalizeBridgeUrl($('higgsBridgeUrl').value, location.href);
+  const epoch = ++higgsConnectionEpoch;
+  const adapter = new PROVIDER_API.HiggsfieldBridgeAdapter(url, { healthTimeoutMs: 30_000, authTimeoutMs: 13 * 60_000 });
+  higgsStatus('abrindo o acesso oficial no navegador…', null, 'authenticating');
+  higgsAuthPromise = adapter.authenticate()
+    .then(account => {
+      if (epoch !== higgsConnectionEpoch || $('higgsBridgeUrl').value !== url) return false;
+      return applyHiggsfieldConnection(adapter, account);
+    })
+    .catch(async error => {
+      if (epoch !== higgsConnectionEpoch) return false;
+      const message = await higgsConnectionMessage(error);
+      invalidateHiggsfield(message, isHiggsfieldAuthError(error) ? 'auth-required' : 'disconnected');
+      throw new Error(message);
+    })
+    .finally(() => {
+      higgsAuthPromise = null;
+      if (epoch !== higgsConnectionEpoch) connectHiggsfield(true);
+    });
+  return higgsAuthPromise;
 }
 
 // ---- chave: guarda SÓ no browser, viaja SÓ pro Google ----
@@ -2340,26 +2589,28 @@ function higgsfieldInputs(job, spec) {
 }
 
 async function generateHiggsfieldImage(scene, rawScene, job) {
-  if (!state.higgsConnected || !state.higgsAdapter) {
-    const error = new Error('Higgsfield bridge não está conectado');
-    error.status = 503;
-    throw error;
-  }
+  const adapter = await ensureHiggsfieldConnection();
   const config = PROVIDER_API.modelByName(job.model);
   if (!config) throw new Error('Modelo Higgsfield não permitido');
   const spec = resolvePrompt(scene, rawScene, job, config.name);
   const refs = higgsfieldInputs(job, spec);
   const prompt = cleanPromptText([refs.notes.join(' '), spec.text].filter(Boolean).join(' '));
   state.lastPayloadPrompt = prompt;
-  const result = await state.higgsAdapter.generate({
-    model: config.name,
-    prompt,
-    aspectRatio: job.ar,
-    resolution: job.imgSize,
-    images: refs.images,
-  });
+  let result;
+  try {
+    result = await adapter.generate({
+      model: config.name,
+      prompt,
+      aspectRatio: job.ar,
+      resolution: job.imgSize,
+      images: refs.images,
+    });
+  } catch (error) {
+    handleHiggsfieldOperationError(error, adapter);
+    throw error;
+  }
   if (!result || !result.image || !result.image.data) throw new Error('Higgsfield terminou sem devolver a imagem');
-  if (Number.isFinite(Number(result.creditsRemaining))) {
+  if (state.higgsAdapter === adapter && Number.isFinite(Number(result.creditsRemaining))) {
     state.higgsAccount = { ...(state.higgsAccount || {}), credits: Number(result.creditsRemaining) };
     syncProviderHint();
   }
@@ -2388,7 +2639,34 @@ const MAX_PENDING_JOBS = 48;
 let queue = [];
 let busy = false;
 let activeJobs = 0;
+const activeByProvider = { google: 0, higgsfield: 0 };
 let pendingTicker = null;
+let localIdSequence = 0;
+let queueOrderSequence = 0;
+const localIdSession = globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+  ? globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+  : Math.random().toString(36).slice(2, 14);
+
+function nextLocalId(prefix) {
+  localIdSequence++;
+  return `${prefix}-${Date.now().toString(36)}-${localIdSession}-${localIdSequence.toString(36)}`;
+}
+
+function requeueInOriginalOrder(job) {
+  const index = queue.findIndex(candidate => Number(candidate.queueOrder) > Number(job.queueOrder));
+  if (index < 0) queue.push(job);
+  else queue.splice(index, 0, job);
+}
+
+function providerJobCapacity(provider) {
+  return provider === 'higgsfield' ? MAX_PARALLEL_JOBS : 1;
+}
+
+function queueJobCanRun(job) {
+  const provider = job.provider === 'higgsfield' ? 'higgsfield' : 'google';
+  if (provider === 'higgsfield' && !state.higgsConnected) return false;
+  return activeByProvider[provider] < providerJobCapacity(provider);
+}
 
 function generationTimes() {
   try { return JSON.parse(localStorage.getItem(GENERATION_TIMES_LS) || '{}') || {}; }
@@ -2470,17 +2748,40 @@ function setPendingRunning(job) {
   updatePendingProgress();
 }
 
+function setPendingQueued(job, message = 'aguardando conexão') {
+  const pending = state.pending.find(item => item.id === job.pendingId);
+  if (!pending) return;
+  pending.status = 'queued';
+  pending.startedAt = 0;
+  pending.msg = message;
+  const card = document.querySelector(`.take.pending[data-pid="${pending.id}"]`);
+  if (card) {
+    card.dataset.status = 'queued';
+    const label = card.querySelector('.pending-msg');
+    const time = card.querySelector('.pending-time');
+    if (label) label.textContent = pending.msg;
+    if (time) time.textContent = 'a Tipó retoma assim que o Higgsfield voltar';
+  }
+  updatePendingProgress();
+}
+
 function syncQueuedPendingPositions() {
-  queue.forEach((job, index) => {
+  const positions = { google: 0, higgsfield: 0 };
+  queue.forEach(job => {
+    const provider = job.provider === 'higgsfield' ? 'higgsfield' : 'google';
+    positions[provider]++;
     const pending = state.pending.find(item => item.id === job.pendingId);
     if (!pending || pending.status !== 'queued') return;
-    pending.msg = `na fila · posição ${index + 1}`;
+    const waitingForHiggsfield = job.provider === 'higgsfield' && !state.higgsConnected;
+    pending.msg = waitingForHiggsfield ? 'aguardando conexão' : `na fila · posição ${positions[provider]}`;
     const card = document.querySelector(`.take.pending[data-pid="${pending.id}"]`);
     if (!card) return;
     const message = card.querySelector('.pending-msg');
     const time = card.querySelector('.pending-time');
     if (message) message.textContent = pending.msg;
-    if (time) time.textContent = 'aguardando um dos 4 espaços';
+    if (time) time.textContent = waitingForHiggsfield
+      ? 'reconectando sem reenviar jobs'
+      : (provider === 'higgsfield' ? 'aguardando um dos 4 espaços Higgsfield' : 'aguardando o espaço Google');
   });
 }
 
@@ -2562,12 +2863,13 @@ function syncQueueUI() {
   $('genBtn').disabled = !ready || !canAddBatch;
   const requirement = $('genRequirement');
   requirement.classList.toggle('ready', ready);
-  if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} na fila` : ''}. Você pode ajustar a cena e revelar mais.`;
+  if (busy && !ready && currentProvider() === 'higgsfield') requirement.textContent = `${activeJobs ? `${activeJobs} em andamento · ` : ''}${n} na fila pausada. A Tipó retoma após reconectar ao Higgsfield.`;
+  else if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} na fila` : ''}. Você pode ajustar a cena e revelar mais.`;
   else if (ready) requirement.textContent = currentProvider() === 'higgsfield'
     ? `${count} ${count === 1 ? 'saída' : 'saídas'} por clique. Google é opcional para a direção criativa.`
     : `Google conectado${state.backend === 'vertex' ? ' via Vertex' : ''}. Pronto para gerar.`;
   else requirement.textContent = currentProvider() === 'higgsfield'
-    ? 'Conecte o bridge local do Higgsfield para liberar a geração.'
+    ? (state.higgsConnectionState === 'auth-required' ? 'Entre no Higgsfield para retomar.' : 'Aguardando a conexão automática com o Higgsfield.')
     : 'Conecte uma chave Google para liberar a geração.';
 }
 
@@ -2576,7 +2878,7 @@ function revelar() {
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
   if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
-  if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast('Ligue e teste o Higgsfield bridge — 🔑'); $('keyPop').classList.add('open'); return; }
+  if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast(state.higgsConnectionState === 'auth-required' ? 'Entre no Higgsfield — 🔑' : 'Higgsfield reconectando automaticamente'); $('keyPop').classList.add('open'); return; }
   try { localSceneForImage(subject); }
   catch (error) {
     $('genStatus').textContent = error.message;
@@ -2596,13 +2898,14 @@ function revelar() {
       if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
     }
   }
-  const batchId = `b${Date.now()}-${Math.round(performance.now())}`;
+  const batchId = nextLocalId('b');
   const jobs = Array.from({ length: count }, (_, index) => ({
     ...snapshotParams(),
     batchId,
     batchIndex: index + 1,
     batchTotal: count,
     pendingId: `${batchId}-${index + 1}`,
+    queueOrder: ++queueOrderSequence,
   }));
   queue.push(...jobs);
   state.pending.push(...jobs.map(job => ({
@@ -2616,6 +2919,7 @@ function revelar() {
     batchTotal: count,
     model: job.model,
     ar: job.ar,
+    provider: job.provider,
   })));
   renderGallery(-1);
   ensurePendingTicker();
@@ -2626,22 +2930,38 @@ function revelar() {
 
 function pump() {
   if (!queue.length) { busy = activeJobs > 0; syncQueueUI(); return; }
-  const next = queue[0];
-  const concurrency = next.provider === 'higgsfield' ? MAX_PARALLEL_JOBS : 1;
-  while (queue.length && activeJobs < concurrency && queue[0].provider === next.provider) {
-    const job = queue.shift();
+  // Um job Higgsfield sem conexão fica pausado, mas não bloqueia um job Google
+  // independente que tenha sido colocado depois dele. A ordem de cada provedor
+  // continua FIFO e o job pago só volta à fila quando o POST nem chegou a sair.
+  let runnableIndex = queue.findIndex(queueJobCanRun);
+  while (runnableIndex >= 0) {
+    const [job] = queue.splice(runnableIndex, 1);
+    const provider = job.provider === 'higgsfield' ? 'higgsfield' : 'google';
     activeJobs++;
+    activeByProvider[provider]++;
     busy = true;
     setPendingRunning(job);
     syncQueueUI();
-    revealJob(job).finally(() => {
+    revealJob(job).then(outcome => {
+      if (outcome === 'wait-for-connection') {
+        requeueInOriginalOrder(job);
+        setPendingQueued(job);
+      }
+    }).finally(() => {
       activeJobs--;
+      activeByProvider[provider]--;
       busy = activeJobs > 0 || queue.length > 0;
       syncQueueUI();
       pump();
     });
+    runnableIndex = queue.findIndex(queueJobCanRun);
   }
+  busy = activeJobs > 0 || queue.length > 0;
   syncQueuedPendingPositions();
+  syncQueueUI();
+  if (queue.some(job => job.provider === 'higgsfield')
+    && !state.higgsConnected
+    && !['auth-required', 'authenticating'].includes(state.higgsConnectionState)) connectHiggsfield(true);
 }
 
 const batchPreparations = new Map();
@@ -2728,7 +3048,7 @@ async function revealJob(job) {
   };
   $('genStatus').textContent = '';
   $('generationRecovery').hidden = true;
-  const pid = job.pendingId || ('p' + Date.now() + '-' + Math.round(performance.now()));
+  const pid = job.pendingId || nextLocalId('p');
   if (!state.pending.some(item => item.id === pid)) {
     state.pending.unshift({ id: pid, msg: 'revelando fotograma', status: 'running', startedAt: Date.now(), expectedMs: expectedGenerationMs(job.model), batchIndex: 1, batchTotal: 1, model: job.model, ar: job.ar });
     job.pendingId = pid;
@@ -2736,6 +3056,7 @@ async function revealJob(job) {
     ensurePendingTicker();
   }
   let completed = false;
+  let waitingForConnection = false;
   try {
     // A preparação (Diretor, visão e Ficha) é compartilhada pelo lote. Só a
     // geração final multiplica jobs/créditos; todas as saídas recebem a mesma
@@ -2807,6 +3128,10 @@ async function revealJob(job) {
     completed = true;
     TipoUI.showToast('Fotograma revelado');
   } catch (e) {
+    if (job.provider === 'higgsfield' && e && e.higgsfieldRequestNotSent) {
+      waitingForConnection = true;
+      return 'wait-for-connection';
+    }
     console.error('[fotograma]', e.detail || e.message);
     TipoUI.showToast(e.message || 'Falhou — tente de novo');
     const d = safeDetail(e);
@@ -2815,10 +3140,10 @@ async function revealJob(job) {
     $('generationRecovery').hidden = false;
     $('generationRecovery').textContent = job.provider === 'higgsfield' ? 'Reconectar Higgsfield' : 'Revisar conexão Google';
   } finally {
-    releaseBatchPreparation(job);
+    if (!waitingForConnection) releaseBatchPreparation(job);
     const pending = state.pending.find(item => item.id === pid);
     if (completed && pending && pending.startedAt) rememberGenerationTime(job.model, Date.now() - pending.startedAt);
-    state.pending = state.pending.filter(x => x.id !== pid);
+    if (!waitingForConnection) state.pending = state.pending.filter(x => x.id !== pid);
     renderGallery(state.pending.length ? -1 : 0);
     ensurePendingTicker();
     syncQueueUI();
@@ -2898,7 +3223,7 @@ async function loadGallery() {
 
 // ---- galeria da sessão: like, download, reusar parâmetros, excluir ----
 function addTake(url, caption, blob, params) {
-  const id = `${Date.now()}-${Math.round(performance.now())}`;
+  const id = nextLocalId('t');
   const take = { id, url, caption, blob, params, liked: false, ts: Date.now() };
   state.takes.unshift(take);
   idbPut({ id, caption, params, liked: false, ts: take.ts, blob });
@@ -3121,7 +3446,9 @@ function renderGallery(selIdx = -1) {
     d.querySelector('.take-caption').textContent = `${config ? config.label : 'Fotograma'}${pn.batchTotal > 1 ? ` · ${pn.batchIndex}/${pn.batchTotal}` : ''}${pn.ar ? ` · ${pn.ar}` : ''}`;
     d.querySelector('.take-prompt').textContent = pn.status === 'running'
       ? 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.'
-      : 'Aguardando um espaço de processamento no bridge.';
+      : (pn.provider === 'higgsfield' && !state.higgsConnected
+        ? 'A Tipó retoma este job depois da reconexão, sem reenviar uma cobrança incerta.'
+        : 'Aguardando um espaço de processamento.');
     g.appendChild(d);
   });
   visibleTakes.forEach(({ take: t, index: i }) => {
@@ -3827,7 +4154,10 @@ function setFotogramaTool(name) {
   restoreWorkspace(next);
   utilityStatus('');
   utilityButtonState();
+  localStorage.setItem(HIGGS_AUTO_LS, '1');
+  startHiggsfieldSupervisor();
   if (!state.higgsConnected) connectHiggsfield(true);
+  else scheduleHiggsfieldProbe(true);
   if (changed) $('panel').scrollTop = 0;
 }
 
@@ -3873,10 +4203,7 @@ async function setUtilityFile(file) {
 }
 
 async function ensureHiggsfieldForTool() {
-  if (state.higgsConnected && state.higgsAdapter) return state.higgsAdapter;
-  await connectHiggsfield(false);
-  if (!state.higgsAdapter) throw new Error('Higgsfield bridge não conectado');
-  return state.higgsAdapter;
+  return ensureHiggsfieldConnection();
 }
 
 function styleConfig() {
@@ -3988,7 +4315,7 @@ function utilityParams(prompt) {
   };
 }
 
-async function showUtilityResult(result, prompt) {
+async function showUtilityResult(result, prompt, operationAdapter) {
   if (!result || !result.image || !result.image.data) throw new Error('Higgsfield terminou sem devolver uma imagem');
   const mime = result.image.mimeType || 'image/png';
   const bytes = Uint8Array.from(atob(result.image.data), character => character.charCodeAt(0));
@@ -4002,7 +4329,7 @@ async function showUtilityResult(result, prompt) {
   $('stillImg').src = url;
   $('stillCaption').textContent = caption;
   $('utilityDownload').disabled = false;
-  if (Number.isFinite(Number(result.creditsRemaining))) {
+  if ((!operationAdapter || state.higgsAdapter === operationAdapter) && Number.isFinite(Number(result.creditsRemaining))) {
     state.higgsAccount = { ...(state.higgsAccount || {}), credits: Number(result.creditsRemaining) };
     syncProviderHint();
   }
@@ -4018,8 +4345,9 @@ async function generateUtility() {
   $('utilityDownload').disabled = true;
   utilityStatus('Conectando ao bridge local…');
   let prompt = '';
+  let adapter = null;
   try {
-    const adapter = await ensureHiggsfieldForTool();
+    adapter = await ensureHiggsfieldForTool();
     utilityStatus('Processando no Higgsfield · sem retry automático…');
     let result;
     if (UTILITY_META[utilityState.active].generator) {
@@ -4063,8 +4391,9 @@ async function generateUtility() {
     } else {
       result = await adapter.runTool({ tool: 'removeBg', images: utilityImagePayload() });
     }
-    await showUtilityResult(result, prompt);
+    await showUtilityResult(result, prompt, adapter);
   } catch (error) {
+    handleHiggsfieldOperationError(error, adapter);
     utilityStatus(error.message || 'A ferramenta falhou', true);
     TipoUI.showToast(error.message || 'Higgsfield falhou');
   } finally {
@@ -4201,10 +4530,26 @@ document.addEventListener('click', (e) => {
 $('keyConnect').addEventListener('click', () => connect(false));
 $('keyForget').addEventListener('click', forgetKey);
 $('higgsConnect').addEventListener('click', () => {
+  localStorage.setItem(HIGGS_AUTO_LS, '1');
   connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
 });
+$('higgsBridgeUrl').addEventListener('change', () => {
+  higgsConnectionEpoch++;
+  clearHiggsfieldReconnect();
+  invalidateHiggsfield('Atualizando o endereço do serviço local…', 'disconnected', false);
+  connectHiggsfield(true);
+});
+$('higgsLogin').addEventListener('click', () => {
+  loginHiggsfield().then(connected => {
+    if (!connected) return;
+    TipoUI.showToast('Higgsfield conectado');
+    $('keyPop').classList.remove('open');
+  }).catch(error => TipoUI.showToast(error.message || 'Não consegui entrar no Higgsfield'));
+});
 $('utilityBridgeConnect').addEventListener('click', () => {
-  connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
+  localStorage.setItem(HIGGS_AUTO_LS, '1');
+  const action = state.higgsConnectionState === 'auth-required' ? loginHiggsfield() : connectHiggsfield(false);
+  action.catch(error => TipoUI.showToast(error.message || 'Higgsfield indisponível'));
 });
 $('keyEye').addEventListener('click', () => {
   const k = $('apiKey');
@@ -4214,7 +4559,8 @@ $('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') connect(fa
 $('imageProvider').addEventListener('change', e => setImageProvider(e.target.value));
 $('providerAction').addEventListener('click', () => {
   if (currentProvider() === 'higgsfield') {
-    connectHiggsfield(false).catch(error => TipoUI.showToast(error.message || 'Bridge Higgsfield indisponível'));
+    const action = state.higgsConnectionState === 'auth-required' ? loginHiggsfield() : connectHiggsfield(false);
+    action.catch(error => TipoUI.showToast(error.message || 'Higgsfield indisponível'));
     return;
   }
   $('keyPop').classList.add('open');
@@ -4224,7 +4570,8 @@ $('generationRecovery').addEventListener('click', () => {
   $('genStatus').textContent = '';
   $('generationRecovery').hidden = true;
   if (currentProvider() === 'higgsfield') {
-    connectHiggsfield(false).catch(error => {
+    const action = state.higgsConnectionState === 'auth-required' ? loginHiggsfield() : connectHiggsfield(false);
+    action.catch(error => {
       $('genStatus').textContent = `Higgsfield: ${error.message || 'não consegui reconectar'}`;
       $('generationRecovery').hidden = false;
     });
@@ -4270,8 +4617,8 @@ setProg('cinema');
 
 const savedBridge = localStorage.getItem(HIGGS_BRIDGE_LS);
 if (savedBridge) $('higgsBridgeUrl').value = savedBridge;
+startHiggsfieldSupervisor();
 setImageProvider(localStorage.getItem(PROVIDER_LS) || 'google');
-if (currentProvider() === 'higgsfield') connectHiggsfield(true);
 
 // chave salva? reconecta em silêncio
 const saved = localStorage.getItem(KEY_LS);
@@ -4280,7 +4627,9 @@ if (saved) {
   connect(true);
 } else {
   $('keyBtn').classList.add('pulse');
-  $('keyPop').classList.add('open'); // onboarding: mostra onde conectar
+  // Higgsfield é autônomo: ausência de uma chave Google não deve interromper
+  // nem abrir onboarding por cima da galeria quando ele é o motor escolhido.
+  if (currentProvider() !== 'higgsfield') $('keyPop').classList.add('open');
 }
 
 loadGallery();

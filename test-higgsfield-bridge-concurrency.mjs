@@ -1,6 +1,8 @@
 import path from 'node:path';
 
 process.env.TIPO_HIGGSFIELD_BIN = path.join(process.cwd(), 'test-fixtures/mock-higgsfield-cli.mjs');
+process.env.TIPO_HIGGSFIELD_ORIGINS = 'http://localhost:3000';
+process.env.MOCK_HIGGSFIELD_AUTH_DELAY_MS = '400';
 const { createHiggsfieldBridgeServer } = await import('./higgsfield-bridge.mjs');
 
 let failures = 0;
@@ -31,6 +33,20 @@ const headers = { Origin: 'http://localhost:3000', 'Content-Type': 'application/
 const payload = JSON.stringify({ model: 'nano_banana_2', prompt: 'parallel bridge test', aspectRatio: '16:9', resolution: '2K' });
 
 try {
+  const authRequest = fetch(`${base}/auth/login`, { method: 'POST', headers });
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const duringAuth = await fetch(`${base}/generate`, { method: 'POST', headers, body: payload });
+  const duringAuthBody = await duringAuth.json();
+  check('login bloqueia geração concorrente antes do CLI', duringAuth.status === 409 && /acesso.+renovado/i.test(duringAuthBody.error), `(${duringAuth.status}) ${duringAuthBody.error}`);
+  const toolDuringAuth = await fetch(`${base}/tool`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ tool: 'removeBg', images: [{ dataUrl: 'data:image/png;base64,AA==' }] }),
+  });
+  check('login bloqueia ferramenta concorrente antes do CLI', toolDuringAuth.status === 409, `(${toolDuringAuth.status})`);
+  const authResponse = await authRequest;
+  check('OAuth simulado conclui e libera novamente o bridge', authResponse.status === 200, `(${authResponse.status})`);
+
   const firstFour = Array.from({ length: 4 }, () => fetch(`${base}/generate`, { method: 'POST', headers, body: payload }));
   await new Promise(resolve => setTimeout(resolve, 120));
 
@@ -45,6 +61,14 @@ try {
   const responses = await Promise.all(firstFour);
   const bodies = await Promise.all(responses.map(response => response.json()));
   check('quatro jobs independentes concluem com quatro imagens', responses.every(response => response.status === 200) && new Set(bodies.map(body => body.id)).size === 4 && bodies.every(body => body.image && body.image.mimeType === 'image/png'));
+
+  process.env.MOCK_HIGGSFIELD_GENERATE_ERROR = 'oauth-json';
+  const redacted = await fetch(`${base}/generate`, { method: 'POST', headers, body: payload });
+  const redactedBody = await redacted.json();
+  delete process.env.MOCK_HIGGSFIELD_GENERATE_ERROR;
+  check('erros do CLI não expõem tokens OAuth em JSON', redacted.status === 500
+    && !/fixture-(?:access|refresh|state)-secret/.test(JSON.stringify(redactedBody))
+    && /•••/.test(redactedBody.error), JSON.stringify(redactedBody));
 } finally {
   globalThis.fetch = realFetch;
   await new Promise(resolve => server.close(resolve));

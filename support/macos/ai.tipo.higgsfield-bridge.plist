@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>ai.tipo.higgsfield-bridge</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__TIPO_NODE_BIN__</string>
+    <string>__TIPO_BRIDGE_FILE__</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__TIPO_PROJECT_DIR__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>__TIPO_HOME__</string>
+    <key>PATH</key>
+    <string>__TIPO_PATH__</string>
+    <key>TIPO_HIGGSFIELD_BIN</key>
+    <string>__TIPO_CLI_BIN__</string>
+    <key>TIPO_HIGGSFIELD_HOST</key>
+    <string>127.0.0.1</string>
+    <key>TIPO_HIGGSFIELD_PORT</key>
+    <string>4789</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>Umask</key>
+  <integer>63</integer>
+
+  <key>StandardOutPath</key>
+  <string>__TIPO_LOG_FILE__</string>
+  <key>StandardErrorPath</key>
+  <string>__TIPO_ERROR_FILE__</string>
+</dict>
+</plist>

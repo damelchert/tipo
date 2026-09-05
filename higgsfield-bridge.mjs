@@ -1,8 +1,9 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -12,7 +13,11 @@ const { EXPAND_RATIOS, TOOL_COSTS } = require('./shared/fotograma-tools.js');
 
 const HOST = process.env.TIPO_HIGGSFIELD_HOST || '127.0.0.1';
 const PORT = Number(process.env.TIPO_HIGGSFIELD_PORT || 4789);
-const CLI = process.env.TIPO_HIGGSFIELD_BIN || '/usr/local/bin/higgsfield';
+const CLI = process.env.TIPO_HIGGSFIELD_BIN || [
+  join(homedir(), 'bin', 'higgsfield'),
+  join(homedir(), '.local', 'bin', 'higgsfield'),
+  '/usr/local/bin/higgsfield',
+].find(candidate => existsSync(candidate)) || '/usr/local/bin/higgsfield';
 const FFMPEG = process.env.TIPO_FFMPEG_BIN || (() => {
   try { return require('ffmpeg-static'); } catch (error) { return 'ffmpeg'; }
 })();
@@ -20,12 +25,8 @@ const MAX_BODY_BYTES = 64 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
 const CLI_TIMEOUT_MS = 22 * 60 * 1000;
-const DEFAULT_ORIGINS = [
-  'http://127.0.0.1:3000', 'http://localhost:3000',
-  'http://127.0.0.1:8080', 'http://localhost:8080',
-  'http://localhost',
-  'https://tipo-steel.vercel.app',
-];
+const AUTH_TIMEOUT_MS = 12 * 60 * 1000;
+const DEFAULT_ORIGINS = ['https://tipo-steel.vercel.app'];
 const configuredOrigins = String(process.env.TIPO_HIGGSFIELD_ORIGINS || '')
   .split(',').map(value => value.trim()).filter(Boolean);
 const ALLOWED_ORIGINS = new Set([...DEFAULT_ORIGINS, ...configuredOrigins]);
@@ -33,9 +34,10 @@ const ALLOWED_ORIGINS = new Set([...DEFAULT_ORIGINS, ...configuredOrigins]);
 const MAX_ACTIVE_GENERATIONS = 4;
 const activeGenerations = new Map();
 let activeTool = null;
+let authPromise = null;
 
 function bridgeBusy() {
-  return !!activeTool || activeGenerations.size > 0;
+  return !!authPromise || !!activeTool || activeGenerations.size > 0;
 }
 
 function inputError(message, status = 400) {
@@ -49,8 +51,17 @@ function publicError(error) {
     .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza•••')
     .replace(/AQ\.[0-9A-Za-z_.-]{8,}/g, 'AQ.•••')
     .replace(/Bearer\s+\S+/gi, 'Bearer •••')
+    .replace(/\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '•••')
+    .replace(/([?&](?:code|state)=)[^&\s]+/gi, '$1•••')
+    .replace(/(["']?(?:(?:access|refresh|id)_token|authorization_code|oauth_code|state)["']?\s*:\s*)["'][^"']*["']/gi, '$1"•••"')
+    .replace(/((?:access|refresh|id)_token|authorization_code|oauth_code|state)(\s*[=:]\s*)["']?[^"'&,\s}]+/gi, '$1$2•••')
     .slice(0, 400);
   return text || 'Falha desconhecida';
+}
+
+function authRequired(error) {
+  return (error && (error.status === 401 || error.code === 'AUTH_REQUIRED'))
+    || /(?:not authenticated|session expired|authentication required|unauthorized)/i.test(String((error && error.message) || error || ''));
 }
 
 function originAllowed(origin) {
@@ -102,9 +113,16 @@ function run(bin, args, options = {}) {
     let stdout = '';
     let stderr = '';
     let settled = false;
+    let timedOut = false;
+    let killTimer = null;
     const timer = setTimeout(() => {
-      child.kill('SIGTERM');
-      finish(new Error('O Higgsfield CLI excedeu o tempo limite'));
+      timedOut = true;
+      try { child.kill('SIGTERM'); } catch (error) {}
+      // Não libera o slot enquanto o subprocesso ainda pode estar vivo. Se ele
+      // ignorar SIGTERM, encerra à força após uma pequena janela de limpeza.
+      killTimer = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch (error) {}
+      }, 5_000);
     }, options.timeoutMs || CLI_TIMEOUT_MS);
 
     const append = (current, chunk) => {
@@ -115,7 +133,8 @@ function run(bin, args, options = {}) {
     child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
     child.on('error', finish);
     child.on('close', code => {
-      if (code === 0) finish(null, { stdout, stderr });
+      if (timedOut) finish(new Error('O Higgsfield CLI excedeu o tempo limite'));
+      else if (code === 0) finish(null, { stdout, stderr });
       else {
         const error = new Error(stderr.trim() || stdout.trim() || `CLI encerrou com código ${code}`);
         error.code = code;
@@ -127,6 +146,7 @@ function run(bin, args, options = {}) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
       if (error) reject(error); else resolve(result);
     }
   });
@@ -267,6 +287,22 @@ async function accountStatus() {
   };
 }
 
+function authenticate() {
+  if (authPromise) return authPromise;
+  if (bridgeBusy()) throw inputError('Espere os jobs Higgsfield terminarem antes de entrar novamente', 409);
+  authPromise = (async () => {
+    try {
+      await run(CLI, ['auth', 'login'], { timeoutMs: AUTH_TIMEOUT_MS });
+      return await accountStatus();
+    } catch (cause) {
+      const error = inputError('Não foi possível concluir o acesso do Higgsfield no navegador', 401);
+      error.code = 'AUTH_REQUIRED';
+      throw error;
+    }
+  })().finally(() => { authPromise = null; });
+  return authPromise;
+}
+
 async function downloadOutput(url) {
   const parsed = new URL(url);
   if (parsed.protocol !== 'https:') throw new Error('O CLI devolveu uma URL de saída insegura');
@@ -287,6 +323,7 @@ async function downloadOutput(url) {
 
 async function generate(body) {
   const input = validateGenerate(body);
+  if (authPromise) throw inputError('O acesso ao Higgsfield está sendo renovado. Aguarde a conclusão.', 409);
   if (activeTool) {
     const error = new Error('Uma ferramenta Higgsfield está em processamento neste bridge');
     error.status = 409;
@@ -362,7 +399,9 @@ async function runTool(body) {
 export function createHiggsfieldBridgeServer() {
   return http.createServer(async (req, res) => {
     const origin = req.headers.origin;
-    if (!originAllowed(origin)) return sendJson(req, res, 403, { error: 'Origin não autorizado' });
+    if ((origin && !originAllowed(origin)) || (req.method === 'POST' && !origin)) {
+      return sendJson(req, res, 403, { error: 'Origin não autorizado' });
+    }
 
     if (req.method === 'OPTIONS') {
       if (origin) {
@@ -382,16 +421,24 @@ export function createHiggsfieldBridgeServer() {
 
     const url = new URL(req.url || '/', `http://${req.headers.host || `${HOST}:${PORT}`}`);
     try {
+      if (req.method === 'GET' && url.pathname === '/live') {
+        return sendJson(req, res, 200, { ok: true, service: 'tipo-higgsfield-bridge' });
+      }
       if (req.method === 'GET' && url.pathname === '/health') {
         const account = await accountStatus();
         return sendJson(req, res, 200, {
           ok: true,
           ...account,
+          authenticating: !!authPromise,
           busy: bridgeBusy(),
           activeGenerations: activeGenerations.size,
           maxParallelGenerations: MAX_ACTIVE_GENERATIONS,
           models: HIGGSFIELD_MODELS.map(({ name, label, cost, costs }) => ({ name, label, cost, costs: costs || null })),
         });
+      }
+      if (req.method === 'POST' && url.pathname === '/auth/login') {
+        const account = await authenticate();
+        return sendJson(req, res, 200, { ok: true, ...account });
       }
       if (req.method === 'POST' && url.pathname === '/generate') {
         const payload = await readJson(req);
@@ -405,10 +452,12 @@ export function createHiggsfieldBridgeServer() {
       }
       return sendJson(req, res, 404, { error: 'Rota inexistente' });
     } catch (error) {
-      if (!error.status || error.status >= 500) console.error('[tipo-higgsfield]', publicError(error));
-      return sendJson(req, res, error.status || 500, {
+      const needsAuth = authRequired(error);
+      const status = needsAuth ? 401 : (error.status || 500);
+      if (status >= 500) console.error('[tipo-higgsfield]', publicError(error));
+      return sendJson(req, res, status, {
         error: publicError(error),
-        detail: error.status ? '' : 'Veja o terminal do bridge para o diagnóstico completo.',
+        ...(needsAuth ? { code: 'AUTH_REQUIRED' } : {}),
       });
     }
   });

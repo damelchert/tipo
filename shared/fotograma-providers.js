@@ -79,6 +79,9 @@
       // num cancelamento prematuro de toda imagem.
       this.timeoutMs = (options && options.timeoutMs) || 23 * 60 * 1000;
       this.healthTimeoutMs = (options && options.healthTimeoutMs) || 30 * 1000;
+      // O servidor encerra o OAuth em 12 min; o browser deixa um minuto de
+      // folga para ainda receber a resposta/erro final do bridge.
+      this.authTimeoutMs = (options && options.authTimeoutMs) || 13 * 60 * 1000;
       const hostname = new URL(this.baseUrl).hostname;
       this.targetAddressSpace = ['127.0.0.1', 'localhost', '[::1]'].includes(hostname) ? 'loopback' : null;
     }
@@ -118,6 +121,10 @@
 
     health() {
       return this.request('/health', { method: 'GET' }, this.healthTimeoutMs);
+    }
+
+    authenticate() {
+      return this.request('/auth/login', { method: 'POST' }, this.authTimeoutMs);
     }
 
     generate(input) {
