@@ -335,9 +335,18 @@ const TipoUI = {
     const a = document.createElement('a');
     a.className = 'tipo-back-btn';
     a.href = 'index.html' + (target ? '#' + target : '');
-    a.title = 'Back to menu';
+    a.title = 'Voltar ao hub Tipó';
+    a.setAttribute('aria-label', a.title);
     a.textContent = '\u2190';
     document.body.appendChild(a);
+    // Only store this allowlisted tool id, never user images/prompts/keys.
+    if (this._backTargets[mode]) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('tipo-hub-recent') || '[]');
+        const recent = Array.isArray(stored) ? stored.filter(id => typeof id === 'string' && this._backTargets[id]) : [];
+        localStorage.setItem('tipo-hub-recent', JSON.stringify([mode, ...recent.filter(id => id !== mode)].slice(0, 8)));
+      } catch { /* The tools also work when browser storage is unavailable. */ }
+    }
   },
 
   /** One-call chrome for standalone visual tools (no p5/TipoUI.init):
@@ -453,22 +462,26 @@ const TipoUI = {
   /** Initialize theme toggle button and restore saved preference */
   initTheme() {
     // Restore saved theme
-    const saved = localStorage.getItem('tipo-theme') || 'light';
+    let saved = 'light';
+    try { if (localStorage.getItem('tipo-theme') === 'dark') saved = 'dark'; } catch {}
     document.documentElement.setAttribute('data-theme', saved);
 
     // Create toggle button if not already present
     if (!document.querySelector('.tipo-theme-toggle')) {
       const btn = document.createElement('button');
       btn.className = 'tipo-theme-toggle';
-      btn.title = 'Toggle light/dark theme';
+      btn.title = saved === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro';
+      btn.setAttribute('aria-label', btn.title);
       btn.textContent = saved === 'dark' ? '\u263C' : '\u263E';
       btn.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') || 'dark';
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.classList.add('theme-anim');
         document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('tipo-theme', next);
+        try { localStorage.setItem('tipo-theme', next); } catch {}
         btn.textContent = next === 'dark' ? '\u263C' : '\u263E';
+        btn.title = next === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro';
+        btn.setAttribute('aria-label', btn.title);
         setTimeout(() => document.documentElement.classList.remove('theme-anim'), 380);
       });
       document.body.appendChild(btn);
@@ -2595,13 +2608,16 @@ const TipoHelp = {
     const map = this.TEXTS[tool];
     if (!map) return;
     let injected = 0;
-    document.querySelectorAll('.section-title').forEach(el => {
-      const key = el.textContent.trim();
+    document.querySelectorAll('.section-title, [data-tipo-help]').forEach(el => {
+      const key = el.dataset.tipoHelp || el.textContent.trim();
       if (!map[key] || el.querySelector('.tipo-help-icon')) return;
       const s = document.createElement('span');
       s.className = 'tipo-help-icon';
       s.dataset.help = map[key];
       s.textContent = '?';
+      s.setAttribute('role', 'button');
+      s.setAttribute('aria-label', 'Ajuda: ' + key);
+      s.tabIndex = 0;
       el.appendChild(s);
       injected++;
     });
@@ -2611,19 +2627,26 @@ const TipoHelp = {
   _bind() {
     const style = document.createElement('style');
     style.textContent = `
-.tipo-help-icon { display:inline-flex; align-items:center; justify-content:center; width:13px; height:13px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); color:var(--text-5,#777); font-size:9px; font-weight:400; cursor:help; margin-left:6px; flex:none; user-select:none; text-transform:none; letter-spacing:0; vertical-align:middle; }
-.tipo-help-icon:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
-#tipoHelpTip { position:fixed; z-index:9999; max-width:260px; background:var(--bg-2,#1e1e1e); border:1px solid var(--border-2,#3a3a3a); color:var(--text-2,#ccc); font-size:11px; line-height:1.55; padding:9px 11px; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .15s; letter-spacing:0; text-transform:none; box-shadow:0 4px 16px rgba(0,0,0,.35); }
+.tipo-help-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; border:1px solid var(--border-2,#3a3a3a); color:var(--text-5,#777); font-size:11px; font-weight:400; cursor:help; margin-left:6px; flex:none; user-select:none; text-transform:none; letter-spacing:0; vertical-align:middle; }
+.tipo-help-icon:hover, .tipo-help-icon:focus-visible { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
+#tipoHelpTip { position:fixed; z-index:9999; max-width:260px; background:var(--bg-2,#1e1e1e); border:1px solid var(--border-2,#3a3a3a); color:var(--text-2,#ccc); font-size:12px; line-height:1.55; padding:9px 11px; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .15s; letter-spacing:0; text-transform:none; box-shadow:0 4px 16px rgba(0,0,0,.35); }
 `;
     document.head.appendChild(style);
     const tip = document.createElement('div');
     tip.id = 'tipoHelpTip';
+    tip.setAttribute('role', 'tooltip');
+    tip.setAttribute('aria-hidden', 'true');
     document.body.appendChild(tip);
     this._tip = tip;
 
+    let activeIcon = null;
     const show = (icon) => {
+      activeIcon?.removeAttribute('aria-describedby');
+      activeIcon = icon;
+      icon.setAttribute('aria-describedby', tip.id);
       tip.textContent = icon.dataset.help;
       tip.style.opacity = '1';
+      tip.setAttribute('aria-hidden', 'false');
       const r = icon.getBoundingClientRect();
       tip.style.left = '0px'; tip.style.top = '0px'; // reset before measuring
       const tw = tip.offsetWidth, th = tip.offsetHeight;
@@ -2633,20 +2656,36 @@ const TipoHelp = {
       tip.style.left = x + 'px';
       tip.style.top = y + 'px';
     };
-    const hide = () => { tip.style.opacity = '0'; this._pinned = false; };
+    const hide = () => {
+      tip.style.opacity = '0';
+      tip.setAttribute('aria-hidden', 'true');
+      activeIcon?.removeAttribute('aria-describedby');
+      activeIcon = null;
+      this._pinned = false;
+    };
 
     document.querySelectorAll('.tipo-help-icon').forEach(icon => {
       icon.addEventListener('mouseenter', () => { if (!this._pinned) show(icon); });
       icon.addEventListener('mouseleave', () => { if (!this._pinned) hide(); });
+      icon.addEventListener('focus', () => { this._pinned = false; show(icon); });
+      icon.addEventListener('blur', hide);
+      icon.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          icon.click();
+        }
+      });
       icon.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (this._pinned) { hide(); return; }
+        if (this._pinned && activeIcon === icon) { hide(); return; }
         show(icon);
         this._pinned = true;
       });
     });
     document.addEventListener('click', hide);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
     const panel = document.querySelector('.tipo-panel');
     if (panel) panel.addEventListener('scroll', hide);
   },
@@ -2824,6 +2863,10 @@ const TipoMobile = {
     // grip: the only part visible in the peek state
     const grip = document.createElement('div');
     grip.className = 'tipo-sheet-grip';
+    grip.tabIndex = 0;
+    grip.setAttribute('role', 'button');
+    grip.setAttribute('aria-label', 'Abrir ou fechar ajustes');
+    grip.setAttribute('aria-expanded', 'false');
     grip.innerHTML = '<span class="tipo-sheet-bar"></span><span class="tipo-sheet-label">Ajustes</span>';
     panel.insertBefore(grip, panel.firstChild);
 
@@ -2847,11 +2890,17 @@ const TipoMobile = {
     });
     const setOpen = open => {
       panel.classList.toggle('sheet-open', open);
+      grip.setAttribute('aria-expanded', String(open));
       // split view: canvas resizes to the space above the sheet so the user
       // tweaks AND watches at the same time (like desktop side-by-side)
       document.body.classList.toggle('tipo-sheet-open', open);
       setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
     };
+    grip.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      setOpen(!panel.classList.contains('sheet-open'));
+    });
     const finish = e => {
       if (startY === null) return;
       panel.classList.remove('sheet-drag');
@@ -2896,7 +2945,18 @@ const TipoMobile = {
         if (e.target.classList && e.target.classList.contains('tipo-help-icon')) return;
         if (e.target.closest('button, input, select, a, label')) return;
         sec.classList.toggle('sec-collapsed');
+        title.setAttribute('aria-expanded', String(!sec.classList.contains('sec-collapsed')));
       });
+      if (!title.querySelector('button, input, select, a, label')) {
+        title.tabIndex = 0;
+        title.setAttribute('role', 'button');
+        title.setAttribute('aria-expanded', String(!sec.classList.contains('sec-collapsed')));
+        title.addEventListener('keydown', e => {
+          if (e.target !== title || (e.key !== 'Enter' && e.key !== ' ')) return;
+          e.preventDefault();
+          title.click();
+        });
+      }
     });
 
     // panels swap from side column to overlay — let canvases refit.
@@ -2930,9 +2990,9 @@ const TipoFormat = {
     this._container = c;
     const style = document.createElement('style');
     style.textContent = `
-.tipo-fmt-btn { position:fixed; top:18px; right:108px; z-index:8999; height:28px; padding:0 12px;
+.tipo-fmt-btn { position:fixed; top:14px; right:108px; z-index:8999; height:36px; padding:0 12px;
   border-radius:14px; border:1px solid var(--border-2,#3a3a3a); background:var(--bg-1,#161616);
-  color:var(--text-4,#999); font-family:var(--font-ui,monospace); font-size:9px; letter-spacing:1.5px;
+  color:var(--text-2,#aaa); font-family:var(--font-ui,monospace); font-size:12px; letter-spacing:.2px;
   cursor:pointer; }
 .tipo-fmt-btn:hover { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); }
 .tipo-fmt-btn.active { border-color:var(--accent,#2A8A7A); color:var(--accent,#2A8A7A); font-weight:700; }
@@ -2943,7 +3003,8 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
     const b = document.createElement('button');
     b.className = 'tipo-fmt-btn';
     b.title = 'Formato do canvas: Stories 9:16, feed 1:1 / 4:5, wide 16:9';
-    b.textContent = 'FREE';
+    b.textContent = 'Formato livre';
+    b.setAttribute('aria-label', 'Formato do canvas: livre. Clique para alternar.');
     b.addEventListener('click', () => this.setIdx((this.idx + 1) % this.RATIOS.length));
     document.body.appendChild(b);
     this._btn = b;
@@ -2956,7 +3017,8 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
   setIdx(i) {
     this.idx = i;
     if (this._btn) {
-      this._btn.textContent = this.RATIOS[i][0].toUpperCase();
+      this._btn.textContent = i === 0 ? 'Formato livre' : this.RATIOS[i][0];
+      this._btn.setAttribute('aria-label', `Formato do canvas: ${i === 0 ? 'livre' : this.RATIOS[i][0]}. Clique para alternar.`);
       this._btn.classList.toggle('active', i !== 0);
     }
     if (this._chips) {
@@ -2980,7 +3042,8 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
     const grid = document.createElement('div');
     grid.className = 'preset-grid';
     this._chips = this.RATIOS.map(([name], i) => {
-      const chip = document.createElement('span');
+      const chip = document.createElement('button');
+      chip.type = 'button';
       chip.className = 'preset-chip' + (i === this.idx ? ' active' : '');
       chip.textContent = i === 0 ? 'Livre' : name;
       chip.addEventListener('click', () => this.setIdx(i));
@@ -3036,6 +3099,40 @@ body.tipo-full .tipo-fmt-btn { display:none !important; }
   },
 };
 
+// Compatibility layer for the original span-based controls. This keeps each
+// engine's click handler intact while adding a keyboard equivalent and names.
+const TipoAccess = {
+  _wired: new WeakSet(),
+  _labelSeq: 0,
+  scan() {
+    document.querySelectorAll('.preset-chip, .fchip, .prog-btn').forEach(el => {
+      if (el.matches('button, a, input') || this._wired.has(el) || el.querySelector('button, a, input, select')) return;
+      this._wired.add(el);
+      if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+      if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      el.addEventListener('keydown', event => {
+        if (event.target !== el || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        if (el.getAttribute('aria-disabled') !== 'true') el.click();
+      });
+    });
+    document.querySelectorAll('button[title]:not([aria-label])').forEach(el => {
+      if (el.title) el.setAttribute('aria-label', el.title);
+    });
+    document.querySelectorAll('.tipo-panel input:not([type="hidden"]), .tipo-panel select, .tipo-panel textarea, #controlPanel input:not([type="hidden"]), #controlPanel select, #controlPanel textarea').forEach(el => {
+      if (el.hasAttribute('aria-label') || el.hasAttribute('aria-labelledby') || el.labels?.length) return;
+      const row = el.closest('.range-row, .color-row, .color-section-row');
+      const label = row?.querySelector('.range-label, label') || el.closest('.section')?.querySelector('.section-title');
+      if (el.title || el.getAttribute('placeholder')) {
+        el.setAttribute('aria-label', el.title || el.getAttribute('placeholder'));
+      } else if (label) {
+        if (!label.id) label.id = `tipo-control-label-${++this._labelSeq}`;
+        el.setAttribute('aria-labelledby', label.id);
+      }
+    });
+  },
+};
+
 if (typeof document !== 'undefined') {
   const boot = () => {
     TipoBehavior.scan();
@@ -3063,8 +3160,9 @@ if (typeof document !== 'undefined') {
     let pending = null;
     new MutationObserver(() => {
       if (pending) return;
-      pending = setTimeout(() => { pending = null; TipoBehavior.scan(); }, 200);
+      pending = setTimeout(() => { pending = null; TipoBehavior.scan(); TipoAccess.scan(); }, 200);
     }).observe(document.body, { childList: true, subtree: true });
+    TipoAccess.scan();
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

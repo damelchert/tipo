@@ -129,7 +129,7 @@ const adapterTimeouts = await page.evaluate(() => ({
   health: state.higgsAdapter && state.higgsAdapter.healthTimeoutMs,
   auth: state.higgsAdapter && state.higgsAdapter.authTimeoutMs,
 }));
-check('health, OAuth e geração usam relógios separados com folga', adapterTimeouts.health === 30_000 && adapterTimeouts.auth === 13 * 60_000 && adapterTimeouts.generation === 23 * 60_000, JSON.stringify(adapterTimeouts));
+check('health, OAuth e geração usam relógios separados com folga', adapterTimeouts.health === 30_000 && adapterTimeouts.auth === 13 * 60_000 && adapterTimeouts.generation === 26 * 60_000, JSON.stringify(adapterTimeouts));
 check('saldo do Higgsfield fica visível', /1258\.87/.test(await page.locator('#providerHint').textContent()));
 
 await page.selectOption('#model', 'seedream_v5_lite');

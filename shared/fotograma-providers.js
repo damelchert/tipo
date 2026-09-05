@@ -10,6 +10,59 @@
   const SEEDREAM_PRO_RATIOS = ['21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'];
   const SEEDREAM_45_RATIOS = ['21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'];
   const GPT_IMAGE_RATIOS = ['21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'];
+  // Catálogo real do CLI 1.1.24, conferido em 05/09/2026. Não substituir
+  // silenciosamente um controle geométrico por uma reinterpretação por prompt.
+  const HIGGSFIELD_TOOLS = Object.freeze({
+    multiAngle: Object.freeze({ available: false, reason: 'O modelo Multi Angle foi retirado do catálogo atual do Higgsfield. A ferramenta fica pausada até voltar a ter um motor compatível.' }),
+    expand: Object.freeze({ available: true }),
+    removeBg: Object.freeze({ available: true }),
+  });
+
+  function redactSecrets(value, secret) {
+    let text = String(value || '');
+    if (secret) text = text.split(String(secret)).join('•••');
+    return text
+      .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza•••')
+      .replace(/AQ\.[0-9A-Za-z_.-]{8,}/g, 'AQ.•••')
+      .replace(/Bearer\s+\S+/gi, 'Bearer •••')
+      .replace(/([?&](?:key|code|state)=)[^&\s]+/gi, '$1•••');
+  }
+
+  async function googleRequest(url, options = {}) {
+    const body = options.body;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs || (body ? 5 * 60_000 : 30_000));
+    try {
+      const response = await fetch(url, {
+        method: body ? 'POST' : 'GET',
+        headers: { 'x-goog-api-key': options.key || '', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+      let payload;
+      try { payload = await response.json(); }
+      catch (error) {
+        if (controller.signal.aborted) throw error;
+        if (response.ok) throw new ProviderError('O Google devolveu uma resposta inválida. Confira a conta antes de tentar novamente.', 502);
+      }
+      if (!response.ok) {
+        const error = new ProviderError(`Google respondeu ${response.status}`, response.status,
+          redactSecrets(payload && payload.error && payload.error.message, options.key));
+        throw error;
+      }
+      return payload;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        const failure = new ProviderError('O Google não concluiu a resposta dentro do limite. Confira a conta antes de tentar novamente.', 504);
+        failure.ambiguous = !!body;
+        throw failure;
+      }
+      if (error instanceof ProviderError) throw error;
+      const failure = new ProviderError('A conexão com o Google foi interrompida. Confira a conta antes de tentar novamente.', 0);
+      failure.ambiguous = !!body;
+      throw failure;
+    } finally { clearTimeout(timer); }
+  }
 
   // Custos verificados na conta Creator em 20/08/2026. São estimativas de UI:
   // o bridge devolve o saldo real depois que o CLI concluir o job.
@@ -77,7 +130,9 @@
       // O health precisa falhar rápido, mas uma geração CLI pode levar muitos
       // minutos. Manter relógios separados evita transformar o probe de 30s
       // num cancelamento prematuro de toda imagem.
-      this.timeoutMs = (options && options.timeoutMs) || 23 * 60 * 1000;
+      // Inclui a espera CLI (até 22 min), materialização das referências,
+      // download limitado a 2 min e consulta final de saldo.
+      this.timeoutMs = (options && options.timeoutMs) || 26 * 60 * 1000;
       this.healthTimeoutMs = (options && options.healthTimeoutMs) || 30 * 1000;
       // O servidor encerra o OAuth em 12 min; o browser deixa um minuto de
       // folga para ainda receber a resposta/erro final do bridge.
@@ -152,11 +207,14 @@
 
   return {
     HIGGSFIELD_MODELS,
+    HIGGSFIELD_TOOLS,
     HiggsfieldBridgeAdapter,
     ProviderError,
     ProviderRouter,
     estimateCost,
+    googleRequest,
     modelByName,
     normalizeBridgeUrl,
+    redactSecrets,
   };
 });

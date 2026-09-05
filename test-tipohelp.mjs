@@ -87,6 +87,21 @@ await page.waitForTimeout(200);
 const unpinned = await page.evaluate(() => getComputedStyle(document.getElementById('tipoHelpTip')).opacity === '0');
 check('click pins / outside unpins', pinned && unpinned);
 
+// Keyboard help is discoverable, opens without a mouse, and Escape dismisses it.
+const helpButton = page.getByRole('button', { name: 'Ajuda: Type', exact: true });
+await helpButton.focus();
+check('keyboard focus describes the control', await page.evaluate(() =>
+  document.activeElement.getAttribute('aria-describedby') === 'tipoHelpTip'
+  && document.getElementById('tipoHelpTip').getAttribute('aria-hidden') === 'false'));
+await helpButton.press('Enter');
+check('Enter pins help', await page.evaluate(() => TipoHelp._pinned));
+await page.keyboard.press('Escape');
+check('Escape closes keyboard help', await page.evaluate(() =>
+  !TipoHelp._pinned && document.getElementById('tipoHelpTip').getAttribute('aria-hidden') === 'true'
+  && !document.activeElement.hasAttribute('aria-describedby')));
+await helpButton.press('Space');
+check('Space reopens help', await page.evaluate(() => TipoHelp._pinned));
+
 // 4) Pages with their own system are untouched (gate)
 for (const t of ['dithering', 'riso', 'datamosh']) {
   await page.goto(`http://localhost/${t}.html`, { waitUntil: 'domcontentloaded' });

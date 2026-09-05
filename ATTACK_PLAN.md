@@ -8,6 +8,15 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24 — HUB CRIATIVO + AUDITORIA DE PRODUTO ✅ (2026-09-05)
+- **Entrada reconstruída:** acesso direto ao Fotograma/Studio/Kinetic, catálogo de 41 ferramentas, busca normalizada, filtros, favoritas e recentes locais. Removidos intro obrigatório, navegação em camadas, ticker, partículas e loops decorativos. Prévia de vídeo somente por clique; thumbnails reais otimizados e estudos vetoriais leves.
+- **Base visual comum:** General Sans e IBM Plex Mono locais, contraste dos textos auxiliares, controles maiores, foco visível, presets por teclado, campos com nomes acessíveis, bottom sheet operável por teclado. `FREE` agora diz `Formato livre`. Cache de CSS/JS renovado nas 42 páginas.
+- **Fotograma:** briefs utilitários 12k sem corte, prompts específicos corrigidos, preview de prompt/parâmetros em cada seção, snapshots imutáveis antes do health, progresso de utilitários no grid, capacidade compartilhada e inspector por teclado. Multi Angle fora do rail enquanto seu motor estiver indisponível.
+- **Conectores:** rota oficial Vertex Express, timeouts e sanitização; modelo Google determinístico, sem nova cobrança por saída menor ou resposta sem imagem. Download Higgsfield limitado e validado; GPT2 sem flag removida. Sessão real conectou automaticamente sem gerar imagem.
+- **Bugs reais:** Vessel Elastic não interrompe o Canvas com raio negativo; contraste corrigido em dois presets. Depth Map impede trocar vídeo durante análise e explica presets, com upload no workspace. Studio ganhou controles maiores, zoom de acessibilidade liberado e ajuda restaurada. Ajuda compartilhada operável por teclado, validada nas 33 ferramentas do registro.
+- **Provas:** 80/80 cenários das 40 ferramentas não-Fotograma em desktop/mobile; 39 PNGs válidos. Regressões de Fotograma, fila, galeria, prompts, Vertex/Higgsfield, mobile, Depth Map e Studio passaram. Home: 28 checks em cinco larguras e dois temas. IA gerativa mockada; conta Higgsfield e exportações locais reais.
+- **Relatórios:** `docs/audit-platform-2026-09.md`, `docs/audit-fotograma-2026-09.md`, `docs/audit-connectors-2026-09.md`. Não há certificação estética de modelos sem geração real; galeria local continua sem backup em nuvem.
+
 ### FASE 23 — VIDEO DEPTH MAP para Seedance ✅ (2026-08-12)
 - **Pedido:** reproduzir na Tipó o fluxo do Artificial Studio (`video-depth-map`): upload de vídeo → vídeo grayscale de profundidade para usar como referência no Seedance.
 - **Ferramenta #41 / 18ª visual:** `depthmap.html`, separada do `depth.html` (o existente continua imagem/vídeo → relevo 3D). Card NOVO · AI no catálogo e contador/ticker atualizados.

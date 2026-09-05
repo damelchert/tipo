@@ -2,13 +2,17 @@
 
 Suite of generative visual tools for motion type, kinetic typography, AI stills, and dithering. The tools run in the browser; Fotograma can optionally use a private local bridge for the authenticated Higgsfield CLI.
 
+The home page is an immediate creative hub with all 41 tools, accent-insensitive search, category filters, favorites, recently opened tools, and light/dark themes. Its previews are static and local; the motion preview plays only on request. UI fonts are self-hosted. Existing category backlinks (`#visual`, `#3d`, `#kinetic`, etc.) remain supported.
+
+See [the September 2026 platform audit](docs/audit-platform-2026-09.md) for findings, fixes, test coverage and limits.
+
 ## Tools
 
 ### Video Depth Map
 Convert video into a temporally stabilized grayscale depth reference for Seedance. Depth Anything V2 Small runs locally with WebGPU FP16 when available and a WASM q8 fallback; export is silent H.264 MP4 via WebCodecs.
 
 ### Fotograma
-Create cinematic, advertising, and music-video stills. A permanent tool rail also exposes the audited Higgsfield workflows: Multi Angle, Animation Styles, aspect-ratio Expand, and Remove BG (beta), plus a shortcut to Video Depth Map. Google AI Studio/Vertex remains responsible for visual direction and can also generate the final image. An optional Higgsfield provider exposes Nano Banana Pro/2, Seedream 4.5/5, and GPT Image 2 with the estimated CLI credit cost shown before generation. Create accepts scene briefs up to 12,000 characters and can launch 1–4 independent Higgsfield images per click. Reveal remains available while jobs run: repeated clicks append new batches to a visible queue, with four active jobs and up to 48 active/queued images. Progress cards appear immediately with locally estimated percentage and remaining time.
+Create cinematic, advertising, and music-video stills. The permanent tool rail includes Cast, Product, Sheets, Animation Styles (still-image restyling), aspect-ratio Expand, and Remove BG (beta), plus Video Depth Map. Multi Angle is paused because its dedicated engine was removed from the current Higgsfield catalogue; it is not replaced with a simulated camera prompt. Google AI Studio/Vertex can optionally analyze references/direct visual direction and generate the final Create image; Higgsfield can operate without a Google key. Nano Banana Pro/2, Seedream 4.5/5, and GPT Image 2 show estimated CLI credit costs before generation. Create and generative-tool briefs accept up to 12,000 characters. Create can launch 1–4 independent Higgsfield images per click; repeated clicks append batches to a visible queue, with four active jobs and up to 48 active/queued images. Progress cards show locally estimated percentage and time. Tool inputs are snapshotted before requests; switching tabs cannot change a running operation.
 
 Fotograma stores the complete gallery as image blobs in this browser's IndexedDB and asks the browser for persistent-storage protection. It no longer hides older records after reload or automatically evicts them. This is local persistence, not cloud synchronization: clearing site data, using a private window, switching browser profiles/devices, or exhausting the browser's storage can still remove or prevent new saved images. Download important outputs separately.
 
@@ -66,7 +70,7 @@ The always-on service trusts only the official Tipó origin by default. To use t
 TIPO_HIGGSFIELD_ORIGINS=http://localhost:8080 ./support/macos/install-higgsfield-bridge.zsh
 ```
 
-Select **Higgsfield** inside Create or open a specialized tool in the left rail. Google is optional when Higgsfield is selected: when connected it can enrich the Director and analyze automatic references; without it, Create uses deterministic local direction and asks you to assign reference roles manually. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, runs at most four image jobs concurrently, and never sends the Higgsfield session to the browser. Connection checks time out after 30 seconds, while image jobs may remain open for up to 23 minutes. The official `https://tipo-steel.vercel.app` origin is allowed out of the box.
+Select **Higgsfield** inside Create or open a specialized tool in the left rail. Google is optional when Higgsfield is selected: when connected it can enrich the Director and analyze automatic references; without it, Create uses deterministic local direction and asks you to assign reference roles manually. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, runs at most four image jobs concurrently, and never sends the Higgsfield session to the browser. Connection checks time out after 30 seconds; image requests allow up to 26 minutes including CLI processing and bounded output download. The official `https://tipo-steel.vercel.app` origin is allowed out of the box. The Mac must be awake and the service running; this is not a remote cloud connector.
 
 Every specialized-tool upload accepts both files from the computer and images dragged directly from the Fotograma gallery.
 

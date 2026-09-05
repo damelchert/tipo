@@ -14,6 +14,10 @@ if (args[0] === 'auth' && args[1] === 'login') {
 }
 
 if (args[0] === 'generate' && args[1] === 'create') {
+  if (args.includes('--batch_size')) {
+    console.error('Parameter batch_size does not exist in the current GPT Image 2 contract');
+    process.exit(2);
+  }
   if (process.env.MOCK_HIGGSFIELD_GENERATE_ERROR === 'oauth-json') {
     console.error('{"access_token":"fixture-access-secret","refresh_token":"fixture-refresh-secret","state":"fixture-state-secret"}');
     process.exit(3);

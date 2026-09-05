@@ -1,0 +1,20 @@
+project: tipo
+updated: 2026-09-05
+workflow: brownfield-audit-and-improve
+phase: verified
+scope:
+  tools: 41
+  homepage: editorial-hub
+decisions:
+  identity: preserve-cream-charcoal-teal-gold
+  ui_font: self-hosted-General-Sans
+  values_font: self-hosted-IBM-Plex-Mono
+  display_font: self-hosted-Clash-Display
+  motion: homepage-opt-in
+  navigation: searchable-flat-catalogue-with-legacy-backlinks
+verification:
+  tool_smoke: 80-of-80
+  homepage_checks: 28
+  accessibility: improvements-not-full-certification
+  paid_ai_generation: not-performed
+report: docs/audit-platform-2026-09.md

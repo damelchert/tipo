@@ -13,6 +13,7 @@ const png2k = await gen.evaluate(async () => {
 });
 await gen.close();
 const calls = [];
+let failureMode = '';
 await ctx.route('**/*', async route => {
   const url = new URL(route.request().url());
   if (url.hostname === 'aiplatform.googleapis.com') {
@@ -26,6 +27,10 @@ await ctx.route('**/*', async route => {
       queryKey: url.searchParams.has('key'),
       headerKey: route.request().headers()['x-goog-api-key'] || '',
     });
+    if (failureMode === 'network') return route.abort('connectionreset');
+    if (failureMode === 'unauthorized') return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Unauthorized' } }) });
+    if (failureMode === 'quota') return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Quota exceeded' } }) });
+    if (failureMode === 'empty') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'No image' }] } }] }) });
     // v1: chat ok, imagem com imageSize → 400 (o comportamento real da Vertex)
     if (!isBeta && isImage && hasSize) {
       return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid JSON payload received. Unknown name "imageSize"' } }) });
@@ -71,6 +76,29 @@ check('Vertex pede TEXT + IMAGE desde a primeira tentativa compatível', imageRe
 check('chave Vertex viaja só no header', calls.length > 0 && calls.every(c => !c.queryKey && c.headerKey === 'AQ.vertextestkey123456'));
 const cap = await page.evaluate(() => document.getElementById('stillCaption').textContent);
 check('legenda sem warning de resolução', !cap.includes('saiu') && !cap.includes('caiu'), `(${cap.slice(0,80)})`);
+check('Vertex usa a rota express oficial v1beta1 como primeira opção', await page.evaluate(() => !state._vxMode.path.includes('projects/')));
+for (const mode of ['network', 'unauthorized', 'empty']) {
+  failureMode = mode;
+  const before = calls.length;
+  const result = await page.evaluate(async () => {
+    try {
+      await tryImageModel('gemini-3-pro-image', 'one requested image', { ar: '16:9', imgSize: '2K', refs: [] }, null);
+      return { failed: false };
+    } catch (error) { return { failed: true, message: error.message }; }
+  });
+  check(`Vertex ${mode}: uma única chamada, sem repetição silenciosa`, result.failed && calls.length === before + 1, `${calls.length - before} chamada(s); ${result.message}`);
+}
+failureMode = 'quota';
+const beforeQuota = calls.length;
+const quotaResult = await page.evaluate(async () => {
+  const job = { ...snapshotParams(), model: 'gemini-3.1-flash-image', modelOptions: [
+    { name: 'gemini-3.1-flash-image', label: 'Nano Banana 2' },
+    { name: 'gemini-3-pro-image', label: 'Nano Banana Pro' },
+  ] };
+  try { await generateGoogleImage('a quiet room', 'a quiet room', job); return { failed: false }; }
+  catch (error) { return { failed: true, message: error.message }; }
+});
+check('falta de cota não troca modelo nem dispara cobrança alternativa', quotaResult.failed && calls.length === beforeQuota + 1 && quotaResult.message.includes('manualmente'), quotaResult.message);
 check('zero pageerrors', errs.length === 0, errs.join('|').slice(0,150));
 await browser.close();
 console.log(fails ? `${fails} FAIL` : 'ALL PASS');

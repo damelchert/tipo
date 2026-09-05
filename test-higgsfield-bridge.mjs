@@ -79,7 +79,7 @@ try {
     headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool: 'multiAngle', rotate: 999, vertical: 0, forward: 0, images: [{ dataUrl: 'data:image/png;base64,AA==' }] }),
   });
-  check('parâmetro de câmera fora da allowlist morre antes do crédito', badAngle.status === 400, `(${badAngle.status})`);
+  check('modelo Multi Angle retirado é bloqueado antes do crédito', badAngle.status === 410, `(${badAngle.status})`);
 
   const missing = await fetch(`${base}/missing`, { headers: { Origin: 'http://localhost:3000' } });
   check('bridge não expõe rotas fora da allowlist', missing.status === 404, `(${missing.status})`);

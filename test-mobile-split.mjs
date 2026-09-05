@@ -25,7 +25,7 @@ const check = (n, ok, x='') => { console.log(`${n}: ${ok?'OK':'FAIL'} ${x}`); if
 const page = await ctx.newPage();
 let errs = 0;
 page.on('pageerror', e => { errs++; console.log('[err]', e.message); });
-await page.goto('http://localhost/shaper.html', { waitUntil: 'domcontentloaded' });
+await page.goto('http://localhost/pattern.html', { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(2200);
 await page.tap('.tipo-sheet-grip');
 await page.waitForTimeout(900);

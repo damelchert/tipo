@@ -7,33 +7,36 @@
 <meta name="description" content="Tipó — Video Depth Map. Convert video into a stable grayscale depth reference for Seedance, entirely in your browser.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Video Depth Map</title>
-<link rel="stylesheet" href="shared/style.css?v=20260713-id1">
+<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
-<script src="shared/ui.js?v=20260722-au4"></script>
+<script src="shared/ui.js?v=20260905-hub2"></script>
 <style>
   body { display:flex; height:100vh; overflow:hidden; }
   select { width:100%; min-width:0; background:var(--bg-2); color:var(--text-1); border:1px solid var(--border-2); padding:6px; font:11px var(--font-ui); }
-  .checkbox-label { display:flex; align-items:center; gap:8px; min-height:28px; color:var(--text-3); font-size:11px; }
+  .checkbox-label { display:flex; align-items:center; gap:8px; min-height:36px; color:var(--text-2); font-size:13px; }
   .checkbox-label input { accent-color:var(--accent); }
-  .process-note { margin-top:7px; color:var(--text-5); font-size:9px; line-height:1.5; letter-spacing:.2px; }
+  .process-note { margin-top:9px; color:var(--text-3); font-size:12px; line-height:1.5; }
   .status-card { margin-top:8px; padding:9px 10px; border:1px solid var(--border-1); border-radius:5px; background:var(--bg-2); }
-  #modelStatus { color:var(--text-3); font-size:10px; line-height:1.4; min-height:14px; }
-  #progressText { color:var(--accent); font-size:9px; line-height:1.4; margin-top:3px; min-height:13px; }
+  #modelStatus { color:var(--text-2); font-size:13px; line-height:1.5; min-height:18px; }
+  #progressText { color:var(--accent); font-size:12px; line-height:1.5; margin-top:5px; min-height:18px; }
   .progress-track { height:3px; margin-top:7px; overflow:hidden; border-radius:2px; background:var(--border-1); }
   #progressBar { width:0; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-warm)); transition:width .18s ease; }
   #depthWorkspace { flex:1; min-width:0; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0c0c0c; }
   #depthCanvas { display:block; width:100%; height:auto; max-height:100%; background:#070707; box-shadow:0 8px 50px rgba(0,0,0,.45); transition:opacity .2s ease; }
   #depthCanvas.source-previewing { opacity:0; }
   .empty-state { position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; pointer-events:none; transition:opacity .2s ease; }
-  .empty-state.hidden { opacity:0; }
-  .empty-inner { width:min(420px,76%); text-align:center; }
+  .empty-state.hidden { opacity:0; visibility:hidden; }
+  .empty-inner { width:min(460px,80%); text-align:center; }
   .empty-depth { height:96px; border:1px solid rgba(153,224,210,.28); border-radius:7px; background:
     radial-gradient(circle at 28% 50%,#f8f5f0 0 7%,#aaa 8% 16%,#515151 17% 28%,transparent 29%),
     linear-gradient(115deg,#101010 5%,#404040 36%,#bdbdbd 58%,#f5f5f5 76%,#262626 96%);
     filter:contrast(1.08); animation:depthPulse 3.2s ease-in-out infinite alternate; }
   @keyframes depthPulse { to { filter:contrast(1.28) brightness(.88); transform:scale(.985); } }
-  .empty-title { margin-top:18px; color:var(--text-2); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; }
-  .empty-copy { margin-top:7px; color:var(--text-5); font-size:10px; line-height:1.6; }
+  .empty-title { margin-top:24px; color:#F8F5F0; font-size:26px; font-weight:600; letter-spacing:-.5px; }
+  .empty-copy { margin:12px auto 0; max-width:40ch; color:#B5B3AF; font-size:15px; line-height:1.6; }
+  .empty-upload { pointer-events:auto; display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:0 24px; margin-top:24px; border:1px solid #99E0D2; border-radius:8px; background:#99E0D2; color:#0C302A; font:600 14px var(--font-ui); cursor:pointer; }
+  .empty-upload:hover { background:#B2EBE0; }
+  .empty-upload:focus-visible { outline:3px solid #F8F5F0; outline-offset:4px; }
   .source-monitor { position:absolute; left:18px; bottom:18px; z-index:3; width:min(220px,25vw); border:1px solid rgba(248,245,240,.22); border-radius:5px; overflow:hidden; background:#111; box-shadow:0 8px 30px rgba(0,0,0,.35); opacity:0; transform:translateY(8px); transition:.22s ease; }
   .source-monitor.visible { opacity:1; transform:none; }
   .source-monitor video { display:block; width:100%; max-height:150px; object-fit:contain; background:#080808; }
@@ -87,6 +90,7 @@
       <span class="preset-chip" data-preset="edges" role="button" tabindex="0" title="Crisper plane separation and stronger edges">Crisp</span>
       <span class="preset-chip" data-preset="motion" role="button" tabindex="0" title="Less history and ghosting for fast movement">Fast motion</span>
     </div>
+    <div class="process-note" id="presetNote" aria-live="polite">Balanced detail and temporal stability for most Seedance references.</div>
   </div>
 
   <div class="section">
@@ -158,8 +162,10 @@
   <div class="empty-state" id="emptyState">
     <div class="empty-inner">
       <div class="empty-depth"></div>
-      <div class="empty-title">Video → depth reference</div>
-      <div class="empty-copy">Drop a video or use Upload. Bright pixels are closer; dark pixels are farther away.</div>
+      <div class="empty-title">A new dimension for your video.</div>
+      <div class="empty-copy">Turn movement into a depth reference. Bright pixels are closer; dark pixels are farther away.</div>
+      <button class="empty-upload" id="emptyUploadBtn" type="button">Choose a video</button>
+      <div class="empty-copy" style="font-size:12px;margin-top:12px">Or drop an MP4, MOV or WebM here. Your video stays on this device.</div>
     </div>
   </div>
   <div class="workspace-badge" id="workspaceBadge">Grayscale depth · Seedance reference</div>
@@ -250,6 +256,7 @@ function setBusy(busy, label) {
   const exportBtn = document.getElementById('exportBtn');
   processBtn.disabled = busy || !sourceFile;
   document.getElementById('uploadBtn').disabled = busy;
+  document.getElementById('emptyUploadBtn').disabled = busy;
   fileInput.disabled = busy;
   cancelBtn.hidden = !busy;
   cancelBtn.disabled = !busy;
@@ -312,6 +319,12 @@ function resetResults() {
 }
 
 function loadVideoFile(file) {
+  // File pickers are disabled while busy; drag-and-drop must honor the same
+  // lock so an in-flight depth pass cannot start reading a different source.
+  if (exportBusy) {
+    TipoUI.showToast('Cancel the current pass before choosing another video.');
+    return;
+  }
   if (!validVideo(file)) {
     revokeMedia();
     sourceFile = null;
@@ -768,6 +781,12 @@ function applyPreset(name) {
     el.dispatchEvent(new Event('input',{bubbles:true}));
   });
   document.querySelectorAll('[data-preset]').forEach(el=>el.classList.toggle('active',el.dataset.preset===name));
+  document.getElementById('presetNote').textContent = {
+    seedance:'Balanced detail and temporal stability for most Seedance references.',
+    stable:'More smoothing across frames. Best for still or slow shots; fast movement can leave trails.',
+    edges:'Sharper edges and stronger plane separation. More detail, but small changes can flicker.',
+    motion:'Less frame history to reduce trails during fast movement. Some extra flicker is possible.',
+  }[name];
   if(stableFrames.length) invalidateProcessedPass();
 }
 
@@ -800,6 +819,7 @@ function bindControls() {
 }
 
 document.getElementById('uploadBtn').addEventListener('click',()=>fileInput.click());
+document.getElementById('emptyUploadBtn').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>loadVideoFile(fileInput.files[0]));
 document.getElementById('processBtn').addEventListener('click',processDepth);
 document.getElementById('exportBtn').addEventListener('click',downloadAgain);

@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { HIGGSFIELD_MODELS, estimateCost, modelByName } = require('./shared/fotograma-providers.js');
+const { HIGGSFIELD_MODELS, HIGGSFIELD_TOOLS, estimateCost, modelByName } = require('./shared/fotograma-providers.js');
 const { EXPAND_RATIOS, TOOL_COSTS } = require('./shared/fotograma-tools.js');
 
 const HOST = process.env.TIPO_HIGGSFIELD_HOST || '127.0.0.1';
@@ -35,6 +35,7 @@ const MAX_ACTIVE_GENERATIONS = 4;
 const activeGenerations = new Map();
 let activeTool = null;
 let authPromise = null;
+let accountPromise = null;
 
 function bridgeBusy() {
   return !!authPromise || !!activeTool || activeGenerations.size > 0;
@@ -216,7 +217,7 @@ function cliArgs(input, imageFiles) {
   } else if (input.model.name === 'seedream_v5_pro') {
     args.push('--resolution', '2k');
   } else if (input.model.name === 'gpt_image_2') {
-    args.push('--quality', 'high', '--resolution', input.resolution.toLowerCase(), '--batch_size', '1');
+    args.push('--quality', 'high', '--resolution', input.resolution.toLowerCase());
   }
   args.push('--wait', '--wait-timeout', '20m', '--wait-interval', '3s', '--json');
   return args;
@@ -236,6 +237,7 @@ function validateTool(body) {
   if (images.length !== 1) throw inputError('A ferramenta precisa de exatamente uma imagem');
 
   if (tool === 'multiAngle') {
+    if (!HIGGSFIELD_TOOLS.multiAngle.available) throw inputError(HIGGSFIELD_TOOLS.multiAngle.reason, 410);
     return {
       tool,
       images,
@@ -277,14 +279,20 @@ function toolCliArgs(input, imageFile) {
   return args;
 }
 
-async function accountStatus() {
-  const result = await run(CLI, ['account', 'status', '--json'], { timeoutMs: 30_000 });
-  const parsed = parseCliJson(result.stdout);
-  return {
-    connected: true,
-    plan: parsed.subscription_plan_type || 'unknown',
-    credits: Number(parsed.credits),
-  };
+function accountStatus() {
+  // Abas e conclusões simultâneas compartilham o mesmo refresh em voo.
+  // Não persistimos o saldo: o próximo probe volta a consultar a conta.
+  if (accountPromise) return accountPromise;
+  accountPromise = (async () => {
+    const result = await run(CLI, ['account', 'status', '--json'], { timeoutMs: 30_000 });
+    const parsed = parseCliJson(result.stdout);
+    return {
+      connected: true,
+      plan: parsed.subscription_plan_type || 'unknown',
+      credits: parsed.credits != null && Number.isFinite(Number(parsed.credits)) ? Number(parsed.credits) : null,
+    };
+  })().finally(() => { accountPromise = null; });
+  return accountPromise;
 }
 
 function authenticate() {
@@ -303,22 +311,62 @@ function authenticate() {
   return authPromise;
 }
 
-async function downloadOutput(url) {
+function trustedOutputUrl(url) {
   const parsed = new URL(url);
-  if (parsed.protocol !== 'https:') throw new Error('O CLI devolveu uma URL de saída insegura');
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || (parsed.port && parsed.port !== '443')) {
+    throw new Error('O CLI devolveu uma URL de saída insegura');
+  }
   const trustedHost = parsed.hostname === 'higgsfield.ai'
     || parsed.hostname.endsWith('.higgsfield.ai')
     || parsed.hostname.endsWith('.cloudfront.net');
   if (!trustedHost) throw new Error('O CLI devolveu uma URL fora dos hosts de saída permitidos');
-  const response = await fetch(parsed, { redirect: 'follow' });
-  if (!response.ok) throw new Error(`Não consegui baixar a saída (${response.status})`);
-  const declared = Number(response.headers.get('content-length') || 0);
-  if (declared > MAX_OUTPUT_BYTES) throw new Error('Saída maior que 32 MB');
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > MAX_OUTPUT_BYTES) throw new Error('Saída maior que 32 MB');
-  const mimeType = String(response.headers.get('content-type') || 'image/png').split(';')[0];
-  if (!mimeType.startsWith('image/')) throw new Error('O Higgsfield não devolveu uma imagem');
-  return { mimeType, data: buffer.toString('base64') };
+  return parsed;
+}
+
+export async function downloadOutput(url, options = {}) {
+  const fetchOutput = options.fetch || globalThis.fetch;
+  const maxBytes = options.maxBytes || MAX_OUTPUT_BYTES;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs || 120_000);
+  let response;
+  try {
+    let target = trustedOutputUrl(url);
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      response = await fetchOutput(target, { redirect: 'manual', signal: controller.signal });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      await response.body?.cancel();
+      if (redirects === 3) throw new Error('A saída do Higgsfield redirecionou vezes demais');
+      const location = response.headers.get('location');
+      if (!location) throw new Error('Redirecionamento da saída sem destino');
+      target = trustedOutputUrl(new URL(location, target));
+    }
+    if (!response.ok) throw new Error(`Não consegui baixar a saída (${response.status})`);
+    const declared = Number(response.headers.get('content-length') || 0);
+    if (declared > maxBytes) throw new Error('Saída maior que o limite de download (32 MB)');
+    const mimeType = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType)) throw new Error('O Higgsfield não devolveu uma imagem PNG, JPEG ou WebP');
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of response.body || []) {
+      size += chunk.length;
+      if (size > maxBytes) throw new Error('Saída maior que o limite de download (32 MB)');
+      chunks.push(Buffer.from(chunk));
+    }
+    if (!size) throw new Error('O Higgsfield devolveu uma imagem vazia');
+    return { mimeType, data: Buffer.concat(chunks, size).toString('base64') };
+  } catch (error) {
+    if (response?.body && !response.body.locked) await response.body.cancel().catch(() => {});
+    if (controller.signal.aborted) throw inputError('O download da imagem Higgsfield excedeu o tempo limite', 504);
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
+async function completedJobImage(job) {
+  try { return await downloadOutput(job.result_url); }
+  catch (cause) {
+    const error = inputError(`A geração já foi concluída no Higgsfield, mas o download falhou: ${publicError(cause)}. Confira o histórico Higgsfield antes de gerar novamente.`, cause.status || 502);
+    throw error;
+  }
 }
 
 async function generate(body) {
@@ -344,7 +392,7 @@ async function generate(body) {
     const parsed = parseCliJson(result.stdout);
     const job = Array.isArray(parsed) ? parsed[0] : parsed;
     if (!job || job.status !== 'completed' || !job.result_url) throw new Error('O job terminou sem imagem utilizável');
-    const image = await downloadOutput(job.result_url);
+    const image = await completedJobImage(job);
     let account = null;
     try { account = await accountStatus(); } catch (error) {}
     return {
@@ -378,7 +426,7 @@ async function runTool(body) {
     const parsed = parseCliJson(result.stdout);
     const job = Array.isArray(parsed) ? parsed[0] : parsed;
     if (!job || job.status !== 'completed' || !job.result_url) throw new Error('A ferramenta terminou sem imagem utilizável');
-    const image = await downloadOutput(job.result_url);
+    const image = await completedJobImage(job);
     let account = null;
     try { account = await accountStatus(); } catch (error) {}
     return {
@@ -433,6 +481,7 @@ export function createHiggsfieldBridgeServer() {
           busy: bridgeBusy(),
           activeGenerations: activeGenerations.size,
           maxParallelGenerations: MAX_ACTIVE_GENERATIONS,
+          tools: HIGGSFIELD_TOOLS,
           models: HIGGSFIELD_MODELS.map(({ name, label, cost, costs }) => ({ name, label, cost, costs: costs || null })),
         });
       }

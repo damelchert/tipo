@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const pageOrigin = 'https://tipo-steel.vercel.app';
+const production = process.argv.includes('--production');
 const browser = await chromium.launch();
 const context = await browser.newContext();
 await context.grantPermissions(['local-network-access'], { origin: pageOrigin });
@@ -19,7 +20,7 @@ await context.addInitScript(() => {
   localStorage.removeItem('tipo-gemini-key');
 });
 
-await context.route(`${pageOrigin}/**`, route => {
+if (!production) await context.route(`${pageOrigin}/**`, route => {
   const url = new URL(route.request().url());
   const file = path.join(root, decodeURIComponent(url.pathname));
   const contentType = {
@@ -37,7 +38,8 @@ page.on('requestfailed', request => failedRequests.push(`${request.method()} ${r
 page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
 
 try {
-  await page.goto(`${pageOrigin}/fotograma.html`, { waitUntil: 'load' });
+  const response = await page.goto(`${pageOrigin}/fotograma.html`, { waitUntil: 'load' });
+  const cspPresent = Boolean(response.headers()['content-security-policy']);
   try { await page.waitForFunction(() => state.higgsConnected === true, null, { timeout: 30_000 }); }
   catch (error) {}
   const result = await page.evaluate(() => ({
@@ -56,8 +58,9 @@ try {
     && result.creditsAreNumeric
     && result.generateEnabled
     && !result.popoverOpen
+    && (!production || cspPresent)
     && errors.length === 0;
-  console.log(JSON.stringify({ ok, ...result, pageErrors: errors, failedRequests, consoleErrors }, null, 2));
+  console.log(JSON.stringify({ ok, production, cspPresent, ...result, pageErrors: errors, failedRequests, consoleErrors }, null, 2));
   process.exitCode = ok ? 0 : 1;
 } finally {
   await browser.close();

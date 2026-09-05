@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <meta name="description" content="Tipó — Studio. An infinite canvas where effects stack as nodes on multiple media at once: halftone, dither, gradient map, glitch, wave, grain — chained live.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Studio</title>
-<link rel="stylesheet" href="shared/style.css?v=20260713-id1">
+<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260722-au4"></script>
+<script src="shared/ui.js?v=20260905-hub2"></script>
 <script src="shared/hq.js?v=20260715-rec1"></script>
 <style>
   @font-face { font-family: 'Clash Display'; src: url('assets/fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight: 600 900; font-display: swap; }
@@ -66,7 +66,7 @@
   .stk-card.off .stk-dot { background: transparent; border-color: var(--text-5); }
   .stk-btns { display: none; gap: 3px; }
   .stk-card:hover .stk-btns, .stk-card.sel .stk-btns { display: flex; }
-  .stk-btns button { width: 20px; height: 20px; padding: 0; border: none; border-radius: 4px; background: transparent; color: var(--text-5); font-size: 10px; cursor: pointer; font-family: var(--font-mono); line-height: 1; }
+  .stk-btns button { width: 24px; height: 28px; padding: 0; border: none; border-radius: 4px; background: transparent; color: var(--text-2); font-size: 12px; cursor: pointer; font-family: var(--font-mono); line-height: 1; }
   .stk-btns button:hover { background: var(--bg-2); color: var(--accent); }
   .stk-btns button.stk-x:hover { color: var(--red); }
   .stk-src { border-style: dashed; }
@@ -90,16 +90,16 @@
   }
   #topbar .tb-title { font-size: 11px; letter-spacing: 2.5px; color: var(--text-1); }
   #topbar .tb-title i { font-style: normal; color: var(--accent-warm, #D4A040); }
-  #topbar select { background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 5px 7px; font-size: 10px; font-family: var(--font-ui); border-radius: 6px; }
-  #topbar .tb-btn { border: 1px solid var(--border-2); background: transparent; color: var(--text-2); font-size: 10px; letter-spacing: 0.8px; padding: 6px 11px; border-radius: 7px; cursor: pointer; font-family: var(--font-ui); text-transform: uppercase; }
+  #topbar select { background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 8px 10px; min-height: 36px; font-size: 13px; font-family: var(--font-ui); border-radius: 6px; }
+  #topbar .tb-btn { border: 1px solid var(--border-2); background: transparent; color: var(--text-1); font-size: 12px; letter-spacing: 0.3px; min-height: 36px; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: var(--font-ui); }
   #topbar .tb-btn:hover { border-color: var(--accent); color: var(--accent); }
   #topbar .tb-btn.rec-live { border-color: var(--red); color: var(--red); animation: stRecPulse 1.2s ease-in-out infinite; }
   @keyframes stRecPulse { 50% { opacity: 0.55; } }
 
   /* zoom HUD */
   #viewHud { position: fixed; bottom: 18px; left: 18px; z-index: 900; display: flex; gap: 8px; align-items: center; font-family: var(--font-mono); }
-  #viewHud .vh-zoom { font-size: 10px; color: var(--text-5); letter-spacing: 1px; min-width: 40px; }
-  #viewHud button { border: 1px solid var(--border-2); background: color-mix(in srgb, var(--bg-1, #141414) 88%, transparent); color: var(--text-3); font-size: 10px; padding: 6px 10px; border-radius: 7px; cursor: pointer; font-family: var(--font-ui); letter-spacing: 0.5px; }
+  #viewHud .vh-zoom { font-size: 12px; color: var(--text-3); letter-spacing: .4px; min-width: 40px; }
+  #viewHud button { border: 1px solid var(--border-2); background: color-mix(in srgb, var(--bg-1, #141414) 88%, transparent); color: var(--text-2); font-size: 12px; min-height: 36px; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: var(--font-ui); letter-spacing: 0.3px; }
   #viewHud button:hover { border-color: var(--accent); color: var(--accent); }
   #spaceHint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 890; font-size: 9.5px; letter-spacing: 1.5px; color: var(--text-5); text-transform: uppercase; font-family: var(--font-mono); pointer-events: none; text-align: center; }
 
@@ -125,7 +125,7 @@
   .fx-pane .color-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   .fx-pane .color-row label { font-size: 9.5px; color: var(--text-4); min-width: 52px; text-transform: uppercase; letter-spacing: 0.5px; }
   .fx-pane input[type="color"] { width: 36px; height: 22px; border: 1px solid var(--border-2); background: var(--bg-2); padding: 0; cursor: pointer; }
-  .fx-pane select { flex: 1; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 5px 6px; font-size: 10.5px; font-family: var(--font-ui); border-radius: 5px; }
+  .fx-pane select { flex: 1; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); min-height: 34px; padding: 7px 8px; font-size: 12px; font-family: var(--font-ui); border-radius: 5px; }
   #inspBody .insp-hint { font-size: 9px; color: var(--text-5); letter-spacing: 0.4px; margin-top: 10px; line-height: 1.5; }
 
   /* ============ MODAL de ferramentas (add node / trocar fonte) ============ */
@@ -140,7 +140,7 @@
   .tool-thumb { border: 1px solid var(--border-2, #333); border-radius: 10px; padding: 8px; cursor: pointer; background: var(--bg-2, #1a1a1a); text-align: center; }
   .tool-thumb:hover { border-color: var(--accent); }
   .tool-thumb .tt-vis { height: 52px; border-radius: 6px; margin-bottom: 7px; overflow: hidden; position: relative; }
-  .tool-thumb .tt-name { font-size: 10px; letter-spacing: 0.5px; color: var(--text-2); }
+  .tool-thumb .tt-name { font-size: 12px; letter-spacing: 0.2px; color: var(--text-2); }
   .tools-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .tools-row .tool-inp { flex: 1; min-width: 100px; border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 10px; text-align: center; font-size: 10.5px; letter-spacing: 0.5px; color: var(--text-2); cursor: pointer; background: var(--bg-2); }
   .tools-row .tool-inp:hover { border-color: var(--accent); color: var(--accent); }
@@ -180,11 +180,12 @@
 
   /* ============ mobile ============ */
   @media (max-width: 768px) {
-    #topbar { top: 8px; gap: 6px; padding: 6px 10px; max-width: calc(100vw - 16px); }
+    #topbar { top: 8px; left: 58px; right: 58px; width: auto; transform: none; gap: 5px; padding: 6px; max-width: none; }
+    #topbar select, #topbar .tb-btn { min-height: 40px; font-size: 12px; padding: 7px 9px; }
     #topbar .tb-title { display: none; }
     #inspector { top: auto; bottom: 0; left: 0; right: 0; width: auto; border-radius: 14px 14px 0 0; }
     #inspBody { max-height: 38vh; }
-    #viewHud { bottom: auto; top: 60px; left: 10px; }
+    #viewHud { bottom: 16px; top: auto; left: 10px; }
     #spaceHint { display: none; }
     .tipo-back-btn { top: 12px; }
   }
@@ -218,7 +219,7 @@
 </div>
 
 <div id="viewHud">
-  <button onclick="fitView()">Reset view</button>
+  <button onclick="fitView()">Enquadrar canvas</button>
   <span class="vh-zoom" id="zoomLabel">100%</span>
 </div>
 <div id="spaceHint">arrasta o vazio pra navegar &middot; arrasta um frame pra mover &middot; scroll/pin&ccedil;a d&aacute; zoom &middot; solta m&iacute;dia aqui</div>
@@ -233,21 +234,21 @@
   </div>
   <div id="inspBody">
     <div id="paramsHost"></div>
-    <div class="insp-hint">o "~" de cada slider anima &mdash; osciladores ou &#9834; &aacute;udio-reativo</div>
+    <div class="insp-hint" data-tipo-help="Effect Controls">o "~" de cada slider anima &mdash; osciladores ou &#9834; &aacute;udio-reativo</div>
   </div>
 </div>
 
 <div id="toolsModal">
   <div id="toolsBox">
     <h2>Tools <button type="button" onclick="closeTools()">&#10005;</button></h2>
-    <h3>Fonte do frame ativo</h3>
+    <h3 data-tipo-help="Source">Fonte do frame ativo</h3>
     <div class="tools-row">
       <div class="tool-inp" onclick="closeTools(); useText()">Texto (type vivo)</div>
       <div class="tool-inp" onclick="closeTools(); useDemo()">Demo TIP&Oacute;</div>
       <div class="tool-inp" onclick="closeTools(); document.getElementById('fileInput').click()">Imagem / V&iacute;deo</div>
       <div class="tool-inp" onclick="closeTools(); toggleWebcam()">Webcam</div>
     </div>
-    <h3>Efeitos (entram no frame ativo)</h3>
+    <h3 data-tipo-help="Stack">Efeitos (entram no frame ativo)</h3>
     <div class="tools-grid" id="toolsGrid"></div>
   </div>
 </div>

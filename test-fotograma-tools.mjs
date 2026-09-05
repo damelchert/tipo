@@ -36,7 +36,9 @@ await context.route('**/*', async route => {
   if (url.hostname === '127.0.0.1' && url.port === '4789') {
     if (url.pathname === '/health') {
       healthCalls++;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: true, plan: 'creator', credits: 1258.87 }) });
+      // The production catalog pauses Multi Angle. This legacy contract fixture
+      // explicitly simulates a bridge where the dedicated model is available.
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: true, plan: 'creator', credits: 1258.87, tools: { multiAngle: { available: true } } }) });
     }
     if (url.pathname === '/tool') {
       const body = JSON.parse(request.postData() || '{}');
@@ -85,7 +87,8 @@ check('Create removeu os presets redundantes de escala e ponto de vista', await 
 check('Create expõe o motor e recolhe a direção técnica avançada', await page.locator('#engineGroup').isVisible() && await page.locator('#advancedDirection').isVisible() && !(await page.locator('#advancedDirection').getAttribute('open')));
 check('status de geração é legível e anunciado por acessibilidade', await page.locator('#genStatus').getAttribute('role') === 'alert' && await page.locator('#genRequirement').count() === 1);
 
-await page.click('[data-fotograma-tool="multiAngle"]');
+check('Multi Angle retirado da navegação até o motor voltar', await page.locator('[data-fotograma-tool="multiAngle"]').isHidden());
+await page.evaluate(() => setFotogramaTool('multiAngle'));
 check('troca visual realmente substitui o painel antigo', await page.locator('#createControls').isHidden() && await page.locator('#utilityControls').isVisible());
 await page.waitForTimeout(80);
 check('ferramenta tenta parear o Higgsfield e mostra o estado no próprio painel', await page.evaluate(() => state.higgsConnected && /conectado/i.test(document.getElementById('utilityBridgeStatus')?.textContent || '')));
@@ -240,12 +243,13 @@ await page.fill('#gallerySearch', '');
 if (process.argv.includes('--screenshot')) {
   await page.setViewportSize({ width: 2048, height: 1152 });
   await page.click('[data-fotograma-tool="cast"]');
+  check('aba visual e estado acessível acompanham a ferramenta atual', await page.locator('[data-fotograma-tool].on').count() === 1 && await page.locator('[data-fotograma-tool].on').getAttribute('data-fotograma-tool') === 'cast' && await page.locator('[data-fotograma-tool="cast"]').getAttribute('aria-pressed') === 'true');
   await page.locator('#gridDensity').fill('3');
   await page.locator('#gridDensity').dispatchEvent('input');
-  await page.screenshot({ path: '/private/tmp/tipo-fotograma-gallery.png' });
+  await page.screenshot({ path: '/private/tmp/tipo-fotograma-gallery.png', animations: 'disabled' });
   await page.locator('#gallery .take img').first().click();
   await page.click('#lightboxPromptToggle');
-  await page.screenshot({ path: '/private/tmp/tipo-fotograma-lightbox.png' });
+  await page.screenshot({ path: '/private/tmp/tipo-fotograma-lightbox.png', animations: 'disabled' });
   await page.click('#lightboxClose');
   console.log('screenshot: /private/tmp/tipo-fotograma-gallery.png');
   console.log('screenshot: /private/tmp/tipo-fotograma-lightbox.png');

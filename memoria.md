@@ -11,7 +11,7 @@
 ## Estrutura de Arquivos
 ```
 /tipo/
-  index.html                   — landing page (navegação progressiva com hash routing)
+  index.html                   — hub editorial (catálogo de 41 ferramentas, busca, filtros, favoritas e recentes)
   
   # VISUAL TOOLS
   studio.html                  — stack de efeitos em chain WebGL2 (8 fx shader, presets de receita) (FUNCIONAL)
@@ -1675,6 +1675,17 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 ---
 
 ## 2026-09-05
+
+### Auditoria integral — hub criativo e confiabilidade
+- Daniel autorizou revisar e melhorar toda a plataforma, priorizando a página de entrada, identidade profissional/minimalista, Fotograma, prompts e conectores. Aplicados os squads de design (sistema/a11y), desenvolvimento (frontend/API/testes) e audiovisual (contratos de criação/edição).
+- Home editorial nova com destaques Fotograma/Studio/Kinetic, catálogo completo de 41 ferramentas, busca por nome/efeito/formato sem acentos, categorias, favoritas e recentes. Guarda somente ids locais; sem dados de imagens/prompts/chaves. Links antigos de categoria continuam válidos. Saiu intro bloqueante/GSAP/loops de canvases; vídeo do hero é opt-in. Usada cópia WebP de uma saída Fotograma já presente no projeto; PNGs pessoais preservados.
+- UI shared passou de mono integral para General Sans local + mono nos valores; rótulos/ações ampliados e contraste corrigido, sem mexer nos pixels de exportação. Foco visível e equivalentes de teclado nos chips; bottom sheet também acessível. Badge `FREE` significava formato, não plano: agora `Formato livre`.
+- Fotograma tinha cortes silenciosos nos briefs utilitários, conflitos de prompt em Product/Sheets/Animation e leitura de aba depois do await. Corrigidos com limite explícito12k, contratos separados, preview dos prompts, snapshot antes do health e resultado atribuído à ferramenta original. Utilitários mostram progresso no grid e compartilham a capacidade Higgsfield. Create mantém assinatura fotoquímica já decidida; outras seções têm direção própria.
+- Auditoria live do catálogo detectou `qwen_camera_control` ausente. Multi Angle saiu do rail ativo e é bloqueado antes de cobrança. Expand/Remove BG usam motores dedicados, não system prompt; Animation gera still. Não inventar substituição por prompt como controle geométrico preciso.
+- Google: endpoint Express oficial primeiro; falha ambígua não repete POST; resposta200 sem imagem não repete; imagem abaixo da resolução é preservada com aviso em vez de gerar3x; 403/404/429 não troca modelo. Chaves sanitizadas antes dos logs. Higgsfield: GPT2 sem batch_size inválido, download32MB/2min/3redirects HTTPS allowlist/raster; browser26min. Consulta de conta deduplicada.
+- Conta real Higgsfield reconectou no navegador sem códigos ou Google, LaunchAgent ativo. Testes não geraram imagens IA. A documentação oficial confirma que CLI consome créditos e Unlimited é só site; não seguir notas antigas que diziam ilimitado no CLI. Google key particular/billing e qualidade estética real dos modelos não foram validados.
+- Vessel: raio negativo causado pelo overshoot Elastic interrompia draw; clamp geométrico e contraste Snappy/Jelly corrigidos. Depth Map não permite source swap durante análise, ganhou upload central e explicação dos presets. Studio controles de ação maiores, viewport sem bloqueio de zoom e ajuda restaurada. Ajuda compartilhada ganhou foco/Enter/Espaço/Escape, validada nas 33 ferramentas do registro.
+- Verificação: smoke80/80 desktop+mobile nas40 ferramentas restantes e39 PNGs válidos; home28 checks; suites Fotograma/prompts/queue/IDB/reconnect/Vertex/Higgs/DepthMap/Studio/mobile passaram. Relatório completo em `docs/audit-platform-2026-09.md` com evidências e limitações. Galeria continua local: não limpar dados do site, baixar originais importantes.
 
 ### Fotograma — Higgsfield sempre ativo, OAuth no navegador e reconexão automática
 - **Falha composta encontrada:** não havia processo em `127.0.0.1:4789`, nenhum LaunchAgent instalado, a sessão do CLI tinha expirado e o binário fixo `/usr/local/bin/higgsfield` era a versão obsoleta 0.1.40. A instalação atual 1.1.24 vive em `~/bin/higgsfield` e o bridge agora resolve primeiro os caminhos atuais do usuário.

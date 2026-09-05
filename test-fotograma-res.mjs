@@ -1,5 +1,5 @@
 // Fotograma V3: resolução + contrato de Emulsão, sem modelo ou rede real.
-// A primeira geração devolve 1024px e a segunda 2048px para provar o retry.
+// Uma saída 1024px é preservada e sinalizada sem uma segunda cobrança.
 import { chromium } from './node_modules/playwright/index.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -128,20 +128,20 @@ await page.waitForFunction(() => state.connected && [...document.getElementById(
 await page.evaluate(() => { document.getElementById('diretor').checked = false; });
 await page.fill('#scene', 'um croissant sobre uma bandeja de uvas');
 
-// Resolução base: Pro repuxa automaticamente o primeiro retorno baixo.
+// Resolução base: preservar a saída concluída, sem repetição paga invisível.
 imgCalls = 0;
 lowFirst = true;
 await revealAndWait();
-check('auto-retry disparou (2 chamadas de imagem)', imgCalls === 2, `(${imgCalls})`);
+check('saída baixa não dispara nova cobrança', imgCalls === 1, `(${imgCalls})`);
 const cap = await page.evaluate(() => document.getElementById('stillCaption').textContent);
-check('legenda SEM warning (2ª veio 2K)', !cap.includes('saiu'), `(${cap.slice(0, 90)})`);
+check('legenda avisa resolução real e ausência de repetição paga', cap.includes('saiu 1024') && cap.includes('sem repetição paga'), `(${cap.slice(-150)})`);
 const dims = await page.evaluate(async () => {
   const bmp = await createImageBitmap(state.lastBlob);
   const long = Math.max(bmp.width, bmp.height);
   bmp.close();
   return long;
 });
-check('blob final é o 2K', dims === 2048, `(${dims})`);
+check('blob original de 1K não é descartado', dims === 1024, `(${dims})`);
 lowFirst = false;
 
 // Pro: a imagem de mood é válida, mas só sua descrição entra no payload.

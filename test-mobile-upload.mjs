@@ -5,13 +5,14 @@ const root = process.cwd();
 const browser = await webkit.launch();
 const ctx = await browser.newContext({ ...devices['iPhone 13'] });
 const cdn = new Map();
+let failures = 0;
 await ctx.route('**/*', async route => {
   const url = new URL(route.request().url());
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return route.fallback(); // blob:/data: pass through
   try {
     if (url.hostname === 'localhost') {
       const f = path.join(root, decodeURIComponent(url.pathname));
-      const mime = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf' }[path.extname(f)] || 'application/octet-stream';
+      const mime = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf','.otf':'font/otf','.jpg':'image/jpeg' }[path.extname(f)] || 'application/octet-stream';
       await route.fulfill({ status: 200, contentType: mime, body: fs.readFileSync(f) });
     } else {
       if (!cdn.has(url.href)) { const r = await fetch(url.href); cdn.set(url.href, { s: r.status, b: Buffer.from(await r.arrayBuffer()), t: r.headers.get('content-type')||'text/javascript' }); }
@@ -31,7 +32,7 @@ for (const [tool, openPicker, checkLoaded] of [
     await p.waitForTimeout(600);
     await p.tap('button:text-is("Upload")');
   }, () => typeof sourceType !== 'undefined' && sourceType === 'image'],
-  ['shaper', async p => {
+  ['rastro', async p => {
     await p.tap('.tipo-sheet-grip');
     await p.waitForTimeout(600);
     await p.tap('button:text-is("Upload")');
@@ -47,13 +48,16 @@ for (const [tool, openPicker, checkLoaded] of [
       page.waitForEvent('filechooser', { timeout: 10000 }),
       openPicker(page),
     ]);
-    await chooser.setFiles('/tmp/test-upload.jpg');
+    await chooser.setFiles(path.join(root, 'assets/fotograma-demo.jpg'));
     await page.waitForTimeout(2500);
     const loaded = await page.evaluate(checkLoaded);
     console.log(`${tool}: picker=OK loaded=${loaded} errs=${JSON.stringify(errs.slice(0,2))}`);
+    if (!loaded || errs.length) failures++;
   } catch (e) {
     console.log(`${tool}: FAIL ${e.message.split('\n')[0]} errs=${JSON.stringify(errs.slice(0,2))}`);
+    failures++;
   }
   await page.close();
 }
 await browser.close();
+process.exitCode = failures ? 1 : 0;

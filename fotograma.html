@@ -7,10 +7,10 @@
 <meta name="description" content="Tipó — Fotograma. Cinema, advertising and music-video stills with role-aware visual references, curated camera direction and coherent film looks.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Fotograma</title>
-<link rel="stylesheet" href="shared/style.css?v=20260723-fotograma-ref1">
-<script src="shared/ui.js?v=20260723-fotograma-ref1"></script>
-<script src="shared/fotograma-providers.js?v=20260905-higgsfield5"></script>
-<script src="shared/fotograma-tools.js?v=20260820-tools2"></script>
+<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<script src="shared/ui.js?v=20260905-hub2"></script>
+<script src="shared/fotograma-providers.js?v=20260905-audit1"></script>
+<script src="shared/fotograma-tools.js?v=20260905-audit1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #fotogramaRail { flex: 0 0 190px; height: 100vh; box-sizing: border-box; overflow-y: auto; background: color-mix(in srgb, var(--bg-1) 92%, #000); border-right: 1px solid var(--border-2); padding: 22px 12px 18px; font-family: var(--font-ui); }
@@ -318,6 +318,57 @@
   .pending-progress-meta { width: 100%; display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--text-4); font: 9px/1.35 var(--font-ui); font-variant-numeric: tabular-nums; }
   .pending-progress-meta span:last-child { text-align: right; }
   .pending-batch { color: var(--accent); }
+
+  /* Image lab: readable controls, quiet chrome, consistent action hierarchy. */
+  .rail-tool { font-size: 13px; min-height: 46px; }
+  .rail-label { color: var(--text-3); font-size: 10px; letter-spacing: 1.2px; }
+  .rail-brand span { font-size: 10px; }
+  .rail-tool:focus-visible, .tool-choice:focus-visible, .fchip:focus-visible, .prog-btn:focus-visible, #utilityDrop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  #panel .stock-hint, #panel .provider-hint, #panel .key-hint, .tool-cost-note { font-size: 11px; line-height: 1.6; }
+  .prog-btn { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .prog-btn .p-name { font-size: 13px; letter-spacing: .7px; }
+  .prog-btn .p-sub { font-size: 10px; text-transform: none; letter-spacing: .15px; }
+  #scene { min-height: 180px; line-height: 1.6; }
+  .tool-intro { padding: 15px; border-radius: 10px; }
+  .tool-intro-title { align-items: flex-start; flex-wrap: wrap; font-size: 16px; letter-spacing: -.2px; text-transform: none; }
+  .tool-intro-copy, .utility-textarea { font-size: 13px; }
+  .tool-intro-badge, .utility-bridge, .utility-drop-sub { font-size: 11px; }
+  .utility-textarea { min-height: 140px; line-height: 1.65; }
+  .tool-grid { gap: 8px; }
+  .tool-choice { min-height: 78px; font-size: 13px; padding: 12px; border-radius: 8px; }
+  .tool-choice span { font-size: 11px; color: var(--text-3); }
+  .utility-format-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .utility-field-label { display: block; color: var(--text-3); font: 11px/1.6 var(--font-ui); }
+  .utility-field-label select { margin-top: 5px; }
+  #utilityPromptPreview { margin: 18px 0; border: 1px solid var(--border-2); border-radius: 8px; padding: 12px; }
+  #utilityPromptPreview summary { cursor: pointer; color: var(--text-2); font: 12px/1.5 var(--font-ui); }
+  #utilityPromptText { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); font: 12px/1.65 var(--font-mono, monospace); }
+  .utility-counter { display: block; margin-top: 5px; text-align: right; font: 10px/1.4 var(--font-ui); color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .utility-counter.over { color: var(--red, #CC4840); }
+  #utilityActions { position: sticky; bottom: -24px; z-index: 15; padding: 15px 0 18px; background: var(--bg-1); border-top: 1px solid var(--border-2); }
+  #genBtn, #utilityGenerate { min-height: 50px; font-size: 13px; letter-spacing: .6px; }
+  #utilityGenerate:disabled { opacity: .7; }
+  #galleryStorage { font-size: 10px; line-height: 1.45; text-transform: none; letter-spacing: 0; }
+  .take-caption { font-size: 12px; }
+  .take-prompt { font-size: 12px; color: var(--text-3); line-height: 1.55; }
+  .take-date, .pending-progress-meta { font-size: 10px; color: var(--text-3); }
+  #gallery .take img:focus-visible { outline: 3px solid var(--accent); outline-offset: -4px; }
+  #lightboxPromptText { font-size: 12px; }
+  /* The inspector is always dark, regardless of the surrounding UI theme. */
+  #lightbox { --focus-color: #99E0D2; }
+  #lightboxTitle { font-size: 13px; }
+  .lightbox-action { font-size: 13px; }
+  #lightboxClose:hover, #lightboxClose:focus-visible,
+  .lightbox-action:hover, .lightbox-action:focus-visible, .lightbox-action.on { color: #99E0D2; border-color: #62B5A1; }
+  [data-fotograma-tool="multiAngle"][hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .pending-spinner, .take.pending .take-media::before, #keyBtn.pulse { animation: none; }
+    #gallery .take img, .pending-progress-bar { transition: none; }
+  }
+  @media (max-width: 760px) {
+    .rail-tool { min-width: 88px; font-size: 11px; }
+    #utilityActions { bottom: -22px; }
+  }
 </style>
 </head>
 <body>
@@ -333,7 +384,7 @@
   </div>
   <div class="rail-group">
     <div class="rail-label">Direção</div>
-    <button class="rail-tool" type="button" data-fotograma-tool="multiAngle"><span class="rail-icon">◫</span> Multi Angle</button>
+    <button class="rail-tool" type="button" data-fotograma-tool="multiAngle" hidden><span class="rail-icon">◫</span> Multi Angle</button>
     <button class="rail-tool" type="button" data-fotograma-tool="styleShift"><span class="rail-icon">◈</span> Animation</button>
     <button class="rail-tool" type="button" data-fotograma-tool="expand"><span class="rail-icon">⌗</span> Expand</button>
   </div>
@@ -386,6 +437,7 @@
   <div class="section" id="secProgram" data-mobile-open>
     <div class="section-title">Est&eacute;tica</div>
     <div class="prog-row" id="progRow"></div>
+    <div class="stock-hint">Assinatura Tipó: textura de película e altas luzes protegidas. Cast, Product e Animation têm direções independentes.</div>
     <div id="generoRow" style="display:none; margin-top:8px;">
       <select id="genero"></select>
       <div class="stock-hint" id="generoHint"></div>
@@ -532,7 +584,7 @@
       <div class="section" data-mobile-open>
         <div class="section-title">Descrição do personagem</div>
         <textarea class="utility-textarea" id="castDescription" placeholder="idade, origem, rosto, cabelo, corpo, figurino e presença…" spellcheck="false"></textarea>
-        <div class="stock-hint">A referência é opcional. Sem imagem, o brief cria uma identidade original; com imagem, o rosto e os traços ficam travados.</div>
+        <div class="stock-hint">Referência opcional. Com imagem, o prompt prioriza rosto e traços; confira a fidelidade do resultado antes de usar.</div>
       </div>
       <div class="section">
         <div class="section-title">Linguagem</div>
@@ -564,7 +616,7 @@
       <div class="section">
         <div class="section-title">Direção adicional</div>
         <textarea class="utility-textarea" id="sheetDirection" placeholder="opcional: figurino, poses, detalhe técnico ou prioridade da prancha…" spellcheck="false"></textarea>
-        <div class="stock-hint">Sheets exige uma imagem e mantém a mesma identidade ou o mesmo produto em todos os quadros.</div>
+        <div class="stock-hint">Uma imagem de origem, várias vistas do mesmo sujeito. Partes não visíveis são inferidas pela IA: confira continuidade e detalhes.</div>
       </div>
     </div>
 
@@ -616,14 +668,19 @@
     </div>
 
     <div class="section" id="generatorSettings" data-mobile-open hidden>
-      <div class="section-title">Engine</div>
-      <select id="styleModel"></select>
-      <select id="styleRatio" style="margin-top:6px;"></select>
-      <select id="styleResolution" style="margin-top:6px;"><option value="2K">2K</option><option value="4K">4K</option></select>
+      <div class="section-title">Motor da imagem</div>
+      <label class="utility-field-label" for="styleModel">Modelo</label><select id="styleModel"></select>
+      <div class="utility-format-row"><label class="utility-field-label" for="styleRatio">Proporção<select id="styleRatio"></select></label><label class="utility-field-label" for="styleResolution">Resolução<select id="styleResolution"><option value="2K">2K</option><option value="4K">4K</option></select></label></div>
       <div class="tool-cost-note" id="styleCost"></div>
     </div>
 
-    <div class="section section-divider" data-mobile-open>
+    <details id="utilityPromptPreview">
+      <summary>Ver instruções desta ferramenta</summary>
+      <div class="stock-hint" id="utilityPromptHint"></div>
+      <pre id="utilityPromptText"></pre>
+    </details>
+
+    <div class="section section-divider" id="utilityActions" data-mobile-open>
       <button class="btn" id="utilityGenerate" type="button" disabled>Escolha uma imagem</button>
       <div id="utilityStatus" role="status"></div>
       <button class="btn btn-secondary" id="utilityDownload" type="button" disabled>Baixar resultado</button>
@@ -648,7 +705,7 @@
     <button class="btn btn-secondary" id="keyForget">Esquecer chave</button>
   </div>
   <div id="keyStatus"></div>
-  <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza&hellip;, free tier) ou da <b>Agent Platform / Vertex</b> (AQ&hellip;, cr&eacute;ditos do trial). Fica s&oacute; no seu navegador e vai apenas pro Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Criar chave gr&aacute;tis &rarr;</a></div>
+  <div class="key-hint">Aceita chave do <b>AI Studio</b> (AIza&hellip;) ou da <b>Agent Platform / Vertex</b> (AQ&hellip;). Gerar imagens exige cota e faturamento ou cr&eacute;ditos ativos no Google. A chave fica neste navegador e vai apenas ao Google. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Gerenciar chave &rarr;</a></div>
   <div class="provider-divider"></div>
   <div style="font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:7px;">Higgsfield &middot; conex&atilde;o autom&aacute;tica</div>
   <div class="higgs-auto-row">
@@ -735,7 +792,7 @@
 // ============================================================
 
 // dois backends do Google, detectados pelo prefixo da chave:
-//   AIza… → AI Studio (generativelanguage) — free tier, sem billing
+//   AIza… → AI Studio (generativelanguage) — imagens exigem cota paga
 //   AQ.…  → Agent Platform / Vertex (aiplatform) — créditos do trial/billing
 const KEY_LS = 'tipo-gemini-key';
 function keyBackend(k) { return /^AQ[.\w]/.test(k) ? 'vertex' : 'studio'; }
@@ -1499,7 +1556,7 @@ function keyStatus(msg, cls) {
 function sanitizeApiError(status, text) {
   if (status === 401 || status === 403) return 'Chave inválida ou sem permissão pra esse modelo';
   if (status === 400) return 'Pedido recusado pelo modelo';
-  if (status === 429) return 'Sem cota pra esse modelo nessa chave (o Pro exige billing — o Nano Banana 2 tem faixa grátis)';
+  if (status === 429) return 'Cota ou limite temporário do Google atingido. Confira faturamento e limites desse modelo na sua conta.';
   if (status === 404) return 'Modelo indisponível pra essa chave';
   if (status >= 500) return 'API do Google instável — tente de novo';
   return `Erro da API (${status})`;
@@ -1507,11 +1564,7 @@ function sanitizeApiError(status, text) {
 
 /** detalhe do Google seguro pra exibir: nunca deixa uma chave passar */
 function safeDetail(e) {
-  const d = (e && e.detail) ? String(e.detail) : '';
-  return d
-    .replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza•••')
-    .replace(/AQ\.[0-9A-Za-z_\-.]{8,}/g, 'AQ.•••')
-    .slice(0, 240);
+  return PROVIDER_API.redactSecrets((e && (e.detail || e.message)) || '', key()).slice(0, 240);
 }
 
 /** bloqueia tentativa de extrair/burlar o system prompt (a cena vira
@@ -1534,40 +1587,26 @@ function looksLikeInjection(text) {
 }
 
 async function gapiUrl(url, body) {
-  const r = await fetch(url, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      'x-goog-api-key': key(),
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!r.ok) {
-    let detail = '';
-    try { detail = (await r.json()).error?.message || ''; } catch (e) {}
-    const err = new Error(sanitizeApiError(r.status, detail));
-    err.status = r.status;
-    err.detail = detail; // só console/genStatus (mascarado), nunca cru
-    throw err;
+  try {
+    return await PROVIDER_API.googleRequest(url, { key: key(), body });
+  } catch (error) {
+    if (error.status && ![502, 504].includes(error.status)) error.message = sanitizeApiError(error.status, error.detail);
+    throw error;
   }
-  return r.json();
 }
 
-/** Vertex/Agent Platform: o endpoint global exige o caminho completo
- *  projects/-/locations/global. Escada de compat pra variações de
- *  versão/host; a chave permanece exclusivamente no header. */
+/** Express usa a rota publishers; o caminho global completo fica como
+ *  compatibilidade para chaves antigas. Nunca repetir POST após falha de rede:
+ *  a requisição pode já ter sido aceita/cobrada. */
 async function vertexCall(id, body) {
   const clean = String(id).replace(/^models\//, '');
   const suffix = `publishers/google/models/${clean}:generateContent`;
-  // cada MODO é só a FORMA da rota; a URL é remontada por
-  // modelo. **v1beta1 PRIMEIRO**: é a única superfície do Vertex com o
-  // imageConfig completo (imageSize) — o BUG do 2K era o ping do flash
-  // memorizar /v1/, que aceita chat e aspectRatio mas RECUSA imageSize
-  // (400) → a escada de payload derrubava o size → sempre 1K.
+  // v1beta1 preserva imageConfig nos projetos com suporte parcial em v1.
   const ALL_MODES = [
+    { path: `/v1beta1/${suffix}` },
     { path: `/v1beta1/projects/-/locations/global/${suffix}` },
     { path: `/v1/projects/-/locations/global/${suffix}` },
-    { path: `/v1/${suffix}` }, // forma curta (alguns projetos)
+    { path: `/v1/${suffix}` },
   ];
   // modo memorizado tenta primeiro, mas 4xx NÃO trava mais a sessão:
   // os outros modos entram na sequência (o payload pode exigir outra versão)
@@ -1578,29 +1617,12 @@ async function vertexCall(id, body) {
     const path = m.path.replace(/publishers\/google\/models\/[^:]+:generateContent/, suffix);
     const base = `https://aiplatform.googleapis.com${path}`;
     try {
-      const r = await fetch(base, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key(),
-        },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        let detail = '';
-        try { detail = (await r.json()).error?.message || ''; } catch (e) {}
-        const err = new Error(sanitizeApiError(r.status, detail));
-        err.status = r.status;
-        err.detail = detail;
-        // 400/401/403/404 = formato de rota/versão — tenta o próximo modo
-        if ([400, 401, 403, 404].includes(r.status)) { last = err; continue; }
-        throw err;
-      }
+      const result = await gapiUrl(base, body);
       state._vxMode = m; // memoriza o VENCEDOR (pode trocar por payload)
-      return r.json();
+      return result;
     } catch (e) {
-      if (e instanceof TypeError) { last = e; continue; } // rede/CORS — tenta o próximo
-      if (e.status && [400, 401, 403, 404].includes(e.status)) { last = e; continue; }
+      // Só uma recusa explícita de formato/rota permite a compatibilidade.
+      if (e.status && [400, 404].includes(e.status)) { last = e; continue; }
       throw e;
     }
   }
@@ -1676,11 +1698,11 @@ async function connect(silent) {
       const hintState = applySceneReferenceHint($('scene').value.trim(), state.refs);
       if (hintState.changedRefs.length) renderRefs();
       for (const ref of state.refs) {
-        if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
+        if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', safeDetail(e)));
       }
       return;
     } catch (e) {
-      console.warn(`[fotograma] connect ${backend}:`, e.detail || e.message);
+      console.warn(`[fotograma] connect ${backend}:`, safeDetail(e));
       lastErr = e;
       const blocked = e.status === 404 || (e.status === 403 && /blocked|not.*enabled|SERVICE_DISABLED/i.test(safeDetail(e)));
       // só cai pro próximo backend se este está bloqueado por restrição/API off
@@ -2529,7 +2551,8 @@ async function tryImageModel(model, prompt, job, spec) {
         state.lastPayloadPrompt = prompt;
         return part.inlineData;
       }
-      lastErr = new Error('O modelo não devolveu imagem (pode ter recusado o prompt)');
+      lastErr = new Error('O modelo não devolveu imagem (pode ter recusado o prompt). Nenhuma nova geração foi enviada.');
+      break; // Uma resposta 200 já pode ter sido cobrada; não reenvia com outro payload.
     } catch (e) {
       lastErr = e;
       if (e.status !== 400) break; // 400 = formato; resto (cota etc.) desiste da escada
@@ -2541,32 +2564,20 @@ async function tryImageModel(model, prompt, job, spec) {
 async function generateGoogleImage(scene, rawScene, job) {
   const catalog = (job.modelOptions && job.modelOptions.length) ? job.modelOptions : FALLBACK_IMG_MODELS;
   const chosen = job.model || catalog[0].name;
-  const labelOf = v => (catalog.find(o => (o.name || o.value) === v) || {}).label || v;
-  // Lite só participa quando foi escolhido deliberadamente. Ele não é um
-  // fallback silencioso para jobs complexos com várias referências.
-  const alternatives = catalog.map(o => o.name || o.value).filter(v => v && v !== chosen && !/lite/i.test(v));
-  const order = [chosen, ...alternatives];
-  let lastErr = null;
-  for (let i = 0; i < order.length; i++) {
-    const spec = resolvePrompt(scene, rawScene, job, order[i]);
-    try {
-      const r = await tryImageModel(order[i], spec.text, job, spec);
-      state.lastModelLabel = labelOf(order[i]);
-      if (order[i] !== chosen) {
-        state.lastCfgNote = [state.lastCfgNote, `caiu do ${labelOf(chosen)} (sem cota) pro ${state.lastModelLabel}`].filter(Boolean).join(' · ');
-      }
-      return { inlineData: r, prompt: spec.text, spec, model: order[i], label: state.lastModelLabel };
-    } catch (e) {
-      lastErr = e;
-      if (![403, 404, 429].includes(e.status)) throw e;
-      const next = order[i + 1];
-      if (next) {
-        devMsg(`sem cota — revelando no ${labelOf(next).toLowerCase()}…`, job);
-        TipoUI.showToast(`Modelo sem cota nessa chave — tentando ${labelOf(next)}`);
-      }
+  const label = (catalog.find(option => (option.name || option.value) === chosen) || {}).label || chosen;
+  const spec = resolvePrompt(scene, rawScene, job, chosen);
+  try {
+    const inlineData = await tryImageModel(chosen, spec.text, job, spec);
+    state.lastModelLabel = label;
+    return { inlineData, prompt: spec.text, spec, model: chosen, label };
+  } catch (error) {
+    if ([403, 404, 429].includes(error.status)) {
+      const guidance = 'Revise o acesso ou escolha outro modelo manualmente. O modelo não foi trocado.';
+      error.detail = `${safeDetail(error).slice(0, 130)} ${guidance}`;
+      error.message = `${error.message} ${guidance}`;
     }
+    throw error;
   }
-  throw lastErr;
 }
 
 function higgsfieldInputs(job, spec) {
@@ -2871,6 +2882,7 @@ function syncQueueUI() {
   else requirement.textContent = currentProvider() === 'higgsfield'
     ? (state.higgsConnectionState === 'auth-required' ? 'Entre no Higgsfield para retomar.' : 'Aguardando a conexão automática com o Higgsfield.')
     : 'Conecte uma chave Google para liberar a geração.';
+  if (!$('utilityControls').hidden) utilityButtonState();
 }
 
 function revelar() {
@@ -2895,7 +2907,7 @@ function revelar() {
   if (hintState.changedRefs.length) {
     renderRefs();
     for (const ref of hintState.changedRefs) {
-      if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
+      if (refIsAuto(ref) && !ref.desc) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', safeDetail(e)));
     }
   }
   const batchId = nextLocalId('b');
@@ -2970,7 +2982,7 @@ async function prepareJobForGeneration(job) {
   const canUseGoogleAssist = !!job.googleAssist && !!state.connected && !!key();
   if (job.mood && !job.mood.desc && canUseGoogleAssist) {
     devMsg('lendo a emulsão da referência…', job);
-    try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', e.detail || e.message); }
+    try { await analisarMood(job.mood); } catch (e) { console.warn('[fotograma] emulsão:', safeDetail(e)); }
   }
   const jobHintState = applySceneReferenceHint(job.scene, job.refs || []);
   const needsRefAnalysis = ref => !ref.desc && refIsAuto(ref) && !ref.inferredRole;
@@ -2978,7 +2990,7 @@ async function prepareJobForGeneration(job) {
     devMsg('entendendo a função das referências…', job);
     for (const ref of job.refs) {
       if (!needsRefAnalysis(ref)) continue;
-      try { await analisarRef(ref, ref.sceneRoleHint || jobHintState.role); } catch (e) { console.warn('[fotograma] referência:', e.detail || e.message); }
+      try { await analisarRef(ref, ref.sceneRoleHint || jobHintState.role); } catch (e) { console.warn('[fotograma] referência:', safeDetail(e)); }
     }
   }
   const unresolved = (job.refs || []).filter(ref => refIsAuto(ref) && !ref.inferredRole);
@@ -2987,25 +2999,27 @@ async function prepareJobForGeneration(job) {
     devMsg('traduzindo a Ficha técnica…', job);
     try { await normalizeFicha(job); }
     catch (e) {
-      console.warn('[fotograma] ficha:', e.detail || e.message);
+      console.warn('[fotograma] ficha:', safeDetail(e));
       throw new Error('Não consegui traduzir a Ficha técnica sem perder valores. Revise os campos e tente novamente.');
     }
   }
 
   let scene = localSceneForImage(job.scene);
-  if (canUseGoogleAssist) {
+  // The Director is an enrichment pass for short ideas, not a summarizer.
+  // Its 1,600-character output contract must never truncate a detailed brief.
+  if (canUseGoogleAssist && job.scene.length <= 1600) {
     devMsg(job.diretor ? 'diretor decupando a cena…' : 'traduzindo e limpando a cena…', job);
     try {
       const expanded = saneExpansion(await diretor(job.scene, job));
       if (!expanded) throw new Error('resposta vazia, conversacional ou malformada');
       scene = expanded;
     } catch (e) {
-      console.warn('[fotograma] diretor:', e.detail || e.message);
+      console.warn('[fotograma] diretor:', safeDetail(e));
       devMsg('Diretor indisponível — seguindo com a direção local…', job);
       TipoUI.showToast('Diretor Google indisponível; seguindo com a direção local da Tipó');
     }
   } else {
-    devMsg('montando a direção local da Tipó…', job);
+    devMsg(job.scene.length > 1600 ? 'preservando o brief completo…' : 'montando a direção local da Tipó…', job);
   }
   return { scene, ficha: job.ficha, refs: job.refs, mood: job.mood };
 }
@@ -3080,36 +3094,24 @@ async function revealJob(job) {
 
     devMsg('revelando o fotograma…', job);
     state.lastCfgNote = '';
-    // a API às vezes derruba/ignora o imageSize — REPUXA sozinho até vir
-    // na resolução pedida (padrão da casa: nunca entregar abaixo de 2K
-    // em silêncio). 3 tentativas; só avisa se todas vierem baixas.
+    // Preserva toda saída concluída. Uma resolução inferior é avisada;
+    // não há nova geração/cobrança automática para substituí-la.
     const asked = { '2K': 2048, '4K': 4096 }[job.imgSize] || 0;
-    // Higgsfield cobra cada job do CLI. Uma saída paga abaixo do tamanho pedido
-    // é sinalizada, nunca repetida automaticamente sem consentimento.
-    const maxAttempts = job.provider === 'higgsfield' ? 1 : 3;
-    let result = null, blob = null, gotW = 0, gotH = 0;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      result = await generateImage(scene, job.scene, job);
-      const img = result.inlineData;
-      state.lastPrompt = result.prompt;
-      blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
-      const wantsHi = supportsImageSize(result.model) && asked >= 2048;
-      if (!wantsHi) break;
+    const result = await generateImage(scene, job.scene, job);
+    const img = result.inlineData;
+    state.lastPrompt = result.prompt;
+    const blob = await (await fetch(`data:${img.mimeType};base64,${img.data}`)).blob();
+    let gotW = 0, gotH = 0;
+    if (supportsImageSize(result.model) && asked >= 2048) {
       try {
         const bmp = await createImageBitmap(blob);
         gotW = bmp.width; gotH = bmp.height;
         bmp.close();
-      } catch (e) { break; }
-      if (Math.max(gotW, gotH) >= asked * 0.9) break;
-      if (attempt < maxAttempts) {
-        devMsg(`saiu ${gotW}×${gotH} — repuxando em ${job.imgSize} (${attempt + 1}/${maxAttempts})…`, job);
-        state.lastCfgNote = '';
-      }
+      } catch (e) {}
     }
     state.lastBlob = blob;
     if (asked >= 2048 && gotW && Math.max(gotW, gotH) < asked * 0.9 && result && supportsImageSize(result.model)) {
-      const attemptNote = maxAttempts === 1 ? 'sem repetição paga' : `após ${maxAttempts} tentativas`;
-      state.lastCfgNote = [state.lastCfgNote, `saiu ${gotW}×${gotH} (${attemptNote}; pedido ${job.imgSize})`].filter(Boolean).join(' · ');
+      state.lastCfgNote = [state.lastCfgNote, `saiu ${gotW}×${gotH} (sem repetição paga; pedido ${job.imgSize})`].filter(Boolean).join(' · ');
     }
     const url = URL.createObjectURL(blob);
     $('stillImg').src = url;
@@ -3132,7 +3134,7 @@ async function revealJob(job) {
       waitingForConnection = true;
       return 'wait-for-connection';
     }
-    console.error('[fotograma]', e.detail || e.message);
+    console.error('[fotograma]', safeDetail(e));
     TipoUI.showToast(e.message || 'Falhou — tente de novo');
     const d = safeDetail(e);
     const providerName = job.provider === 'higgsfield' ? 'Higgsfield' : 'Google';
@@ -3443,7 +3445,7 @@ function renderGallery(selIdx = -1) {
     d.querySelector('.pending-progress-bar').style.width = `${progress.percent}%`;
     d.querySelector('.pending-percent').textContent = pn.status === 'running' ? `${progress.percent}% estimado` : 'na fila';
     d.querySelector('.pending-time').textContent = progress.time;
-    d.querySelector('.take-caption').textContent = `${config ? config.label : 'Fotograma'}${pn.batchTotal > 1 ? ` · ${pn.batchIndex}/${pn.batchTotal}` : ''}${pn.ar ? ` · ${pn.ar}` : ''}`;
+    d.querySelector('.take-caption').textContent = `${pn.utilityTool ? UTILITY_META[pn.utilityTool].title + ' · ' : ''}${config ? config.label : (pn.utilityTool ? 'Higgsfield' : 'Fotograma')}${pn.batchTotal > 1 ? ` · ${pn.batchIndex}/${pn.batchTotal}` : ''}${pn.ar ? ` · ${pn.ar}` : ''}`;
     d.querySelector('.take-prompt').textContent = pn.status === 'running'
       ? 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.'
       : (pn.provider === 'higgsfield' && !state.higgsConnected
@@ -3481,6 +3483,14 @@ function renderGallery(selIdx = -1) {
     d.querySelector('img').addEventListener('click', () => openTakeLightbox(t));
     // arrastar o take pra REFERÊNCIAS ou EMULSÃO (Daniel 23/07)
     const im = d.querySelector('img');
+    im.tabIndex = 0;
+    im.setAttribute('role', 'button');
+    im.setAttribute('aria-label', `Abrir imagem: ${t.caption || 'Fotograma'}`);
+    im.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openTakeLightbox(t);
+    });
     im.draggable = true;
     im.addEventListener('dragstart', e => {
       e.dataTransfer.setData('application/x-tipo-take', t.id);
@@ -3805,7 +3815,7 @@ function renderRefs() {
       refreshPreview();
       if (state.connected) {
         for (const ref of [...new Set([r, ...hintState.changedRefs])]) {
-          analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
+          analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', safeDetail(e)));
         }
       }
     });
@@ -3818,7 +3828,7 @@ function renderRefs() {
       renderRefs();
       refreshPreview();
       if (state.connected) {
-        for (const ref of hintState.changedRefs) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
+        for (const ref of hintState.changedRefs) analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', safeDetail(e)));
       }
     });
     box.appendChild(d);
@@ -3846,7 +3856,7 @@ async function addRefFiles(files) {
   renderRefs();
   if (state.connected) {
     for (const ref of [...new Set([...added, ...hintState.changedRefs])]) {
-      analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', e.detail || e.message));
+      analisarRef(ref, ref.sceneRoleHint || '').catch(e => console.warn('[fotograma] referência:', safeDetail(e)));
     }
   }
   if (state.refs.length >= 4) TipoUI.showToast('Máximo de 4 referências');
@@ -3971,7 +3981,7 @@ async function setMoodFile(f) {
     drawMoodCanvas();
     if (state.connected) {
       $('moodDesc').textContent = '🧪 lendo a emulsão…';
-      try { await analisarMood(); } catch (err) { $('moodDesc').textContent = ''; console.warn('[fotograma] emulsão:', err.detail || err.message); }
+      try { await analisarMood(); } catch (err) { $('moodDesc').textContent = ''; console.warn('[fotograma] emulsão:', safeDetail(err)); }
     }
   } catch (err) { TipoUI.showToast(err.message); }
 }
@@ -4040,7 +4050,7 @@ const UTILITY_META = Object.freeze({
   },
   styleShift: {
     title: 'Animation Styles',
-    description: 'Retexturiza uma imagem em uma linguagem de animação completa. Cada estilo usa uma direção própria e preserva identidade, composição e objetos.',
+    description: 'Uma imagem estática com linguagem de animação. Cada estilo dirige materiais e acabamento; o prompt protege identidade, composição e objetos. Não gera vídeo.',
     button: 'Retexturizar imagem',
     generator: true,
   },
@@ -4066,6 +4076,8 @@ const utilityState = {
   sheetTypeId: TOOL_API.SHEET_TYPES[0].id,
   expandRatio: '21:9',
   busy: false,
+  activeJob: null,
+  results: {},
   result: null,
   generationSettings: {
     styleShift: { model: 'seedream_v5_lite', ratio: '16:9', resolution: '2K' },
@@ -4091,15 +4103,28 @@ function utilityButtonState() {
   const button = $('utilityGenerate');
   if (utilityState.active === 'create') return;
   const meta = UTILITY_META[utilityState.active];
+  const capability = state.higgsAccount?.tools?.[utilityState.active] || PROVIDER_API.HIGGSFIELD_TOOLS?.[utilityState.active];
+  if (capability?.available === false) {
+    button.disabled = true;
+    button.textContent = 'Indisponível no provedor';
+    utilityStatus(capability.reason || 'Este motor está pausado no Higgsfield. Nenhuma geração será enviada.');
+    return;
+  }
+  if (!utilityState.busy && activeByProvider.higgsfield >= MAX_PARALLEL_JOBS) {
+    button.disabled = true;
+    button.textContent = 'Aguardando um espaço Higgsfield';
+    return;
+  }
   const writtenBrief = utilityState.active === 'cast'
     ? $('castDescription').value.trim()
     : (utilityState.active === 'product' ? $('productDirection').value.trim() : '');
-  const ready = utilityState.image || (meta.optionalImage && writtenBrief);
+  const overBudget = [...document.querySelectorAll('.utility-pane:not([hidden]) .utility-textarea')].some(field => field.value.trim().length > TOOL_API.MAX_DIRECTION_CHARS);
+  const ready = !overBudget && (utilityState.image || (meta.optionalImage && writtenBrief));
   button.disabled = utilityState.busy || !ready;
   const config = meta.generator ? styleConfig() : null;
   const cost = config ? PROVIDER_API.estimateCost(config, $('styleResolution').value) : null;
   button.textContent = utilityState.busy
-    ? 'Processando no Higgsfield…'
+    ? `Processando ${UTILITY_META[utilityState.activeJob?.tool || utilityState.active].title}…`
     : (ready ? `${meta.button}${cost ? ` · ${cost} cr` : ''}` : (meta.optionalImage ? 'Descreva ou adicione uma imagem' : 'Escolha uma imagem'));
 }
 
@@ -4130,7 +4155,11 @@ function setFotogramaTool(name) {
   const changed = next !== utilityState.active;
   if (changed) cacheCurrentWorkspace();
   utilityState.active = next;
-  document.querySelectorAll('[data-fotograma-tool]').forEach(button => button.classList.toggle('on', button.dataset.fotogramaTool === next));
+  document.querySelectorAll('[data-fotograma-tool]').forEach(button => {
+    const selected = button.dataset.fotogramaTool === next;
+    button.classList.toggle('on', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
   const isCreate = next === 'create';
   $('createControls').hidden = !isCreate;
   $('utilityControls').hidden = isCreate;
@@ -4140,6 +4169,8 @@ function setFotogramaTool(name) {
     if (changed) $('panel').scrollTop = 0;
     return;
   }
+  utilityState.result = utilityState.results[next] || null;
+  $('utilityDownload').disabled = !utilityState.result;
   Object.keys(UTILITY_META).forEach(tool => {
     const pane = $(`${tool}Pane`);
     if (pane) pane.hidden = tool !== next;
@@ -4152,6 +4183,8 @@ function setFotogramaTool(name) {
   $('generatorSettings').hidden = !UTILITY_META[next].generator;
   if (UTILITY_META[next].generator) loadGenerationSettings(next);
   restoreWorkspace(next);
+  renderUtilityDrop();
+  refreshUtilityPrompt();
   utilityStatus('');
   utilityButtonState();
   localStorage.setItem(HIGGS_AUTO_LS, '1');
@@ -4199,6 +4232,7 @@ async function setUtilityFile(file) {
   $('stillCaption').textContent = `${file.name || 'imagem'} · origem`;
   utilityState.workspaces[utilityState.active] = { src: ref.dataUrl, caption: $('stillCaption').textContent };
   utilityStatus('Imagem pronta. O arquivo só será enviado ao Higgsfield quando você gerar.');
+  refreshUtilityPrompt();
   utilityButtonState();
 }
 
@@ -4271,6 +4305,32 @@ function renderToolChoices(containerId, items, dataName, selected, onSelect) {
   });
 }
 
+function utilityPromptFor(tool = utilityState.active) {
+  if (tool === 'styleShift') return TOOL_API.buildStylePrompt(utilityState.styleId, $('styleDirection').value);
+  if (tool === 'cast') return TOOL_API.buildCastPrompt({ description: $('castDescription').value, styleId: utilityState.castStyleId, backgroundId: utilityState.castBackgroundId, hasReference: !!utilityState.image });
+  if (tool === 'product') return TOOL_API.buildProductPrompt({ direction: $('productDirection').value, styleId: utilityState.productStyleId, hasReference: !!utilityState.image });
+  if (tool === 'sheets') return TOOL_API.buildSheetPrompt({ typeId: utilityState.sheetTypeId, direction: $('sheetDirection').value });
+  return '';
+}
+
+function refreshUtilityPrompt() {
+  const tool = utilityState.active;
+  if (tool === 'create') return;
+  const generator = UTILITY_META[tool].generator;
+  $('utilityPromptHint').textContent = generator
+    ? 'Este é o prompt completo enviado ao modelo selecionado, junto da imagem de origem. Não é uma garantia de fidelidade: revise o resultado.'
+    : 'Processamento dedicado do Higgsfield, sem system prompt. Só os parâmetros abaixo são enviados com a imagem.';
+  try {
+    $('utilityPromptText').textContent = generator ? utilityPromptFor(tool) : JSON.stringify(utilityToolPayload(tool, []), null, 2);
+  } catch (error) { $('utilityPromptText').textContent = error.message; }
+}
+
+function utilityToolPayload(tool, images) {
+  if (tool === 'multiAngle') return { tool, images, rotate: Number($('angleRotate').value), vertical: Number($('angleVertical').value), forward: Number($('angleForward').value), removeBg: $('angleRemoveBg').checked };
+  if (tool === 'expand') return { tool, images, aspectRatio: utilityState.expandRatio };
+  return { tool, images };
+}
+
 function renderCastChoices() {
   renderToolChoices('castStyleChoices', TOOL_API.CAST_STYLES, 'castStyle', utilityState.castStyleId, id => { utilityState.castStyleId = id; });
   renderToolChoices('castBackgroundChoices', TOOL_API.CAST_BACKGROUNDS, 'castBackground', utilityState.castBackgroundId, id => { utilityState.castBackgroundId = id; });
@@ -4311,94 +4371,85 @@ function utilityParams(prompt) {
     sheetTypeId: utilityState.sheetTypeId,
     expandRatio: utilityState.expandRatio,
     generation: generation ? { ...generation } : null,
+    brief: utilityState.active === 'cast' ? $('castDescription').value : utilityState.active === 'product' ? $('productDirection').value : utilityState.active === 'sheets' ? $('sheetDirection').value : utilityState.active === 'styleShift' ? $('styleDirection').value : '',
     prompt: prompt || '',
   };
 }
 
-async function showUtilityResult(result, prompt, operationAdapter) {
+async function showUtilityResult(result, job, operationAdapter) {
   if (!result || !result.image || !result.image.data) throw new Error('Higgsfield terminou sem devolver uma imagem');
   const mime = result.image.mimeType || 'image/png';
   const bytes = Uint8Array.from(atob(result.image.data), character => character.charCodeAt(0));
   const blob = new Blob([bytes], { type: mime });
   const url = URL.createObjectURL(blob);
-  const meta = UTILITY_META[utilityState.active];
-  const engine = UTILITY_META[utilityState.active].generator ? styleConfig().label : result.label;
-  const caption = `${meta.title} · ${engine} · ${result.estimatedCredits ?? '?'} cr`;
-  utilityState.result = { blob, url, caption };
-  utilityState.workspaces[utilityState.active] = { src: url, caption };
-  $('stillImg').src = url;
-  $('stillCaption').textContent = caption;
-  $('utilityDownload').disabled = false;
+  const meta = UTILITY_META[job.tool];
+  const engine = meta.generator ? PROVIDER_API.modelByName(job.payload.model).label : result.label;
+  const engineSuffix = engine && !engine.toLowerCase().startsWith(meta.title.toLowerCase()) ? ` · ${engine}` : (job.tool === 'removeBg' ? ' · beta' : '');
+  const caption = `${meta.title}${engineSuffix} · ${result.estimatedCredits ?? '?'} cr`;
+  utilityState.results[job.tool] = { blob, url, caption };
+  utilityState.workspaces[job.tool] = { src: url, caption };
+  if (utilityState.active === job.tool) {
+    utilityState.result = utilityState.results[job.tool];
+    $('stillImg').src = url;
+    $('stillCaption').textContent = caption;
+    $('utilityDownload').disabled = false;
+    showPrompt(job.prompt || '');
+    utilityStatus(`Concluído${Number.isFinite(Number(result.creditsRemaining)) ? ` · saldo ${Number(result.creditsRemaining).toFixed(2)}` : ''}.`);
+  } else TipoUI.showToast(`${meta.title} concluído · resultado na galeria`);
   if ((!operationAdapter || state.higgsAdapter === operationAdapter) && Number.isFinite(Number(result.creditsRemaining))) {
     state.higgsAccount = { ...(state.higgsAccount || {}), credits: Number(result.creditsRemaining) };
     syncProviderHint();
   }
-  showPrompt(prompt || '');
-  addTake(url, caption, blob, utilityParams(prompt));
-  utilityStatus(`Concluído${Number.isFinite(Number(result.creditsRemaining)) ? ` · saldo ${Number(result.creditsRemaining).toFixed(2)}` : ''}.`);
+  addTake(url, caption, blob, job.params);
 }
 
 async function generateUtility() {
   if (utilityState.busy || utilityState.active === 'create' || $('utilityGenerate').disabled) return;
+  // Freeze every input before the first await. Changing tabs must never change
+  // the paid operation, prompt, source image or result provenance in flight.
+  let job;
+  try {
+    const tool = utilityState.active;
+    const prompt = utilityPromptFor(tool);
+    const images = utilityImagePayload();
+    const payload = UTILITY_META[tool].generator
+      ? { model: styleConfig().name, prompt, aspectRatio: $('styleRatio').value, resolution: $('styleResolution').value, images }
+      : utilityToolPayload(tool, images);
+    job = { tool, prompt, payload, params: utilityParams(prompt), pendingId: nextLocalId('utility') };
+  } catch (error) { utilityStatus(error.message, true); return; }
   utilityState.busy = true;
+  utilityState.activeJob = job;
+  activeByProvider.higgsfield++;
   utilityButtonState();
   $('utilityDownload').disabled = true;
   utilityStatus('Conectando ao bridge local…');
-  let prompt = '';
   let adapter = null;
+  state.pending.unshift({ id: job.pendingId, utilityTool: job.tool, msg: 'verificando conexão…', status: 'queued', model: job.payload.model || job.tool, ar: job.payload.aspectRatio, provider: 'higgsfield' });
+  renderGallery(-1);
+  ensurePendingTicker();
   try {
     adapter = await ensureHiggsfieldForTool();
-    utilityStatus('Processando no Higgsfield · sem retry automático…');
-    let result;
-    if (UTILITY_META[utilityState.active].generator) {
-      const config = styleConfig();
-      if (utilityState.active === 'styleShift') {
-        prompt = TOOL_API.buildStylePrompt(utilityState.styleId, $('styleDirection').value);
-      } else if (utilityState.active === 'cast') {
-        prompt = TOOL_API.buildCastPrompt({
-          description: $('castDescription').value,
-          styleId: utilityState.castStyleId,
-          backgroundId: utilityState.castBackgroundId,
-          hasReference: !!utilityState.image,
-        });
-      } else if (utilityState.active === 'product') {
-        prompt = TOOL_API.buildProductPrompt({
-          direction: $('productDirection').value,
-          styleId: utilityState.productStyleId,
-          hasReference: !!utilityState.image,
-        });
-      } else {
-        prompt = TOOL_API.buildSheetPrompt({ typeId: utilityState.sheetTypeId, direction: $('sheetDirection').value });
-      }
-      result = await adapter.generate({
-        model: config.name,
-        prompt,
-        aspectRatio: $('styleRatio').value,
-        resolution: $('styleResolution').value,
-        images: utilityImagePayload(),
-      });
-    } else if (utilityState.active === 'multiAngle') {
-      result = await adapter.runTool({
-        tool: 'multiAngle',
-        images: utilityImagePayload(),
-        rotate: Number($('angleRotate').value),
-        vertical: Number($('angleVertical').value),
-        forward: Number($('angleForward').value),
-        removeBg: $('angleRemoveBg').checked,
-      });
-    } else if (utilityState.active === 'expand') {
-      result = await adapter.runTool({ tool: 'expand', images: utilityImagePayload(), aspectRatio: utilityState.expandRatio });
-    } else {
-      result = await adapter.runTool({ tool: 'removeBg', images: utilityImagePayload() });
-    }
-    await showUtilityResult(result, prompt, adapter);
+    if (utilityState.active === job.tool) utilityStatus('Processando no Higgsfield · acompanhe na galeria.');
+    setPendingRunning({ ...job, model: job.payload.model || job.tool });
+    devMsg(`processando ${UTILITY_META[job.tool].title}`, job);
+    const result = UTILITY_META[job.tool].generator
+      ? await adapter.generate(job.payload)
+      : await adapter.runTool(job.payload);
+    await showUtilityResult(result, job, adapter);
+    const pending = state.pending.find(item => item.id === job.pendingId);
+    if (pending?.startedAt) rememberGenerationTime(job.payload.model || job.tool, Date.now() - pending.startedAt);
   } catch (error) {
     handleHiggsfieldOperationError(error, adapter);
-    utilityStatus(error.message || 'A ferramenta falhou', true);
+    if (utilityState.active === job.tool) utilityStatus(error.message || 'A ferramenta falhou', true);
     TipoUI.showToast(error.message || 'Higgsfield falhou');
   } finally {
     utilityState.busy = false;
+    utilityState.activeJob = null;
+    activeByProvider.higgsfield--;
+    state.pending = state.pending.filter(item => item.id !== job.pendingId);
+    renderGallery(-1);
     utilityButtonState();
+    pump();
   }
 }
 
@@ -4406,6 +4457,8 @@ async function reuseUtilityTake(take) {
   const params = take && take.params || {};
   if (!params.utilityTool) return;
   setFotogramaTool(params.utilityTool);
+  const briefField = { cast: 'castDescription', product: 'productDirection', sheets: 'sheetDirection', styleShift: 'styleDirection' }[params.utilityTool];
+  if (briefField && typeof params.brief === 'string') $(briefField).value = params.brief;
   if (params.styleId) {
     utilityState.styleId = params.styleId;
     renderStyleChoices();
@@ -4505,6 +4558,41 @@ renderSheetChoices();
 renderExpandRatios();
 loadGenerationSettings('styleShift');
 renderUtilityDrop();
+
+const utilityFieldNames = { castDescription: 'Descrição do personagem', productDirection: 'Direção do produto', sheetDirection: 'Direção da prancha', styleDirection: 'Direção da retexturização' };
+Object.entries(utilityFieldNames).forEach(([id, label]) => {
+  const field = $(id);
+  field.setAttribute('aria-label', label);
+  field.setAttribute('aria-describedby', `${id}Count`);
+  const counter = document.createElement('output');
+  counter.id = `${id}Count`;
+  counter.className = 'utility-counter';
+  field.after(counter);
+  const update = () => {
+    const count = field.value.trim().length;
+    counter.textContent = `${count.toLocaleString('pt-BR')} / ${TOOL_API.MAX_DIRECTION_CHARS.toLocaleString('pt-BR')}`;
+    counter.classList.toggle('over', count > TOOL_API.MAX_DIRECTION_CHARS);
+    field.setAttribute('aria-invalid', String(count > TOOL_API.MAX_DIRECTION_CHARS));
+  };
+  field.addEventListener('input', update);
+  update();
+});
+function syncFotogramaSelectionState() {
+  document.querySelectorAll('.rail-tool[data-fotograma-tool], .tool-choice, .fchip, .prog-btn').forEach(button => button.setAttribute('aria-pressed', String(button.classList.contains('on'))));
+}
+$('utilityControls').addEventListener('input', () => { utilityButtonState(); refreshUtilityPrompt(); });
+$('utilityControls').addEventListener('change', refreshUtilityPrompt);
+$('utilityControls').addEventListener('click', () => setTimeout(() => { refreshUtilityPrompt(); syncFotogramaSelectionState(); }, 0));
+$('panel').addEventListener('click', () => setTimeout(syncFotogramaSelectionState, 0));
+$('fotogramaRail').addEventListener('click', syncFotogramaSelectionState);
+$('lightbox').addEventListener('keydown', event => {
+  if (event.key !== 'Tab') return;
+  const controls = [...$('lightbox').querySelectorAll('button:not([disabled])')].filter(button => button.getClientRects().length);
+  const first = controls[0], last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
+syncFotogramaSelectionState();
 
 function syncResRow() {
   const isHiggs = currentProvider() === 'higgsfield';

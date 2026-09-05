@@ -314,6 +314,17 @@ const initial = await page.evaluate(() => ({
 check('video input + processing UI exists', /video/i.test(initial.accept) && initial.canvas && initial.cancel);
 check('actions disabled before upload', initial.processDisabled && initial.exportDisabled);
 check('model is lazy (zero module requests at boot)', traffic.transformersModules === 0);
+const [emptyChooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#emptyUploadBtn')]);
+check('empty-state upload opens the native file picker', !!emptyChooser);
+const presetDescriptions = await page.evaluate(() => {
+  const descriptions = ['seedance', 'stable', 'edges', 'motion'].map(name => {
+    applyPreset(name);
+    return document.getElementById('presetNote').textContent;
+  });
+  applyPreset('seedance');
+  return descriptions;
+});
+check('each preset explains its detail/stability tradeoff', new Set(presetDescriptions).size === 4 && presetDescriptions.every(text => text.length > 40));
 
 await page.locator('#fileInput').setInputFiles({
   name: 'not-a-video.txt', mimeType: 'text/plain', buffer: Buffer.from('not video'),
@@ -375,6 +386,14 @@ await setControl(page, 'analysisFps', 6);
 await observeProgress(page);
 await page.click('#processBtn');
 await page.waitForFunction(() => globalThis.depthMapState?.phase === 'processing' && globalThis.__depthMock?.inferenceCalls > 0, null, { timeout: 30000 });
+const lockedDrop = await page.evaluate(() => {
+  const source = document.getElementById('sourceVideo').src;
+  const transfer = new DataTransfer();
+  transfer.items.add(new File(['replacement'], 'replacement.mp4', { type: 'video/mp4' }));
+  document.getElementById('depthWorkspace').dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer }));
+  return { sameSource: document.getElementById('sourceVideo').src === source, phase: depthMapState.phase };
+});
+check('drag-and-drop cannot replace the source during an active pass', lockedDrop.sameSource && lockedDrop.phase === 'processing', JSON.stringify(lockedDrop));
 const processingLayout = await actionLayout(page);
 await page.click('#cancelBtn');
 await page.waitForFunction(() => globalThis.depthMapState?.phase === 'cancelled', null, { timeout: 30000 });
@@ -489,22 +508,25 @@ check('temporal smoothing reduces real exported-frame flicker',
 // 6) Landing-page and mobile integration.
 const index = await context.newPage();
 await index.goto('http://localhost/index.html#visual', { waitUntil: 'domcontentloaded' });
-await index.waitForFunction(() => document.getElementById('levelVisual')?.classList.contains('active'));
+await index.locator('.hub-tool-link[href="depthmap.html"]').waitFor({ state: 'visible' });
 const card = await index.evaluate(() => {
-  const link = document.querySelector('a.tipo-mode-card[href="depthmap.html"]');
+  const link = document.querySelector('.hub-tool-link[href="depthmap.html"]');
   return {
     link: link && {
-      title: link.querySelector('.tipo-mode-card-title')?.textContent || '',
-      desc: link.querySelector('.tipo-mode-card-desc')?.textContent || '',
-      meta: link.querySelector('.tipo-mode-card-meta')?.textContent || '',
+      title: link.querySelector('h3')?.textContent || '',
+      desc: link.querySelector('p')?.textContent || '',
+      meta: link.querySelector('.hub-tool-meta')?.textContent || '',
     },
-    stats: document.querySelector('.header-stats')?.textContent || '',
+    visualFilter: document.querySelector('[data-filter="visual"]')?.getAttribute('aria-pressed'),
   };
 });
 check('Depth Map card is integrated in Visual Tools',
-  !!card.link && /depth\s*map/i.test(card.link.title) && /video/i.test(`${card.link.desc} ${card.link.meta}`) && /seedance|mp4/i.test(`${card.link.desc} ${card.link.meta}`),
+  !!card.link && card.visualFilter === 'true' && /depth\s*map/i.test(card.link.title) && /v[íi]deo/i.test(`${card.link.desc} ${card.link.meta}`) && /seedance|mp4/i.test(`${card.link.desc} ${card.link.meta}`),
   JSON.stringify(card));
-check('landing tool count includes Depth Map', /41\s+tools/i.test(card.stats), `(${card.stats})`);
+await index.locator('[data-filter="all"]').click();
+const catalogCount = await index.locator('.hub-tool-link').count();
+const sourceToolCount = fs.readdirSync(root).filter(file => file.endsWith('.html') && file !== 'index.html').length;
+check('landing tool count includes every standalone tool', catalogCount === sourceToolCount, `${catalogCount}/${sourceToolCount}`);
 await index.close();
 
 const mobileTraffic = { external: [], transformersModules: 0, modelWeightRequests: [] };

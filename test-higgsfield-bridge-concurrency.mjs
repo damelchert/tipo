@@ -62,6 +62,9 @@ try {
   const bodies = await Promise.all(responses.map(response => response.json()));
   check('quatro jobs independentes concluem com quatro imagens', responses.every(response => response.status === 200) && new Set(bodies.map(body => body.id)).size === 4 && bodies.every(body => body.image && body.image.mimeType === 'image/png'));
 
+  const gpt = await fetch(`${base}/generate`, { method: 'POST', headers, body: JSON.stringify({ model: 'gpt_image_2', prompt: 'current parameter contract', aspectRatio: '16:9', resolution: '2K' }) });
+  check('GPT Image 2 não recebe batch_size removido do contrato atual', gpt.status === 200);
+
   process.env.MOCK_HIGGSFIELD_GENERATE_ERROR = 'oauth-json';
   const redacted = await fetch(`${base}/generate`, { method: 'POST', headers, body: payload });
   const redactedBody = await redacted.json();
