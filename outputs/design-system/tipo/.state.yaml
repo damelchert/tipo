@@ -19,6 +19,36 @@ verification:
   paid_ai_generation: not-performed
 report: docs/audit-platform-2026-09.md
 features:
+  fotograma_prompt_review:
+    phase: verified-release-approved
+    components: [prompt-inspector, saved-prompt-reader, local-usage-table, auteur-profiles, account-popover, visual-only-looks]
+    looks: [naturalista, editorial, experimental]
+    scene_enrichment: separate-opt-in-neutral
+    patterns: existing-tipo-tokens-native-dialog-semantic-table
+    profiles: 6
+    look_checks: 171
+    studio_checks: 67
+    contract_checks: 28
+    account_isolation_cases: 9
+    reconnection_regression: passed-expired-session-keeps-login
+    visual_generation_validation: pending-no-paid-generation
+    magnific: pending-account-legacy-or-current
+    report: docs/audit-fotograma-prompts-2026-09.md
+  image_effects_video_audit:
+    phase: verified
+    tools: 18
+    patterns: [existing-tokens, source-preserving-preview, controlled-presets, explicit-export-limits]
+    preview_default: cover-without-distortion
+    full_source_view: opt-in-contain
+    native_canvas_display: independent-of-export-resolution
+    full_hd_engines_verified: 10
+    framing_checks: 84
+    tonal_checks: 73
+    motion_checks: 67
+    workspace_cases: 8
+    final_platform_smoke: 80-of-80
+    providers_changed: false
+    report: docs/audit-image-effects-2026-09.md
   kinetic_previews:
     phase: verified
     tools: 23

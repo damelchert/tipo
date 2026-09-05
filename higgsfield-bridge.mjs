@@ -12,6 +12,11 @@ const { HIGGSFIELD_MODELS, HIGGSFIELD_TOOLS, estimateCost, modelByName } = requi
 const { EXPAND_RATIOS, TOOL_COSTS } = require('./shared/fotograma-tools.js');
 
 const HOST = process.env.TIPO_HIGGSFIELD_HOST || '127.0.0.1';
+// The bridge acts with the local CLI account. Never expose that account on a
+// LAN/public interface; browser origin checks are not per-user authentication.
+if (!['127.0.0.1', 'localhost', '::1'].includes(HOST)) {
+  throw new Error('TIPO_HIGGSFIELD_HOST deve ser loopback: 127.0.0.1, localhost ou ::1');
+}
 const PORT = Number(process.env.TIPO_HIGGSFIELD_PORT || 4789);
 const CLI = process.env.TIPO_HIGGSFIELD_BIN || [
   join(homedir(), 'bin', 'higgsfield'),

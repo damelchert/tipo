@@ -313,7 +313,14 @@ const TipoHQ = {
     }
 
     const fps = 30;
-    const enc = await this._pickConfig(video.videoWidth, video.videoHeight, fps);
+    // Source-sized output by default; a tool with an explicit crop may supply
+    // its actual output frame so HQ doesn't silently re-crop it a second time.
+    const size = cfg.getOutputSize ? cfg.getOutputSize(video) : { width: video.videoWidth, height: video.videoHeight };
+    if (!Number.isFinite(size?.width) || !Number.isFinite(size?.height) || size.width < 2 || size.height < 2) {
+      TipoUI.showToast('Dimensões de saída inválidas. Confira o enquadramento.');
+      return false;
+    }
+    const enc = await this._pickConfig(size.width, size.height, fps);
     if (!enc) { TipoUI.showToast('Encoder não suporta essa resolução'); return false; }
 
     this._running = true;

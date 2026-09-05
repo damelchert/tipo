@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Risograph Simulator. Spot-color ink separation, halftone, misregistration and grain in the browser.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Riso</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
-<script src="shared/hq.js?v=20260715-rec1"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
+<script src="shared/hq.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -55,16 +55,15 @@
   <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
+      <span class="preset-chip" onclick="applyPreset('editorial')">Editorial</span>
       <span class="preset-chip" onclick="applyPreset('classic')">Classic</span>
       <span class="preset-chip" onclick="applyPreset('zine')">Zine</span>
       <span class="preset-chip" onclick="applyPreset('poster')">Poster</span>
-      <span class="preset-chip" onclick="applyPreset('editorial')">Editorial</span>
-      <span class="preset-chip" onclick="applyPreset('punk')">Punk</span>
+      <span class="preset-chip" onclick="applyPreset('offset')">Offset</span>
       <span class="preset-chip" onclick="applyPreset('mono')">Mono</span>
       <span class="preset-chip" onclick="applyPreset('cmyk')">CMYK</span>
       <span class="preset-chip" onclick="applyPreset('newsprint')">Newsprint</span>
-      <span class="preset-chip" onclick="applyPreset('comic')">Comic</span>
-      <span class="preset-chip" onclick="applyPreset('tipo')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+      <span class="preset-chip" onclick="applyPreset('editorial')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
 
@@ -433,7 +432,8 @@ function getGrainCanvas() {
   for (let i = 0; i < S * S; i++) {
     const x = i % S, y = (i / S) | 0;
     // fine noise + coarse blotches = organic ink texture
-    const fine = Math.random();
+    const raw = Math.sin((i + 1) * 127.1) * 43758.5453;
+    const fine = raw - Math.floor(raw);
     const coarse = (Math.sin(x * 0.11 + Math.sin(y * 0.07) * 3) + Math.sin(y * 0.13 + Math.sin(x * 0.05) * 3)) * 0.25 + 0.5;
     const v = fine * 0.65 + coarse * 0.35;
     const j = i * 4;
@@ -450,6 +450,7 @@ function getGrainCanvas() {
 function renderRiso(targetCtx, w, h, opts) {
   // opts: { cell, dotGain, misregPx, grainAmt, inkOp, paper, soloLayer (optional, for separations) }
   const frame = getCurrentFrame();
+  if (frame && typeof frame.readyState === 'number' && frame.readyState < 2) return;
 
   // 1. Source → srcCanvas, get luminance
   srcCanvas.width = w; srcCanvas.height = h;
@@ -551,9 +552,11 @@ function renderRiso(targetCtx, w, h, opts) {
       lctx.save();
       lctx.globalCompositeOperation = 'destination-out';
       lctx.globalAlpha = opts.grainAmt / 100 * 0.85;
-      for (let gy = 0; gy < h; gy += grainImg.height) {
-        for (let gx = 0; gx < w; gx += grainImg.width) {
-          lctx.drawImage(grainImg, gx, gy);
+      const grainScale = opts.scaleMult || 1;
+      const grainW = grainImg.width * grainScale, grainH = grainImg.height * grainScale;
+      for (let gy = 0; gy < h; gy += grainH) {
+        for (let gx = 0; gx < w; gx += grainW) {
+          lctx.drawImage(grainImg, gx, gy, grainW, grainH);
         }
       }
       lctx.restore();
@@ -562,7 +565,8 @@ function renderRiso(targetCtx, w, h, opts) {
     // composite with misregistration + multiply overprint
     const dx = (seededRand(slot * 7 + 1) - 0.5) * 2 * opts.misregPx;
     const dy = (seededRand(slot * 7 + 2) - 0.5) * 2 * opts.misregPx;
-    const rot = (seededRand(slot * 7 + 3) - 0.5) * opts.misregPx * 0.0015;
+    // Rotation is an angle, not a pixel length: HQ must not multiply it.
+    const rot = (seededRand(slot * 7 + 3) - 0.5) * opts.misregPx / (opts.scaleMult || 1) * 0.0015;
     targetCtx.save();
     if (opts.soloLayer === undefined) {
       targetCtx.globalCompositeOperation = 'multiply';
@@ -577,6 +581,7 @@ function renderRiso(targetCtx, w, h, opts) {
 
 function currentOpts(scaleMult = 1) {
   return {
+    scaleMult,
     cell: val('cellSize') * scaleMult,
     dotGain: val('dotGain'),
     misregPx: val('misreg') * scaleMult,
@@ -670,16 +675,15 @@ async function toggleRec() {
 const PRESETS = {
   // Entry/reset default — brand-adjacent real Riso inks (matches the `layers` boot state)
   tipo:      { inks: ['#00838a', '#ffb511', null],        angles: [15, 75, 45], cov: [55, 50, 50], cell: 9,  gain: 20, misreg: 6,  grain: 25, op: 92, paper: '#f5f0e4' },
-  classic:   { inks: ['#0078bf', '#f15060', null],        angles: [15, 75, 45], cov: [55, 50, 50], cell: 9,  gain: 20, misreg: 6,  grain: 25, op: 92, paper: '#f5f0e4' },
-  zine:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [45, 15, 75], cov: [50, 60, 50], cell: 10, gain: 25, misreg: 10, grain: 40, op: 94, paper: '#f2efe6' },
-  poster:    { inks: ['#3d5588', '#ffb511', '#f15060'],   angles: [15, 75, 45], cov: [55, 60, 45], cell: 12, gain: 30, misreg: 5,  grain: 20, op: 90, paper: '#f5f0e4' },
-  editorial: { inks: ['#1a1a1a', '#00838a', null],        angles: [45, 15, 75], cov: [55, 40, 50], cell: 7,  gain: 12, misreg: 3,  grain: 15, op: 92, paper: '#f8f5ee' },
-  punk:      { inks: ['#1a1a1a', '#ff48b0', null],        angles: [30, 60, 45], cov: [65, 70, 50], cell: 14, gain: 45, misreg: 22, grain: 65, op: 96, paper: '#ece7d8' },
-  mono:      { inks: ['#1a1a1a', null, null],             angles: [45, 75, 15], cov: [60, 50, 50], cell: 8,  gain: 18, misreg: 0,  grain: 30, op: 95, paper: '#f5f0e4' },
+  classic:   { inks: ['#0078bf', '#f15060', null],        angles: [15, 75, 45], cov: [50, 45, 50], cell: 8,  gain: 12, misreg: 2,  grain: 15, op: 92, paper: '#f5f0e4' },
+  zine:      { inks: ['#1a1a1a', '#914e72', null],        angles: [45, 15, 75], cov: [50, 40, 50], cell: 9, gain: 16, misreg: 3, grain: 25, op: 94, paper: '#f2efe6' },
+  poster:    { inks: ['#3d5588', '#ffb511', '#f15060'],   angles: [15, 75, 45], cov: [48, 45, 38], cell: 10, gain: 15, misreg: 2,  grain: 15, op: 90, paper: '#f5f0e4' },
+  editorial: { inks: ['#1a1a1a', '#00838a', null],        angles: [45, 15, 75], cov: [50, 30, 50], cell: 6,  gain: 8, misreg: 1,  grain: 10, op: 95, paper: '#f8f5ee' },
+  offset:    { inks: ['#1a1a1a', '#925f52', null],        angles: [45, 15, 75], cov: [50, 35, 50], cell: 7, gain: 12, misreg: 3, grain: 18, op: 95, paper: '#f3eee2' },
+  mono:      { inks: ['#1a1a1a', null, null],             angles: [45, 75, 15], cov: [55, 50, 50], cell: 6,  gain: 10, misreg: 0,  grain: 16, op: 98, paper: '#f5f0e4' },
   // CMYK process presets
-  cmyk:      { mode: 'cmyk', on: [1,1,1,1], cov: [50,50,50,50], angles: [15,75,0,45], cell: 8,  gain: 18, misreg: 4, grain: 22, op: 92, gcr: 70, paper: '#f9f6ef' },
-  newsprint: { mode: 'cmyk', on: [1,1,1,1], cov: [45,45,42,55], angles: [15,75,0,45], cell: 13, gain: 50, misreg: 6, grain: 45, op: 94, gcr: 90, paper: '#efe9da' },
-  comic:     { mode: 'cmyk', on: [1,1,1,1], cov: [60,62,58,50], angles: [15,75,0,45], cell: 16, gain: 28, misreg: 8, grain: 25, op: 95, gcr: 55, paper: '#f6f1e2' },
+  cmyk:      { mode: 'cmyk', on: [1,1,1,1], cov: [50,50,50,50], angles: [15,75,0,45], cell: 6,  gain: 10, misreg: 1, grain: 12, op: 98, gcr: 80, paper: '#f9f6ef' },
+  newsprint: { mode: 'cmyk', on: [1,1,1,1], cov: [45,45,42,50], angles: [15,75,0,45], cell: 10, gain: 22, misreg: 2, grain: 22, op: 95, gcr: 90, paper: '#efe9da' },
 };
 
 function applyPreset(name) {
@@ -785,8 +789,7 @@ wrap.addEventListener('dblclick', rerollSeed);
 TipoUI.initChrome('visual');
 
 // Init
-buildLayerUI();
-updateLabels();
+applyPreset('editorial');
 render();
 
 /** Export HQ (Fase 16): renderRiso já é parametrizado por (ctx, w, h, opts);

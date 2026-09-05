@@ -856,3 +856,19 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: none !important; }
 }
+/* Full-workspace, source-aspect previews. Deliberately separate CSS display
+   size from backing resolution and export size; no stretched pixels. */
+.tipo-media-stage { min-width: 0; min-height: 0; overflow: hidden !important; }
+.tipo-media-stage > canvas { flex: none; max-width: none !important; max-height: none !important; box-shadow: none !important; }
+.tipo-preview-fit {
+  position: fixed; top: 14px; right: 108px; z-index: 8999;
+  min-height: 36px; padding: 0 12px; border-radius: 14px;
+  border: 1px solid var(--border-2); background: var(--bg-1);
+  color: var(--text-2); font: 12px var(--font-ui); cursor: pointer;
+}
+.tipo-preview-fit:hover, .tipo-preview-fit[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.tipo-preview-fit:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+body.tipo-full .tipo-preview-fit { display: none; }
+@media (max-width: 768px) {
+  .tipo-preview-fit { top: 12px; right: 108px; min-height: 40px; font-size: 11px; }
+}

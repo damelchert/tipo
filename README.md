@@ -6,6 +6,8 @@ The home page is an immediate creative hub with all 41 tools, accent-insensitive
 
 See [the September 2026 platform audit](docs/audit-platform-2026-09.md) for findings, fixes, test coverage and limits.
 
+Image & Effects now uses workspace-filling, aspect-preserving previews, with an Adjust option to show the full source. Preview zoom is separate from export resolution. A follow-up [18-tool video-use audit](docs/audit-image-effects-2026-09.md) covers curated presets, temporal determinism, actual SVG geometry, native PNG fixes, AudioType soundtrack capture and ten filters tested with real Full HD MP4 exports. Cross-Mosh with a second video is explicitly live-recording-only; the browser pipeline is SDR/8-bit, not an HDR/ProRes mastering pipeline.
+
 ## Tools
 
 ### Video Depth Map

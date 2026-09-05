@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Gradient Map. Remap image luminance to any color palette with draggable gradient stops, contrast curve and posterize.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Gradient Map</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
-<script src="shared/hq.js?v=20260715-rec1"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
+<script src="shared/hq.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -52,15 +52,15 @@
   <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
-      <span class="preset-chip" onclick="applyPreset('athos')">Athos</span>
+      <span class="preset-chip" onclick="applyPreset('tonal')">Tonal</span>
       <span class="preset-chip" onclick="applyPreset('duotone')">Duotone</span>
       <span class="preset-chip" onclick="applyPreset('sunset')">Sunset</span>
       <span class="preset-chip" onclick="applyPreset('infrared')">Infrared</span>
       <span class="preset-chip" onclick="applyPreset('chrome')">Chrome</span>
-      <span class="preset-chip" onclick="applyPreset('neon')">Neon</span>
+      <span class="preset-chip" onclick="applyPreset('athos')">Athos</span>
       <span class="preset-chip" onclick="applyPreset('sepia')">Sepia</span>
-      <span class="preset-chip" onclick="applyPreset('acid')">Acid</span>
-      <span class="preset-chip" onclick="applyPreset('athos')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
+      <span class="preset-chip" onclick="applyPreset('silver')">Silver</span>
+      <span class="preset-chip" onclick="applyPreset('tonal')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
 
@@ -436,7 +436,7 @@ function buildToneCurve() {
  *  virtual — o cycle anda por segundos do take, não por frames de tela. */
 function renderFrameHQ(frame, tSec, ctx, W, H) {
   const savedCycle = cycleT;
-  cycleT = tSec * 30 * 0.004 * (1 + val('cycle') / 25); // mesma taxa do loop a 30fps
+  cycleT = tSec * 0.12 * (1 + val('cycle') / 25);
   if (lutDirty) buildLUT();
   buildToneCurve();
   cycleT = savedCycle;
@@ -512,9 +512,12 @@ let last = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   if (now - last < 33) return; // ~30fps
+  const delta = last ? Math.min(0.1, (now - last) / 1000) : 0;
   last = now;
   if (isDynamic()) {
-    cycleT += 0.004 * (1 + val('cycle') / 25);
+    const speed = 0.12 * (1 + val('cycle') / 25);
+    // Uploaded media and HQ share the same clock; static/camera inputs use seconds.
+    cycleT = sourceType === 'video' && sourceVideo ? sourceVideo.currentTime * speed : cycleT + delta * speed;
     render();
     needsRender = false;
   } else if (needsRender) {
@@ -546,19 +549,20 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
-  athos:    { stops: [['#1A1818', 0], ['#2A8A7A', 0.45], ['#D4A040', 0.78], ['#F8F5F0', 1]], contrast: 0,  brightness: 0, posterize: 0, mix: 100, cycle: 14 },
+  tonal:    { stops: [['#14191d', 0], ['#777e80', 0.5], ['#f3eee4', 1]], contrast: 0, brightness: 0, posterize: 0, mix: 30, cycle: 0 },
+  silver:   { stops: [['#101215', 0], ['#777b80', 0.5], ['#f5f6f7', 1]], contrast: 5, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
+  athos:    { stops: [['#1A1818', 0], ['#2A8A7A', 0.45], ['#D4A040', 0.78], ['#F8F5F0', 1]], contrast: 0,  brightness: 0, posterize: 0, mix: 70, cycle: 0 },
   duotone:  { stops: [['#101060', 0], ['#ff5a36', 1]], contrast: 20, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   sunset:   { stops: [['#1c0030', 0], ['#7a1060', 0.35], ['#ff4060', 0.62], ['#ffb030', 0.85], ['#fff6d8', 1]], contrast: 12, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   infrared: { stops: [['#03052e', 0], ['#3b0f6e', 0.3], ['#c4205a', 0.58], ['#ff7a18', 0.8], ['#ffffff', 1]], contrast: 25, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   chrome:   { stops: [['#000000', 0], ['#8aa0b4', 0.3], ['#f8fbff', 0.5], ['#46586a', 0.72], ['#ffffff', 1]], contrast: 35, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
-  neon:     { stops: [['#05010d', 0], ['#2de2e6', 0.4], ['#f706cf', 0.7], ['#f9f871', 1]], contrast: 30, brightness: 0, posterize: 0, mix: 100, cycle: 0 },
   sepia:    { stops: [['#241608', 0], ['#6b4a26', 0.45], ['#c49a64', 0.8], ['#f4e8d0', 1]], contrast: -10, brightness: 5, posterize: 0, mix: 100, cycle: 0 },
-  acid:     { stops: [['#001a00', 0], ['#19c400', 0.35], ['#e0ff20', 0.6], ['#ff20c0', 0.82], ['#20f0ff', 1]], contrast: 18, brightness: 0, posterize: 6, mix: 100, cycle: 24 },
 };
 
 function applyPreset(name) {
   const p = PRESETS[name];
   if (!p) return;
+  cycleT = 0;
   stops = p.stops.map(([color, pos]) => ({ color, pos }));
   selectedStop = 0;
   ['contrast', 'brightness', 'posterize', 'mix', 'cycle'].forEach(id => {
@@ -635,7 +639,7 @@ wrap.addEventListener('drop', e => {
 TipoUI.initChrome('visual');
 
 // Init
-applyPreset('athos');
+applyPreset('tonal');
 
 TipoHQ.enable({
   getVideo: () => (sourceType === 'video' && sourceVideo) ? sourceVideo : null,

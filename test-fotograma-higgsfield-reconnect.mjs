@@ -210,6 +210,9 @@ async function runScenario(browser, pngBase64, name, options, exercise) {
     window.__TIPO_HIGGSFIELD_TEST_CONFIG__ = config;
     try {
       localStorage.setItem('tipo-fotograma-image-provider', 'higgsfield');
+      // Reconnection tests represent an already-authorized browser. Clean
+      // visitors are separately covered by test-fotograma-account-isolation.
+      localStorage.setItem('tipo-higgsfield-autoconnect', '1');
       localStorage.setItem('tipo-higgsfield-bridge-url', 'http://127.0.0.1:4789');
       localStorage.removeItem('tipo-gemini-key');
     } catch (error) {}
@@ -300,6 +303,7 @@ try {
     bridge: { up: true, authRequired: true },
   }, async ({ page, bridge }) => {
     await page.waitForFunction(() => state.higgsConnectionState === 'auth-required');
+    if (!await page.locator('#keyPop').isVisible()) await page.click('#keyBtn');
     const loginVisible = await page.locator('#higgsLogin').isVisible();
     const statusBefore = await page.locator('#higgsStatus').textContent();
     await sleep(220);
@@ -334,12 +338,16 @@ try {
       status: document.getElementById('higgsStatus').textContent,
     }));
     check('401 dentro de ferramenta preserva Entrar e não vira falha de transporte', !ui.connected && ui.connectionState === 'auth-required' && !ui.loginHidden && /sessão.+expirada/i.test(ui.status), JSON.stringify(ui));
+    const afterExpiredSession = bridge.healthCalls;
+    await sleep(180);
+    check('sessão expirada em ferramenta não agenda probes inúteis', bridge.healthCalls === afterExpiredSession && bridge.generationCalls === 0, `health=${bridge.healthCalls}/${afterExpiredSession}`);
   });
 
   await runScenario(browser, pngBase64, 'OAuth troca de URL', {
     bridge: { up: true, authRequired: true, authDelayMs: 180 },
   }, async ({ page, bridge }) => {
     await page.waitForFunction(() => state.higgsConnectionState === 'auth-required');
+    if (!await page.locator('#keyPop').isVisible()) await page.click('#keyBtn');
     await page.click('#higgsLogin');
     await waitFor(() => bridge.authCalls === 1, 'OAuth iniciar');
     await page.evaluate(() => {
@@ -356,7 +364,9 @@ try {
     bridge: { up: true },
   }, async ({ page, bridge }) => {
     await page.waitForFunction(() => state.higgsConnected === true);
+    await page.click('#keyBtn');
     await page.selectOption('#imageProvider', 'google');
+    await page.keyboard.press('Escape');
     bridge.authRequired = true;
     await page.evaluate(async () => {
       state.higgsLastHealthAt = 0;
@@ -490,7 +500,9 @@ try {
     });
     await page.waitForFunction(() => state.higgsConnectionState === 'auth-required' && activeJobs === 0 && queue.length === 1 && state.pending.length === 1, null, { timeout: 8_000 });
 
+    if (!await page.locator('#keyPop').isVisible()) await page.click('#keyBtn');
     await page.selectOption('#imageProvider', 'google');
+    await page.keyboard.press('Escape');
     await page.fill('#scene', 'tipojobgoogle rua vazia ao amanhecer');
     await page.click('#genBtn');
     await waitFor(() => bridge.googleImageCalls === 1, 'imagem Google concluir', 8_000);

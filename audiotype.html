@@ -7,12 +7,13 @@
 <meta name="description" content="Tipó — AudioType: audio-reactive typography visualizer. Upload text or images + music, watch letters pulse with sound.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — AudioType</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js" integrity="sha384-6Twx1hAeKnwfOYJAHtYeJETRiGD5pRPkjjh0pVbG1QoesncjOpw5e75Y1kOkXeRI" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
 <style>
+  #imageFitRow[hidden], #useTextBtn[hidden] { display:none !important; }
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; background: #000; }
   #canvasContainer canvas { display: block; }
@@ -43,10 +44,12 @@
     <div class="section-title">Text</div>
     <input type="text" id="textInput" value="TIPÓ" placeholder="Type here...">
     <div class="btn-row" style="margin-top:6px;">
-      <button class="btn btn-secondary" onclick="document.getElementById('imgInput').click()" style="font-size:10px;">Upload Image</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('imgInput').click()">Upload Image</button>
+      <button class="btn btn-secondary" id="useTextBtn" onclick="useTextSource()" hidden>Use text</button>
     </div>
     <input type="file" id="imgInput" accept="image/*" style="display:none">
-    <div id="imgName" style="font-size:9px;color:var(--text-4);margin-top:3px;"></div>
+    <div id="imgName" style="font-size:12px;color:var(--text-3);margin-top:7px;overflow-wrap:anywhere;"></div>
+    <div class="range-row" id="imageFitRow" hidden><label class="range-label" for="imageFit">Image fit</label><select id="imageFit"><option value="cover">Preencher · recorte central</option><option value="contain">Ajustar · imagem inteira</option></select></div>
   </div>
 
   <div class="section">
@@ -70,13 +73,13 @@
   <div class="section">
     <div class="section-title">Presets</div>
     <div class="preset-grid">
+      <span class="preset-chip active" onclick="applyPreset('mono')">Mono</span>
+      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
       <span class="preset-chip" onclick="applyPreset('equalizer')">Equalizer</span>
       <span class="preset-chip" onclick="applyPreset('waveform')">Waveform</span>
       <span class="preset-chip" onclick="applyPreset('spectrum')">Spectrum</span>
       <span class="preset-chip" onclick="applyPreset('pulse')">Pulse</span>
-      <span class="preset-chip" onclick="applyPreset('minimal')">Minimal</span>
       <span class="preset-chip" onclick="applyPreset('neon')">Neon</span>
-      <span class="preset-chip" onclick="applyPreset('mono')">Mono</span>
       <span class="preset-chip" onclick="applyPreset('fire')">Fire</span>
       <span class="preset-chip" onclick="resetAll()" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
@@ -84,11 +87,11 @@
 
   <div class="section">
     <div class="section-title">Grid</div>
-    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="cols" min="10" max="200" value="60"><span class="range-value" id="colsVal">60</span></div>
-    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="5" max="150" value="40"><span class="range-value" id="rowsVal">40</span></div>
+    <div class="range-row"><span class="range-label">Columns</span><input type="range" id="cols" min="10" max="200" value="70"><span class="range-value" id="colsVal">70</span></div>
+    <div class="range-row"><span class="range-label">Rows</span><input type="range" id="rows" min="5" max="150" value="45"><span class="range-value" id="rowsVal">45</span></div>
     <div class="range-row"><span class="range-label">Gap</span><input type="range" id="gap" min="0" max="10" value="1"><span class="range-value" id="gapVal">1</span></div>
-    <div class="range-row"><span class="range-label">Min Size</span><input type="range" id="minSize" min="0" max="100" value="5"><span class="range-value" id="minSizeVal">5</span></div>
-    <div class="range-row"><span class="range-label">Max Size</span><input type="range" id="maxSize" min="0" max="100" value="100"><span class="range-value" id="maxSizeVal">100</span></div>
+    <div class="range-row"><span class="range-label">Min Size</span><input type="range" id="minSize" min="0" max="100" value="2"><span class="range-value" id="minSizeVal">2</span></div>
+    <div class="range-row"><span class="range-label">Max Size</span><input type="range" id="maxSize" min="0" max="100" value="95"><span class="range-value" id="maxSizeVal">95</span></div>
   </div>
 
   <div class="section">
@@ -109,8 +112,8 @@
 
   <div class="section">
     <div class="section-title">Audio Reactivity</div>
-    <div class="range-row"><span class="range-label">Intensity</span><input type="range" id="audioIntensity" min="0" max="100" value="60"><span class="range-value" id="audioIntensityVal">60</span></div>
-    <div class="range-row"><span class="range-label">Smoothing</span><input type="range" id="smoothing" min="1" max="99" value="75"><span class="range-value" id="smoothingVal">75</span></div>
+    <div class="range-row"><span class="range-label">Intensity</span><input type="range" id="audioIntensity" min="0" max="100" value="55"><span class="range-value" id="audioIntensityVal">55</span></div>
+    <div class="range-row"><span class="range-label">Smoothing</span><input type="range" id="smoothing" min="1" max="99" value="80"><span class="range-value" id="smoothingVal">80</span></div>
     <div class="range-row"><span class="range-label">Freq Range</span><input type="range" id="freqRange" min="0" max="100" value="50"><span class="range-value" id="freqRangeVal">50</span></div>
   </div>
 
@@ -118,10 +121,10 @@
     <div class="section-title">Color Levels</div>
     <div class="range-row"><span class="range-label">Levels</span><input type="range" id="colorLevels" min="2" max="8" value="4"><span class="range-value" id="colorLevelsVal">4</span></div>
     <div id="colorLevelInputs">
-      <div class="color-level-row"><label>1</label><input type="color" id="lv0" value="#1A1818"></div>
-      <div class="color-level-row"><label>2</label><input type="color" id="lv1" value="#1B5A4E"></div>
-      <div class="color-level-row"><label>3</label><input type="color" id="lv2" value="#2A8A7A"></div>
-      <div class="color-level-row"><label>4</label><input type="color" id="lv3" value="#5FB3A3"></div>
+      <div class="color-level-row"><label>1</label><input type="color" id="lv0" value="#000000"></div>
+      <div class="color-level-row"><label>2</label><input type="color" id="lv1" value="#333333"></div>
+      <div class="color-level-row"><label>3</label><input type="color" id="lv2" value="#999999"></div>
+      <div class="color-level-row"><label>4</label><input type="color" id="lv3" value="#FFFFFF"></div>
       <div class="color-level-row" style="display:none;"><label>5</label><input type="color" id="lv4" value="#99E0D2"></div>
       <div class="color-level-row" style="display:none;"><label>6</label><input type="color" id="lv5" value="#B08830"></div>
       <div class="color-level-row" style="display:none;"><label>7</label><input type="color" id="lv6" value="#D4A040"></div>
@@ -129,7 +132,7 @@
     </div>
     <div class="color-section-row" style="margin-top:6px;">
       <span class="range-label">Background</span>
-      <input type="color" id="bgColor" value="#F8F5F0">
+      <input type="color" id="bgColor" value="#0A0A0A">
     </div>
   </div>
 
@@ -195,15 +198,24 @@ function setup() {
   const container = document.getElementById('canvasContainer');
   const c = createCanvas(container.offsetWidth, container.offsetHeight);
   c.parent('canvasContainer');
+  // Re-measure after p5's default body-level canvas leaves the flex row.
+  resizeCanvas(container.clientWidth, container.clientHeight, true);
   pixelDensity(1);
   textFont(font);
 
   TipoUI.init({ mode: 'audiotype', formatters: {} });
   recorder = TipoUI.recorder;
+  // AudioType owns its analyser (separate from the shared behavior audio bus).
+  // Expose that same signal to the recorder so the exported visualizer is not silent.
+  const sharedAudioTap = TipoRecorder.audioTap;
+  TipoRecorder.audioTap = () => audioCtx && analyser && (isPlaying || isMic)
+    ? { ctx: audioCtx, node: analyser }
+    : sharedAudioTap?.();
 
   // File inputs
   document.getElementById('audioInput').addEventListener('change', handleAudioUpload);
   document.getElementById('imgInput').addEventListener('change', handleImageUpload);
+  document.getElementById('imageFit').addEventListener('change', buildTextBuffer);
   document.getElementById('colorLevels').addEventListener('input', updateColorLevelVisibility);
 
   // Drag & drop
@@ -226,13 +238,18 @@ function windowResized() {
 
 function buildTextBuffer() {
   if (useImage && uploadedImg) {
-    // Use uploaded image as source
+    // The sampled grid is mapped to the stage. Match that aspect first, then
+    // fit the image inside it so portrait/landscape uploads are never stretched.
     if (textBuffer) textBuffer.remove();
-    const aspect = uploadedImg.width / uploadedImg.height;
-    const bw = 800;
-    const bh = Math.round(bw / aspect);
+    const aspect = Math.max(1, width) / Math.max(1, height);
+    const bw = aspect >= 1 ? 800 : Math.max(1, Math.round(800 * aspect));
+    const bh = aspect >= 1 ? Math.max(1, Math.round(800 / aspect)) : 800;
     textBuffer = createGraphics(bw, bh);
-    textBuffer.image(uploadedImg, 0, 0, bw, bh);
+    textBuffer.background(0);
+    const fit = document.getElementById('imageFit').value;
+    const scale = (fit === 'cover' ? Math.max : Math.min)(bw / uploadedImg.width, bh / uploadedImg.height);
+    const dw = uploadedImg.width * scale, dh = uploadedImg.height * scale;
+    textBuffer.image(uploadedImg, (bw - dw) / 2, (bh - dh) / 2, dw, dh);
     textBuffer.loadPixels();
     return;
   }
@@ -375,18 +392,33 @@ function stopMic() {
   document.getElementById('micBtn').style.borderColor = '';
 }
 
-function handleImageUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+let imageLoadSequence = 0;
+function useTextSource() {
+  imageLoadSequence++;
+  useImage = false;
+  document.getElementById('imgName').textContent = '';
+  document.getElementById('imageFitRow').hidden = true;
+  document.getElementById('useTextBtn').hidden = true;
+  buildTextBuffer();
+}
+
+function loadImageSource(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const sequence = ++imageLoadSequence;
   const url = URL.createObjectURL(file);
   loadImage(url, img => {
     URL.revokeObjectURL(url);
+    if (sequence !== imageLoadSequence) return;
     uploadedImg = img;
     useImage = true;
     document.getElementById('imgName').textContent = file.name;
+    document.getElementById('imageFitRow').hidden = false;
+    document.getElementById('useTextBtn').hidden = false;
     buildTextBuffer();
-  }, () => URL.revokeObjectURL(url));
+  }, () => { URL.revokeObjectURL(url); if (sequence === imageLoadSequence) TipoUI.showToast('Image could not be decoded. Try PNG or JPEG.'); });
 }
+
+function handleImageUpload(e) { loadImageSource(e.target.files[0]); }
 
 function handleDrop(e) {
   e.preventDefault();
@@ -396,14 +428,7 @@ function handleDrop(e) {
     if (file.type.startsWith('audio/')) {
       loadAudioFile(file);
     } else if (file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      loadImage(url, img => {
-        URL.revokeObjectURL(url);
-        uploadedImg = img;
-        useImage = true;
-        document.getElementById('imgName').textContent = file.name;
-        buildTextBuffer();
-      }, () => URL.revokeObjectURL(url));
+      loadImageSource(file);
     }
   }
 }
@@ -592,27 +617,30 @@ function draw() {
 function setVal(id, v) { TipoUI.setVal(id, v); }
 function setCol(id, v) { document.getElementById(id).value = v; }
 
-function resetAll() {
-  useImage = false;
-  uploadedImg = null;
-  document.getElementById('imgName').textContent = '';
-  setVal('cols', 60); setVal('rows', 40); setVal('gap', 1);
-  setVal('minSize', 5); setVal('maxSize', 100);
-  setVal('audioIntensity', 60); setVal('smoothing', 75); setVal('freqRange', 50);
+function resetAll(preserveSource = false) {
+  if (!preserveSource) {
+    useTextSource();
+    uploadedImg = null;
+    document.getElementById('imageFit').value = 'cover';
+  }
+  setVal('cols', 70); setVal('rows', 45); setVal('gap', 1);
+  setVal('minSize', 2); setVal('maxSize', 95);
+  setVal('audioIntensity', 55); setVal('smoothing', 80); setVal('freqRange', 50);
   setVal('colorLevels', 4);
   document.getElementById('barMode').value = 'h-bars';
   document.getElementById('shrinkAxis').value = 'height';
-  setCol('lv0', '#1A1818'); setCol('lv1', '#1B5A4E');
-  setCol('lv2', '#2A8A7A'); setCol('lv3', '#5FB3A3');
+  setCol('lv0', '#000000'); setCol('lv1', '#333333');
+  setCol('lv2', '#999999'); setCol('lv3', '#FFFFFF');
   setCol('lv4', '#99E0D2'); setCol('lv5', '#B08830');
   setCol('lv6', '#D4A040'); setCol('lv7', '#E8C97E');
-  setCol('bgColor', '#F8F5F0');
+  setCol('bgColor', '#0A0A0A');
+  if (!preserveSource) document.querySelectorAll('.preset-grid .preset-chip').forEach(chip => chip.classList.toggle('active', chip.textContent === 'Mono'));
   updateColorLevelVisibility();
   buildTextBuffer();
 }
 
 const PRESETS = {
-  equalizer: () => { resetAll();
+  equalizer: () => { resetAll(true);
     setVal('cols', 80); setVal('rows', 50); setVal('gap', 1);
     setVal('minSize', 5); setVal('maxSize', 100);
     setVal('audioIntensity', 80); setVal('smoothing', 60);
@@ -621,7 +649,7 @@ const PRESETS = {
     setCol('lv0', '#0a0a2e'); setCol('lv1', '#4400aa');
     setCol('lv2', '#ff6600'); setCol('lv3', '#ffffff');
   },
-  waveform: () => { resetAll();
+  waveform: () => { resetAll(true);
     setVal('cols', 120); setVal('rows', 60); setVal('gap', 0);
     setVal('minSize', 0); setVal('maxSize', 100);
     setVal('audioIntensity', 90); setVal('smoothing', 60);
@@ -630,7 +658,7 @@ const PRESETS = {
     setCol('lv0', '#000000'); setCol('lv1', '#003366');
     setCol('lv2', '#0088ff'); setCol('lv3', '#88ddff');
   },
-  spectrum: () => { resetAll();
+  spectrum: () => { resetAll(true);
     setVal('cols', 100); setVal('rows', 80); setVal('gap', 0);
     setVal('minSize', 0); setVal('maxSize', 100);
     setVal('audioIntensity', 70); setVal('smoothing', 80);
@@ -641,7 +669,7 @@ const PRESETS = {
     setCol('lv2', '#ff6600'); setCol('lv3', '#ffcc00');
     setCol('lv4', '#00ff88'); setCol('lv5', '#00ccff');
   },
-  pulse: () => { resetAll();
+  pulse: () => { resetAll(true);
     setVal('cols', 50); setVal('rows', 30); setVal('gap', 2);
     setVal('minSize', 10); setVal('maxSize', 100);
     setVal('audioIntensity', 100); setVal('smoothing', 50);
@@ -650,7 +678,7 @@ const PRESETS = {
     setCol('lv0', '#000000'); setCol('lv1', '#ff0066');
     setCol('lv2', '#ff00cc'); setCol('lv3', '#ffffff');
   },
-  minimal: () => { resetAll();
+  minimal: () => { resetAll(true);
     setVal('cols', 40); setVal('rows', 25); setVal('gap', 3);
     setVal('minSize', 0); setVal('maxSize', 80);
     setVal('audioIntensity', 40); setVal('smoothing', 90);
@@ -660,7 +688,7 @@ const PRESETS = {
     setCol('lv0', '#111111'); setCol('lv1', '#ffffff');
     setCol('bgColor', '#000000');
   },
-  neon: () => { resetAll();
+  neon: () => { resetAll(true);
     setVal('cols', 90); setVal('rows', 60); setVal('gap', 1);
     setVal('minSize', 5); setVal('maxSize', 100);
     setVal('audioIntensity', 75); setVal('smoothing', 65);
@@ -672,7 +700,7 @@ const PRESETS = {
     setCol('lv4', '#ffffff');
     setCol('bgColor', '#050005');
   },
-  mono: () => { resetAll();
+  mono: () => { resetAll(true);
     setVal('cols', 70); setVal('rows', 45); setVal('gap', 1);
     setVal('minSize', 2); setVal('maxSize', 95);
     setVal('audioIntensity', 55); setVal('smoothing', 80);
@@ -683,7 +711,7 @@ const PRESETS = {
     setCol('lv2', '#999999'); setCol('lv3', '#ffffff');
     setCol('bgColor', '#0a0a0a');
   },
-  fire: () => { resetAll();
+  fire: () => { resetAll(true);
     setVal('cols', 80); setVal('rows', 55); setVal('gap', 0);
     setVal('minSize', 0); setVal('maxSize', 100);
     setVal('audioIntensity', 85); setVal('smoothing', 55);

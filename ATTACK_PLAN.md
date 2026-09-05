@@ -8,6 +8,23 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24.4 — FOTOGRAMA: PROMPTS, DIREÇÃO E CONTAS (2026-09-05)
+- Daniel aprovou os ajustes finais e o commit/push conjunto com Imagem & Efeitos. Validação final antes da publicação; imagens pessoais fora do commit.
+- Looks Tipó: Naturalista, Editorial e Experimental alteram somente fotografia, sem presumir músicos, atletas, produtos, ações ou cenários. Enriquecer a cena é independente, neutro e desligado para visitantes novos. Setores publicitários retirados; controles manuais disponíveis nos três looks.
+- Compatibilidade: IDs dos looks preservados para reuso da galeria; gêneros antigos não injetam conteúdo; texto dos prompts históricos não é reescrito. Diretor + fotografia permanece alternativa sem empilhar outro look.
+- Prompts & uso: contratos reais por ferramenta, prompt efetivamente salvo, inventário local sem preço inventado e seis perfis diretor/fotógrafo fundamentados.
+- Brief não é mais reescrito para impor grão/shoulder; assinatura opcional, Ficha literal, referencias numeradas consistentemente; contratos especializados mais concisos.
+- Conexões no topo, visitante limpo sem vinculação automática, sessão existente preservada, disconnect/forget propagados entre abas, bridge restrita a loopback.
+- 171 checks de looks, 67 Studio, 28 contratos, 9 isolamento; regressões de ferramentas, Vertex, fila/galeria, reconexão, GIF e efeitos passaram. Corrigido status 401 perdido na preparação de ferramenta. Sem geração paga; validação estética real dos perfis pendente.
+- Magnific pendente de identificar conta Legacy ou atual. Não foi habilitado conector sem autenticação validada. Ver `docs/audit-fotograma-prompts-2026-09.md` e `docs/fotograma-magnific-integration.md`.
+
+### FASE 24.3 — IMAGEM & EFEITOS PARA VÍDEO ✅ (2026-09-05)
+- Auditoria das 18 ferramentas: preview preenchendo o workspace sem deformação, controles preservados, Ajustar para o quadro inteiro; composição/galeria/pranchas mantêm seus fluxos próprios.
+- Dithering: zoom separado de resolução, presets completos de acabamento, Bayer correto nos extremos, SVG fiel às formas e recorte respeitado no HQ; corrida de upload/câmera protegida.
+- Presets/algoritmos: meios-tons e geometria corrigidos, receitas gimmick retiradas, clocks/ruído reproduzíveis, PNG/HQ mais coerentes e AudioType MP4 com áudio real.
+- Arquivos Full HD reais nos dez filtros HQ; todos os presets auditados, desktop/mobile, SVG/PNG/MP4 e regressões do hub/Fotograma. Cross-Mosh HQ bloqueado até suportar sincronização do segundo vídeo; não confundir simulação/SDR com mastering.
+- Evidências, ferramentas preservadas e limites por ferramenta: `docs/audit-image-effects-2026-09.md` e três relatórios especializados.
+
 ### FASE 24.2 — PRÉVIAS REAIS DE TIPOGRAFIA CINÉTICA ✅ (2026-09-05)
 - Substituídas as ilustrações genéricas dos 23 cards cinéticos por MP4 + WebP capturados do primeiro preset real de cada ferramenta; 6 s, 24 FPS, 640 × 380. Flag usa frase de exemplo para o Banner ficar legível, sem mudar o preset.
 - Reprodução limitada a três cards visíveis, prioridade por mouse/foco, pausa fora da tela/aba, controles individual e geral, movimento reduzido/economia de dados sem autoplay; hero continua por clique.

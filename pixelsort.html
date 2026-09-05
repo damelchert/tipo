@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Pixel Sort. Classic Asendorf-style pixel sorting with arbitrary angle, 6 sort keys and threshold masking.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Pixel Sort</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
-<script src="shared/hq.js?v=20260715-rec1"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
+<script src="shared/hq.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -48,9 +48,10 @@
       <span class="preset-chip" onclick="applyPreset('spectrum')">Spectrum</span>
       <span class="preset-chip" onclick="applyPreset('scanwave')">Scanwave</span>
       <span class="preset-chip" onclick="applyPreset('subtle')">Subtle</span>
-      <span class="preset-chip" onclick="applyPreset('chaos')">Chaos</span>
+      <span class="preset-chip" onclick="applyPreset('chaos')">Prism</span>
       <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
+    <p style="font-size:12px;line-height:1.5;color:var(--text-4)">Recortes estáveis entre frames. Comece em Subtle; Mix preserva a imagem original. PNG e HQ usam a resolução da fonte.</p>
   </div>
 
   <div class="section">
@@ -149,6 +150,7 @@ function releaseVideo() {
 }
 
 function handleFile(file) {
+  if (!file || !/^(image|video)\//.test(file.type)) { TipoUI.showToast('Envie uma imagem ou um vídeo compatível.'); return; }
   document.getElementById('dropHint').style.display = 'none';
   if (file.type.startsWith('image/')) {
     if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
@@ -167,7 +169,7 @@ function handleFile(file) {
     const vid = document.createElement('video');
     vid.src = url;
     vid.loop = true; vid.muted = true; vid.playsInline = true;
-    vid.play();
+    vid.play().catch(err => { if (err.name !== 'AbortError') TipoUI.showToast('Não foi possível reproduzir este vídeo. Verifique o formato.'); });
     sourceVideo = vid; sourceImg = null; sourceType = 'video';
     document.getElementById('webcamBtn').textContent = 'Webcam';
     document.getElementById('webcamBtn').style.borderColor = '';
@@ -193,7 +195,7 @@ function toggleWebcam() {
       setMediaUrl(null);
       const vid = document.createElement('video');
       vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
-      vid.play();
+      vid.play().catch(() => TipoUI.showToast('Não foi possível iniciar a câmera.'));
       sourceVideo = vid; sourceType = 'webcam';
       document.getElementById('dropHint').style.display = 'none';
       document.getElementById('webcamBtn').textContent = 'Stop Cam';
@@ -337,7 +339,7 @@ function sortLine(d, start, stride, count, opts) {
       if (opts.maxSpan > 0 && i - runStart >= opts.maxSpan) {
         sortRun(d, start, stride, runStart, i, opts.keyFn, opts.desc);
         runStart = i;
-      } else if (opts.breakP > 0 && Math.random() < opts.breakP) {
+      } else if (opts.breakP > 0 && spatialBreak(start, stride, i) < opts.breakP) {
         sortRun(d, start, stride, runStart, i, opts.keyFn, opts.desc);
         runStart = i;
       }
@@ -348,6 +350,14 @@ function sortLine(d, start, stride, count, opts) {
       runStart = -1;
     }
   }
+}
+
+// A fixed spatial mask: repeated renders/exports do not invent new cuts.
+function spatialBreak(start, stride, index) {
+  let x = (start + Math.imul(stride, index + 1) + 7349) | 0;
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
 }
 
 function ensureBufs(maxLine) {
@@ -387,6 +397,9 @@ function render() {
   const { w, h } = workingSize();
   if (mainCanvas.width !== w || mainCanvas.height !== h) { mainCanvas.width = w; mainCanvas.height = h; }
   if (workCanvas.width !== w || workCanvas.height !== h) { workCanvas.width = w; workCanvas.height = h; }
+  mainCtx.clearRect(0, 0, w, h);
+  workCtx.clearRect(0, 0, w, h);
+  driftT = effectTime() * 1.35;
 
   // source → work canvas (cover fit)
   const sw = frame.videoWidth || frame.naturalWidth || frame.width;
@@ -472,12 +485,14 @@ function isDynamic() {
 }
 
 let last = 0;
+function effectTime() {
+  return sourceType === 'video' && sourceVideo ? sourceVideo.currentTime : performance.now() / 1000;
+}
 function loop(now) {
   requestAnimationFrame(loop);
   if (now - last < 33) return; // ~30fps
   last = now;
   if (isDynamic()) {
-    driftT += 0.045;
     render();
     needsRender = false;
   } else if (needsRender) {
@@ -491,7 +506,14 @@ requestAnimationFrame(loop);
 // EXPORT
 // ============================================================
 function exportPNG() {
-  mainCanvas.toBlob(blob => {
+  const frame = getCurrentFrame() || getDemo();
+  if (frame.readyState !== undefined && frame.readyState < 2) return;
+  const output = document.createElement('canvas');
+  output.width = frame.videoWidth || frame.naturalWidth || frame.width;
+  output.height = frame.videoHeight || frame.naturalHeight || frame.height;
+  renderFrameHQ(frame, effectTime(), output.getContext('2d'), output.width, output.height);
+  output.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('Não foi possível exportar o PNG.'); return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.download = TipoUI.stampName('tipo-pixelsort.png');
@@ -509,13 +531,13 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
-  classic:  { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 25, thrHigh: 75, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 10 },
-  veils:    { sortBy: 'brightness', angle: 90,  reverse: true,  thrLow: 0,  thrHigh: 62, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
-  shatter:  { sortBy: 'brightness', angle: 45,  reverse: false, thrLow: 18, thrHigh: 85, invertMask: false, maxSpan: 24, randomness: 55, mix: 100, drift: 0 },
-  spectrum: { sortBy: 'hue',        angle: 0,   reverse: false, thrLow: 10, thrHigh: 92, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 0 },
-  scanwave: { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 35, thrHigh: 65, invertMask: false, maxSpan: 0,  randomness: 0,  mix: 100, drift: 55 },
+  classic:  { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 35, thrHigh: 75, invertMask: false, maxSpan: 24, randomness: 0,  mix: 65, drift: 0 },
+  veils:    { sortBy: 'brightness', angle: 90,  reverse: true,  thrLow: 15, thrHigh: 62, invertMask: false, maxSpan: 32, randomness: 0,  mix: 70, drift: 0 },
+  shatter:  { sortBy: 'brightness', angle: 45,  reverse: false, thrLow: 28, thrHigh: 80, invertMask: false, maxSpan: 18, randomness: 35, mix: 65, drift: 0 },
+  spectrum: { sortBy: 'hue',        angle: 0,   reverse: false, thrLow: 25, thrHigh: 85, invertMask: false, maxSpan: 30, randomness: 0,  mix: 65, drift: 0 },
+  scanwave: { sortBy: 'brightness', angle: 0,   reverse: false, thrLow: 35, thrHigh: 65, invertMask: false, maxSpan: 30, randomness: 0,  mix: 70, drift: 25 },
   subtle:   { sortBy: 'brightness', angle: 90,  reverse: false, thrLow: 30, thrHigh: 70, invertMask: false, maxSpan: 18, randomness: 20, mix: 40,  drift: 0 },
-  chaos:    { sortBy: 'saturation', angle: 135, reverse: true,  thrLow: 5,  thrHigh: 95, invertMask: false, maxSpan: 35, randomness: 70, mix: 100, drift: 30 },
+  chaos:    { sortBy: 'saturation', angle: 135, reverse: true,  thrLow: 25, thrHigh: 80, invertMask: false, maxSpan: 22, randomness: 25, mix: 60, drift: 0 },
 };
 
 function applyPreset(name) {
@@ -529,10 +551,7 @@ function applyPreset(name) {
   document.getElementById('invertMask').checked = p.invertMask;
   updateLabels();
   requestRender();
-  if (typeof event !== 'undefined' && event && event.target) {
-    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
-    event.target.classList.add('active');
-  }
+  document.querySelectorAll('.preset-chip').forEach(el => el.classList.toggle('active', el.getAttribute('onclick') === `applyPreset('${name}')` && el.textContent.trim() !== 'Reset'));
 }
 
 function updateLabels() {
@@ -599,7 +618,7 @@ wrap.addEventListener('drop', e => {
 TipoUI.initChrome('visual');
 
 // Init
-updateLabels();
+applyPreset('subtle');
 requestRender();
 
 // ============================================================
@@ -612,6 +631,7 @@ const hqRot = document.createElement('canvas');
 const hqRotCtx = hqRot.getContext('2d', { willReadFrequently: true });
 
 function renderFrameHQ(frame, tSec, ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
   hqWork.width = W; hqWork.height = H;
   const sw = frame.videoWidth || frame.width, sh = frame.videoHeight || frame.height;
   const sc = Math.max(W / sw, H / sh);

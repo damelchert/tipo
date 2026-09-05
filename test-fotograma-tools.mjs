@@ -91,7 +91,10 @@ check('Multi Angle retirado da navegação até o motor voltar', await page.loca
 await page.evaluate(() => setFotogramaTool('multiAngle'));
 check('troca visual realmente substitui o painel antigo', await page.locator('#createControls').isHidden() && await page.locator('#utilityControls').isVisible());
 await page.waitForTimeout(80);
-check('ferramenta tenta parear o Higgsfield e mostra o estado no próprio painel', await page.evaluate(() => state.higgsConnected && /conectado/i.test(document.getElementById('utilityBridgeStatus')?.textContent || '')));
+check('abrir ferramenta não autoriza a conta Higgsfield de um visitante', healthCalls === 0 && await page.evaluate(() => !state.higgsConnected));
+await page.click('#utilityBridgeConnect');
+await page.waitForFunction(() => state.higgsConnected);
+check('clique explícito conecta Higgsfield e mostra o estado no próprio painel', await page.evaluate(() => state.higgsConnected && /conectado/i.test(document.getElementById('utilityBridgeStatus')?.textContent || '')));
 await page.setInputFiles('#utilityFile', { name: 'source.png', mimeType: 'image/png', buffer: pngBuffer });
 await page.waitForFunction(() => !document.getElementById('utilityGenerate').disabled);
 await page.evaluate(() => {
@@ -190,7 +193,7 @@ await page.click('#utilityGenerate');
 await page.waitForFunction(() => !utilityState.busy && /Remove BG/.test(document.getElementById('stillCaption').textContent), null, { timeout: 10_000 });
 check('Remove BG permanece funcional e marcado beta', toolBodies.some(body => body.tool === 'removeBg') && /beta/i.test(await page.locator('#utilityBadge').textContent()));
 check('nenhuma credencial entra nos payloads Higgsfield', !JSON.stringify([...toolBodies, ...generationBodies]).match(/AIza|AQ\./));
-check('bridge é pareado uma vez e reutilizado', healthCalls === 1, `health=${healthCalls}`);
+check('bridge é conectado por opt-in uma vez e reutilizado', healthCalls === 1, `health=${healthCalls}`);
 
 check('cards não exibem mais botão redundante de expandir', await page.locator('#gallery [data-a="zoom"]').count() === 0);
 const castCard = page.locator('#gallery .take').filter({ hasText: 'Cast ·' }).first();

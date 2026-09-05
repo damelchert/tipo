@@ -7,11 +7,11 @@
 <meta name="description" content="Tipó — Datamosh. Real-time parametric datamoshing in the browser: motion-vector codec simulation with keyframe control.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Datamosh</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
-<script src="shared/hq.js?v=20260715-rec1"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
+<script src="shared/hq.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-0); }
@@ -47,6 +47,7 @@
       <button class="btn btn-secondary" id="motionExtBtn" onclick="document.getElementById('motionInput').click()">Video B</button>
     </div>
     <input type="file" id="motionInput" accept="video/*" style="display:none">
+    <p style="font-size:12px;line-height:1.5;color:var(--text-4)">Simulação de movimento, não remoção real de I-frames. Vídeo B: use Record MP4; HQ frame a frame está disponível no modo Self.</p>
   </div>
 
   <div class="section">
@@ -58,7 +59,7 @@
       <span class="preset-chip" onclick="applyPreset('ghost')">Ghost Trail</span>
       <span class="preset-chip" onclick="applyPreset('tear')">Channel Tear</span>
       <span class="preset-chip" onclick="applyPreset('drift')">Subtle Drift</span>
-      <span class="preset-chip" onclick="applyPreset('collapse')">Collapse</span>
+      <span class="preset-chip" onclick="applyPreset('collapse')">Flow Break</span>
       <span class="preset-chip" onclick="applyPreset('classic')" style="border-color:#ff4444;color:#ff4444;">Reset</span>
     </div>
   </div>
@@ -156,6 +157,13 @@ let needKeyframe = true;
 let sweepRow = -1;          // -1 = no sweep in progress
 let lastAutoKf = 0;
 let demoT = 0;
+let lastSourceTime = null;
+
+function moshNoise(frame, block, channel = 0) {
+  let n = Math.imul(frame + 1, 374761393) ^ Math.imul(block + 19, 668265263) ^ channel;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
 
 const SPIRAL_CACHE = {};
 function spiralOffsets(r) {
@@ -184,6 +192,7 @@ function releaseVideo() {
 }
 
 function handleFile(file) {
+  if (!file || !/^(image|video)\//.test(file.type)) { TipoUI.showToast('Envie uma imagem ou um vídeo compatível.'); return; }
   document.getElementById('dropHint').style.display = 'none';
   if (file.type.startsWith('image/')) {
     if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
@@ -202,7 +211,7 @@ function handleFile(file) {
     const vid = document.createElement('video');
     vid.src = url;
     vid.loop = true; vid.muted = true; vid.playsInline = true;
-    vid.play();
+    vid.play().catch(err => { if (err.name !== 'AbortError') TipoUI.showToast('Não foi possível reproduzir este vídeo. Verifique o formato.'); });
     sourceVideo = vid; sourceImg = null; sourceType = 'video';
     document.getElementById('webcamBtn').textContent = 'Webcam';
     document.getElementById('webcamBtn').style.borderColor = '';
@@ -228,7 +237,7 @@ function toggleWebcam() {
       setMediaUrl(null);
       const vid = document.createElement('video');
       vid.srcObject = stream; vid.muted = true; vid.playsInline = true;
-      vid.play();
+      vid.play().catch(() => TipoUI.showToast('Não foi possível iniciar a câmera.'));
       sourceVideo = vid; sourceType = 'webcam';
       document.getElementById('dropHint').style.display = 'none';
       document.getElementById('webcamBtn').textContent = 'Stop Cam';
@@ -250,23 +259,24 @@ function setMotionSelf() {
   document.getElementById('motionSelfBtn').className = 'btn';
   document.getElementById('motionExtBtn').className = 'btn btn-secondary';
   document.getElementById('motionExtBtn').textContent = 'Video B';
-  grayPrev = null;
+  grayPrev = grayCur = null;
 }
 
 document.getElementById('motionInput').addEventListener('change', e => {
   const file = e.target.files[0];
-  if (!file) return;
+  if (!file || !file.type.startsWith('video/')) return;
+  if (motionVideo) { motionVideo.pause(); motionVideo.removeAttribute('src'); motionVideo.load(); }
   if (motionUrl) URL.revokeObjectURL(motionUrl);
   motionUrl = URL.createObjectURL(file);
   const vid = document.createElement('video');
   vid.src = motionUrl;
   vid.loop = true; vid.muted = true; vid.playsInline = true;
-  vid.play();
+  vid.play().catch(err => { if (err.name !== 'AbortError') TipoUI.showToast('Não foi possível reproduzir o Vídeo B.'); });
   motionVideo = vid;
   document.getElementById('motionSelfBtn').className = 'btn btn-secondary';
   document.getElementById('motionExtBtn').className = 'btn';
   document.getElementById('motionExtBtn').textContent = file.name.length > 14 ? file.name.slice(0, 12) + '…' : file.name;
-  grayPrev = null;
+  grayPrev = grayCur = null;
 });
 
 function getCurrentFrame() {
@@ -410,7 +420,7 @@ function computeVectors(w, h, blockPx, radius, threshPx) {
 // ============================================================
 // MOSH STEP
 // ============================================================
-function resetMosh() { needKeyframe = true; sweepRow = -1; }
+function resetMosh() { needKeyframe = true; sweepRow = -1; grayPrev = grayCur = null; lastSourceTime = null; }
 
 function dropKeyframe() {
   if (document.getElementById('sweepKf').checked) sweepRow = 0;
@@ -425,6 +435,13 @@ function step(now) {
 
   // 1. Real frame → frameCanvas
   const frame = getCurrentFrame();
+  if (sourceType === 'video' && sourceVideo) {
+    const seconds = sourceVideo.currentTime;
+    if (lastSourceTime !== null && (seconds < lastSourceTime - 0.001 || seconds - lastSourceTime > 0.25)) resetMosh();
+    if (!window.__tipoHQactive && lastSourceTime === seconds && !needKeyframe && !motionVideo) return;
+    lastSourceTime = seconds;
+    now = seconds * 1000;
+  }
   if (frame) {
     if ((sourceType === 'video' || sourceType === 'webcam') && frame.readyState < 2) return;
     const sw2 = frame.videoWidth || frame.naturalWidth || frame.width;
@@ -441,7 +458,7 @@ function step(now) {
   if (needKeyframe) {
     acc.getContext('2d').drawImage(frameCanvas, 0, 0);
     needKeyframe = false;
-    grayPrev = null;
+    grayPrev = grayCur = null;
     lastAutoKf = now;
   }
   const autoSec = val('autoKf');
@@ -459,6 +476,13 @@ function step(now) {
 
   // 4. Warp accumulator (motion compensation without the real frame)
   const amount = val('amount') / 100;
+  if (amount === 0) {
+    acc.getContext('2d').drawImage(frameCanvas, 0, 0);
+    mainCtx.drawImage(frameCanvas, 0, 0);
+    if (recorder && recorder.isRecording) recorder.captureFrame();
+    return;
+  }
+  const noiseFrame = Math.floor(now / (1000 / 30));
   const meltIters = val('melt');
   const mult = val('vecMult') / 10;
   const jit = val('jitter');
@@ -471,11 +495,11 @@ function step(now) {
     const dctx = accAlt.getContext('2d');
     dctx.drawImage(acc, 0, 0);
     for (let i = 0; i < vectors.length; i++) {
-      if (amount < 1 && Math.random() > amount) continue;
+      if (amount < 1 && moshNoise(noiseFrame, i, it) > amount) continue;
       const [bx, by, vx0, vy0] = vectors[i];
       let vx = vx0 * mult + bvx;
       let vy = vy0 * mult + bvy;
-      if (jit > 0) { vx += (Math.random() - 0.5) * jit * 0.2; vy += (Math.random() - 0.5) * jit * 0.2; }
+      if (jit > 0) { vx += (moshNoise(noiseFrame, i, it + 101) - 0.5) * jit * 0.2; vy += (moshNoise(noiseFrame, i, it + 503) - 0.5) * jit * 0.2; }
       // pull content from where the block came from
       const sx = Math.round(bx - vx), sy = Math.round(by - vy);
       const cx = Math.max(0, sx), cy = Math.max(0, sy);
@@ -486,8 +510,8 @@ function step(now) {
     }
     // bias-only mosh when nothing moves but bias is set (images, stills)
     if (vectors.length === 0 && (bForce > 0 || jit > 0)) {
-      const jx = (Math.random() - 0.5) * jit * 0.2;
-      const jy = (Math.random() - 0.5) * jit * 0.2;
+      const jx = (moshNoise(noiseFrame, it, 101) - 0.5) * jit * 0.2;
+      const jy = (moshNoise(noiseFrame, it, 503) - 0.5) * jit * 0.2;
       dctx.drawImage(acc, bvx + jx, bvy + jy);
     }
     const t2 = acc; acc = accAlt; accAlt = t2;
@@ -550,6 +574,7 @@ function startLoop() {
 // ============================================================
 function exportPNG() {
   mainCanvas.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('Não foi possível exportar o PNG.'); return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.download = TipoUI.stampName('tipo-datamosh.png');
@@ -567,13 +592,13 @@ async function toggleRec() {
 // PRESETS
 // ============================================================
 const PRESETS = {
-  classic:  { amount: 100, melt: 1, recover: 0,  threshold: 2, vecMult: 10, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
-  melt:     { amount: 100, melt: 3, recover: 0,  threshold: 1, vecMult: 16, jitter: 5,  biasAngle: 90, biasForce: 25, blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
-  bloom:    { amount: 100, melt: 4, recover: 4,  threshold: 1, vecMult: 22, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 12, searchRad: 5, channel: 'all', autoKf: 0, sweep: false },
+  classic:  { amount: 80, melt: 1, recover: 8,  threshold: 2, vecMult: 10, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
+  melt:     { amount: 80, melt: 2, recover: 8,  threshold: 2, vecMult: 12, jitter: 0,  biasAngle: 90, biasForce: 8, blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
+  bloom:    { amount: 80, melt: 2, recover: 12, threshold: 2, vecMult: 16, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 12, searchRad: 5, channel: 'all', autoKf: 0, sweep: false },
   ghost:    { amount: 70,  melt: 1, recover: 12, threshold: 2, vecMult: 12, jitter: 0,  biasAngle: 90, biasForce: 0,  blockSize: 16, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
-  tear:     { amount: 100, melt: 2, recover: 0,  threshold: 1, vecMult: 14, jitter: 10, biasAngle: 0,  biasForce: 8,  blockSize: 16, searchRad: 4, channel: 'r',   autoKf: 4, sweep: true },
-  drift:    { amount: 45,  melt: 1, recover: 20, threshold: 3, vecMult: 8,  jitter: 4,  biasAngle: 90, biasForce: 3,  blockSize: 24, searchRad: 3, channel: 'all', autoKf: 0, sweep: false },
-  collapse: { amount: 100, melt: 5, recover: 0,  threshold: 0, vecMult: 28, jitter: 35, biasAngle: 90, biasForce: 40, blockSize: 32, searchRad: 6, channel: 'all', autoKf: 6, sweep: false },
+  tear:     { amount: 80, melt: 1, recover: 10, threshold: 2, vecMult: 12, jitter: 0, biasAngle: 0,  biasForce: 3,  blockSize: 16, searchRad: 4, channel: 'r',   autoKf: 0, sweep: true },
+  drift:    { amount: 45, melt: 1, recover: 20, threshold: 3, vecMult: 8,  jitter: 0, biasAngle: 90, biasForce: 0,  blockSize: 24, searchRad: 3, channel: 'all', autoKf: 0, sweep: false },
+  collapse: { amount: 85, melt: 2, recover: 8, threshold: 2, vecMult: 16, jitter: 2, biasAngle: 90, biasForce: 10, blockSize: 24, searchRad: 4, channel: 'all', autoKf: 0, sweep: false },
 };
 
 function applyPreset(name) {
@@ -586,10 +611,7 @@ function applyPreset(name) {
   document.getElementById('sweepKf').checked = p.sweep;
   updateLabels();
   dropKeyframe();
-  if (typeof event !== 'undefined' && event && event.target) {
-    document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
-    event.target.classList.add('active');
-  }
+  document.querySelectorAll('.preset-chip').forEach(el => el.classList.toggle('active', el.getAttribute('onclick') === `applyPreset('${name}')` && el.textContent.trim() !== 'Reset'));
 }
 
 function updateLabels() {
@@ -602,8 +624,9 @@ function updateLabels() {
 // BINDINGS
 // ============================================================
 ['amount', 'melt', 'recover', 'threshold', 'vecMult', 'jitter', 'biasAngle', 'biasForce', 'blockSize', 'searchRad', 'autoKf'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updateLabels);
+  document.getElementById(id).addEventListener('input', () => { lastSourceTime = null; updateLabels(); });
 });
+document.getElementById('channel').addEventListener('change', () => { lastSourceTime = null; });
 
 document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) handleFile(e.target.files[0]);
@@ -655,7 +678,7 @@ mainCanvas.addEventListener('click', dropKeyframe);
 TipoUI.initChrome('visual');
 
 // Init
-updateLabels();
+applyPreset('drift');
 startLoop();
 
 // ============================================================
@@ -666,15 +689,15 @@ startLoop();
 TipoHQ.enable({
   getVideo: () => (sourceType === 'video' && sourceVideo) ? sourceVideo : null,
   begin: (W, H) => {
+    if (motionVideo) throw new Error('HQ com Vídeo B não está disponível. Use Record MP4 para gravar Cross-Mosh ou selecione Self para exportar HQ.');
     hqSize = { w: W, h: H };
-    needKeyframe = true;
-    grayPrev = null;
+    resetMosh();
   },
   render: (frame, tSec, ctx, W, H) => {
     step(tSec * 1000);
     ctx.drawImage(mainCanvas, 0, 0, W, H);
   },
-  end: () => { hqSize = null; needKeyframe = true; grayPrev = null; },
+  end: () => { hqSize = null; resetMosh(); },
   // 16.5 — replay da performance: o drop capturado ao vivo re-acontece
   // no MESMO timestamp do vídeo durante a passada HQ
   perfEvent: (name) => { if (name === 'keyframe') dropKeyframe(); },

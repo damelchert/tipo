@@ -109,7 +109,9 @@
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('O bridge precisa usar HTTP ou HTTPS');
     if (url.username || url.password) throw new Error('Não coloque credenciais na URL do bridge');
     const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
-    if (url.protocol !== 'https:' && !loopback) throw new Error('Bridge remoto precisa usar HTTPS');
+    // This bridge uses the computer's CLI session, not a tenant-scoped account.
+    // HTTPS alone does not make a shared/remote bridge safe for other visitors.
+    if (!loopback) throw new Error('O Higgsfield bridge deve estar neste computador (127.0.0.1, localhost ou ::1)');
     url.hash = '';
     url.search = '';
     return url.href.replace(/\/$/, '');

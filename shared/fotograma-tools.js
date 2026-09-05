@@ -21,37 +21,37 @@
       id: 'film3d',
       label: '3D Film',
       note: 'cinema, matéria e luz natural',
-      prompt: 'Transform the reference into a premium cinematic 3D animated feature frame. Preserve the exact subject identity, pose, wardrobe, objects, camera position, composition and lighting direction. Build believable materials, subtle stylization, expressive but anatomically coherent faces, physically motivated light, atmospheric depth, rich surface texture and organic cinema-lens falloff. It must feel art-directed as one complete film frame, never like a generic 3D render.',
+      prompt: 'Render the reference as a cinematic 3D animated feature frame with subtly sculpted forms, believable materials and detailed surface texture.',
     }),
     Object.freeze({
       id: 'feature3d',
       label: 'Feature 3D',
       note: 'formas claras e expressão ampla',
-      prompt: 'Transform the reference into a polished family animated-feature 3D frame. Preserve the exact people, recognizable identity, pose, wardrobe, props, composition and camera angle. Use appealing simplified forms, readable silhouettes, warm expressive faces, carefully groomed hair, tactile materials, soft global illumination and controlled cinematic depth. Avoid copying any named franchise, character or studio signature.',
+      prompt: 'Render the reference as a family animated-feature 3D frame with simplified forms, readable silhouettes, groomed hair and tactile materials.',
     }),
     Object.freeze({
       id: 'stylized3d',
       label: 'Stylized 3D',
       note: 'design gráfico e volumes ousados',
-      prompt: 'Retexturize the reference as a bold stylized 3D editorial frame. Preserve subject identity, body proportions, pose, clothing, object count, composition, perspective and lighting logic. Use graphic surface design, sculpted planes, tactile handcrafted surfaces and decisive color separation. Translate the original lighting into the chosen medium without moving its sources or shadows. Keep the scene authored, not toy-like or template-driven.',
+      prompt: 'Render the reference as a stylized 3D editorial frame with sculpted planes, graphic surface patterns and handcrafted material texture.',
     }),
     Object.freeze({
       id: 'modern2d',
       label: 'Modern 2D',
       note: 'linha editorial e cor chapada',
-      prompt: 'Transform the reference into a contemporary hand-drawn 2D animation frame. Preserve the exact identity, pose, wardrobe, objects, spatial relationships, composition and camera angle. Use confident economical linework, designed shape language, layered flat color, restrained texture, selective cel shading and cinematic light grouping. Retain human nuance and environmental depth; avoid vector-clipart stiffness.',
+      prompt: 'Render the reference as a contemporary hand-drawn 2D animation frame with economical linework, layered flat color and restrained cel shading.',
     }),
     Object.freeze({
       id: 'animefilm',
       label: 'Anime Film',
       note: 'desenho manual e fundo pintado',
-      prompt: 'Transform the reference into a premium hand-drawn Japanese animated feature-film frame. Preserve the same person, identity, pose, clothing, objects, composition, camera angle and lighting direction. Use expressive clean linework, richly painted backgrounds, subtle cel shading, cinematic color, natural human proportions and quiet photographic observation. Do not imitate a specific living artist or named production.',
+      prompt: 'Render the reference as a hand-drawn Japanese animated feature-film frame with clean linework, painted backgrounds and subtle cel shading.',
     }),
     Object.freeze({
       id: 'clay',
       label: 'Clay',
       note: 'stop-motion tátil',
-      prompt: 'Transform the reference into a meticulously crafted stop-motion clay animation frame. Preserve subject identity, pose, wardrobe, props, composition, camera angle and lighting direction. Render hand-shaped clay surfaces, tiny fingerprints, miniature fabric and practical sets, replacement-animation facial design, shallow macro depth and warm physical lighting. Keep proportions coherent and avoid glossy plastic CGI.',
+      prompt: 'Render the reference as a stop-motion clay animation frame with hand-shaped surfaces, tiny fingerprints, miniature fabric and practical-set texture.',
     }),
   ]);
 
@@ -83,7 +83,7 @@
     Object.freeze({ id: 'productViews', label: 'Produto 360°', note: 'vistas e detalhe técnico', prompt: 'Create a clean multi-view sheet showing the same single product in every panel: front, three-quarter, side, rear and detail views.' }),
   ]);
 
-  const PRESERVATION_SUFFIX = ' Fidelity is mandatory: do not add, remove or replace people, limbs, wardrobe pieces, products, props or architecture. Do not change ethnicity, age, body shape, gaze, gesture or framing. Change the rendering medium and requested palette, not the scene content. Keep source lighting direction and shadow placement while translating their texture into the chosen medium. Preserve existing legible lettering and product marks; do not add new text, captions, logos, borders or watermarks. Produce one still image, not an animation or contact sheet.';
+  const PRESERVATION_SUFFIX = 'Fidelity is mandatory: retain identity, expression, body proportions, pose, wardrobe, object count, composition and camera angle. Change only the rendering medium and requested palette or surface treatment. Keep source lighting, shadows, exposure and focus. Preserve existing legible lettering and product marks. Add no captions, borders or watermarks. Produce one still image, not an animation or contact sheet.';
 
   function styleById(id) {
     return STYLE_PRESETS.find(style => style.id === id) || STYLE_PRESETS[0];
@@ -91,11 +91,7 @@
 
   function buildStylePrompt(styleId, direction) {
     const style = styleById(styleId);
-    const userDirection = validatedDirection(direction);
-    const directionClause = userDirection
-      ? ` Additional art direction, subordinate to identity and composition fidelity: ${userDirection}.`
-      : '';
-    return `${style.prompt}${directionClause}${PRESERVATION_SUFFIX}`;
+    return `${style.prompt}\n${PRESERVATION_SUFFIX}${directionClause(direction, 'Art direction for palette and surface treatment; source fidelity stays fixed')}`;
   }
 
   function byId(items, id) {
@@ -110,7 +106,8 @@
 
   function directionClause(value, label = 'Additional direction') {
     const clean = validatedDirection(value);
-    return clean ? ` ${label}: ${clean}.` : '';
+    // Keep the original brief as one separate block, including punctuation and line breaks.
+    return clean ? `\n${label}:\n${clean}` : '';
   }
 
   function buildCastPrompt(options = {}) {
@@ -118,33 +115,33 @@
     const background = byId(CAST_BACKGROUNDS, options.backgroundId);
     const hasReference = options.hasReference === true;
     const identity = hasReference
-      ? 'Image 1 is the sole identity authority. Preserve the exact recognizable face, age, ethnicity, skin tone, hair, body proportions and distinctive features.'
-      : 'Create one canonical adult character unless the brief specifies another age, with a specific recognizable face, coherent anatomy and stable identity. Follow the written age exactly.';
-    return `CAST — canonical character design. ${identity}${directionClause(options.description, 'Character brief')} ${style.prompt} Use a ${background.prompt}. Produce one person in one finished portrait, not a contact sheet. Do not add a second person, duplicate the subject, merge faces, beautify away distinctive features or alter requested wardrobe. Keep hands and anatomy coherent. No text, captions, logos, borders or watermarks.`;
+      ? 'Image 1 is the sole identity authority: retain face, age, ethnicity, skin tone, hair, body proportions and distinctive features.'
+      : 'Create one canonical adult character unless the brief specifies another age; follow that age exactly.';
+    return `CAST — one finished character portrait. ${identity} Do not add a second person or merge faces. Keep anatomy and requested wardrobe coherent. Explicit brief instructions override style and background defaults, not referenced identity. Keep physical lettering already present or requested; add no captions, borders or watermarks.\nStyle default: ${style.prompt}\nBackground default: ${background.prompt}.${directionClause(options.description, 'Character brief')}`;
   }
 
   function buildProductPrompt(options = {}) {
     const style = byId(PRODUCT_STYLES, options.styleId);
     const hasReference = options.hasReference === true;
     const authority = hasReference
-      ? 'Image 1 is the sole product authority. Preserve the exact product geometry, proportions, construction, materials, colors, surface finish and components. Preserve every legible brand mark and packaging feature exactly where it exists; do not invent or rewrite label text. A requested camera change may reveal another view of the same object, never redesign it.'
-      : 'Create one original product exactly from the written brief, with coherent construction, manufacturable geometry and physically believable materials. Do not invent brand names or label text.';
-    return `PRODUCT — faithful commercial image. ${authority}${directionClause(options.direction, 'Campaign direction')} ${style.prompt} Show one canonical product unless the brief explicitly requests a set. Lighting, environment and camera may change, but the product itself may not be redesigned, simplified, duplicated or accessorized. No floating typography, captions, borders or watermarks.`;
+      ? 'Image 1 is the product authority. Preserve exact product geometry, components, materials, colors and finish. Preserve every legible brand mark and packaging feature; do not invent or rewrite label text. A new view must depict the same design; infer unseen surfaces conservatively.'
+      : 'Build the product described in the brief with coherent construction and believable materials. Include brand names and label text only when supplied in the brief.';
+    return `PRODUCT — faithful commercial image. ${authority} Show one product; include sets or accessories only when explicitly requested. Lighting, environment and camera may change, not product design. The brief overrides style defaults. Add no floating typography, captions, borders or watermarks.\nStyle default: ${style.prompt}${directionClause(options.direction, 'Campaign direction')}`;
   }
 
   function buildSheetPrompt(options = {}) {
     const type = byId(SHEET_TYPES, options.typeId);
     const subjectProtection = type.id === 'productViews'
-      ? 'Preserve exact product geometry, components, materials, colors, branding and distinctive details. Use five clearly separated panels: four complete-object views and one intentional close detail. Infer unseen surfaces conservatively; this is an AI interpretation, not a measured technical drawing.'
-      : 'Preserve exact facial identity, age, body proportions, hair, wardrobe and distinctive features across every panel. Change only the requested view, expression or pose. Do not merge faces or invent another person.';
+      ? 'Preserve exact product geometry, components, materials, colors and branding. Use five clearly separated panels: four complete-object views and one close detail. Infer unseen surfaces conservatively; this is an AI interpretation, not a measured technical drawing.'
+      : 'Preserve facial identity, age, body proportions, hair, wardrobe and distinctive features. Change only the requested view, expression or pose.';
     const layout = type.id === 'expressions'
       ? 'Arrange the six expressions in a 3-by-2 grid with consistent head-and-shoulders crops, eye level and face scale. Keep the complete head and hair inside each panel; the torso may be cropped.'
       : type.id === 'poses'
         ? 'Arrange six full-body poses in a 3-by-2 grid. Keep the complete head, hands and feet inside each panel with clear margins.'
         : type.id === 'characterTurnaround'
           ? 'Arrange four full-body views in one horizontal row. Keep the complete head, hands and feet inside each panel with clear margins. Do not treat unseen clothing details as verified facts.'
-          : 'Use a balanced reference-board layout; keep complete objects inside their four view panels and reserve cropping only for the detail panel.';
-    return `SHEETS — controlled reference board. Image 1 is the sole identity and design authority. ${type.prompt} Use a consistent neutral studio background, equal panel sizing, stable scale, matched lighting and clear separation between panels. Every panel must depict the same canonical subject — never relatives, variants or multiple products. ${subjectProtection} ${layout}${directionClause(options.direction, 'Additional sheet direction, subordinate to identity and panel-count fidelity')} No decorative layout, added labels, floating typography, borders or watermarks. Preserve lettering that belongs to the source subject.`;
+          : 'Use equal panel sizes. Keep complete objects at consistent scale in the four view panels; the detail panel may use a larger scale and a close crop.';
+    return `SHEETS — one reference board. Image 1 is the sole identity and design authority. ${type.prompt} ${subjectProtection} ${layout} Use a neutral background, matched lighting and clear panel separation. Preserve source lettering; add no labels, decorative borders or watermarks.${directionClause(options.direction, 'Sheet brief, subordinate to identity and panel-count fidelity')}`;
   }
 
   function clampInteger(value, min, max, fallback = 0) {

@@ -2972,10 +2972,62 @@ const TipoMobile = {
 /* ============================================================
    TIPÓ — Canvas format presets (13.3)
    Floating pill cycles FREE → 9:16 → 1:1 → 4:5 → 16:9. It
-   letterboxes the canvas CONTAINER — every tool reads container
-   size and refits on resize, so preview, PNG, MP4 and GIF all
-   come out in the chosen social aspect. Universal by design.
+   letterboxes the canvas CONTAINER for stage-sized engines.
+   Source-sized engines use TipoMediaViewport instead: a CSS
+   format alone must never pretend to change their export size.
+   HQ adapters retain native output unless they declare a crop.
    ============================================================ */
+
+// Source-sized engines must grow their DISPLAY, not their sampling grid. A
+// 640px video preview should not sit at 1:1 in a 1600px workspace, nor should
+// a CSS aspect-ratio control pretend to change the exported media's format.
+const TipoMediaViewport = {
+  TOOLS: new Set(['dithering', 'riso', 'pixelsort', 'gradientmap', 'datamosh', 'rastro', 'depth']),
+  mode: 'cover',
+  init() {
+    const tool = location.pathname.split('/').pop().replace(/\.html$/, '');
+    if (!this.TOOLS.has(tool)) return;
+    const stage = document.querySelector('#canvasWrap, #canvasArea');
+    const canvas = stage?.querySelector('canvas');
+    if (!canvas) return;
+    this.stage = stage; this.canvas = canvas;
+    stage.classList.add('tipo-media-stage');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tipo-preview-fit';
+    button.title = 'Ajustar mostra o quadro inteiro. Preencher amplia com recorte apenas no preview. Não altera a resolução nem o enquadramento do arquivo exportado.';
+    button.addEventListener('click', () => {
+      this.mode = this.mode === 'contain' ? 'cover' : 'contain';
+      this.update();
+    });
+    this.button = button;
+    document.body.appendChild(button);
+    let queued = false;
+    const schedule = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; this.update(); });
+    };
+    new ResizeObserver(schedule).observe(stage);
+    new MutationObserver(schedule).observe(canvas, { attributes: true, attributeFilter: ['width', 'height'] });
+    window.addEventListener('resize', schedule);
+    this.update();
+  },
+  update() {
+    const { canvas, stage, button } = this;
+    if (!canvas || !canvas.width || !canvas.height) return;
+    const scale = Math[this.mode === 'cover' ? 'max' : 'min'](stage.clientWidth / canvas.width, stage.clientHeight / canvas.height);
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    const width = `${canvas.width * scale}px`, height = `${canvas.height * scale}px`;
+    if (canvas.style.width !== width) canvas.style.width = width;
+    if (canvas.style.height !== height) canvas.style.height = height;
+    stage.dataset.previewFit = this.mode;
+    const cropped = this.mode === 'cover';
+    button.textContent = cropped ? 'Preview · preencher' : 'Preview · ajustar';
+    button.setAttribute('aria-label', `${button.textContent}. ${cropped ? 'Recorte só na visualização; clique para ver o quadro inteiro.' : 'Quadro inteiro; clique para preencher a área de trabalho.'}`);
+    button.setAttribute('aria-pressed', String(cropped));
+  },
+};
 
 const TipoFormat = {
   RATIOS: [['free', 0], ['9:16', 9 / 16], ['1:1', 1], ['4:5', 4 / 5], ['16:9', 16 / 9]],
@@ -2984,6 +3036,7 @@ const TipoFormat = {
   _btn: null,
 
   init() {
+    if (TipoMediaViewport.stage) return; // preview framing ≠ export format
     const c = document.getElementById('canvasContainer')
       || document.getElementById('canvasWrap') || document.getElementById('canvasArea');
     if (!c || this._btn) return;
@@ -3151,6 +3204,7 @@ if (typeof document !== 'undefined') {
     }
     TipoUI.initPanelIdentity();
     TipoMobile.init();
+    TipoMediaViewport.init();
     TipoFormat.init();
     // MP4s go through TipoRecorder.download — route them through the
     // share-aware deliver path on mobile

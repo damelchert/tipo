@@ -7,12 +7,12 @@
 <meta name="description" content="Tipo — Kinetic type, motion typography &amp; visual tools. 100% browser, zero install.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipo — Glitch</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js" integrity="sha384-6Twx1hAeKnwfOYJAHtYeJETRiGD5pRPkjjh0pVbG1QoesncjOpw5e75Y1kOkXeRI" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
-<script src="shared/hq.js?v=20260715-rec1"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
+<script src="shared/hq.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasContainer { flex: 1; position: relative; overflow: hidden; }
@@ -37,6 +37,9 @@
       <button class="btn btn-secondary" id="webcamBtn" onclick="toggleWebcam()">Webcam</button>
     </div>
     <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+    <label for="sourceFit" style="display:block;margin-top:12px;font-size:12px">Enquadramento do preview</label>
+    <select id="sourceFit"><option value="cover" selected>Preencher</option><option value="contain">Ajustar — imagem inteira</option></select>
+    <p style="font-size:12px;line-height:1.5;color:var(--text-4)">Preencher ocupa a área de trabalho sem deformar. PNG e HQ preservam o quadro original da fonte.</p>
   </div>
 
   <div class="section">
@@ -44,13 +47,14 @@
     <div class="preset-grid">
       <span class="preset-chip" onclick="applyPreset('subtle')">Subtle</span>
       <span class="preset-chip" onclick="applyPreset('vhs')">VHS</span>
-      <span class="preset-chip" onclick="applyPreset('corrupt')">Corrupt</span>
-      <span class="preset-chip" onclick="applyPreset('datamosh')">Data Mosh</span>
+      <span class="preset-chip" onclick="applyPreset('corrupt')">Signal Break</span>
+      <span class="preset-chip" onclick="applyPreset('datamosh')">Block Drift</span>
       <span class="preset-chip" onclick="applyPreset('crt')">CRT</span>
       <span class="preset-chip" onclick="applyPreset('rgb')">RGB Split</span>
       <span class="preset-chip" onclick="applyPreset('static')">Static</span>
-      <span class="preset-chip" onclick="applyPreset('chaos')">Chaos</span>
+      <span class="preset-chip" onclick="applyPreset('chaos')">Digital Cut</span>
     </div>
+    <p style="font-size:12px;line-height:1.5;color:var(--text-4)">Presets com intensidade controlada. Speed 0 congela o padrão; no vídeo, a variação acompanha o tempo da fonte. Block Drift é um efeito gráfico, não datamosh de codec.</p>
   </div>
 
   <div class="section">
@@ -118,6 +122,8 @@ let font, recorder;
 let sourceImg = null;
 let sourceVideo = null;
 let hqK = 1; // Export HQ: multiplicador dos parâmetros em pixels
+let hqTime = null;
+let effectEpoch = 0;
 let webcamStream = null;
 let mediaUrl = null; // object URL of current video file (revoked on replace)
 
@@ -138,6 +144,10 @@ function setup() {
     document.getElementById('canvasContainer').offsetHeight
   );
   c.parent('canvasContainer');
+  // p5's temporary body-level canvas occupies 100px in the flex row during
+  // createCanvas(). Re-measure once it belongs to the actual workspace.
+  const stage = document.getElementById('canvasContainer');
+  resizeCanvas(stage.clientWidth, stage.clientHeight);
   textFont(font);
   pixelDensity(1);
 
@@ -145,6 +155,7 @@ function setup() {
   recorder = TipoUI.recorder;
 
   createDefaultImage();
+  applyPreset('subtle');
   bindInputs();
 }
 
@@ -157,6 +168,9 @@ function windowResized() {
 
 function val(id) { return TipoUI.val(id); }
 function setVal(id, v) { TipoUI.setVal(id, v); }
+function sourceFitScale(W, H, sw, sh) {
+  return document.getElementById('sourceFit').value === 'contain' ? Math.min(W / sw, H / sh) : Math.max(W / sw, H / sh);
+}
 
 function createDefaultImage() {
   const g = createGraphics(640, 480);
@@ -179,6 +193,8 @@ function createDefaultImage() {
 // --- Source Management ---
 
 function handleFile(file) {
+  if (!file || !/^(image|video)\//.test(file.type)) { TipoUI.showToast('Envie uma imagem ou um vídeo compatível.'); return; }
+  effectEpoch = performance.now();
   if (file.type.startsWith('image/')) {
     sourceType = 'image';
     if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
@@ -191,7 +207,8 @@ function handleFile(file) {
       document.getElementById('dropHint').style.display = 'none';
       document.getElementById('webcamBtn').textContent = 'Webcam';
       document.getElementById('webcamBtn').style.borderColor = '';
-      noLoop(); redraw();
+      if (val('speed') > 0) loop(); else noLoop();
+      redraw();
     }, () => URL.revokeObjectURL(url));
   } else if (file.type.startsWith('video/')) {
     sourceType = 'video';
@@ -251,6 +268,7 @@ function getCurrentFrame() {
 }
 
 function bindInputs() {
+  document.getElementById('sourceFit').addEventListener('change', () => redraw());
   document.getElementById('fileInput').addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) handleFile(file);
@@ -278,33 +296,40 @@ function draw() {
   const chShift = val('channelShift') * hqK;
   const shiftDir = document.getElementById('shiftDir').value;
   const sliceN = val('sliceCount');
-  const sliceInt = val('sliceIntensity') * hqK;
+  const sliceInt = val('sliceIntensity');
   const pxSort = val('pixelSort');
   const scanOp = val('scanlineOpacity');
   const scanGap = Math.max(1, val('scanlineGap') * hqK);
   const noiseN = val('noiseAmt');
   const bleed = val('colorBleed') * hqK;
   const blockSz = Math.max(2, val('blockSize') * hqK);
-  const blockShift = val('blockShift') * hqK;
+  const blockShift = val('blockShift');
   const blockScr = val('blockScramble');
   const chanSwap = val('channelSwap');
-  const scanOff = val('scanOffset') * hqK;
-  const interlaceAmt = val('interlace') * hqK;
+  const scanOff = val('scanOffset');
+  const interlaceAmt = val('interlace');
   const spd = val('speed') / 100;
 
   // Animation time factor
-  const t = spd > 0 ? frameCount * spd * 0.05 : 0;
+  const seconds = hqTime ?? (sourceType === 'video' && sourceVideo ? sourceVideo.elt.currentTime : (performance.now() - effectEpoch) / 1000);
+  const t = seconds * spd * 1.5;
+  // Stable at rest, repeatable at a source timestamp; independent of redraw/FPS.
+  randomSeed(7349 + (spd > 0 ? Math.floor(seconds * (2 + spd * 10)) : 0));
 
   background('#F8F5F0');
 
   // Fit image to canvas
   const fw = frame.width || frame.elt?.videoWidth || 640;
   const fh = frame.height || frame.elt?.videoHeight || 480;
-  const sc = min(width / fw, height / fh);
+  const sc = sourceFitScale(width, height, fw, fh);
   const iw = fw * sc;
   const ih = fh * sc;
   const ox = (width - iw) / 2;
   const oy = (height - ih) / 2;
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(ox, oy, iw, ih);
+  drawingContext.clip();
 
   // --- Base image ---
   image(frame, ox, oy, iw, ih);
@@ -316,17 +341,18 @@ function draw() {
     const dx = (shiftDir === 'vertical') ? 0 : animShift;
     const dy = (shiftDir === 'horizontal') ? 0 : animShift * 0.6;
 
-    push();
-    blendMode(ADD);
-    tint(255, 0, 0, 130);
-    image(frame, ox - dx, oy - dy, iw, ih);
-    tint(0, 255, 0, 40);
-    image(frame, ox, oy, iw, ih);
-    tint(0, 0, 255, 130);
-    image(frame, ox + dx, oy + dy, iw, ih);
-    pop();
-    blendMode(BLEND);
-    noTint();
+    // Recombine displaced channels instead of adding RGB copies over the base
+    // (additive copies used to overexpose even a flat grey source).
+    loadPixels();
+    const src = new Uint8ClampedArray(pixels);
+    const sx = Math.round(dx), sy = Math.round(dy);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const p = (y * width + x) * 4;
+      const r = (Math.max(0, Math.min(height - 1, y + sy)) * width + Math.max(0, Math.min(width - 1, x + sx))) * 4;
+      const b = (Math.max(0, Math.min(height - 1, y - sy)) * width + Math.max(0, Math.min(width - 1, x - sx))) * 4;
+      pixels[p] = src[r]; pixels[p + 2] = src[b + 2];
+    }
+    updatePixels();
   }
 
   // --- Color Bleed (chromatic aberration spread) ---
@@ -492,7 +518,8 @@ function draw() {
       const total = pw * ph;
       const prob = noiseN / 400;
       for (let i = 0; i < total; i++) {
-        if (random() < prob) {
+        const x = i % pw, y = Math.floor(i / pw);
+        if (x >= ox * d && x < (ox + iw) * d && y >= oy * d && y < (oy + ih) * d && random() < prob) {
           const idx = i * 4;
           const v = random(255);
           pixels[idx]   = v;
@@ -516,6 +543,7 @@ function draw() {
     }
     noStroke();
   }
+  drawingContext.restore();
 
   // Capture frame for recording
   if (recorder) recorder.captureFrame();
@@ -526,7 +554,23 @@ function draw() {
 
 // --- Export ---
 
-function savePNG() { saveCanvas('tipo-glitch', 'png'); TipoUI.showToast('PNG saved'); }
+function savePNG() {
+  const frame = getCurrentFrame();
+  if (!frame || (frame.elt && frame.elt.readyState < 2)) return;
+  const W = frame.elt?.videoWidth || frame.width;
+  const H = frame.elt?.videoHeight || frame.height;
+  const output = document.createElement('canvas'); output.width = W; output.height = H;
+  const seconds = sourceType === 'video' ? sourceVideo.elt.currentTime : (performance.now() - effectEpoch) / 1000;
+  try {
+    TipoHQ._cfg.begin(W, H);
+    TipoHQ._cfg.render(frame, seconds, output.getContext('2d'), W, H);
+  } finally { TipoHQ._cfg.end(); }
+  output.toBlob(blob => {
+    if (!blob) { TipoUI.showToast('Não foi possível exportar o PNG.'); return; }
+    TipoUI._downloadBlob(blob, 'tipo-glitch.png');
+    TipoUI.showToast('PNG salvo na resolução da fonte');
+  }, 'image/png');
+}
 async function toggleRec() { await TipoUI.toggleRec(); }
 
 // --- Presets ---
@@ -553,64 +597,68 @@ function resetAll() {
 const PRESETS = {
   subtle: () => {
     resetAll();
-    setVal('channelShift', 5); setVal('sliceCount', 2); setVal('sliceIntensity', 8);
-    setVal('noiseAmt', 3); setVal('speed', 10);
+    setVal('channelShift', 3); setVal('sliceCount', 2); setVal('sliceIntensity', 2);
+    setVal('noiseAmt', 1); setVal('speed', 10);
   },
   vhs: () => {
     resetAll();
-    setVal('channelShift', 15); document.getElementById('shiftDir').value = 'horizontal';
-    setVal('sliceCount', 6); setVal('sliceIntensity', 15);
-    setVal('scanlineOpacity', 50); setVal('scanlineGap', 3);
-    setVal('scanOffset', 22); setVal('interlace', 15);
-    setVal('noiseAmt', 12); setVal('colorBleed', 20); setVal('speed', 20);
+    setVal('channelShift', 6); document.getElementById('shiftDir').value = 'horizontal';
+    setVal('sliceCount', 3); setVal('sliceIntensity', 3);
+    setVal('scanlineOpacity', 16); setVal('scanlineGap', 3);
+    setVal('scanOffset', 5); setVal('interlace', 5);
+    setVal('noiseAmt', 3); setVal('colorBleed', 4); setVal('speed', 20);
   },
   corrupt: () => {
     resetAll();
-    setVal('channelShift', 50); setVal('sliceCount', 30); setVal('sliceIntensity', 80);
-    setVal('blockShift', 45); setVal('blockScramble', 25); setVal('channelSwap', 20);
-    setVal('pixelSort', 40); setVal('noiseAmt', 15); setVal('speed', 50);
+    setVal('channelShift', 10); setVal('sliceCount', 7); setVal('sliceIntensity', 9);
+    setVal('blockShift', 15); setVal('blockScramble', 4); setVal('channelSwap', 0);
+    setVal('pixelSort', 10); setVal('noiseAmt', 2); setVal('speed', 30);
   },
   datamosh: () => {
     resetAll();
-    setVal('channelShift', 30); document.getElementById('shiftDir').value = 'both';
-    setVal('sliceCount', 20); setVal('sliceIntensity', 60);
-    setVal('blockShift', 35); setVal('blockScramble', 50); setVal('channelSwap', 30);
+    setVal('channelShift', 4); document.getElementById('shiftDir').value = 'both';
+    setVal('sliceCount', 4); setVal('sliceIntensity', 5);
+    setVal('blockShift', 20); setVal('blockScramble', 8); setVal('channelSwap', 0);
     setVal('blockSize', 24);
-    setVal('pixelSort', 70); setVal('colorBleed', 30); setVal('speed', 40);
+    setVal('pixelSort', 12); setVal('noiseAmt', 0); setVal('colorBleed', 0); setVal('speed', 20);
   },
   crt: () => {
     resetAll();
     setVal('channelShift', 8); document.getElementById('shiftDir').value = 'horizontal';
-    setVal('sliceCount', 0); setVal('scanlineOpacity', 70); setVal('scanlineGap', 2);
+    setVal('sliceCount', 0); setVal('scanlineOpacity', 22); setVal('scanlineGap', 3);
     setVal('interlace', 8);
-    setVal('noiseAmt', 5); setVal('colorBleed', 15); setVal('speed', 10);
+    setVal('noiseAmt', 2); setVal('colorBleed', 2); setVal('speed', 10);
   },
   rgb: () => {
     resetAll();
-    setVal('channelShift', 60); document.getElementById('shiftDir').value = 'both';
-    setVal('sliceCount', 0); setVal('noiseAmt', 0); setVal('colorBleed', 40);
+    setVal('channelShift', 14); document.getElementById('shiftDir').value = 'both';
+    setVal('sliceCount', 0); setVal('noiseAmt', 0); setVal('colorBleed', 0);
     setVal('speed', 15);
   },
   static: () => {
     resetAll();
     setVal('channelShift', 3); setVal('sliceCount', 0);
-    setVal('noiseAmt', 80); setVal('scanlineOpacity', 30); setVal('scanlineGap', 2);
-    setVal('scanOffset', 12);
-    setVal('speed', 60);
+    setVal('noiseAmt', 8); setVal('scanlineOpacity', 10); setVal('scanlineGap', 3);
+    setVal('scanOffset', 2);
+    setVal('speed', 25);
   },
   chaos: () => {
     resetAll();
-    setVal('channelShift', 80); document.getElementById('shiftDir').value = 'both';
-    setVal('sliceCount', 50); setVal('sliceIntensity', 100);
-    setVal('blockShift', 70); setVal('blockScramble', 60); setVal('channelSwap', 50);
-    setVal('scanOffset', 50); setVal('interlace', 35);
-    setVal('pixelSort', 60); setVal('scanlineOpacity', 40); setVal('scanlineGap', 2);
-    setVal('noiseAmt', 35); setVal('colorBleed', 50); setVal('speed', 80);
+    setVal('channelShift', 12); document.getElementById('shiftDir').value = 'both';
+    setVal('sliceCount', 8); setVal('sliceIntensity', 12);
+    setVal('blockShift', 18); setVal('blockScramble', 6); setVal('channelSwap', 4);
+    setVal('scanOffset', 6); setVal('interlace', 3);
+    setVal('pixelSort', 15); setVal('scanlineOpacity', 10); setVal('scanlineGap', 3);
+    setVal('noiseAmt', 3); setVal('colorBleed', 0); setVal('speed', 35);
   }
 };
 
 function applyPreset(name) {
-  TipoUI.applyPreset(name, PRESETS);
+  if (!PRESETS[name]) return;
+  // Effects presets are edits, not an animated take: commit values atomically.
+  PRESETS[name]();
+  if (typeof TipoBehavior !== 'undefined') TipoBehavior.resync();
+  document.querySelectorAll('.preset-chip').forEach(chip => chip.classList.toggle('active', chip.getAttribute('onclick') === `applyPreset('${name}')`));
   loop(); redraw();
 }
 
@@ -654,15 +702,20 @@ TipoHQ.enable({
   getVideo: () => (sourceType === 'video' && sourceVideo && sourceVideo.elt) ? sourceVideo.elt : null,
   begin: (W, H) => {
     hqPrev = { w: width, h: height };
-    hqK = W / width;
+    const frame = getCurrentFrame();
+    const fw = frame?.elt?.videoWidth || frame?.width || width;
+    const fh = frame?.elt?.videoHeight || frame?.height || height;
+    hqK = W / (sourceFitScale(width, height, fw, fh) * fw);
     noLoop();
     resizeCanvas(W, H);
   },
   render: (frame, tSec, ctx, W, H) => {
+    hqTime = tSec;
     redraw();
     ctx.drawImage(drawingContext.canvas, 0, 0, W, H);
   },
   end: () => {
+    hqTime = null;
     hqK = 1;
     if (hqPrev) resizeCanvas(hqPrev.w, hqPrev.h);
     hqPrev = null;

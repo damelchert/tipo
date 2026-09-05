@@ -65,6 +65,8 @@ await context.route('**/*', async route => {
 try {
   await page.goto('http://localhost/fotograma.html');
   await page.evaluate(() => { document.getElementById('keyPop').classList.remove('open'); setFotogramaTool('cast'); });
+  assert.equal(await page.evaluate(() => state.higgsConnected), false, 'abrir uma ferramenta não autoriza a conta local');
+  await page.click('#utilityBridgeConnect');
   await page.waitForFunction(() => state.higgsConnected);
   assert.equal(await page.locator('[data-fotograma-tool="multiAngle"]').isVisible(), false);
   await page.evaluate(() => setFotogramaTool('multiAngle'));
@@ -88,7 +90,9 @@ try {
 
   healthHeld = true;
   generationHeld = true;
-  await page.evaluate(() => { state.higgsLastHealthAt = 0; state.higgsConnected = false; });
+  // Keep the browser explicitly connected, but expire its health freshness.
+  // The in-flight recheck must still freeze inputs before a user changes tabs.
+  await page.evaluate(() => { state.higgsLastHealthAt = 0; });
   await page.click('#utilityGenerate');
   await page.waitForFunction(() => utilityState.busy && state.pending.length === 1);
   assert.equal(await page.evaluate(() => activeByProvider.higgsfield), 1, 'utilitário reserva um dos quatro slots');

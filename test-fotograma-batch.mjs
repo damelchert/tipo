@@ -109,8 +109,11 @@ const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 
 await page.goto('http://localhost/fotograma.html', { waitUntil: 'load' });
+await page.click('#keyBtn');
 await page.selectOption('#imageProvider', 'higgsfield');
+await page.click('#higgsConnect');
 await page.waitForFunction(() => state.higgsConnected === true);
+await page.keyboard.press('Escape');
 await page.selectOption('#model', 'nano_banana_2');
 
 check('controle de lote aparece somente no Higgsfield', await page.locator('#batchSection').isVisible());
@@ -163,6 +166,7 @@ await page.click('#keyBtn');
 await page.fill('#apiKey', 'AIzaBATCHDIRECTORTEST123');
 await page.click('#keyConnect');
 await page.waitForFunction(() => state.connected === true);
+await page.check('#diretor'); // Enrichment is now an independent, opt-in preference.
 await page.fill('#scene', 'uma mulher atravessa uma estação de concreto vazia sob uma luz fluorescente prática');
 await page.click('#genBtn');
 await page.waitForFunction(() => state.pending.length === 3);
@@ -200,9 +204,11 @@ check('reload recupera também imagens além do antigo corte de 30', await page.
 check('imagens da galeria usam decodificação lazy para históricos grandes', await page.locator('#gallery .take:not(.pending) img[loading="lazy"][decoding="async"]').count() === 38);
 check('interface explica que a galeria é salva neste navegador', /salva neste navegador|armazenamento local protegido/i.test(await page.locator('#galleryStorage').textContent()));
 
+await page.click('#keyBtn');
 await page.selectOption('#imageProvider', 'google');
 check('Google continua com geração unitária e sem controle irrelevante', await page.locator('#batchSection').isHidden());
 await page.selectOption('#imageProvider', 'higgsfield');
+await page.keyboard.press('Escape');
 await page.setViewportSize({ width: 390, height: 780 });
 const mobile = await page.evaluate(() => {
   const section = document.getElementById('batchSection').getBoundingClientRect();

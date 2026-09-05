@@ -7,10 +7,10 @@
 <meta name="description" content="Tipó — Mockup. Drop your art into procedural vector scenes: poster, tee, phone, card, billboard. Real perspective, no AI.">
 <meta name="theme-color" content="#0a0a0a">
 <title>Tipó — Mockup</title>
-<link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
+<link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js" integrity="sha384-ut5hA6QX8px1vwvHCiy1MqfODbif8Iy0Gr+X61/AoNxP3VXx2wF99Pu9PeTEkG5E" crossorigin="anonymous"></script>
 <script src="shared/recorder.js?v=20260722-rec3"></script>
-<script src="shared/ui.js?v=20260905-hub2"></script>
+<script src="shared/ui.js?v=20260905-effects1"></script>
 <style>
   body { display: flex; height: 100vh; }
   #canvasWrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
@@ -578,21 +578,28 @@ function getDemoArt() {
 }
 
 function useDemo() {
+  artLoadSequence++;
   art = getDemoArt();
   artName = 'demo';
   needsRender = true;
 }
 
+let artLoadSequence = 0;
 function loadFile(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) return;
+  const sequence = ++artLoadSequence;
+  const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = () => {
+    URL.revokeObjectURL(url);
+    if (sequence !== artLoadSequence) return;
     art = img;
     artName = file.name.replace(/\.[^.]+$/, '');
     needsRender = true;
     TipoUI.showToast('Art aplicada');
   };
-  img.src = URL.createObjectURL(file);
+  img.onerror = () => { URL.revokeObjectURL(url); if (sequence === artLoadSequence) TipoUI.showToast('Image could not be decoded. Try PNG or JPEG.'); };
+  img.src = url;
 }
 
 // ---- Render loop -----------------------------------------------------------------
