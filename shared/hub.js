@@ -58,9 +58,10 @@
   const filterNames = {visual:'imagem & efeitos',kinetic:'tipografia cinética','3d':'tipografia 3D','2d':'tipografia 2D',composition:'composição',animation:'animação',favorites:'favoritas'};
   const photoPreviews = new Set(['studio','dithering','pattern','reticula','riso','cylinder']);
 
-  // Small, static vector studies keep the whole catalogue useful without
-  // mounting dozens of engines or downloading a video for every card.
+  // Kinetic cards use recordings of their real first preset. The controller
+  // below loads only visible previews, without mounting any tool engines.
   function artwork(tool, index) {
+    if (tool.category !== 'visual') return `<img class="hub-preview-poster" src="assets/hub/kinetic/${tool.id}.webp" width="640" height="380" loading="lazy" alt=""><video class="hub-preview-video" data-preview="${tool.id}" data-src="assets/hub/kinetic/${tool.id}.mp4" poster="assets/hub/kinetic/${tool.id}.webp" width="640" height="380" muted loop playsinline preload="none" disablepictureinpicture aria-hidden="true" tabindex="-1"></video>`;
     if (tool.id === 'fotograma') return '<img src="assets/hub/fotograma.webp" width="640" height="381" loading="lazy" alt="">';
     if (photoPreviews.has(tool.id)) return `<img src="assets/hub/${tool.id}.webp" width="640" height="381" loading="lazy" alt="">`;
     const palettes = [['#243b34','#b4cec0','#e7bf6c'],['#ddd5c4','#352e28','#926747'],['#a89cab','#2f2430','#eadcbb'],['#dba64d','#2b2924','#e9ddbb'],['#233330','#a2c7b5','#dca3a4']];
@@ -102,11 +103,190 @@
     return `<svg viewBox="0 0 420 250" aria-hidden="true" focusable="false"><rect width="420" height="250" fill="${bg}"/>${art}</svg>`;
   }
 
+  const previewToggle = document.getElementById('hubPreviewsToggle');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const connection = navigator.connection;
+  const individuallyPaused = new Set();
+  const manuallyPlaying = new Map();
+  let previewStates = [];
+  let previewFrame = 0;
+  let manualOrder = 0;
+  let hoveredPreview = null;
+  let focusedPreview = null;
+  let explicitGroupPlay = false;
+  let previewsPaused = false;
+  try { previewsPaused = localStorage.getItem('tipo-hub-previews') === 'paused'; } catch { /* Session controls still work. */ }
+  const autoPreviews = () => !previewsPaused && (explicitGroupPlay || (!reducedMotion.matches && !connection?.saveData));
+  const attentionPreview = state => autoPreviews() && !reducedMotion.matches && !connection?.saveData &&
+    (state.id === hoveredPreview || state.id === focusedPreview) ? 1 : 0;
+
+  function syncPreviewButton(state) {
+    const playing = !state.video.paused || state.pending;
+    state.button.textContent = playing ? 'Ⅱ' : '▶';
+    state.button.setAttribute('aria-pressed', String(playing));
+    state.button.setAttribute('aria-label', `${state.failed ? 'Tentar reproduzir' : playing ? 'Pausar' : 'Reproduzir'} prévia de ${byId.get(state.id).name}`);
+    state.button.title = state.button.getAttribute('aria-label');
+  }
+  function syncPreviewToggle() {
+    const enabled = autoPreviews() || manuallyPlaying.size > 0;
+    previewToggle.setAttribute('aria-pressed', String(enabled));
+    previewToggle.querySelector('[data-preview-label]').textContent = enabled ? 'Pausar prévias' : 'Reproduzir prévias';
+    previewToggle.querySelector('[aria-hidden]').textContent = enabled ? 'Ⅱ' : '▶';
+    document.getElementById('hubPreviewNote').textContent = reducedMotion.matches || connection?.saveData
+      ? 'Primeiro preset de cada ferramenta · movimento só com sua permissão.'
+      : 'Primeiro preset de cada ferramenta · até 3 prévias em movimento.';
+  }
+  function pausePreview(state) {
+    state.wanted = false;
+    state.pending = false;
+    state.attempt++;
+    state.video.pause();
+    syncPreviewButton(state);
+  }
+  function playPreview(state) {
+    state.wanted = true;
+    if (state.pending || !state.video.paused) return;
+    if (!state.video.hasAttribute('src')) {
+      state.video.src = state.video.dataset.src;
+      state.video.load();
+    }
+    const attempt = ++state.attempt;
+    state.pending = true;
+    syncPreviewButton(state);
+    state.video.play().then(() => {
+      if (attempt !== state.attempt || !state.wanted || document.hidden) {
+        if (!state.wanted || document.hidden) state.video.pause();
+        return;
+      }
+      state.pending = false;
+      syncPreviewButton(state);
+    }).catch(error => {
+      if (attempt !== state.attempt) return;
+      state.pending = false;
+      if (error.name !== 'AbortError') state.blocked = true;
+      syncPreviewButton(state);
+      schedulePreviews();
+    });
+  }
+  function updatePreviews() {
+    previewFrame = 0;
+    const candidates = document.hidden ? [] : previewStates.filter(state => state.visible && !state.failed && !state.blocked &&
+      (manuallyPlaying.has(state.id) || (autoPreviews() && !individuallyPaused.has(state.id))));
+    candidates.sort((a,b) => (manuallyPlaying.get(b.id) || 0) - (manuallyPlaying.get(a.id) || 0) ||
+      attentionPreview(b) - attentionPreview(a) || b.ratio - a.ratio);
+    const selected = new Set(candidates.slice(0,3));
+    // Pause first so scrolling or manual selection never exceeds the budget.
+    previewStates.forEach(state => { if (!selected.has(state)) pausePreview(state); });
+    selected.forEach(playPreview);
+    syncPreviewToggle();
+  }
+  function schedulePreviews() {
+    if (!previewFrame) previewFrame = requestAnimationFrame(updatePreviews);
+  }
+  const previewObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      const state = previewStates.find(item => item.video === entry.target);
+      if (state) { state.visible = entry.isIntersecting && entry.intersectionRatio >= .1; state.ratio = entry.intersectionRatio; }
+    }
+    schedulePreviews();
+  }, { threshold:[0,.1,.5,.9,1] });
+  function detachPreviews() {
+    previewObserver.disconnect();
+    if (previewFrame) cancelAnimationFrame(previewFrame);
+    previewFrame = 0;
+    hoveredPreview = null;
+    focusedPreview = null;
+    previewStates.forEach(state => {
+      pausePreview(state);
+      state.video.removeAttribute('src');
+      state.video.load();
+    });
+    previewStates = [];
+  }
+  function attachPreviews() {
+    previewStates = [...grid.querySelectorAll('[data-preview]')].map(video => {
+      video.muted = true;
+      const id = video.dataset.preview;
+      const state = { id, video, button:grid.querySelector(`[data-preview-toggle="${id}"]`), visible:false, ratio:0, wanted:false, pending:false, blocked:false, failed:false, attempt:0 };
+      video.addEventListener('playing', () => {
+        if (!state.wanted || document.hidden) return video.pause();
+        video.classList.add('has-frame');
+        syncPreviewButton(state);
+      });
+      video.addEventListener('pause', () => syncPreviewButton(state));
+      video.addEventListener('error', () => {
+        state.failed = true;
+        video.classList.remove('has-frame');
+        pausePreview(state);
+        schedulePreviews();
+      });
+      previewObserver.observe(video);
+      syncPreviewButton(state);
+      return state;
+    });
+    syncPreviewToggle();
+  }
+  function togglePreview(id) {
+    const state = previewStates.find(item => item.id === id);
+    if (!state) return;
+    if (!state.video.paused || state.pending) {
+      manuallyPlaying.delete(id);
+      individuallyPaused.add(id);
+      pausePreview(state);
+    } else {
+      individuallyPaused.delete(id);
+      manuallyPlaying.set(id, ++manualOrder);
+      state.blocked = false;
+      if (state.failed) { state.failed = false; state.video.removeAttribute('src'); }
+      // The visible button is a user gesture, including on touch devices.
+      const bounds = state.video.getBoundingClientRect();
+      state.visible = bounds.bottom > 0 && bounds.top < innerHeight;
+    }
+    updatePreviews();
+  }
+  previewToggle.addEventListener('click', () => {
+    const wasEnabled = autoPreviews() || manuallyPlaying.size > 0;
+    previewsPaused = wasEnabled;
+    explicitGroupPlay = !wasEnabled;
+    manuallyPlaying.clear();
+    if (!wasEnabled) individuallyPaused.clear();
+    try { localStorage.setItem('tipo-hub-previews', wasEnabled ? 'paused' : 'auto'); } catch { /* Session controls still work. */ }
+    updatePreviews();
+  });
+  const motionPreferenceChanged = () => { explicitGroupPlay = false; manuallyPlaying.clear(); updatePreviews(); };
+  reducedMotion.addEventListener('change', motionPreferenceChanged);
+  connection?.addEventListener('change', motionPreferenceChanged);
+  document.addEventListener('visibilitychange', updatePreviews);
+  window.addEventListener('pagehide', () => previewStates.forEach(pausePreview));
+  // Inspecting another card temporarily lends it a playback slot. Explicit
+  // pause and system motion/data preferences still take precedence.
+  grid.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const card = event.target.closest('.hub-tool-kinetic');
+    if (!card || (event.relatedTarget instanceof Node && card.contains(event.relatedTarget))) return;
+    hoveredPreview = card.dataset.id;
+    schedulePreviews();
+  });
+  grid.addEventListener('pointerout', event => {
+    const card = event.target.closest('.hub-tool-kinetic');
+    if (!card || (event.relatedTarget instanceof Node && card.contains(event.relatedTarget))) return;
+    if (hoveredPreview === card.dataset.id) hoveredPreview = null;
+    schedulePreviews();
+  });
+  grid.addEventListener('focusin', event => {
+    focusedPreview = event.target.closest('.hub-tool-kinetic')?.dataset.id || null;
+    schedulePreviews();
+  });
+  grid.addEventListener('focusout', () => { focusedPreview = null; schedulePreviews(); });
+
   function render() {
     const query=normalize(search.value.trim());
     let shown=tools.filter(tool => (filter==='all'||filter==='favorites'&&favorites.has(tool.id)||filter==='kinetic'&&tool.category!=='visual'||tool.category===filter) && (!query||query.split(/\s+/).every(part=>normalize(`${tool.name} ${tool.kind} ${tool.description} ${tool.meta} ${tool.tags}`).includes(part))));
     if(sort.value==='name')shown=shown.toSorted((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    grid.innerHTML=shown.map(tool=>`<article class="hub-tool" data-id="${tool.id}"><a class="hub-tool-link" href="${tool.id}.html" data-tool="${tool.id}"><div class="hub-tool-art">${artwork(tool,tools.indexOf(tool))}<span class="hub-tool-kind">${tool.kind}</span></div><div class="hub-tool-title"><h3>${tool.name}</h3><span aria-hidden="true">↗</span></div><p>${tool.description}</p><span class="hub-tool-meta">${tool.meta}</span></a><button class="hub-tool-favorite" data-favorite="${tool.id}" type="button" aria-label="${favorites.has(tool.id)?'Remover':'Adicionar'} ${tool.name} ${favorites.has(tool.id)?'das':'às'} favoritas" aria-pressed="${favorites.has(tool.id)}">${favorites.has(tool.id)?'★':'☆'}</button></article>`).join('');
+    detachPreviews();
+    grid.innerHTML=shown.map(tool=>`<article class="hub-tool${tool.category !== 'visual' ? ' hub-tool-kinetic' : ''}" data-id="${tool.id}"><a class="hub-tool-link" href="${tool.id}.html" data-tool="${tool.id}"><div class="hub-tool-art">${artwork(tool,tools.indexOf(tool))}<span class="hub-tool-kind">${tool.kind}</span></div><div class="hub-tool-title"><h3>${tool.name}</h3><span aria-hidden="true">↗</span></div><p>${tool.description}</p><span class="hub-tool-meta">${tool.meta}</span></a>${tool.category !== 'visual' ? `<button class="hub-preview-toggle" data-preview-toggle="${tool.id}" type="button" aria-label="Reproduzir prévia de ${tool.name}" aria-pressed="false">▶</button>` : ''}<button class="hub-tool-favorite" data-favorite="${tool.id}" type="button" aria-label="${favorites.has(tool.id)?'Remover':'Adicionar'} ${tool.name} ${favorites.has(tool.id)?'das':'às'} favoritas" aria-pressed="${favorites.has(tool.id)}">${favorites.has(tool.id)?'★':'☆'}</button></article>`).join('');
+    attachPreviews();
+    document.getElementById('hubPreviewToolbar').hidden = !shown.some(tool => tool.category !== 'visual');
     document.getElementById('toolCount').textContent=`${shown.length} ${shown.length===1?'ferramenta':'ferramentas'}${filterNames[filter]?` · ${filterNames[filter]}`:' para criar'}${query?' · busca ativa':''}`;
     document.getElementById('emptyCatalog').hidden=shown.length>0;
     document.getElementById('emptyMessage').textContent=filter==='favorites'&&!favorites.size?'Marque a estrela nas ferramentas que você mais usa. Elas ficam salvas neste navegador.':'Experimente outro nome ou efeito, ou limpe os filtros.';
@@ -129,6 +309,8 @@
     document.getElementById('recentTools').innerHTML=ids.map(id=>`<a href="${id}.html" data-tool="${id}">${byId.get(id).name}<span aria-hidden="true">↗</span></a>`).join('');
   }
   document.addEventListener('click',event=>{
+    const preview=event.target.closest('[data-preview-toggle]');
+    if(preview){togglePreview(preview.dataset.previewToggle);return;}
     const favorite=event.target.closest('[data-favorite]');
     if(favorite){const id=favorite.dataset.favorite;favorites.has(id)?favorites.delete(id):favorites.add(id);writeList('tipo-hub-favorites',[...favorites]);render();(grid.querySelector(`[data-favorite="${id}"]`)||document.querySelector('[data-filter="favorites"]')).focus({preventScroll:true});return;}
     const link=event.target.closest('a[data-tool]');

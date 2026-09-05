@@ -10,9 +10,9 @@
   <link rel="preload" href="assets/fonts/GeneralSans-Regular.otf" as="font" type="font/otf" crossorigin>
   <link rel="preload" href="assets/fonts/ClashDisplay-Medium.otf" as="font" type="font/otf" crossorigin>
   <link rel="stylesheet" href="shared/style.css?v=20260905-hub2">
-  <link rel="stylesheet" href="shared/hub.css?v=20260905-hub1">
+  <link rel="stylesheet" href="shared/hub.css?v=20260905-motion1">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('tipo-theme')==='dark'?'dark':'light';}catch{}</script>
-  <script src="shared/hub.js?v=20260905-hub1" defer></script>
+  <script src="shared/hub.js?v=20260905-motion1" defer></script>
 </head>
 <body class="tipo-hub">
   <a class="hub-skip" href="#catalog">Pular para as ferramentas</a>
@@ -47,6 +47,7 @@
     <section id="catalog" class="hub-catalog" aria-labelledby="catalogTitle">
       <div class="hub-catalog-head"><div><p class="hub-eyebrow">O repertório é seu</p><h2 id="catalogTitle">Escolha seu próximo experimento<span>.</span></h2></div><div class="hub-search"><span aria-hidden="true">⌕</span><label class="hub-sr-only" for="toolSearch">Buscar ferramenta, efeito ou formato</label><input type="search" id="toolSearch" placeholder="Busque um efeito, uma ferramenta…" autocomplete="off"><kbd aria-hidden="true">/</kbd></div></div>
       <div class="hub-catalog-toolbar"><div class="hub-filters" role="group" aria-label="Categorias de ferramentas"><button type="button" data-filter="all" aria-pressed="true">Todas <span>41</span></button><button type="button" data-filter="visual" aria-pressed="false">Imagem & efeitos <span>18</span></button><button type="button" data-filter="kinetic" aria-pressed="false">Tipografia cinética <span>23</span></button><button type="button" data-filter="favorites" aria-pressed="false"><span aria-hidden="true">☆</span> Favoritas</button></div><label class="hub-sort" for="toolSort">Ordenar <select id="toolSort"><option value="curated">Curadoria Tipó</option><option value="name">Nome A–Z</option></select></label></div>
+      <div id="hubPreviewToolbar" class="hub-preview-toolbar"><p id="hubPreviewNote">Primeiro preset de cada ferramenta · até 3 prévias em movimento.</p><button id="hubPreviewsToggle" class="hub-previews-toggle" type="button" aria-pressed="true" aria-describedby="hubPreviewNote"><span aria-hidden="true">Ⅱ</span><span data-preview-label>Pausar prévias</span></button></div>
       <div class="hub-catalog-status"><p id="toolCount" role="status" aria-live="polite">41 ferramentas para criar</p><button type="button" id="clearFilters" hidden>Limpar filtros ×</button></div>
       <div id="toolGrid" class="hub-tool-grid"></div><div id="emptyCatalog" class="hub-empty" hidden><span aria-hidden="true">↗</span><h3>Nenhuma ferramenta por aqui. Ainda.</h3><p id="emptyMessage">Experimente outro nome ou efeito.</p><button type="button" id="emptyReset">Ver todas as ferramentas</button></div>
       <noscript><p>Ative o JavaScript para buscar no catálogo. Você também pode abrir diretamente <a href="fotograma.html">Fotograma</a>, <a href="studio.html">Studio</a>, <a href="dithering.html">Dithering</a>, <a href="pattern.html">Pattern</a>, <a href="cylinder.html">Cylinder</a> ou <a href="depthmap.html">Video Depth Map</a>.</p></noscript>

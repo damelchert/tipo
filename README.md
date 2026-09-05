@@ -2,7 +2,7 @@
 
 Suite of generative visual tools for motion type, kinetic typography, AI stills, and dithering. The tools run in the browser; Fotograma can optionally use a private local bridge for the authenticated Higgsfield CLI.
 
-The home page is an immediate creative hub with all 41 tools, accent-insensitive search, category filters, favorites, recently opened tools, and light/dark themes. Its previews are static and local; the motion preview plays only on request. UI fonts are self-hosted. Existing category backlinks (`#visual`, `#3d`, `#kinetic`, etc.) remain supported.
+The home page is an immediate creative hub with all 41 tools, accent-insensitive search, category filters, favorites, recently opened tools, and light/dark themes. All 23 kinetic cards show recordings of their real first preset: silent six-second loops with real still-image covers, loaded on visibility and limited to three simultaneous playbacks. Global and individual pause controls are available; reduced-motion and data-saving preferences use stills until explicit play. The hero video remains opt-in. UI fonts are self-hosted. Existing category backlinks (`#visual`, `#3d`, `#kinetic`, etc.) remain supported. [Preview provenance and regeneration](assets/hub/README.md).
 
 See [the September 2026 platform audit](docs/audit-platform-2026-09.md) for findings, fixes, test coverage and limits.
 

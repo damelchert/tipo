@@ -10,7 +10,7 @@ decisions:
   ui_font: self-hosted-General-Sans
   values_font: self-hosted-IBM-Plex-Mono
   display_font: self-hosted-Clash-Display
-  motion: homepage-opt-in
+  motion: real-kinetic-previews-visible-budget-3-hero-opt-in
   navigation: searchable-flat-catalogue-with-legacy-backlinks
 verification:
   tool_smoke: 80-of-80
@@ -19,6 +19,18 @@ verification:
   paid_ai_generation: not-performed
 report: docs/audit-platform-2026-09.md
 features:
+  kinetic_previews:
+    phase: verified
+    tools: 23
+    components: [existing-tool-card, real-poster-video, individual-play-pause, global-motion-toggle]
+    patterns: existing-hub-tokens-and-controls
+    playback_budget: 3
+    motion_checks: 38
+    catalogue_regression_checks: 28
+    media_verified: 23
+    reduced_motion: explicit-play-only
+    provenance: assets/hub/kinetic/manifest.json
+    report: assets/hub/README.md
   video_reference:
     phase: verified
     route: fotograma.html#video-gif

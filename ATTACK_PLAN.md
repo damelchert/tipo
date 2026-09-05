@@ -8,6 +8,12 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24.2 — PRÉVIAS REAIS DE TIPOGRAFIA CINÉTICA ✅ (2026-09-05)
+- Substituídas as ilustrações genéricas dos 23 cards cinéticos por MP4 + WebP capturados do primeiro preset real de cada ferramenta; 6 s, 24 FPS, 640 × 380. Flag usa frase de exemplo para o Banner ficar legível, sem mudar o preset.
+- Reprodução limitada a três cards visíveis, prioridade por mouse/foco, pausa fora da tela/aba, controles individual e geral, movimento reduzido/economia de dados sem autoplay; hero continua por clique.
+- Proveniência e regeneração em `assets/hub/README.md`, script `support/generate-kinetic-previews.mjs` e manifest por arquivo. Testes de mídia real + interações/browser/regressão da home.
+- Verificação: 23 vídeos/capas com decode real e conteúdo em movimento, 38 checks de reprodução + 28 da home; todos passaram. MP4 total 5,82 MiB, não baixado integralmente na abertura.
+
 ### FASE 24.1 — REFERÊNCIAS DE VÍDEO NO FOTOGRAMA ✅ (2026-09-05)
 - Nova aba **Vídeo → GIF**: upload local, drag/drop e link HTTPS direto com CORS, sem backend de download, conta ou créditos.
 - Preview reproduzível; trecho em segundos; presets Compacto/Equilibrado/Movimento; tamanho, FPS e cores; GIF, prancha JPG com timestamps ou ambos.

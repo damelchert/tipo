@@ -1676,6 +1676,12 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 
 ## 2026-09-05
 
+### Hub — prévias reais das 23 ferramentas cinéticas
+- Daniel apontou que os templates vetoriais de Stripes, Coil, Flag, Cascade e Ribbon não explicavam os efeitos; pediu animação do primeiro pattern. Todos os 23 cards cinéticos agora usam gravações do primeiro preset real, não SVGs genéricos.
+- MP4 H.264 silencioso, 6 s/24 FPS/640 × 380 + capa WebP do vídeo. Captura offline avança o p5 na cadência nativa sem pular estados físicos; scripts e manifest permitem regenerar. Flag usa frase mais longa somente na demo, pois A Banner com quatro letras quase desaparecia; não altera a ferramenta nem o preset.
+- Carregamento por visibilidade, máximo três vídeos tocando, pausa fora da tela e aba, controles próprios por card e pausa geral persistente. Respeita movimento reduzido e economia de dados até play explícito. Hero opt-in preservado. Galerias, provedores e motores das ferramentas não foram modificados.
+- Testes de mídia verificam conteúdo em movimento, capas legíveis, frames/duração/codec/tamanho; testes de browser cobrem teclado/toque, limites de playback, navegação, erros e regressões. Detalhes em `assets/hub/README.md`.
+
 ### Fotograma — Vídeo → GIF e prancha para análise
 - Daniel pediu transformar arquivo/link de vídeo em GIF para facilitar análise de referências no GPT. Implementada aba `videoReference`, link direto `fotograma.html#video-gif`, sem Higgsfield/Google e sem alterar a galeria existente.
 - Upload até300MB, MP4/MOV/WebM decodificáveis; link HTTPS de arquivo com CORS. Não baixa páginas de YouTube/Instagram/Vimeo e não usa proxy. CSP ampliou somente `media-src` para HTTPS; `connect-src` de chaves/IA não foi ampliado. Vídeos remotos usam CORS anônimo e não recebem credenciais de provedor.
