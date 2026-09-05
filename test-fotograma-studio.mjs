@@ -112,5 +112,18 @@ try {
   await page.screenshot({ path: path.join(dir, 'prompts-mobile.png') });
   assert.deepEqual(errors, []); checks++;
   assert.equal(calls.filter(url => /127\.0\.0\.1|googleapis/.test(url)).length, 0); checks++;
+  for (const theme of ['light', 'dark']) {
+    const ratio = await page.evaluate(theme => {
+      document.documentElement.dataset.theme = theme;
+      const style = getComputedStyle(document.getElementById('keyBtn'));
+      const luminance = css => {
+        const c = css.match(/[\d.]+/g).slice(0, 3).map(Number).map(n => n / 255).map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4);
+        return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+      };
+      const a = luminance(style.color), b = luminance(style.backgroundColor);
+      return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    }, theme);
+    assert.ok(ratio >= 4.5, `Connections label contrast in ${theme}: ${ratio}`); checks++;
+  }
   console.log(`PASS ${checks} studio checks. No provider requests or image charges. Screenshots: ${dir}`);
 } finally { await browser.close(); }

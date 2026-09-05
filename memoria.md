@@ -1677,6 +1677,7 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 ## 2026-09-05
 
 ### Fotograma — looks visuais e liberação do bloco
+- Publicado o bloco principal `cde7027` em main; comparação de 33 arquivos e 41 rotas passou. Inspeção visual posterior encontrou texto preto em Conexões no tema escuro: cor semântica corrigida, teste de contraste ≥4,5:1 em ambos os temas; Studio agora69checks. Nenhuma alteração de conta/galeria.
 - Daniel aprovou os ajustes e o grande commit/push após a revisão: “altere, faça os ajustes necessarios e ai o grande commit/push”. A suspensão anterior foi encerrada; arquivos pessoais não devem entrar no commit.
 - Naturalista/Editorial/Experimental substituem Cinema/Publicidade/Music Video em Looks Tipó. Somente enquadramento/óptica/foco/luz/cor/textura; retirar conteúdo presumido de músicos, atletas, veículos, acessórios e cenários. IDs `cinema/commercial/clipe` permanecem para compatibilidade, gênero antigo fica inerte, prompts históricos preservados.
 - Enriquecer a cena separado, neutro entre looks, desligado em perfil novo; preferência explícita existente respeitada. Todos os controles manuais disponíveis nos três looks; Diretor+fotografia não empilha look da casa.

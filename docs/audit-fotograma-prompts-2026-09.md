@@ -64,7 +64,7 @@ Pesquisa e contrato: [proposta de integração](fotograma-magnific-integration.m
 ## Verificação
 
 - `node test-fotograma-looks.mjs`: **171 checks**, três looks e briefs contrastantes, conteúdo literal, instrumento explicitamente pedido, prioridade dos seis slots, gênero antigo inerte, reuso sem mutar take, modos sem empilhar, enriquecimento neutro/off/persistência e mobile.
-- `node test-fotograma-studio.mjs`: **67 checks**, UI desktop/mobile, seis perfis/slots/overrides, sem grão, numeração, prompt realmente salvo, escaping, persistência, foco, layout sem sobreposição e nenhuma chamada de provedor.
+- `node test-fotograma-studio.mjs`: **69 checks**, UI desktop/mobile, seis perfis/slots/overrides, sem grão, numeração, prompt realmente salvo, escaping, persistência, foco, layout sem sobreposição, contraste ≥4,5:1 em Conexões nos dois temas e nenhuma chamada de provedor.
 - `node test-fotograma-tool-contracts.mjs --browser`: **28/28**, contratos literais/12k, preservação, fontes e catálogo imutável.
 - `node test-fotograma-account-isolation.mjs`: **9/9**, visitantes separados, opt-in legado, disconnect/forget/health tardio/Google tardio, abas e links.
 - `node test-connector-safety.mjs`: **12/12**. Bridge/CORS: **13 checks**.

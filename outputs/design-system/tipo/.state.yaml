@@ -27,7 +27,7 @@ features:
     patterns: existing-tipo-tokens-native-dialog-semantic-table
     profiles: 6
     look_checks: 171
-    studio_checks: 67
+    studio_checks: 69
     contract_checks: 28
     account_isolation_cases: 9
     reconnection_regression: passed-expired-session-keeps-login

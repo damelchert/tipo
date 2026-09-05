@@ -63,6 +63,19 @@ try {
   assert.equal(await page.locator('#diretor').isChecked(), false, 'scene enrichment is opt-in');
   assert.equal(await page.locator('#keyPop').isVisible(), false, 'accounts do not interrupt fresh visitors');
   assert.equal(await page.locator('#genBtn').isDisabled(), true, 'no inherited provider account');
+  for (const theme of ['light', 'dark']) {
+    const contrast = await page.evaluate(theme => {
+      document.documentElement.dataset.theme = theme;
+      const style = getComputedStyle(document.getElementById('keyBtn'));
+      const luminance = css => {
+        const channels = css.match(/[\d.]+/g).slice(0, 3).map(Number).map(n => n / 255).map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4);
+        return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+      };
+      const a = luminance(style.color), b = luminance(style.backgroundColor);
+      return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    }, theme);
+    assert.ok(contrast >= 4.5, `Published connections label contrast in ${theme}: ${contrast}`);
+  }
   await page.locator('#studioReviewOpen').click();
   assert.equal(await page.locator('#studioReview').evaluate(el => el.open), true);
   await page.screenshot({ path: path.join(artifacts, 'fotograma-prompts.png'), animations: 'disabled' });
