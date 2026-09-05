@@ -8,11 +8,12 @@ import assert from 'node:assert/strict';
 const origin = 'https://tipo-steel.vercel.app';
 const files = ['index.html', 'fotograma.html', 'studio.html', 'depthmap.html', 'vessel.html',
   'shared/hub.js', 'shared/hub.css', 'shared/ui.js', 'shared/style.css',
-  'shared/fotograma-tools.js', 'shared/fotograma-providers.js'];
+  'shared/fotograma-tools.js', 'shared/fotograma-providers.js',
+  'shared/video-reference-ui.js', 'shared/video-reference-engine.js', 'shared/video-reference.css'];
 for (const file of files) {
   const response = await fetch(`${origin}/${file}`, { cache: 'no-store' });
   assert.equal(response.status, 200, file);
-  assert.equal(await response.text(), await fs.readFile(file, 'utf8'), `${file}: deployed content must match local`);
+  assert.ok(await response.text() === await fs.readFile(file, 'utf8'), `${file}: deployed content must match local`);
 }
 console.log(`PASS ${files.length} published files match the release`);
 

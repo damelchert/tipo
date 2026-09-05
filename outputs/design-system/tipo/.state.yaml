@@ -18,3 +18,12 @@ verification:
   accessibility: improvements-not-full-certification
   paid_ai_generation: not-performed
 report: docs/audit-platform-2026-09.md
+features:
+  video_reference:
+    phase: verified
+    route: fotograma.html#video-gif
+    components: [source-upload, source-preview, trim-controls, export-settings, progress, result-cards]
+    patterns: existing-panel-button-token-and-mobile-sheet
+    responsive: desktop-and-mobile
+    account_required: false
+    report: docs/video-reference.md

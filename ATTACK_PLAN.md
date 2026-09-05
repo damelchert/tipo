@@ -8,6 +8,13 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24.1 — REFERÊNCIAS DE VÍDEO NO FOTOGRAMA ✅ (2026-09-05)
+- Nova aba **Vídeo → GIF**: upload local, drag/drop e link HTTPS direto com CORS, sem backend de download, conta ou créditos.
+- Preview reproduzível; trecho em segundos; presets Compacto/Equilibrado/Movimento; tamanho, FPS e cores; GIF, prancha JPG com timestamps ou ambos.
+- Captura por seek determinístico e GIF incremental. Cancelamento no carregamento/conversão, controles travados durante job, limites de frames/pixels/bytes e limpeza de recursos. Galeria existente preservada; exportações de vídeo são da sessão e precisam ser baixadas.
+- Objetivo de análise: GIF animado não garante entrada de visão nem menos tokens; prancha estática torna a sequência explícita. Limites e requisitos documentados em `docs/video-reference.md`.
+- Testes: motor real com FFmpeg/GIF/JPEG, erros e cancelamento; interface desktop/mobile com CORS e sem chamadas de geração; regressões de Fotograma.
+
 ### FASE 24 — HUB CRIATIVO + AUDITORIA DE PRODUTO ✅ (2026-09-05)
 - **Entrada reconstruída:** acesso direto ao Fotograma/Studio/Kinetic, catálogo de 41 ferramentas, busca normalizada, filtros, favoritas e recentes locais. Removidos intro obrigatório, navegação em camadas, ticker, partículas e loops decorativos. Prévia de vídeo somente por clique; thumbnails reais otimizados e estudos vetoriais leves.
 - **Base visual comum:** General Sans e IBM Plex Mono locais, contraste dos textos auxiliares, controles maiores, foco visível, presets por teclado, campos com nomes acessíveis, bottom sheet operável por teclado. `FREE` agora diz `Formato livre`. Cache de CSS/JS renovado nas 42 páginas.

@@ -16,6 +16,8 @@ Create cinematic, advertising, and music-video stills. The permanent tool rail i
 
 Fotograma stores the complete gallery as image blobs in this browser's IndexedDB and asks the browser for persistent-storage protection. It no longer hides older records after reload or automatically evicts them. This is local persistence, not cloud synchronization: clearing site data, using a private window, switching browser profiles/devices, or exhausting the browser's storage can still remove or prevent new saved images. Download important outputs separately.
 
+**Vídeo → GIF** (`fotograma.html#video-gif`) prepares video references locally: file upload or CORS-enabled direct HTTPS video URL, source preview, trim, 3/6/12 FPS, 320/512/720px long edge and 64/128/256 colors. Export an animated GIF, a timestamped JPEG contact sheet (6/9/12 frames), or both. GIF clips are limited to 30 seconds/24 MiB; sheets can sample the full finite video. No AI key, provider credits or media uploads are used. Download these session-only exports before closing the page. Animated GIF is not a guaranteed vision-input or token-saving format; the static sheet exposes the sequence explicitly. [Usage and limitations](docs/video-reference.md).
+
 ### Dithering
 Transform images and videos into visual art using custom SVGs in place of pixels. 7-level shadow-to-highlight mapping with 60+ built-in shapes.
 
@@ -72,7 +74,7 @@ TIPO_HIGGSFIELD_ORIGINS=http://localhost:8080 ./support/macos/install-higgsfield
 
 Select **Higgsfield** inside Create or open a specialized tool in the left rail. Google is optional when Higgsfield is selected: when connected it can enrich the Director and analyze automatic references; without it, Create uses deterministic local direction and asks you to assign reference roles manually. The bridge accepts only curated models and operations, converts JPEG/WebP references to PNG before upload, opts into the browser's private-network preflight only for allowlisted origins, runs at most four image jobs concurrently, and never sends the Higgsfield session to the browser. Connection checks time out after 30 seconds; image requests allow up to 26 minutes including CLI processing and bounded output download. The official `https://tipo-steel.vercel.app` origin is allowed out of the box. The Mac must be awake and the service running; this is not a remote cloud connector.
 
-Every specialized-tool upload accepts both files from the computer and images dragged directly from the Fotograma gallery.
+Every image-tool upload accepts both files from the computer and images dragged directly from the Fotograma gallery. Vídeo → GIF accepts video files and direct video links instead.
 
 For a different deployed Tipó origin, add that exact HTTPS origin to the LaunchAgent environment before loading the service, or use it while running the bridge manually:
 

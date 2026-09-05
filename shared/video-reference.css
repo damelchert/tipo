@@ -1,0 +1,51 @@
+#canvasWrap[hidden], #videoReferenceControls[hidden], #videoReferenceWorkspace[hidden], #videoReferenceControls [hidden], #videoReferenceWorkspace [hidden] { display: none !important; }
+#videoReferenceControls, #videoReferenceWorkspace { --vr-gap: 16px; --vr-radius: 10px; --vr-input-height: 42px; --accent: var(--accent-brand); font-family: var(--font-ui); }
+#videoReferenceControls { display: flex; flex-direction: column; gap: var(--vr-gap); }
+.vr-intro { margin: 0; color: var(--text-3); font-size: 13px; line-height: 1.6; }
+.vr-card { min-width: 0; margin: 0; padding: var(--vr-gap); display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-2); border-radius: var(--vr-radius); background: var(--bg-2); }
+.vr-card legend { padding: 0 6px; color: var(--accent); font: 600 11px/1.4 var(--font-mono); letter-spacing: .7px; text-transform: uppercase; }
+.vr-card label { display: flex; flex-direction: column; gap: 7px; color: var(--text-2); font-size: 12px; line-height: 1.5; }
+.vr-card input:not([type=file]), .vr-card select { width: 100%; min-width: 0; min-height: var(--vr-input-height); padding: 9px 10px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--bg-1); color: var(--text-1); font: 13px/1.4 var(--font-ui); }
+.vr-link-row { display: flex; gap: 8px; }
+.vr-link-row input { flex: 1; }
+.vr-link-row button { flex: none; }
+.vr-hint { margin: 0; color: var(--text-3); font: 11px/1.6 var(--font-ui); overflow-wrap: anywhere; }
+.vr-two { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+#vrGifOptions, #vrSheetOptions { display: flex; flex-direction: column; gap: 10px; }
+.vr-text-button { padding: 6px 0; min-height: 34px; border: 0; background: transparent; color: var(--accent); text-align: left; font: 12px/1.4 var(--font-ui); cursor: pointer; }
+.vr-notice { padding: 0 2px; color: var(--text-3); font: 12px/1.6 var(--font-ui); }
+.vr-notice strong { color: var(--text-1); font-weight: 600; }
+.vr-notice p { margin: 7px 0; }
+.vr-notice a { color: var(--accent); text-underline-offset: 3px; }
+.vr-actions { position: sticky; z-index: 10; bottom: -24px; margin: 0 -24px -24px; padding: var(--vr-gap) 24px 22px; border-top: 1px solid var(--border-2); background: var(--bg-1); display: flex; flex-direction: column; gap: 9px; }
+.vr-actions .btn { width: 100%; }
+#vrStatus { color: var(--text-2); font: 12px/1.5 var(--font-ui); }
+#vrStatus:empty { display: none; }
+#videoReferenceControls .vr-error { color: var(--red); }
+#vrProgress { width: 100%; height: 7px; accent-color: var(--accent); }
+#videoReferenceWorkspace { flex: 1; min-width: 0; overflow: auto; padding: 40px; background: var(--bg-0); }
+.vr-workspace-head { display: flex; align-items: flex-start; gap: var(--vr-gap); justify-content: space-between; margin-bottom: 32px; padding-right: 55px; }
+.vr-eyebrow { color: var(--accent); font: 11px/1.5 var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+.vr-workspace-head h2 { margin: 12px 0 0; font: 500 clamp(28px,3.4vw,52px)/1.03 var(--font-ui); letter-spacing: -1.5px; color: var(--text-0); }
+.vr-local { flex: none; padding: 7px 11px; border: 1px solid var(--border-2); border-radius: 24px; color: var(--text-3); font: 11px/1.4 var(--font-ui); }
+.vr-drop { min-height: 360px; border: 1px dashed var(--border-2); border-radius: var(--vr-radius); background: var(--bg-1); display: grid; }
+.vr-drop button { padding: 28px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 13px; border: none; border-radius: inherit; background: transparent; color: var(--text-3); font: 14px/1.5 var(--font-ui); cursor: pointer; }
+.vr-drop button > span:first-child { font-size: 64px; line-height: 1; color: var(--accent); }
+.vr-drop strong { color: var(--text-1); font-weight: 500; font-size: 22px; }
+.vr-dropping .vr-drop, .vr-dropping .vr-source { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vr-source { margin: 0; overflow: hidden; border: 1px solid var(--border-2); border-radius: var(--vr-radius); background: var(--bg-1); }
+.vr-source video { display: block; width: 100%; max-height: 54vh; min-height: 180px; object-fit: contain; background: var(--bg-0); }
+.vr-source figcaption { padding: 12px var(--vr-gap); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--text-3); font: 11px/1.5 var(--font-ui); overflow-wrap: anywhere; }
+.vr-results-head { margin: 32px 0 18px; }
+.vr-results-head h3 { color: var(--text-1); font: 500 23px/1.3 var(--font-ui); margin: 0 0 6px; }
+.vr-results-head p { margin: 0; color: var(--text-3); font: 12px/1.5 var(--font-ui); }
+#vrResultGrid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(260px,100%),1fr)); gap: var(--vr-gap); }
+.vr-result { display: flex; flex-direction: column; min-width: 0; padding: var(--vr-gap); border: 1px solid var(--border-2); border-radius: var(--vr-radius); background: var(--bg-1); }
+.vr-result img { width: 100%; max-height: 440px; object-fit: contain; border-radius: 5px; background: var(--bg-0); }
+.vr-result h4 { margin: 16px 0 5px; color: var(--text-1); font: 600 15px/1.4 var(--font-ui); }
+.vr-result p { margin: 0 0 14px; color: var(--text-3); font: 11px/1.5 var(--font-ui); }
+.vr-result .btn { display: flex; align-items: center; justify-content: center; min-height: 42px; margin-top: auto; text-decoration: none; font-size: 12px; }
+#videoReferenceControls :is(button,input,select,a):focus-visible, #videoReferenceWorkspace :is(button,a,video):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#videoReferenceControls :disabled, #videoReferenceWorkspace button:disabled { opacity: .5; cursor: not-allowed; }
+@media(max-width:1100px) { #videoReferenceWorkspace { padding: 24px; } .vr-workspace-head { flex-direction: column; gap: 15px; } }
+@media(max-width:760px) { #videoReferenceWorkspace { width: 100%; flex: 1; padding: 58px 16px 150px; } .vr-workspace-head { padding-right: 0; } .vr-workspace-head h2 { font-size: 36px; } .vr-drop { min-height: 250px; } .vr-drop strong { font-size: 19px; } .vr-source video { max-height: 42vh; } .vr-actions { bottom: -22px; } #videoReferenceControls { --vr-input-height: 44px; } #panel #videoReferenceControls input:not([type=file]), #panel #videoReferenceControls select { font-size: 16px; } .vr-text-button { min-height: 44px; } }

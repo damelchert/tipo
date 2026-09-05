@@ -11,6 +11,9 @@
 <script src="shared/ui.js?v=20260905-hub2"></script>
 <script src="shared/fotograma-providers.js?v=20260905-audit1"></script>
 <script src="shared/fotograma-tools.js?v=20260905-audit1"></script>
+<link rel="stylesheet" href="shared/video-reference.css?v=20260905-gif1">
+<script src="shared/video-reference-engine.js?v=20260905-gif1" defer></script>
+<script src="shared/video-reference-ui.js?v=20260905-gif1" defer></script>
 <style>
   body { display: flex; height: 100vh; }
   #fotogramaRail { flex: 0 0 190px; height: 100vh; box-sizing: border-box; overflow-y: auto; background: color-mix(in srgb, var(--bg-1) 92%, #000); border-right: 1px solid var(--border-2); padding: 22px 12px 18px; font-family: var(--font-ui); }
@@ -393,11 +396,16 @@
     <button class="rail-tool" type="button" data-fotograma-tool="removeBg"><span class="rail-icon">◇</span> Remove BG <span class="rail-beta">beta</span></button>
     <a class="rail-tool rail-tool-link" href="depthmap.html"><span class="rail-icon">◩</span> Depth Map ↗</a>
   </div>
+  <div class="rail-group">
+    <div class="rail-label">Referências</div>
+    <button class="rail-tool" type="button" data-fotograma-tool="videoReference"><span class="rail-icon">▻</span> Vídeo → GIF</button>
+  </div>
 </aside>
 
 <div class="tipo-panel" id="panel">
   <h1><span id="fotogramaPanelTitle">Fotograma</span> <span style="display:flex;gap:8px;"><a href="index.html#visual" class="back-link">VISUAL TOOLS</a><a href="index.html" class="back-link">HOME</a></span></h1>
 
+  <div id="videoReferenceControls" hidden></div>
   <div id="createControls">
 
   <div class="section" id="secScene" data-mobile-open>
@@ -754,6 +762,7 @@
     <div class="gallery-empty-copy">Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.</div>
   </div>
 </div>
+<section id="videoReferenceWorkspace" aria-label="Prévia de vídeo e exportações" hidden></section>
 <div id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem expandida" aria-hidden="true">
   <button id="lightboxClose" type="button" aria-label="Fechar imagem expandida">&times;</button>
   <div id="lightboxViewport"><img id="lightboxImg" alt="Resultado expandido"></div>
@@ -1304,7 +1313,7 @@ function wantsHiggsfieldConnection() {
   const activeTool = document.querySelector('[data-fotograma-tool].on')?.dataset.fotogramaTool;
   return localStorage.getItem(HIGGS_AUTO_LS) === '1'
     || currentProvider() === 'higgsfield'
-    || (!!activeTool && activeTool !== 'create');
+    || (!!activeTool && activeTool !== 'create' && activeTool !== 'videoReference');
 }
 
 function canProbeHiggsfield() {
@@ -1360,6 +1369,7 @@ function invalidateHiggsfield(message, connectionState = 'disconnected', retry =
 
 function higgsfieldSurfaceActive() {
   const activeTool = document.querySelector('[data-fotograma-tool].on')?.dataset.fotogramaTool;
+  if (activeTool === 'videoReference') return false;
   return currentProvider() === 'higgsfield' || (!!activeTool && activeTool !== 'create');
 }
 
@@ -4101,7 +4111,7 @@ function utilityStatus(message, error = false) {
 
 function utilityButtonState() {
   const button = $('utilityGenerate');
-  if (utilityState.active === 'create') return;
+  if (!UTILITY_META[utilityState.active]) return;
   const meta = UTILITY_META[utilityState.active];
   const capability = state.higgsAccount?.tools?.[utilityState.active] || PROVIDER_API.HIGGSFIELD_TOOLS?.[utilityState.active];
   if (capability?.available === false) {
@@ -4151,7 +4161,7 @@ function restoreWorkspace(name) {
 }
 
 function setFotogramaTool(name) {
-  const next = name === 'create' || UTILITY_META[name] ? name : 'create';
+  const next = name === 'create' || name === 'videoReference' || UTILITY_META[name] ? name : 'create';
   const changed = next !== utilityState.active;
   if (changed) cacheCurrentWorkspace();
   utilityState.active = next;
@@ -4161,9 +4171,20 @@ function setFotogramaTool(name) {
     button.setAttribute('aria-pressed', String(selected));
   });
   const isCreate = next === 'create';
+  const isVideo = next === 'videoReference';
   $('createControls').hidden = !isCreate;
-  $('utilityControls').hidden = isCreate;
-  $('fotogramaPanelTitle').textContent = isCreate ? 'Fotograma' : UTILITY_META[next].title;
+  $('utilityControls').hidden = isCreate || isVideo;
+  $('videoReferenceControls').hidden = !isVideo;
+  $('videoReferenceWorkspace').hidden = !isVideo;
+  $('canvasWrap').hidden = isVideo;
+  document.body.classList.toggle('video-reference-active', isVideo);
+  $('fotogramaPanelTitle').textContent = isCreate ? 'Fotograma' : isVideo ? 'Vídeo → GIF' : UTILITY_META[next].title;
+  window.FotogramaVideoReference?.setActive(isVideo);
+  if (isVideo) {
+    $('keyPop').classList.remove('open');
+    if (changed) $('panel').scrollTop = 0;
+    return;
+  }
   if (isCreate) {
     restoreWorkspace('create');
     if (changed) $('panel').scrollTop = 0;
@@ -4315,7 +4336,7 @@ function utilityPromptFor(tool = utilityState.active) {
 
 function refreshUtilityPrompt() {
   const tool = utilityState.active;
-  if (tool === 'create') return;
+  if (!UTILITY_META[tool]) return;
   const generator = UTILITY_META[tool].generator;
   $('utilityPromptHint').textContent = generator
     ? 'Este é o prompt completo enviado ao modelo selecionado, junto da imagem de origem. Não é uma garantia de fidelidade: revise o resultado.'
@@ -4404,7 +4425,7 @@ async function showUtilityResult(result, job, operationAdapter) {
 }
 
 async function generateUtility() {
-  if (utilityState.busy || utilityState.active === 'create' || $('utilityGenerate').disabled) return;
+  if (utilityState.busy || !UTILITY_META[utilityState.active] || $('utilityGenerate').disabled) return;
   // Freeze every input before the first await. Changing tabs must never change
   // the paid operation, prompt, source image or result provenance in flight.
   let job;

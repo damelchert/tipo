@@ -1676,6 +1676,14 @@ Plano detalhado no ATTACK_PLAN.md. Itens:
 
 ## 2026-09-05
 
+### Fotograma — Vídeo → GIF e prancha para análise
+- Daniel pediu transformar arquivo/link de vídeo em GIF para facilitar análise de referências no GPT. Implementada aba `videoReference`, link direto `fotograma.html#video-gif`, sem Higgsfield/Google e sem alterar a galeria existente.
+- Upload até300MB, MP4/MOV/WebM decodificáveis; link HTTPS de arquivo com CORS. Não baixa páginas de YouTube/Instagram/Vimeo e não usa proxy. CSP ampliou somente `media-src` para HTTPS; `connect-src` de chaves/IA não foi ampliado. Vídeos remotos usam CORS anônimo e não recebem credenciais de provedor.
+- Exporta GIF (até30s,3/6/12FPS,320/512/720px,64/128/256cores), prancha JPG (6/9/12frames com timestamps) ou ambos. GIF incremental, sem guardar todos os RGBA; limites360frames/120M pixels/24MiB, carregamento/seek com timeout e cancelamento. Prancha pode cobrir vídeo inteiro até24h. O arquivo local não é enviado a servidor.
+- Progresso deriva de frames processados; ETA é estimativa. Preview e decoder são separados. Controles travados durante job, cancelamento preserva exports anteriores, troca de aba não corrompe a conversão. Exportações de vídeo ficam apenas na sessão; baixar antes de fechar.
+- OpenAI oficial documenta GIF **não animado** como entrada de imagem da API. Não prometer que GIF reduz tokens ou que GPT lê a animação inteira. A prancha JPG expõe a sequência; custo depende de dimensões/modelo/detalhe. GIF pode ser maior que MP4. Nenhuma saída inclui áudio.
+- Testes reais com vídeo sintético e FFmpeg, JPEG/GIF decodificados, timestamp/AR, cancelamento, falha de CDN/limites, CORS, teclado/mobile, sem gerações IA. Detalhes em `docs/video-reference.md`.
+
 ### Auditoria integral — hub criativo e confiabilidade
 - Daniel autorizou revisar e melhorar toda a plataforma, priorizando a página de entrada, identidade profissional/minimalista, Fotograma, prompts e conectores. Aplicados os squads de design (sistema/a11y), desenvolvimento (frontend/API/testes) e audiovisual (contratos de criação/edição).
 - Home editorial nova com destaques Fotograma/Studio/Kinetic, catálogo completo de 41 ferramentas, busca por nome/efeito/formato sem acentos, categorias, favoritas e recentes. Guarda somente ids locais; sem dados de imagens/prompts/chaves. Links antigos de categoria continuam válidos. Saiu intro bloqueante/GSAP/loops de canvases; vídeo do hero é opt-in. Usada cópia WebP de uma saída Fotograma já presente no projeto; PNGs pessoais preservados.
