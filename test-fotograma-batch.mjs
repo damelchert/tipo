@@ -109,8 +109,9 @@ const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 
 await page.goto('http://localhost/fotograma.html', { waitUntil: 'load' });
+await page.locator('[data-direction-mode="auteur"]').click();
 await page.click('#keyBtn');
-await page.selectOption('#imageProvider', 'higgsfield');
+check('provedor é indicador automático do modo, não seletor concorrente', await page.locator('#imageProvider').isDisabled());
 await page.click('#higgsConnect');
 await page.waitForFunction(() => state.higgsConnected === true);
 await page.keyboard.press('Escape');
@@ -204,10 +205,9 @@ check('reload recupera também imagens além do antigo corte de 30', await page.
 check('imagens da galeria usam decodificação lazy para históricos grandes', await page.locator('#gallery .take:not(.pending) img[loading="lazy"][decoding="async"]').count() === 38);
 check('interface explica que a galeria é salva neste navegador', /salva neste navegador|armazenamento local protegido/i.test(await page.locator('#galleryStorage').textContent()));
 
-await page.click('#keyBtn');
-await page.selectOption('#imageProvider', 'google');
+await page.locator('[data-direction-mode="signature"]').click();
 check('Google continua com geração unitária e sem controle irrelevante', await page.locator('#batchSection').isHidden());
-await page.selectOption('#imageProvider', 'higgsfield');
+await page.locator('[data-direction-mode="auteur"]').click();
 await page.keyboard.press('Escape');
 await page.setViewportSize({ width: 390, height: 780 });
 const mobile = await page.evaluate(() => {

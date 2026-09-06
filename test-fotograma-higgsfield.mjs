@@ -112,17 +112,23 @@ const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 
 await page.goto('http://localhost/fotograma.html', { waitUntil: 'load' });
+await page.click('#keyBtn');
 await page.fill('#apiKey', 'AIzaHIGGSFIELDTEST123');
 await page.click('#keyConnect');
 await page.waitForFunction(() => state.connected === true);
 
 check('Google continua sendo o provedor padrão', await page.inputValue('#imageProvider') === 'google');
 check('adapter classifica 127.0.0.1 como loopback no Chrome', await page.evaluate(() => new TipoFotogramaProviders.HiggsfieldBridgeAdapter('http://127.0.0.1:4789').targetAddressSpace === 'loopback'));
-await page.selectOption('#imageProvider', 'higgsfield');
+check('indicador de provedor acompanha o modo automaticamente', await page.locator('#imageProvider').isDisabled());
+await page.click('#keyClose');
+await page.locator('[data-direction-mode="auteur"]').click();
 check('Higgsfield expõe somente a allowlist aprovada', (await page.locator('#model option').allTextContents()).length === 6);
 check('custos aparecem antes da geração', (await page.locator('#model option').allTextContents()).every(text => /~\d+(?:–\d+)? cr/.test(text)));
 
+await page.click('#keyBtn');
+await page.click('#higgsConnect');
 await page.waitForFunction(() => state.higgsConnected === true);
+await page.click('#keyClose');
 check('bridge conecta automaticamente sem credencial no browser', await page.evaluate(() => state.higgsConnected && !document.body.textContent.includes('Bearer')));
 const adapterTimeouts = await page.evaluate(() => ({
   generation: state.higgsAdapter && state.higgsAdapter.timeoutMs,
@@ -174,7 +180,7 @@ await page.click('#genBtn');
 await page.waitForFunction(() => state.takes.length >= 2 && !busy, null, { timeout: 10_000 });
 const standaloneRequest = bridgeBodies[2] || {};
 check('Higgsfield standalone não chama texto nem imagem do Google', googleTextGenerations + googleImageGenerations === googleCallsBeforeStandalone);
-check('Higgsfield standalone envia a cena ao CLI com a direção determinística', /casa modernista isolada na mata depois da chuva/i.test(standaloneRequest.prompt || '') && /Physical realism:/.test(standaloneRequest.prompt || ''));
+check('Higgsfield standalone envia a cena ao CLI com a direção determinística de Diretores', /casa modernista isolada na mata depois da chuva/i.test(standaloneRequest.prompt || '') && /Visual intent:/.test(standaloneRequest.prompt || ''));
 check('Higgsfield standalone conclui sem erro de geração', !(await page.locator('#genStatus').textContent()));
 await page.setViewportSize({ width: 320, height: 700 });
 await page.evaluate(() => document.getElementById('keyPop').classList.add('open'));

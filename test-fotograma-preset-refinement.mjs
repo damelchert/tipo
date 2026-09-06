@@ -269,7 +269,10 @@ try {
         };
         const higgs = await generateHiggsfieldImage(scene, scene, { ...base, provider: 'higgsfield', model: 'nano_banana_2' });
         const higgsBody = bodies.pop();
-        const google = await generateGoogleImage(scene, scene, { ...base, provider: 'google', model: 'gemini-3-pro-image-preview' });
+        const google = await generateGoogleImage(scene, scene, {
+          ...base, provider: 'google', model: 'gemini-3-pro-image-preview',
+          modelOptions: [{ name: 'gemini-3-pro-image-preview', label: 'Fixture Nano Banana Pro' }],
+        });
         const googleBody = bodies.pop();
         captured.push({ id, scene, higgs, higgsBody, google, googleBody });
       }

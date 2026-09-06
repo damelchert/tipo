@@ -81,6 +81,8 @@ try {
     await page.locator(`[data-direction-mode="${mode}"]`).click();
     assert.equal(await page.locator('#directionMode').inputValue(), mode, `${mode}: public control updates mode`);
     assert.equal(await page.locator(`[data-direction-mode="${mode}"]`).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('#imageProvider').inputValue(), mode === 'signature' ? 'google' : 'higgsfield', 'creation mode owns the provider');
+    assert.equal(await page.locator('#imageProvider').isDisabled(), true, 'provider is an automatic indicator');
     for (const id of ['signatureControls', 'auteurControls', 'standardControls']) {
       assert.equal(await page.locator(`#${id}`).isVisible(), id === panel, `${mode}: only its controls are visible`);
     }

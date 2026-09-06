@@ -1,5 +1,10 @@
 # Tipó — Memória do Projeto
 
+## 2026-09-05 — Roteamento do Fotograma definido por modo
+- Daniel fixou o mapa: **Looks Tipó → Google/Vertex; Diretores → Higgsfield; Modelo direto → Higgsfield**. Substitui a decisão anterior de preservar qualquer provedor ao mudar de modo.
+- Trocar modo deve trocar catálogo, modelo e estado de geração automaticamente, conservando a conta autorizada e a preferência de modelo de cada provedor. Conexões não deve deixar um provedor incompatível ativo. Fila já enviada/congelada e imagens históricas não mudam.
+- Correção concluída: modo/modelos persistidos; modelo salvo indisponível pede escolha explícita e bloqueia geração, sem fallback. Gate: 1.502 verificações + auditoria funcional e 56 asserts independentes, todos com provedores simulados. Daniel autorizou a publicação em seguida (“push comit”); conferir deploy pelo pipeline Vercel existente, sem contas reais ou imagens pessoais. Base de rollback `de21010`. **Upscale ainda não implementado**, apenas documentado em `docs/fotograma-magnific-integration.md`; backend privado também segue pendente.
+
 ## Info Geral
 - **Nome:** Tipó (com acento) — português, curto, universal, personalidade brasileira
 - **Repo:** github.com/damelchert/tipo

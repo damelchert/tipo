@@ -130,6 +130,7 @@ try {
     state.backend = 'vertex';
     $('apiKey').value = 'AQ.fixture-not-a-real-key';
     state.higgsConnected = true;
+    state.googleModelOptions = [{ name: 'gemini-3-pro-image-preview', label: 'Fixture Nano Banana Pro' }];
     $('model').innerHTML = '<option value="gemini-3-pro-image-preview">Fixture Nano Banana Pro</option>';
     state.refs = [{ roles: [], dataUrl: 'data:image/png;base64,AA==', mime: 'image/png', desc: '', sceneRoleHint: '' }];
     state.mood = { desc: null, full: { mime: 'image/png', dataUrl: 'data:image/png;base64,AA==' } };

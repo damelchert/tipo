@@ -210,6 +210,7 @@ async function runScenario(browser, pngBase64, name, options, exercise) {
     window.__TIPO_HIGGSFIELD_TEST_CONFIG__ = config;
     try {
       localStorage.setItem('tipo-fotograma-image-provider', 'higgsfield');
+      localStorage.setItem('tipo-fotograma-creation-mode', 'auteur');
       // Reconnection tests represent an already-authorized browser. Clean
       // visitors are separately covered by test-fotograma-account-isolation.
       localStorage.setItem('tipo-higgsfield-autoconnect', '1');
@@ -364,8 +365,7 @@ try {
     bridge: { up: true },
   }, async ({ page, bridge }) => {
     await page.waitForFunction(() => state.higgsConnected === true);
-    await page.click('#keyBtn');
-    await page.selectOption('#imageProvider', 'google');
+    await page.locator('[data-direction-mode="signature"]').click();
     await page.keyboard.press('Escape');
     bridge.authRequired = true;
     await page.evaluate(async () => {
@@ -500,8 +500,8 @@ try {
     });
     await page.waitForFunction(() => state.higgsConnectionState === 'auth-required' && activeJobs === 0 && queue.length === 1 && state.pending.length === 1, null, { timeout: 8_000 });
 
-    if (!await page.locator('#keyPop').isVisible()) await page.click('#keyBtn');
-    await page.selectOption('#imageProvider', 'google');
+    if (await page.locator('#keyPop').isVisible()) await page.click('#keyClose');
+    await page.locator('[data-direction-mode="signature"]').click();
     await page.keyboard.press('Escape');
     await page.fill('#scene', 'tipojobgoogle rua vazia ao amanhecer');
     await page.click('#genBtn');

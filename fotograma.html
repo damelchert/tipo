@@ -476,7 +476,7 @@
     <select id="directionMode" hidden aria-hidden="true" tabindex="-1"><option value="signature">Looks Tipó</option><option value="standard">Modelo direto</option><option value="auteur">Diretores</option></select>
     <div id="standardControls" hidden>
       <p class="stock-hint">Seu prompt vai ao modelo sem assinatura automática da Tipó. Referências e ajustes explícitos continuam valendo; o enriquecimento de cena fica desligado.</p>
-      <p class="stock-hint">Escolha o modelo em <strong>Saída</strong>. Ao entrar aqui, selecionamos Higgsfield CLI; conecte sua própria conta em <strong>Conexões</strong>. Isso não autoriza login nem geração automaticamente.</p>
+      <p class="stock-hint">Este modo usa Higgsfield CLI. Escolha o modelo em <strong>Saída</strong> e conecte sua própria conta em <strong>Conexões</strong>. Trocar de modo não autoriza login nem geração.</p>
     </div>
     <div id="auteurControls" hidden>
       <label class="section-title" for="auteurProfile">Perfil de cinema</label>
@@ -515,11 +515,12 @@
   </div>
 
   <div class="section" id="secProvider">
-    <div class="section-title">Provedor da imagem</div>
-    <select id="imageProvider">
-      <option value="google">Google direto</option>
-      <option value="higgsfield">Higgsfield &middot; usa cr&eacute;ditos</option>
+    <div class="section-title">Provedor do modo Create</div>
+    <select id="imageProvider" disabled aria-describedby="providerRoutingHint">
+      <option value="google">Google &middot; sua chave</option>
+      <option value="higgsfield">Higgsfield &middot; sua conta</option>
     </select>
+    <div class="provider-hint" id="providerRoutingHint">Automático: Looks Tipó usa Google; Diretores e Modelo direto usam Higgsfield. As conexões abaixo não trocam o modo.</div>
     <div class="provider-hint" id="providerHint">Nano Banana pela sua chave Google.</div>
     <button class="btn btn-secondary provider-action" id="providerAction" type="button">Conectar provedor</button>
   </div>
@@ -1034,6 +1035,8 @@ const TOOL_API = window.TipoFotogramaTools;
 if (!TOOL_API) throw new Error('Camada de ferramentas do Fotograma não carregou');
 const HIGGSFIELD_MODELS = PROVIDER_API.HIGGSFIELD_MODELS;
 const PROVIDER_LS = 'tipo-fotograma-image-provider';
+const CREATION_MODE_LS = 'tipo-fotograma-creation-mode';
+const MODEL_PREFERENCES_LS = 'tipo-fotograma-model-preferences-v1';
 const HIGGS_BRIDGE_LS = 'tipo-higgsfield-bridge-url';
 const HIGGS_AUTO_LS = 'tipo-higgsfield-autoconnect';
 const GENERATION_COUNT_LS = 'tipo-fotograma-generation-count';
@@ -1063,6 +1066,7 @@ let state = {
   connected: false,
   backend: 'studio',
   imageProvider: 'google',
+  modelPreferences: readModelPreferences(),
   googleModelOptions: [],
   higgsConnected: false,
   higgsConnectionState: 'idle',
@@ -1083,6 +1087,37 @@ let state = {
 const $ = (id) => document.getElementById(id);
 const key = () => $('apiKey').value.trim();
 
+function creationProviderFor(mode = $('directionMode').value) {
+  return mode === 'auteur' || mode === 'standard' ? 'higgsfield' : 'google';
+}
+function readModelPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MODEL_PREFERENCES_LS) || '{}');
+    return Object.fromEntries(['google', 'higgsfield'].filter(provider => typeof saved?.[provider] === 'string').map(provider => [provider, saved[provider]]));
+  } catch { return {}; }
+}
+function modelBelongsToProvider(model, provider) {
+  if (!model) return false;
+  if (provider === 'higgsfield') return !!PROVIDER_API.modelByName(model);
+  return state.googleModelOptions.some(option => option.name === model)
+    || /^gemini-[a-z0-9.-]*image[a-z0-9.-]*$/i.test(model);
+}
+function rememberProviderModel(provider = currentProvider(), model = $('model').value) {
+  if (!modelBelongsToProvider(model, provider)) return;
+  state.modelPreferences[provider] = model;
+  try { localStorage.setItem(MODEL_PREFERENCES_LS, JSON.stringify(state.modelPreferences)); } catch {}
+}
+function generationModelAvailable(model, provider, googleOptions = state.googleModelOptions) {
+  return provider === 'higgsfield'
+    ? !!PROVIDER_API.modelByName(model)
+    : !!model && googleOptions.some(option => (option.name || option.value) === model);
+}
+function assertJobModel(job) {
+  const catalog = job.modelOptions?.length ? job.modelOptions : FALLBACK_IMG_MODELS;
+  if (!generationModelAvailable(job.model, job.provider || 'google', catalog)) {
+    throw new Error('Modelo indisponível para este provedor. Escolha um modelo em Saída; nenhuma geração foi enviada.');
+  }
+}
 function currentProvider() { return state.imageProvider || 'google'; }
 function currentHiggsModel() { return PROVIDER_API.modelByName($('model') && $('model').value); }
 function selectedGenerationCount() { return currentProvider() === 'higgsfield' ? state.generationCount : 1; }
@@ -1146,7 +1181,10 @@ async function higgsConnectionMessage(error) {
 function renderProviderModels(preferred) {
   const model = $('model');
   if (!model) return;
-  const options = currentProvider() === 'higgsfield'
+  const provider = currentProvider();
+  if (modelBelongsToProvider(preferred, provider)) rememberProviderModel(provider, preferred);
+  const wanted = state.modelPreferences[provider];
+  const options = provider === 'higgsfield'
     ? HIGGSFIELD_MODELS.map(item => {
         const costs = [...new Set(Object.values(item.costs || { base: item.cost }))];
         const costLabel = costs.length > 1 ? `${Math.min(...costs)}–${Math.max(...costs)}` : costs[0];
@@ -1157,7 +1195,14 @@ function renderProviderModels(preferred) {
     model.innerHTML = '<option value="">conecte a chave — 🔑 no canto superior direito</option>';
   } else {
     model.innerHTML = options.map(item => `<option value="${item.name}">${item.label}</option>`).join('');
-    if (preferred && options.some(item => item.name === preferred)) model.value = preferred;
+    if (wanted && options.some(item => item.name === wanted)) model.value = wanted;
+    else if (wanted) {
+      const unavailable = new Option('Modelo salvo indisponível — escolha outro', '', true, true);
+      unavailable.disabled = true;
+      model.prepend(unavailable);
+      model.value = '';
+    }
+    rememberProviderModel(provider, model.value);
   }
   syncProviderConstraints();
 }
@@ -1241,18 +1286,34 @@ function syncProviderHint() {
 }
 
 function setImageProvider(value, preferredModel) {
-  state.imageProvider = value === 'higgsfield' ? 'higgsfield' : 'google';
+  const provider = creationProviderFor();
+  const changed = currentProvider() !== provider;
+  rememberProviderModel();
+  // Create's mode owns routing. Account checks and legacy callers cannot
+  // switch it to a different provider; queued jobs keep their own snapshots.
+  state.imageProvider = provider;
   $('imageProvider').value = state.imageProvider;
   localStorage.setItem(PROVIDER_LS, state.imageProvider);
-  renderProviderModels(preferredModel);
-  $('genStatus').textContent = '';
-  $('generationRecovery').hidden = true;
+  renderProviderModels(value === provider ? preferredModel : undefined);
+  if (changed) {
+    $('genStatus').textContent = '';
+    $('generationRecovery').hidden = true;
+  }
   syncQueueUI();
-  if (state.imageProvider === 'higgsfield' && wantsHiggsfieldConnection()) {
+  if (changed && state.imageProvider === 'higgsfield' && wantsHiggsfieldConnection()) {
     startHiggsfieldSupervisor();
     if (!state.higgsConnected) connectHiggsfield(true);
     else scheduleHiggsfieldProbe(true);
   }
+}
+
+function syncCreationProvider(preferredModel) {
+  const provider = creationProviderFor();
+  const model = $('model').value;
+  if (currentProvider() !== provider || $('imageProvider').value !== provider
+    || preferredModel || (model && !modelBelongsToProvider(model, provider))) {
+    setImageProvider(provider, preferredModel);
+  } else rememberProviderModel(provider, model);
 }
 
 let higgsConnectPromise = null;
@@ -2613,8 +2674,9 @@ async function tryImageModel(model, prompt, job, spec) {
 
 async function generateGoogleImage(scene, rawScene, job) {
   assertFotogramaInput(job, scene, rawScene);
+  assertJobModel({ ...job, provider: 'google' });
   const catalog = (job.modelOptions && job.modelOptions.length) ? job.modelOptions : FALLBACK_IMG_MODELS;
-  const chosen = job.model || catalog[0].name;
+  const chosen = job.model;
   const label = (catalog.find(option => (option.name || option.value) === chosen) || {}).label || chosen;
   const spec = resolvePrompt(scene, rawScene, job, chosen);
   assertFotogramaInput(job, spec.text);
@@ -2853,6 +2915,7 @@ function syncQueuedPendingPositions() {
 }
 
 function snapshotParams() {
+  syncCreationProvider();
   const refs = state.refs.map(r => ({
     dataUrl: r.dataUrl, mime: r.mime, role: manualRefRoleIds(r)[0] || 'auto', roles: [...manualRefRoleIds(r)],
     analysisId: refAnalysisId(r), inferredRole: r.inferredRole || '', sceneRoleHint: r.sceneRoleHint || '', desc: r.desc || '', analysisError: r.analysisError || '', analysisVersion: r.analysisVersion || 0, _hi: r._hi,
@@ -2878,12 +2941,15 @@ function snapshotParams() {
 }
 
 function applyParams(pr) {
-  $('directionMode').value = pr.directionMode || 'signature';
+  $('directionMode').value = ['signature', 'auteur', 'standard'].includes(pr.directionMode) ? pr.directionMode : 'signature';
   $('auteurProfile').value = pr.auteurProfile || window.TipoFotogramaDirection.DIRECTIONS[0].id;
+  // Historical providers remain in the saved take. A new use follows today's
+  // mode routing, restoring its model only when it belongs to that provider.
+  const provider = creationProviderFor();
+  setImageProvider(provider, modelBelongsToProvider(pr.model, provider) ? pr.model : undefined);
   syncDirectionMode();
   $('scene').value = pr.scene || '';
   syncSceneCount();
-  setImageProvider(pr.provider || 'google', pr.model);
   state.genero = pr.genero || 'geral';
   setProg(pr.prog);
   // Compatibilidade: takes antigos ainda podem reproduzir a composição salva,
@@ -2909,14 +2975,15 @@ function applyParams(pr) {
   $('moodStrengthVal').textContent = state.moodStrength;
   // Diretor NÃO volta do take antigo — ele é preferência viva do usuário
   // (reusar um take velho com diretor:false desligava silencioso — Daniel 23/07)
-  if ([...$('model').options].some(o => o.value === pr.model)) $('model').value = pr.model;
   $('imgSize').value = pr.imgSize === '1K' ? '2K' : pr.imgSize;
-  syncResRow();
+  syncProviderConstraints();
+  syncQueueUI();
 }
 
 function syncQueueUI() {
   const n = queue.length;
   const ready = providerReady();
+  const modelReady = generationModelAvailable($('model').value, currentProvider());
   const providerButton = $('keyBtn');
   if (providerButton) {
     providerButton.classList.toggle('ok', ready);
@@ -2929,11 +2996,12 @@ function syncQueueUI() {
   $('genBtn').textContent = busy
     ? `Revelar +${count} fotograma${count === 1 ? '' : 's'}`
     : (count > 1 ? `Revelar ${count} fotogramas` : 'Revelar Fotograma');
-  $('genBtn').disabled = !ready || !canAddBatch;
+  $('genBtn').disabled = !ready || !modelReady || !canAddBatch;
   const requirement = $('genRequirement');
   requirement.classList.toggle('ready', ready);
   if (busy && !ready && currentProvider() === 'higgsfield') requirement.textContent = `${activeJobs ? `${activeJobs} em andamento · ` : ''}${n} na fila pausada. A Tipó retoma após reconectar ao Higgsfield.`;
   else if (busy) requirement.textContent = `${activeJobs} job${activeJobs === 1 ? '' : 's'} processando${n ? ` · ${n} na fila` : ''}. Você pode ajustar a cena e revelar mais.`;
+  else if (ready && !modelReady) requirement.textContent = 'Escolha um modelo disponível em Saída. Não trocamos o modelo automaticamente.';
   else if (ready) requirement.textContent = currentProvider() === 'higgsfield'
     ? `${count} ${count === 1 ? 'saída' : 'saídas'} por clique. Google é opcional para análises e enriquecimento da cena.`
     : `Google conectado${state.backend === 'vertex' ? ' via Vertex' : ''}. Pronto para gerar.`;
@@ -2948,8 +3016,10 @@ function revelar() {
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
   try { assertFotogramaInput({ scene: subject, ficha: fichaVals() }); }
   catch (error) { $('genStatus').textContent = error.message; TipoUI.showToast(error.message); return; }
+  syncCreationProvider();
   if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
   if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast(state.higgsConnectionState === 'auth-required' ? 'Entre no Higgsfield — 🔑' : 'Higgsfield reconectando automaticamente'); $('keyPop').classList.add('open'); return; }
+  if (!generationModelAvailable($('model').value, currentProvider())) { TipoUI.showToast('Escolha um modelo disponível em Saída.'); return; }
   try { localSceneForImage(subject); }
   catch (error) {
     $('genStatus').textContent = error.message;
@@ -3126,6 +3196,7 @@ async function revealJob(job) {
   let completed = false;
   let waitingForConnection = false;
   try {
+    assertJobModel(job);
     // A preparação (Diretor, visão e Ficha) é compartilhada pelo lote. Só a
     // geração final multiplica jobs/créditos; todas as saídas recebem a mesma
     // direção consolidada e nenhuma análise Google é repetida quatro vezes.
@@ -4750,6 +4821,7 @@ window.addEventListener('storage', event => {
     $('apiKey').value = '';
     state.connected = false;
     state.googleModelOptions = [];
+    if (currentProvider() === 'google') renderProviderModels();
     syncProviderHint(); syncQueueUI();
   }
 });
@@ -4778,6 +4850,8 @@ $('keyEye').addEventListener('click', () => {
 $('apiKey').addEventListener('input', () => {
   googleConnectionEpoch++;
   state.connected = false;
+  state.googleModelOptions = [];
+  if (currentProvider() === 'google') renderProviderModels();
   syncProviderHint();
   syncQueueUI();
 });
@@ -4806,7 +4880,11 @@ $('generationRecovery').addEventListener('click', () => {
     if (key()) connect(false);
   }
 });
-$('model').addEventListener('change', syncProviderConstraints);
+$('model').addEventListener('change', () => {
+  rememberProviderModel();
+  syncProviderConstraints();
+  syncQueueUI();
+});
 $('imgSize').addEventListener('change', syncProviderHint);
 $('generationCount').addEventListener('input', syncBatchControl);
 $('scene').addEventListener('input', syncSceneCount);
@@ -4819,7 +4897,10 @@ $('diretor').addEventListener('change', () => {
   refreshPreview();
 });
 function syncDirectionMode() {
-  const mode = $('directionMode').value;
+  const mode = ['signature', 'auteur', 'standard'].includes($('directionMode').value) ? $('directionMode').value : 'signature';
+  $('directionMode').value = mode;
+  try { localStorage.setItem(CREATION_MODE_LS, mode); } catch {}
+  syncCreationProvider();
   $('auteurControls').hidden = mode !== 'auteur';
   $('signatureControls').hidden = mode !== 'signature';
   $('standardControls').hidden = mode !== 'standard';
@@ -4845,18 +4926,13 @@ function syncCreationMotorStatus() {
   const label = $('model').selectedOptions[0]?.textContent || 'Escolha o modelo em Saída';
   const provider = currentProvider() === 'higgsfield' ? 'Higgsfield CLI' : (state.backend === 'vertex' ? 'Google Vertex' : 'Google AI Studio');
   const connected = currentProvider() === 'higgsfield' ? state.higgsConnected && wantsHiggsfieldConnection() : state.connected;
-  output.textContent = `${provider} · ${connected ? 'conectado' : 'desconectado'} · ${label}${model ? ' · ID: ' + model : ''}. Modelo e formato em Saída; conta em Conexões.`;
+  const modeLabel = { signature: 'Looks Tipó', auteur: 'Diretores', standard: 'Modelo direto' }[$('directionMode').value] || 'Looks Tipó';
+  output.textContent = `${modeLabel} → ${provider} · ${connected ? 'conectado' : 'desconectado'} · ${label}${model ? ' · ID: ' + model : ''}. Modelo e formato em Saída; conta em Conexões.`;
 }
 
 function chooseCreationMode(mode) {
   if (!['signature', 'auteur', 'standard'].includes(mode)) return;
   $('directionMode').value = mode;
-  // Only this intentional UI action selects Higgsfield. Restore and boot do
-  // not change a saved provider, and connection still requires prior opt-in.
-  if (mode === 'standard') {
-    const selectedModel = $('model').value;
-    setImageProvider('higgsfield', PROVIDER_API.modelByName(selectedModel) ? selectedModel : undefined);
-  }
   syncDirectionMode();
 }
 document.querySelectorAll('[data-direction-mode]').forEach(button => {
@@ -4908,12 +4984,16 @@ buildChips();
 buildSelects();
 buildProgRow();
 setProg('cinema');
-syncDirectionMode();
 
 const savedBridge = localStorage.getItem(HIGGS_BRIDGE_LS);
 if (savedBridge) $('higgsBridgeUrl').value = savedBridge;
+// Older releases persisted only a provider while always displaying Looks.
+// Do not infer a different mode from that stale provider preference.
+const savedCreationMode = localStorage.getItem(CREATION_MODE_LS);
+$('directionMode').value = ['signature', 'auteur', 'standard'].includes(savedCreationMode) ? savedCreationMode : 'signature';
 startHiggsfieldSupervisor();
-setImageProvider(localStorage.getItem(PROVIDER_LS) || 'google');
+setImageProvider(creationProviderFor());
+syncDirectionMode();
 
 // chave salva? reconecta em silêncio
 const saved = localStorage.getItem(KEY_LS);

@@ -147,8 +147,9 @@ try {
     assert.equal(calls.google.length, 0);
     assert.equal(calls.health, 0);
     await accounts(page);
-    await page.selectOption('#imageProvider', 'higgsfield');
+    assert.equal(await page.locator('#imageProvider').isDisabled(), true);
     await page.click('#keyClose');
+    await page.locator('[data-direction-mode="standard"]').click();
     await page.locator('[data-fotograma-tool="cast"]').click();
     await idleEvents(page);
     assert.equal(calls.health, 0, 'changing a tool/provider must not authorize the local account');

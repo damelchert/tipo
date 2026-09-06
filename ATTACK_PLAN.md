@@ -8,6 +8,15 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24.9 — FOTOGRAMA: PROVEDOR POR MODO (2026-09-05, PUBLICAÇÃO AUTORIZADA)
+- Regra explícita de Daniel: Looks Tipó usa a chave Google/Vertex; Diretores e Modelo direto usam Higgsfield. O modo passa a determinar automaticamente o provedor e o catálogo de saída; Conexões gerencia as contas, não um segundo roteamento independente.
+- Preservar as preferências de modelo por provedor, as conexões já autorizadas e os snapshots dos jobs em andamento. Sem chave/conta correspondente, pedir conexão, nunca substituir o provedor silenciosamente.
+- Na migração, a antiga preferência isolada de provedor não deve prender Looks Tipó ao Higgsfield. Reuso prepara uma nova geração conforme o mapa atual, sem reescrever o histórico.
+- Upscale permanece não implementado: existe somente o estudo de integração Magnific. Nenhuma conta Magnific foi ligada nem operação de upscale habilitada nesta correção.
+- Correção concluída: modo e modelos preferidos persistidos separadamente por provedor; modelo salvo fora do catálogo bloqueia a fila/envio, sem fallback silencioso. Esquecer/reconectar Google e respostas tardias não contaminam o catálogo Higgsfield.
+- Gate local: 1.502 verificações de regressão + auditoria funcional, incluindo 90 de roteamento; revisão independente com 56 asserts. Provedores simulados, sem geração real ou reinício da bridge pessoal.
+- Daniel autorizou commit/push da correção (“push comit”). Usar o pipeline Vercel existente e conferir `test-production.mjs` após deploy: conteúdo exato, mapa dos três modos, contas isoladas e desktop/mobile. Base de rollback `de21010`, por revert auditável se necessário. Imagens pessoais permanecem fora do commit; Upscale e backend privado continuam pendentes.
+
 ### FASE 24.8 — LIBERAÇÃO DO BLOCO FOTOGRAMA (2026-09-05)
 - Daniel autorizou expressamente a publicação: “faz push e vamo ser feliz”, depois de informado que o backend privado ainda não está pronto. Essa autorização encerra a suspensão de push registrada nas fases anteriores; não é implementação nem promessa de sigilo.
 - Publicar looks/perfis, três modos, galeria com setas/comparação/input original, Uso e defesa complementar de entrada. Receitas continuam acessíveis no código público; backend privado permanece pendente e contas/CLI não mudam.
