@@ -144,6 +144,67 @@ try {
   for (const slot of ['light', 'color', 'texture']) {
     check(`three looks have distinct ${slot} defaults`, () => assert.equal(new Set(compiledDefaults.map(spec => spec[slot])).size, 3));
   }
+  const natural = compiledDefaults[0];
+  check('Naturalista requests perceptible photochemical grain, not barely visible noise', () => assert.match(natural.texture, /clearly visible.*35mm photochemical grain at normal viewing size/i));
+  check('Naturalista grain responds to exposure and preserves material detail', () => assert.match(natural.texture, /midtones and shadows.*finer in bright areas.*material detail/i));
+  check('Naturalista halation remains source-local, not global haze', () => assert.match(natural.texture, /halation.*only existing.*bright-source edges.*without a global haze/i));
+  check('Naturalista conditional focus separates close detail without flattening wide scenes', () => {
+    assert.match(natural.dof, /close|near[- ]subject|portrait/i);
+    assert.match(natural.dof, /bokeh|background.*soft/i);
+    assert.match(natural.dof, /environmental|wide|landscape/i);
+    assert.match(natural.dof, /readable|legible|spatial depth/i);
+  });
+  check('Editorial does not inherit restored Naturalista grain', () => assert.match(compiledDefaults[1].texture, /without added grain/i));
+
+  const cinemaContracts = await page.evaluate(() => {
+    const baseline = { ...snapshotParams(), directionMode: 'signature', prog: 'cinema', ficha: {}, refs: [], mood: null };
+    const scene = 'Uma pessoa numa sala.';
+    const explicitFocus = ['Fundo em foco.', 'Fundo desfocado.', 'Sem desfoque.', 'Sharp background.', 'No blur.'].map(direction => {
+      const raw = `${scene} ${direction}`;
+      return { raw, spec: resolvePrompt(raw, raw, baseline) };
+    });
+    const profile = window.TipoFotogramaDirection.byId('anderson-yeoman');
+    const auteur = { ...baseline, directionMode: 'auteur', auteurProfile: profile.id };
+    return {
+      explicitFocus,
+      explicitTexture: resolvePrompt(`${scene} Sem grão e sem halation.`, `${scene} Sem grão e sem halation.`, baseline),
+      stock: resolvePrompt(scene, scene, { ...baseline, stock: 'v250d' }),
+      deep: resolvePrompt(scene, scene, { ...baseline, apertura: 'f16' }),
+      expectedStock: byId(STOCKS, 'v250d').phrase,
+      art: resolvePrompt(scene, scene, auteur), expectedArt: profile.artDirection,
+      layout: resolvePrompt(`${scene} Composição assimétrica.`, `${scene} Composição assimétrica.`, auteur),
+      refArt: ['environment', 'composition'].map(role => resolvePrompt(scene, scene, { ...auteur, refs: [{ roles: [role] }] })),
+      manualArt: resolvePrompt(scene, scene, { ...auteur, ficha: { focal: 'layout personalizado' } }),
+      naturalArt: resolvePrompt(scene, scene, baseline),
+      standardArt: resolvePrompt(scene, scene, { ...auteur, directionMode: 'standard' }),
+      noFlare: resolvePrompt(`${scene} Sem flare ou bloom.`, `${scene} Sem flare ou bloom.`, { ...auteur, auteurProfile: 'malick-lubezki' }),
+    };
+  });
+  for (const entry of cinemaContracts.explicitFocus) {
+    check(`explicit focus preserved: ${entry.raw}`, () => assert.ok(entry.spec.text.startsWith(entry.raw)));
+    check(`explicit focus replaces automatic bokeh: ${entry.raw}`, () => assert.equal(entry.spec.slots.dof, ''));
+  }
+  check('explicit grain/halation refusal still suppresses default texture', () => assert.equal(cinemaContracts.explicitTexture.slots.texture, ''));
+  check('explicit texture refusal does not get permissive halation boilerplate', () => assert.doesNotMatch(cinemaContracts.explicitTexture.text, /may bloom or halate|warm halation hugs|35mm photochemical grain/));
+  check('manual stock replaces the Naturalista grain recipe', () => assert.equal(cinemaContracts.stock.slots.texture, cinemaContracts.expectedStock));
+  check('manual deep focus does not retain automatic background bokeh', () => assert.doesNotMatch(cinemaContracts.deep.slots.dof + cinemaContracts.deep.slots.optics, /bokeh|background visibly softens/));
+  check('explicit no flare/bloom suppresses automatic auteur optical effects', () => assert.equal(cinemaContracts.noFlare.slots.optics, ''));
+  check('auteur art direction is compiled as an explicit independent section', () => {
+    assert.ok(cinemaContracts.expectedArt);
+    assert.equal(cinemaContracts.art.artDirection, cinemaContracts.expectedArt);
+    assert.match(cinemaContracts.art.text, /Art direction:/);
+  });
+  check('explicit arrangement suppresses automatic framing and art', () => {
+    assert.equal(cinemaContracts.layout.slots.framing, '');
+    assert.equal(cinemaContracts.layout.artDirection, '');
+  });
+  for (const result of cinemaContracts.refArt) check('content layout reference suppresses profile art direction', () => assert.equal(result.artDirection, ''));
+  for (const key of ['manualArt', 'standardArt']) check(`${key} never stacks auteur art`, () => assert.equal(cinemaContracts[key].artDirection, ''));
+  check('Naturalista has its own bounded art direction, not the dormant auteur recipe', () => {
+    assert.ok(cinemaContracts.naturalArt.artDirection);
+    assert.notEqual(cinemaContracts.naturalArt.artDirection, cinemaContracts.expectedArt);
+    assert.match(cinemaContracts.naturalArt.artDirection, /existing elements|existing structural lines/i);
+  });
 
   const modeIsolation = await page.evaluate(() => {
     const baseline = snapshotParams();
@@ -197,10 +258,9 @@ try {
   check('loading old take does not secretly enable enrichment', () => assert.equal(oldTake.current.diretor, false));
   check('loading old genre does not introduce automotive content', () => assert.doesNotMatch(oldTake.prompt, /\b(car|vehicle|automotive|carro|veículo)\b/i));
 
-  await page.locator('#pvBody').evaluate(el => { el.style.display = ''; });
   await page.evaluate(() => refreshPreview());
-  const warnings = await page.locator('#pvWarn').textContent();
-  check('warnings do not claim hidden commercial slots', () => assert.doesNotMatch(warnings, /gênero resolve|slots ocultos|publicidade:/i));
+  const promptSurfaces = await page.locator('#secPreview, #pvBody, #pvTxt, #pvWarn').count();
+  check('look controls do not expose a compiler preview', () => assert.equal(promptSurfaces, 0));
   await page.screenshot({ path: path.join(screenshots, 'editorial-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();

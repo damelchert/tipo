@@ -81,8 +81,8 @@ try {
   assert.equal(await page.locator('#utilityGenerate').isDisabled(), true);
   assert.match(await page.locator('#utilityGenerate').textContent(), /espaço Higgsfield/);
   await page.evaluate(() => { activeByProvider.higgsfield = 0; utilityButtonState(); });
-  await page.locator('#utilityPromptPreview summary').click();
-  assert.match(await page.locator('#utilityPromptText').textContent(), /MARCADOR_FINAL_387/);
+  assert.equal(await page.locator('#utilityPromptPreview, #utilityPromptText').count(), 0);
+  assert.ok(await page.evaluate(text => TOOL_API.buildCastPrompt({ description: text }).includes(text), longBrief));
   await page.fill('#castDescription', 'x'.repeat(12001));
   assert.equal(await page.locator('#utilityGenerate').isDisabled(), true);
   assert.equal(await page.locator('#castDescription').getAttribute('aria-invalid'), 'true');

@@ -10,9 +10,10 @@
 <link rel="stylesheet" href="shared/style.css?v=20260905-effects1">
 <script src="shared/ui.js?v=20260905-effects1"></script>
 <script src="shared/fotograma-providers.js?v=20260905-looks1"></script>
-<script src="shared/fotograma-direction.js?v=20260905-looks1"></script>
-<script src="shared/fotograma-studio.js?v=20260905-looks1"></script>
-<link rel="stylesheet" href="shared/fotograma-studio.css?v=20260905-looks2">
+<script src="shared/fotograma-direction.js?v=20260905-cinema3"></script>
+<script src="shared/fotograma-input-guard.js?v=20260905-guard1"></script>
+<script src="shared/fotograma-studio.js?v=20260905-ui3"></script>
+<link rel="stylesheet" href="shared/fotograma-studio.css?v=20260905-ui3">
 <script src="shared/fotograma-tools.js?v=20260905-looks1"></script>
 <link rel="stylesheet" href="shared/video-reference.css?v=20260905-gif1">
 <script src="shared/video-reference-engine.js?v=20260905-gif1" defer></script>
@@ -81,7 +82,7 @@
   #canvasWrap { --gallery-cols: 3; flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; display: block; background: var(--bg-0); padding: 0; }
 
   /* workspace = galeria; a imagem-demo existe apenas como estado interno */
-  #stillFrame, #stillCaption, #stillPrompt { display: none !important; }
+  #stillFrame, #stillCaption { display: none !important; }
   #stillImg { display: none; }
   #workspaceHeader { position: sticky; top: 0; z-index: 20; min-height: 78px; display: flex; align-items: center; gap: 18px; padding: 18px 110px 18px 24px; border-bottom: 1px solid var(--border-1); background: color-mix(in srgb, var(--bg-0) 92%, transparent); backdrop-filter: blur(14px); }
   .workspace-heading { min-width: 150px; }
@@ -109,7 +110,7 @@
   .take-acts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .take-meta { min-width: 0; padding: 0 2px; }
   .take-caption { color: var(--text-2); font: 600 11px/1.45 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .take-prompt { min-height: 32px; margin-top: 4px; color: var(--text-4); font: 10px/1.55 var(--font-ui); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .take-brief, .take-status { min-height: 32px; margin-top: 4px; color: var(--text-4); font: 10px/1.55 var(--font-ui); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .take-date { margin-top: 6px; color: var(--text-5); font: 9px/1.3 var(--font-ui); letter-spacing: .4px; }
   #galleryEmpty { margin: 72px auto; max-width: 460px; padding: 38px; border: 1px dashed var(--border-2); border-radius: 10px; color: var(--text-3); text-align: center; }
   #galleryEmpty[hidden] { display: none; }
@@ -117,26 +118,37 @@
   .gallery-empty-copy { margin-top: 9px; font: 11px/1.6 var(--font-ui); }
 
   /* inspector em tela cheia */
-  #lightbox { position: fixed; inset: 0; z-index: 10000; display: none; flex-direction: column; gap: 14px; padding: 22px; background: rgba(8,8,8,.97); color: #eeeae4; }
+  #lightbox { --lb-text: #eeeae4; --lb-muted: #bbb6ad; --lb-border: rgba(255,255,255,.24); --lb-surface: #161614; --lb-focus: #99E0D2; position: fixed; inset: 0; z-index: 10000; display: none; flex-direction: column; gap: 14px; padding: 22px; background: rgba(8,8,8,.97); color: var(--lb-text); overflow-y: auto; }
   #lightbox.open { display: flex; }
-  #lightboxViewport { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  #lightboxImg { max-width: 96vw; max-height: 100%; object-fit: contain; box-shadow: 0 20px 80px rgba(0,0,0,.68); }
+  #lightboxNavigation { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 8px; padding-right: 58px; }
+  .lightbox-nav-group { display: flex; align-items: center; gap: 8px; }
+  #lightboxCounter { min-width: 72px; text-align: center; font: 13px/1.4 var(--font-ui); font-variant-numeric: tabular-nums; }
+  #lightboxPrev, #lightboxNext { min-width: 44px; padding: 0 12px; font-size: 22px; }
+  #lightboxCompareHelp, #lightboxActionScope, #lightboxStatus { margin: 0; color: var(--lb-muted); font: 12px/1.5 var(--font-ui); }
+  #lightboxCompareHelp { flex: 1; min-width: 180px; }
+  #lightboxStatus:empty { display: none; }
+  #lightboxComparePanel { display: flex; flex: none; gap: 12px; align-items: center; width: min(1120px, 100%); align-self: center; font: 13px/1.4 var(--font-ui); }
+  #lightboxCompareSelect { flex: 1; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--lb-border); border-radius: 7px; background: var(--lb-surface); color: var(--lb-text); font: inherit; }
+  #lightboxViewport { flex: 1; min-height: 180px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  #lightbox.comparing #lightboxViewport { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lightbox-image-panel { min-width: 0; min-height: 0; margin: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+  .lightbox-image-panel figcaption { color: var(--lb-text); font: 12px/1.5 var(--font-ui); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #lightboxImg, #lightboxCompareImg { width: 100%; height: 100%; min-height: 0; max-width: 100%; max-height: 100%; object-fit: contain; }
+  #lightboxComparePanel[hidden], #lightboxCompareFigure[hidden], #lightboxActionScope[hidden] { display: none; }
   #lightboxClose { position: fixed; top: 18px; right: 18px; z-index: 2; width: 46px; height: 46px; border: 1px solid rgba(255,255,255,.24); border-radius: 50%; background: rgba(20,20,20,.86); color: #f5f2ec; font: 300 27px/1 var(--font-ui); cursor: pointer; }
   #lightboxClose:hover, #lightboxClose:focus-visible { border-color: var(--accent); color: var(--accent-brand); outline: none; }
   #lightboxInspector { width: min(1120px, 96vw); flex: none; align-self: center; padding: 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(20,20,18,.94); box-shadow: 0 10px 36px rgba(0,0,0,.42); }
   .lightbox-summary { display: flex; align-items: center; gap: 14px; }
   .lightbox-meta { min-width: 0; flex: 1; }
   #lightboxTitle { color: #f4f0e8; font: 650 12px/1.4 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #lightboxDate { margin-top: 4px; color: #8d8982; font: 9px/1.3 var(--font-ui); }
-  #lightboxActions { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+  #lightboxDate { margin-top: 4px; color: var(--lb-muted); font: 11px/1.3 var(--font-ui); }
+  #lightboxActions { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+  #lightboxActionScope { margin-bottom: 10px; color: var(--lb-focus); }
   .lightbox-action { min-height: 44px; padding: 0 15px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(255,255,255,.055); color: #d9d5cd; font: 11.5px/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
   .lightbox-action:hover, .lightbox-action:focus-visible, .lightbox-action.on { border-color: var(--accent); color: var(--accent-brand); outline: none; }
+  #lightbox .lightbox-action:disabled { opacity: .45; cursor: not-allowed; color: var(--lb-muted); border-color: var(--lb-border); }
+  #lightbox button:focus-visible, #lightboxCompareSelect:focus-visible { outline: 2px solid var(--lb-focus); outline-offset: 3px; }
   .lightbox-action.danger:hover, .lightbox-action.danger:focus-visible { border-color: var(--red, #CC4840); color: #ef7770; }
-  #lightboxPromptPanel { max-height: 32vh; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); overflow: auto; }
-  #lightboxPromptPanel[hidden] { display: none; }
-  .lightbox-prompt-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; color: #aaa69e; font: 9px/1.3 var(--font-ui); letter-spacing: 1.2px; text-transform: uppercase; }
-  #lightboxPromptCopy { min-height: 34px; padding: 0 11px; }
-  #lightboxPromptText { color: #c8c4bc; font: 10.5px/1.62 var(--font-ui); white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* chave */
   #apiKey, #higgsBridgeUrl { width: 100%; min-width: 0; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 7px 8px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
@@ -201,7 +213,7 @@
   body.tipo-mobile .ref-role-picker summary { min-height: 44px; font-size: 11px; }
   body.tipo-mobile .ref-role-menu label { min-height: 44px; font-size: 10px; }
   body.tipo-mobile .ref-role-menu legend, body.tipo-mobile .ref-role-help { font-size: 9px; }
-  body.tipo-mobile #fichaToggle, body.tipo-mobile #pvToggle { min-width: 64px; min-height: 44px; }
+  body.tipo-mobile #fichaToggle { min-width: 64px; min-height: 44px; }
 
   select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border-2); padding: 6px; font-size: 11px; font-family: var(--font-ui); border-radius: 4px; }
   /* ficha técnica: campos livres por ponto */
@@ -268,7 +280,7 @@
     #gallery { grid-template-columns: repeat(var(--gallery-cols), minmax(0, 1fr)); gap: 20px; padding: 16px 14px 34px; }
     .take-acts { opacity: 1; }
     .take-caption { font-size: 12px; }
-    .take-prompt { font-size: 10.5px; }
+    .take-brief, .take-status { font-size: 10.5px; }
     .take-date { font-size: 9.5px; }
     #galleryEmpty { margin: 48px 14px; padding: 30px 20px; }
     #utilityBridgeConnect { min-height: 44px; }
@@ -281,12 +293,16 @@
     body #keyPop { right: 14px; }
     #lightbox { gap: 10px; padding: 12px 10px calc(12px + env(safe-area-inset-bottom)); }
     #lightboxClose { top: 10px; right: 10px; width: 44px; height: 44px; }
+    #lightboxNavigation { padding-right: 48px; }
+    #lightboxCompareHelp { flex-basis: 100%; font-size: 11px; }
+    #lightboxComparePanel { align-items: stretch; flex-direction: column; gap: 5px; }
+    #lightbox.comparing #lightboxViewport { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); min-height: 240px; gap: 10px; }
+    .lightbox-image-panel { gap: 4px; }
     #lightboxImg { max-width: 100%; }
     #lightboxInspector { width: 100%; padding: 10px; }
     .lightbox-summary { align-items: flex-start; flex-direction: column; gap: 9px; }
-    #lightboxActions { width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }
+    #lightboxActions { width: 100%; justify-content: flex-start; padding-bottom: 2px; }
     .lightbox-action { min-height: 44px; }
-    #lightboxPromptPanel { max-height: 30vh; }
   }
 
   /* O seletor universal de formato é para canvases; numa galeria ele só cria ruído. */
@@ -334,6 +350,14 @@
   .prog-btn { align-items: flex-start; flex-direction: column; gap: 3px; }
   .prog-btn .p-name { font-size: 13px; letter-spacing: .7px; }
   .prog-btn .p-sub { font-size: 10px; text-transform: none; letter-spacing: .15px; }
+  #creationModeChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .creation-mode { min-width: 0; min-height: 48px; padding: 8px 5px; border: 1px solid var(--border-2); border-radius: 7px; color: var(--text-2); background: var(--bg-2); font: 600 12px/1.3 var(--font-ui); cursor: pointer; }
+  .creation-mode:hover, .creation-mode.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-2)); }
+  .creation-mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  #directionMode[hidden], #standardControls[hidden] { display: none; }
+  #standardControls { margin-top: 14px; }
+  #standardControls .stock-hint, #creationMotorStatus { overflow-wrap: anywhere; }
+  #creationMotorStatus { padding-top: 12px; margin-top: 14px; border-top: 1px solid var(--border-2); }
   #scene { min-height: 180px; line-height: 1.6; }
   .tool-intro { padding: 15px; border-radius: 10px; }
   .tool-intro-title { align-items: flex-start; flex-wrap: wrap; font-size: 16px; letter-spacing: -.2px; text-transform: none; }
@@ -346,9 +370,6 @@
   .utility-format-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
   .utility-field-label { display: block; color: var(--text-3); font: 11px/1.6 var(--font-ui); }
   .utility-field-label select { margin-top: 5px; }
-  #utilityPromptPreview { margin: 18px 0; border: 1px solid var(--border-2); border-radius: 8px; padding: 12px; }
-  #utilityPromptPreview summary { cursor: pointer; color: var(--text-2); font: 12px/1.5 var(--font-ui); }
-  #utilityPromptText { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); font: 12px/1.65 var(--font-mono, monospace); }
   .utility-counter { display: block; margin-top: 5px; text-align: right; font: 10px/1.4 var(--font-ui); color: var(--text-3); font-variant-numeric: tabular-nums; }
   .utility-counter.over { color: var(--red, #CC4840); }
   #utilityActions { position: sticky; bottom: -24px; z-index: 15; padding: 15px 0 18px; background: var(--bg-1); border-top: 1px solid var(--border-2); }
@@ -356,10 +377,9 @@
   #utilityGenerate:disabled { opacity: .7; }
   #galleryStorage { font-size: 10px; line-height: 1.45; text-transform: none; letter-spacing: 0; }
   .take-caption { font-size: 12px; }
-  .take-prompt { font-size: 12px; color: var(--text-3); line-height: 1.55; }
+  .take-brief, .take-status { font-size: 12px; color: var(--text-3); line-height: 1.55; }
   .take-date, .pending-progress-meta { font-size: 10px; color: var(--text-3); }
   #gallery .take img:focus-visible { outline: 3px solid var(--accent); outline-offset: -4px; }
-  #lightboxPromptText { font-size: 12px; }
   /* The inspector is always dark, regardless of the surrounding UI theme. */
   #lightbox { --focus-color: #99E0D2; }
   #lightboxTitle { font-size: 13px; }
@@ -415,7 +435,7 @@
     <div class="section-title">Cena</div>
     <textarea id="scene" placeholder="Descreva o que aparece: &ldquo;padaria antiga lotada de manh&atilde;&rdquo;. Escolha o look para ajustar a fotografia, sem mudar a cena." spellcheck="false"></textarea>
     <div class="scene-counter-row"><span>briefs longos permanecem completos</span><span id="sceneCount">0 / 12000</span></div>
-    <label class="toggle-label enrich-toggle" for="diretor"><input type="checkbox" id="diretor"> <span>Enriquecer a cena<small>Opcional · usa Google para detalhar ideias curtas. Independente do look; não acrescenta personagens, ações ou objetos.</small></span></label>
+    <label class="toggle-label enrich-toggle" for="diretor"><input type="checkbox" id="diretor"> <span>Enriquecer a cena<small>Opcional · usa Google para detalhar ideias de até 350 caracteres, sem inventar elementos. O look funciona mesmo desligado; briefs longos seguem completos.</small></span></label>
   </div>
 
   <div class="section" id="emulsaoSection">
@@ -434,6 +454,7 @@
         <span class="range-value" id="moodStrengthVal">100</span>
       </div>
       <div id="moodDesc" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.5; font-family:var(--font-ui);"></div>
+      <div class="stock-hint">A partir de 50%, a Emulsão substitui cor, luz e textura do look/perfil e coloca esses seletores em espera. Cena e Ficha explícitas continuam prioritárias.</div>
     </div>
   </div>
 
@@ -446,18 +467,29 @@
   </div>
 
   <div class="section" id="secProgram" data-mobile-open>
-    <label class="section-title" for="directionMode">Direção da imagem</label>
-    <select id="directionMode"><option value="signature">Looks Tipó</option><option value="standard">Somente meu brief</option><option value="auteur">Diretor + fotografia</option></select>
+    <div class="section-title" id="creationModeLabel">Como criar</div>
+    <div id="creationModeChoices" role="group" aria-labelledby="creationModeLabel">
+      <button type="button" class="creation-mode on" data-direction-mode="signature" aria-pressed="true" aria-controls="signatureControls">Looks Tipó</button>
+      <button type="button" class="creation-mode" data-direction-mode="auteur" aria-pressed="false" aria-controls="auteurControls">Diretores</button>
+      <button type="button" class="creation-mode" data-direction-mode="standard" aria-pressed="false" aria-controls="standardControls">Modelo direto</button>
+    </div>
+    <select id="directionMode" hidden aria-hidden="true" tabindex="-1"><option value="signature">Looks Tipó</option><option value="standard">Modelo direto</option><option value="auteur">Diretores</option></select>
+    <div id="standardControls" hidden>
+      <p class="stock-hint">Seu prompt vai ao modelo sem assinatura automática da Tipó. Referências e ajustes explícitos continuam valendo; o enriquecimento de cena fica desligado.</p>
+      <p class="stock-hint">Escolha o modelo em <strong>Saída</strong>. Ao entrar aqui, selecionamos Higgsfield CLI; conecte sua própria conta em <strong>Conexões</strong>. Isso não autoriza login nem geração automaticamente.</p>
+    </div>
     <div id="auteurControls" hidden>
       <label class="section-title" for="auteurProfile">Perfil de cinema</label>
       <select id="auteurProfile"></select>
       <div id="auteurNote" class="stock-hint"></div>
+      <div id="auteurStatus" class="stock-hint" role="status"></div>
     </div>
     <div id="signatureControls">
     <div class="section-title">Look visual</div>
     <div class="prog-row" id="progRow"></div>
     <div class="stock-hint" id="lookHint">Muda a fotografia, não o conteúdo: luz, cor, textura, óptica, foco e enquadramento. Seu brief, referências e ajustes explícitos têm prioridade. Cast, Product e Animation são independentes.</div>
     </div>
+    <p class="stock-hint" id="creationMotorStatus" role="status"></p>
   </div>
 
   <div class="section" id="secAspect">
@@ -546,17 +578,8 @@
 
   <details id="advancedDirection">
     <summary>Dire&ccedil;&atilde;o avan&ccedil;ada <span class="advanced-summary-copy">emuls&atilde;o, lente, luz, textura e ficha</span></summary>
-    <div id="advancedDirectionBody"></div>
+    <div id="advancedDirectionBody"><p class="stock-hint">Auto mantém a assinatura do look/perfil. Uma escolha manual substitui apenas sua categoria; cliques não acumulam presets. Cena e Ficha têm prioridade. Ajuste os parâmetros e compare os resultados na galeria.</p></div>
   </details>
-
-  <div class="section" id="secPreview" data-mobile-own-toggle>
-    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">Prompt da imagem <button type="button" id="pvToggle" style="background:none; border:1px solid var(--border-2); border-radius:4px; color:var(--text-3); font-family:var(--font-ui); font-size:9px; padding:2px 8px; cursor:pointer;">ver</button></div>
-    <div id="pvBody" style="display:none;">
-      <div id="pvWarn" style="font-size:9px; color:var(--accent); font-family:var(--font-ui); line-height:1.6; margin-bottom:6px;"></div>
-      <div id="pvTxt" style="font-size:9.5px; color:var(--text-3); font-family:var(--font-mono, monospace); line-height:1.55; white-space:pre-wrap; word-break:break-word; background:var(--bg-2); border:1px solid var(--border-2); border-radius:4px; padding:8px; max-height:220px; overflow:auto;"></div>
-      <button type="button" id="pvCopy" class="btn btn-secondary" style="width:100%; margin-top:6px; font-size:9px; padding:5px;">copiar prompt</button>
-    </div>
-  </div>
 
   <div class="section section-divider" id="secGenerate" data-mobile-open>
     <div class="section-title">Gerar</div>
@@ -686,12 +709,6 @@
       <div class="tool-cost-note" id="styleCost"></div>
     </div>
 
-    <details id="utilityPromptPreview">
-      <summary>Ver instruções desta ferramenta</summary>
-      <div class="stock-hint" id="utilityPromptHint"></div>
-      <pre id="utilityPromptText"></pre>
-    </details>
-
     <div class="section section-divider" id="utilityActions" data-mobile-open>
       <button class="btn" id="utilityGenerate" type="button" disabled>Escolha uma imagem</button>
       <div id="utilityStatus" role="status"></div>
@@ -748,7 +765,7 @@
     </div>
     <label class="gallery-search-wrap" for="gallerySearch">
       <span class="gallery-search-icon" aria-hidden="true">⌕</span>
-      <input id="gallerySearch" type="search" placeholder="Buscar por prompt, modelo ou estética…" autocomplete="off">
+      <input id="gallerySearch" type="search" placeholder="Buscar por cena, modelo ou look…" autocomplete="off">
     </label>
     <label class="grid-control" for="gridDensity">
       <span>Colunas</span>
@@ -760,21 +777,35 @@
     <img id="stillImg" src="assets/fotograma-demo.jpg" alt="Fotograma">
   </div>
   <div id="stillCaption">demo &middot; cinema &middot; cinestill 800t &middot; worm's eye &mdash; cole sua chave e revele o seu</div>
-  <div id="stillPrompt" style="display:none; flex:none; margin:0 auto 6px; max-width:min(760px, 92%); align-items:flex-start; gap:8px;">
-    <span id="stillPromptTxt" style="flex:1; font-size:10px; line-height:1.5; color:var(--text-4); font-family:var(--font-ui); white-space:pre-wrap; word-break:break-word;"></span>
-    <button id="promptCopy" class="btn btn-secondary" style="flex:none; font-size:9px; padding:4px 10px; letter-spacing:1px;">copiar</button>
-  </div>
   <div id="gallery"></div>
   <div id="galleryEmpty" hidden>
     <div class="gallery-empty-title">Sua galeria começa aqui</div>
-    <div class="gallery-empty-copy">Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.</div>
+    <div class="gallery-empty-copy">Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com seu brief original, modelo e ações.</div>
   </div>
 </div>
 <section id="videoReferenceWorkspace" aria-label="Prévia de vídeo e exportações" hidden></section>
 <div id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem expandida" aria-hidden="true">
   <button id="lightboxClose" type="button" aria-label="Fechar imagem expandida">&times;</button>
-  <div id="lightboxViewport"><img id="lightboxImg" alt="Resultado expandido"></div>
+  <div id="lightboxNavigation">
+    <div class="lightbox-nav-group" role="group" aria-label="Navegar pelas imagens da galeria">
+      <button id="lightboxPrev" class="lightbox-action" type="button" aria-label="Imagem anterior">&larr;</button>
+      <output id="lightboxCounter" aria-live="polite" aria-atomic="true"></output>
+      <button id="lightboxNext" class="lightbox-action" type="button" aria-label="Próxima imagem">&rarr;</button>
+    </div>
+    <button id="lightboxCompareToggle" class="lightbox-action" type="button" aria-pressed="false" aria-controls="lightboxComparePanel" aria-describedby="lightboxCompareHelp">Comparar</button>
+    <p id="lightboxCompareHelp"></p>
+  </div>
+  <div id="lightboxComparePanel" hidden>
+    <label for="lightboxCompareSelect">B · referência fixa</label>
+    <select id="lightboxCompareSelect" aria-label="Selecionar imagem B para comparação"></select>
+  </div>
+  <div id="lightboxViewport">
+    <figure class="lightbox-image-panel" id="lightboxPrimaryFigure"><figcaption id="lightboxPrimaryLabel">Imagem atual</figcaption><img id="lightboxImg" alt="Resultado expandido"></figure>
+    <figure class="lightbox-image-panel" id="lightboxCompareFigure" hidden><figcaption id="lightboxCompareLabel">B · referência fixa</figcaption><img id="lightboxCompareImg" alt="Referência B da comparação"></figure>
+  </div>
+  <p id="lightboxStatus" role="status" aria-live="polite"></p>
   <div id="lightboxInspector">
+    <p id="lightboxActionScope" hidden>As ações abaixo se referem somente à imagem A. B permanece fixa.</p>
     <div class="lightbox-summary">
       <div class="lightbox-meta">
         <div id="lightboxTitle">Fotograma</div>
@@ -782,16 +813,11 @@
       </div>
       <div id="lightboxActions">
         <button class="lightbox-action" id="lightboxDownload" type="button">Baixar</button>
-        <button class="lightbox-action" id="lightboxPromptToggle" type="button" aria-expanded="false">Prompt</button>
         <button class="lightbox-action" id="lightboxLike" type="button">Curtir</button>
         <button class="lightbox-action" id="lightboxReuse" type="button">Reusar</button>
         <button class="lightbox-action" id="lightboxToSheets" type="button">Usar no Sheets</button>
         <button class="lightbox-action danger" id="lightboxDelete" type="button">Excluir</button>
       </div>
-    </div>
-    <div id="lightboxPromptPanel" hidden>
-      <div class="lightbox-prompt-head"><span>Prompt completo</span><button class="lightbox-action" id="lightboxPromptCopy" type="button">Copiar prompt</button></div>
-      <div id="lightboxPromptText"></div>
     </div>
   </div>
 </div>
@@ -826,33 +852,35 @@ function modelPath(id) {
 // ---- motor de direção: dados ----
 // Looks are photographic defaults only, never scene or use-case templates.
 // IDs remain stable for saved takes; historical prompt text is not rewritten.
-const HIGHLIGHT_PROTECTION = 'Protect highlight hue and surface texture with a soft film shoulder; bright sources may bloom or halate only around a readable core, never into broad featureless white';
-const LOOK_CONTENT_BOUNDARY = 'The written brief and explicitly assigned references define all subjects, identities, counts, actions, objects, clothing and setting. Any selected visual treatment applies only to that existing content, preserving the requested medium; never introduce, replace or reinterpret scene elements to illustrate a look. Written scene constraints and assigned identity-reference roles remain binding. Explicit visual directions and manual controls override look defaults; visual-reference transfer applies only to the aspects allocated in this prompt';
+const HIGHLIGHT_PROTECTION = 'Protect highlight hue and surface texture with a gradual shoulder and a readable bright core, never broad featureless white; use only the optical bloom or halation specified by the active texture, optics or explicit brief';
+const LOOK_CONTENT_BOUNDARY = 'The brief and assigned references define all subjects, identities, counts, actions, objects, clothing, place and time. Preserve this content and the requested medium. A look never changes the scene. Written constraints, reference identity locks and manual controls override visual defaults; reference transfer stays within its assigned roles';
 
 const PROGRAMAS = {
   cinema: {
-    nome: 'Naturalista', sub: 'luz motivada · textura sutil',
-    intent: 'Naturalistic photographic rendering with restrained contrast and faithful material response',
+    nome: 'Naturalista', sub: 'luz motivada · grão 35mm',
+    intent: 'Naturalistic cinema photography with tangible photochemical texture and dimensional material response',
     finish: 'Preserve the geometry, scale and surface detail of the requested content without artificial smoothing',
+    artDirection: 'Keep existing elements in unforced spatial relationships, with a readable primary anchor and incidental asymmetry; do not stage new activity',
     auto: {
       framing: 'an observational composition at a plausible viewing distance, preserving the existing spatial relationships',
-      optics: 'natural perspective, gentle edge falloff and moderate local contrast without exaggerated distortion',
-      dof: 'gradual optical focus falloff with enough depth to read the described spatial relationships',
-      light: 'soft directional light motivated by the described environment, with readable shadow detail and no added visible light fixtures',
-      color: 'restrained saturation and balanced midtones, preserving named colors and existing material distinctions',
-      texture: 'subtle fine irregular grain that preserves surface detail rather than obscuring it',
+      optics: 'natural spherical perspective, rounded local contrast and gently softened peripheral detail; keep principal contours resolved without digital oversharpening',
+      dof: 'in close views, critical subject detail stays sharp and a genuinely distant background softens into gradual optical bokeh; in environmental or wide views, retain readable depth across the place rather than forcing portrait blur',
+      light: 'one dominant source motivated by the existing place and time; a directional key-to-shadow gradient with ambient bounce, retaining darker-side detail rather than a uniform soft wash',
+      color: 'restrained saturation, rich midtone separation and subtly weighted blacks; keep neutral highlights and the distinct colors of existing materials',
+      texture: 'clearly visible, irregular medium-fine 35mm photochemical grain at normal viewing size: stronger in midtones and shadows, finer in bright areas; preserve material detail, not uniform digital noise. Restrained warm halation hugs only existing intense bright-source edges without a global haze',
     },
   },
   commercial: {
     nome: 'Editorial', sub: 'formas claras · acabamento preciso',
     intent: 'Precise editorial photographic rendering with clear visual hierarchy and disciplined tonal separation',
     finish: 'Preserve exact contours and material detail; controlled finish without waxy smoothing or artificial sharpening',
+    artDirection: 'Separate existing forms through deliberate intervals and clean contour relationships; establish a primary shape and quieter supporting shapes without adding or removing elements',
     auto: {
       framing: 'a deliberate graphic composition with clean separation and balanced negative space around the existing content',
       optics: 'low-distortion optics with crisp contours, neutral perspective and controlled microcontrast',
-      dof: 'sufficient focus depth to make the requested forms legible, with a smooth transition beyond them',
-      light: 'a broad shaped key with restrained fill and precise specular control; balanced exposure without a mandatory dark background or added visible fixtures',
-      color: 'clear midtones and disciplined saturation, with accurate named colors and neutral whites',
+      dof: 'keep all principal forms and their essential edges legible; use restrained distance falloff only behind them, not shallow blur across the arrangement',
+      light: 'a broad, directional key shapes existing surfaces with controlled specular peaks and restrained fill; retain a clear bright-to-shadow gradient without forcing a dark background',
+      color: 'neutral whites, separated midtones and accurate named colors; disciplined saturation and clean tonal endpoints without a colored shadow cast',
       texture: 'a clean, finely resolved finish that retains native surface texture, without added grain or digital smoothing',
     },
   },
@@ -860,13 +888,14 @@ const PROGRAMAS = {
     nome: 'Experimental', sub: 'cor expressiva · óptica marcada',
     intent: 'Expressive photographic rendering through optical character, color relationships and graphic tension alone',
     finish: 'Keep requested geometry and surface detail coherent; expressive rendering must not change the described content',
+    artDirection: 'Build tension from offset groupings, uneven intervals and deliberate overlaps of existing elements, while keeping the principal form legible',
     auto: {
       framing: 'a deliberate asymmetrical composition with graphic tension, retaining the requested angle and spatial relationships',
-      optics: 'mild vintage edge distortion and gentle local optical bloom, without changing the geometry of the principal forms',
-      dof: 'a clear focus plane on the requested point of interest with expressive but gradual optical falloff',
-      light: 'sculpted directional contrast with localized colored light response only where compatible with existing sources; no added fixtures or atmospheric effects',
-      color: 'a bold but limited relationship between existing dominant hues, preserving explicit colors and avoiding an arbitrary multicolor wash',
-      texture: 'visible irregular fine-to-medium grain with restrained highlight halation, preserving material detail',
+      optics: 'mild vintage peripheral softness and off-axis distortion, with the principal geometry intact; no automatic flare or optical bloom',
+      dof: 'a decisive focal plane with pronounced distance falloff in close views; environmental views retain recognizable layers instead of indiscriminate blur',
+      light: 'hard-soft directional contrast shaped by existing sources, with localized color separation only when those sources permit it; no new fixtures or atmospheric haze',
+      color: 'a bold two-family relationship drawn from existing dominant hues, separated by dense neutral intervals; preserve named colors, without an arbitrary multicolor wash',
+      texture: 'visible irregular fine-to-medium grain with decisive local contrast and intact material detail. A tight halation fringe may surround existing intense highlights only; never a broad glow or a flare streak',
     },
   },
 };
@@ -877,18 +906,18 @@ const PROGRAMAS = {
 // LENTES REAIS traduzidas em assinatura PERCEPTUAL (nome de lente o Nano
 // ignora — confirmado no vault v0-v2; o que funciona é descrever o que se VÊ)
 const LENTES = [
-  { id: 'auto',    label: 'Auto · direção selecionada', phrase: '', hint: 'usa o look/perfil; em Somente meu brief, não acrescenta óptica' },
+  { id: 'auto',    label: 'Auto · direção selecionada', phrase: '', hint: 'usa o look/perfil; em Modelo direto, não acrescenta óptica' },
   { id: 'cookes4', label: 'Cooke S4/i',                 phrase: 'Cooke S4-style rendering with gentle central acuity, rounded dimensional separation and soft edge falloff', hint: 'nitidez orgânica, volume humano' },
-  { id: 'panchro', label: 'Cooke Speed Panchro (vintage)', phrase: 'vintage Cooke Speed Panchro rendering with painterly midtone compression, mild spherical glow and soft imperfect edges; optical softness remains local while the graded black floor stays dense and separated', hint: 'romance clássico, compressão suave de médios' },
+  { id: 'panchro', label: 'Cooke Speed Panchro (vintage)', phrase: 'vintage Cooke Speed Panchro rendering with painterly midtone compression and soft imperfect edges. Mild spherical glow stays local. The graded black floor remains dense and separated', hint: 'romance clássico, compressão suave de médios' },
   { id: 'optimo',  label: 'Angénieux Optimo',           phrase: 'Angénieux Optimo-style French look with creamy dimensional rendering and a silky gradual focus falloff', hint: 'French Look — cremosidade e transição suave' },
-  { id: 'anghr',   label: 'Angénieux 25-250 (vintage)', phrase: 'vintage Angénieux 25-250 zoom with glowing spherical aberration, source-local gentle veiling glare and ethereal hazy bokeh; flare never globally lifts the blacks or flattens the graded contrast', hint: 'véu do passado — glow local, preto preservado' },
-  { id: 'superspeed', label: 'Zeiss Super Speed (vintage)', phrase: 'vintage Zeiss Super Speed rendering with gentle spherical glow, softened peripheral microcontrast and subtle optical imperfection; deep blacks remain dense and separated', hint: 'glow sonhador, alma setentista' },
+  { id: 'anghr',   label: 'Angénieux 25-250 (vintage)', phrase: 'vintage Angénieux 25-250 zoom with gradual bokeh and imperfect peripheral definition. Spherical glow stays local. Gentle veiling glare occurs only with an existing light source aligned into the lens. Graded blacks and contrast remain intact', hint: 'véu do passado — glow local, preto preservado' },
+  { id: 'superspeed', label: 'Zeiss Super Speed (vintage)', phrase: 'vintage Zeiss Super Speed rendering with softened peripheral microcontrast and subtle optical imperfection. Gentle spherical glow stays local. Deep blacks remain dense and separated', hint: 'glow sonhador, alma setentista' },
   { id: 'master',  label: 'Zeiss Master Prime',         phrase: 'Zeiss Master Prime-style neutral rendering with high micro-contrast, low distortion and disciplined edges', hint: 'precisão moderna e neutra' },
   { id: 'primo',   label: 'Panavision Primo',           phrase: 'Panavision Primo-style classic Hollywood rendering with firm contrast, dimensional faces and controlled edge falloff', hint: 'volume clássico, contraste firme' },
-  { id: 'k35',     label: 'Canon K35 (vintage)',        phrase: 'vintage Canon K35 rendering with gentle highlight bloom, softened local contrast and soft edge character; no global black lift', hint: 'bloom vintage e bordas suaves' },
+  { id: 'k35',     label: 'Canon K35 (vintage)',        phrase: 'vintage Canon K35 rendering with softened local contrast and soft edge character. Gentle bloom stays around existing bright highlights. No global black lift', hint: 'bloom vintage e bordas suaves' },
   { id: 'helios',  label: 'Helios 44-2 (swirl)',        phrase: 'Helios 44-2, subtle swirly bokeh circling the out-of-focus background', hint: 'bokeh que gira — retrato com vertigem' },
-  { id: 'cookeana', label: 'Cooke Anamorphic/i',        phrase: 'Cooke anamorphic rendering with gentle horizontal squeeze character and oval out-of-focus highlights; streak flare appears only around a visible bright source', hint: 'anamórfica elegante, flare motivado' },
-  { id: 'kowa',    label: 'Kowa Anamorphic (vintage)',  phrase: 'vintage Kowa anamorphic rendering with strong oval out-of-focus highlights, imperfect edges and streak flare only around visible bright sources', hint: 'anamórfica suja e romântica' },
+  { id: 'cookeana', label: 'Cooke Anamorphic/i',        phrase: 'Cooke anamorphic rendering with gentle horizontal squeeze character and oval out-of-focus highlights. Streak flare occurs only with an existing light source aligned into the lens', hint: 'anamórfica elegante, flare motivado' },
+  { id: 'kowa',    label: 'Kowa Anamorphic (vintage)',  phrase: 'vintage Kowa anamorphic rendering with strong oval out-of-focus highlights and imperfect edges. Streak flare occurs only with an existing light source aligned into the lens', hint: 'anamórfica suja e romântica' },
   { id: 'tilt',    label: 'Tilt-shift',                 phrase: 'tilt-shift optical geometry with a deliberately tilted focus plane and natural miniature-like edge falloff', hint: 'plano focal inclinado' },
   { id: 'macro100', label: 'Macro 100mm',               phrase: '100mm macro rendering with low distortion and enlarged tactile microstructure at close working distance', hint: 'textura ampliada sem ditar o foco' },
 ];
@@ -928,16 +957,16 @@ const FRAMINGS = [
 ];
 
 const STOCKS = [
-  { id: 'auto',    label: 'Auto · direção selecionada', phrase: '', hint: 'usa o look/perfil; em Somente meu brief, não acrescenta textura' },
+  { id: 'auto',    label: 'Auto · direção selecionada', phrase: '', hint: 'usa o look/perfil; em Modelo direto, não acrescenta textura' },
   { id: 'v500t',   label: 'Kodak Vision3 500T', phrase: 'Kodak Vision3 500T response with clearly visible fine irregular 35mm grain, generous shadow latitude, dense printable blacks with separated near-black detail and a soft highlight shoulder', grain: 'Kodak Vision3 500T character with clearly visible fine irregular 35mm grain and generous latitude', color: 'neutral cinematic color with restrained tungsten warmth and believable skin tones', hint: 'latitude ampla, grain fino visível, shoulder suave' },
   { id: 'v250d',   label: 'Kodak Vision3 250D', phrase: 'Kodak Vision3 250D response with fine but perceptible 35mm grain, dense clean midtones, separated near-black detail and smooth protected highlight rolloff', grain: 'Kodak Vision3 250D character with fine but clearly perceptible irregular 35mm grain and clean material detail', color: 'daylight-balanced natural color with clear but controlled separation', hint: 'daylight natural, grão fino perceptível' },
   { id: 'v50d',    label: 'Kodak Vision3 50D',  phrase: 'Kodak Vision3 50D response with tight ultra-fine organic grain rendered at clearly perceptible density, high material clarity, deep clean blacks with near-black separation and a smooth film shoulder', grain: 'Kodak Vision3 50D character with tight ultra-fine organic grain rendered at clearly perceptible density and high material clarity', color: 'daylight-balanced color with precise, restrained saturation', hint: 'máxima nitidez, grain mínimo mas presente' },
-  { id: 'cine800', label: 'CineStill 800T',     phrase: 'CineStill 800T response with pronounced medium irregular grain, dense separated shadow color and restrained red halation only around visible bright practical sources', grain: 'CineStill 800T character with pronounced medium irregular grain and restrained red halation only around visible bright practical sources', color: 'tungsten-night color with cool ambient separation and warm practical highlights', hint: 'noite, grain vivo, halation motivada' },
+  { id: 'cine800', label: 'CineStill 800T',     phrase: 'CineStill 800T response with pronounced medium irregular grain and dense separated shadow color. Restrained red halation occurs only around existing intense bright-source edges', grain: 'CineStill 800T character with pronounced medium irregular grain. Restrained red halation occurs only around existing intense bright-source edges', color: 'tungsten-night color with cool ambient separation and warm practical highlights', hint: 'noite, grain vivo, halation motivada' },
   { id: 'portra',  label: 'Kodak Portra 400',   phrase: 'Kodak Portra 400 response with visible fine soft grain, deep open shadows with retained color and gentle highlight compression', grain: 'Kodak Portra 400 character with clearly visible fine soft organic grain and gentle material rendering', color: 'natural skin-biased color with restrained pastel saturation', hint: 'pele natural, pastel contido' },
   { id: 'ekta',    label: 'Ektachrome E100',    phrase: 'Ektachrome E100 slide response with tight very fine but perceptible grain, crisp local contrast, deep slide-film blacks with readable near-black separation and protected highlights within its narrow latitude', grain: 'Ektachrome E100 slide-film character with tight very fine but perceptible grain and crisp local material detail', color: 'clean faithful color with disciplined saturation', hint: 'slide denso e contraste elegante' },
   { id: 'hp5',     label: 'Ilford HP5 — P&B',   phrase: 'Ilford HP5 monochrome response with pronounced medium irregular grain, dense separated blacks and broad documentary tonality', grain: 'Ilford HP5 monochrome character with pronounced medium irregular grain and documentary material texture', hint: 'P&B clássico de fotojornalismo', bw: true },
   { id: 'd3200',   label: 'Delta 3200 — P&B',   phrase: 'Ilford Delta 3200 monochrome response with coarse expressive grain, very deep but separated shadows and soft highlight transitions', grain: 'Ilford Delta 3200 monochrome character with coarse expressive irregular grain and tactile material texture', hint: 'P&B noturno, grain pesado', bw: true },
-  { id: 'pola',    label: 'Polaroid 600',       phrase: 'Polaroid 600 response without an instant-film border: soft detail, visible irregular dye texture, deep uneven density and gentle source-local optical flare', grain: 'Polaroid 600 character without an instant-film border, with soft detail, visible irregular dye texture and gentle source-local optical flare', color: 'subtle instant-film color drift with imperfect dye variation', hint: 'instantâneo sonhado, sem moldura falsa' },
+  { id: 'pola',    label: 'Polaroid 600',       phrase: 'Polaroid 600 response without an instant-film border: soft detail, visible irregular dye texture and deep uneven density. Gentle optical flare occurs only with an existing light source aligned into the lens', grain: 'Polaroid 600 character without an instant-film border, with soft detail and visible irregular dye texture. Gentle optical flare occurs only with an existing light source aligned into the lens', color: 'subtle instant-film color drift with imperfect dye variation', hint: 'instantâneo sonhado, sem moldura falsa' },
 ];
 
 const PALETAS = [
@@ -1208,6 +1237,7 @@ function syncProviderHint() {
       action.textContent = 'Conectar chave Google';
     }
   }
+  syncCreationMotorStatus();
 }
 
 function setImageProvider(value, preferredModel) {
@@ -1510,23 +1540,15 @@ function safeDetail(e) {
   return PROVIDER_API.redactSecrets((e && (e.detail || e.message)) || '', key()).slice(0, 240);
 }
 
-/** bloqueia tentativa de extrair/burlar o system prompt (a cena vira
- *  prompt de imagem E vai pro Diretor — jailbreak em qualquer um dos dois). */
+// Shared with the bridge. Intent matching reduces casual extraction attempts;
+// it does not make the public recipes private or replace provider safeguards.
 function looksLikeInjection(text) {
-  const t = String(text || '').toLowerCase();
-  const RX = [
-    /system\s*prompt/, /\bprompt\s+(do\s+)?sistema/, /instru(ction|ç(ão|ões))/,
-    /\b(?:reveal|revele|mostrar?|mostre|exponha|expor|show(?:\s+me)?)\b.{0,100}\b(?:system|prompt|instruction|policy|rule|guideline|config|setup|sistema|instruç|pol[ií]tica|regra|diretriz|configuraç)/,
-    /ignore\s+(the\s+|all\s+|previous|above)|ignor[ae]\s+(as|todas|tudo|instru)/,
-    /(sua|seu|your|the)\s+(regra|rule|diretriz|guideline|configura|setup)/,
-    /blank\s+(page|image)|folha\s+em\s+branco|p[áa]gina\s+em\s+branco/,
-    /(don'?t|do\s*not|n[ãa]o)\s+(generate|gerar?|create|criar?)\b.*\b(image|imagem|foto|picture)/,
-    /jailbreak|bypass|override|disregard|repeat\s+(everything|the\s+text)|verbatim/,
-    /what\s+(are|is)\s+your\s+(instruction|rule|prompt|guideline)/,
-    /how\s+(are|were)\s+you\s+(built|made|configured|instructed)/,
-    /copie|copy\s+(your|the)\s+(prompt|instruction|system)/,
-  ];
-  return RX.some(rx => rx.test(t));
+  return window.TipoFotogramaInputGuard?.inspect(text).blocked || false;
+}
+function assertFotogramaInput(job, ...texts) {
+  const guard = window.TipoFotogramaInputGuard;
+  if (!guard) throw new Error('Validação indisponível. Recarregue a página antes de gerar.');
+  guard.assertAllowed(job?.scene, job?.brief, ...Object.values(job?.ficha || {}), ...texts);
 }
 
 async function gapiUrl(url, body) {
@@ -1842,13 +1864,73 @@ const RX_SHOT_SCALE_IN_SCENE = /\b(macro|close[- ]?up|extreme close|primeir[íi]
 const RX_FRAMING_IN_SCENE = /\b((ultra[- ]?)?wide[- ]?angle|grande angular|fisheye|olho de peixe|low angle|high angle|contra[- ]?plong[ée]e?|plong[ée]e?|de baixo pra cima|de cima pra baixo|vista de (cima|baixo)|from (directly )?(below|above)|floor[- ]?level|ground[- ]?level|looking (straight )?(up|down)|c[âa]mera (?:baixa|alta|no ch[ãa]o|rente ao ch[ãa]o|na altura (?:do peito|dos olhos|da cintura|do joelho))|camera at (?:eye|chest|waist|knee|ground) height|top[- ]?down|overhead|bird'?s|worm'?s|a[ée]re[ao]|aerial|dutch|zenital|nadir|enquadramento|pov|primeira pessoa|over[- ]the[- ]shoulder|through glass)\b/i;
 const RX_LIGHT_IN_SCENE = /\b(golden hour|p[ôo]r do sol|sunset|sunrise|amanhecer|entardecer|blue hour|vela|candlelight|fluorescen\w*|overcast|nublado|luar|moonlight|contraluz|backlit|silhueta|softbox|key light|fill light|rim light|directional light|diffused light|luz\s+(dura|suave|natural|de janela|lateral|frontal|rasante)|hard sunlight|direct sunlight|window light|practical light|top[- ]?light|chiaroscuro|rembrandt)\b/i;
 const RX_OPTICS_IN_SCENE = /\b(\d{1,3}\s?mm|focal|telephoto|teleobjetiva|anam[oó]rfic\w*|spherical lens|lente|lens|cooke|zeiss|kowa|ang[ée]nieux|panavision|helios|tilt[- ]?shift)\b/i;
-const RX_DOF_IN_SCENE = /\b(f\/?\s?\d+(?:\.\d+)?|depth of field|profundidade de campo|deep focus|shallow focus|foco raso|tudo em foco|bokeh|focus falloff|plano focal)\b/i;
+const RX_OPTICAL_EFFECT_IN_SCENE = /\b(flare|bloom|diffusion|difus[aã]o [oó]ptica|aberra[cç][aã]o esf[ée]rica|spherical aberration)\b/i;
+const RX_DOF_IN_SCENE = /\b(f\/?\s?\d+(?:\.\d+)?|depth of field|profundidade de campo|deep focus|shallow focus|foco raso|tudo em foco|bokeh|focus falloff|plano focal|fundo\s+(?:desfocad[oa]|(?:bem\s+)?n[íi]tid[oa]|em foco)|background\s+(?:blur|sharp|in focus)|blurred background|sharp background|sem desfoque|no blur)\b/i;
+const RX_LAYOUT_IN_SCENE = /\b(symmetr\w*|assim[ée]tric\w*|sim[ée]tric\w*|asymmetr\w*|centered|centred|centralizad\w*|centralisad\w*|composi[cç][aã]o|composition|disposi[cç][aã]o|layout|arrangement|organiza[cç][aã]o|dire[cç][aã]o de arte|art direction|production design|aligned|alinhad\w*|em fila|em c[íi]rculo|in a (?:row|circle)|lado a lado|side[- ]by[- ]side|separad[oa]s?\s+por\s+(?:\d+(?:[.,]\d+)?|um|uma|dois|duas|tr[êe]s)\s*(?:m|metros?|cm|cent[íi]metros?)\b|(?:\d+(?:\.\d+)?|one|two|three)\s*(?:met(?:er|re)s?|feet|foot)\s+apart|regra dos ter[cç]os|rule of thirds|espa[cç]o negativo|negative space)\b/i;
 const RX_BW_IN_SCENE = /\b(black and white|monochrom(?:e|atic)|preto e branco|p\s*&\s*b|sem cor|no color)\b/i;
 const RX_COLOR_IN_SCENE = /\b(palette|paleta|color grade|colour grade|grade de cor|teal and orange|muted palette|paleta muted|desaturat\w*|highly saturat\w*|low saturation|pastel palette|paleta pastel|monocrom\w*)\b/i;
 const RX_TEXTURE_IN_SCENE = /\b(grain|gr[ãa]o|film stock|pel[íi]cula|vision3|portra|cinestill|ektachrome|ilford|delta 3200|halation|light leak|sem gr[ãa]o|no grain|digital clean)\b/i;
 const RX_TONAL_IN_SCENE = /\b(high[- ]key|low[- ]key|underexpos\w*|overexpos\w*|subexpost\w*|superexpost\w*|exposure|exposi[cç][aã]o|half a stop|meio stop|high contrast|low contrast|contraste (?:alto|baixo)|bleach bypass|dim(?:ly)? lit|lifted blacks|milky (?:shadows|blacks)|crushed blacks|deep blacks|dense blacks|black point|black floor|print density|curva tonal|pretos? (?:levantad\w*|lavad\w*|esmagad\w*|profund\w*)|bright daylight|brightly lit|well[- ]lit|bem iluminad\w*|muito iluminad\w*|pouco iluminad\w*|claridade geral)\b/i;
 const RX_NO_GRAIN = /\b(no (?:visible |film )?grain|without (?:visible |film )?grain|grainless|grain[- ]free|grain (?:is )?absent|imperceptible grain|barely visible grain|sem gr[ãa]o|sem grain|digitally pristine|noise[- ]free)\b|\b(?:digital(?:ly)? clean|clean digital)(?=\s+(?:capture|image|render|texture|look|finish|photograph\w*)\b|\s*[,.;:]|\s*$)/i;
 const RX_BLOWN_HIGHLIGHTS = /\b(blown[- ]out highlights?|highlights? blown out|clipped highlights?|clipped whites?|overexposed highlights?|burned[- ]out highlights?|whites? blown out|featureless whites?|pure[- ]white core|no highlight detail|highlights? estourad\w*|altas luzes estourad\w*|brancos? estourad\w*|luzes? queimad\w*|c[ée]u estourad\w*)\b/i;
+
+// An optical refusal can live in any explicit field. It removes only the
+// conflicting default effect, not unrelated grain, geometry or color.
+const RX_OPTICAL_NEGATION = /\b(?:no|without|sem|avoid|exclude|evite|evitar|n[aã]o\s+(?:usar|adicionar))\s+[^.;:,]+/gi;
+const OPTICAL_EFFECT_TERMS = {
+  halation: /\b(?:halation|halos?)\b/i,
+  bloom: /\b(?:bloom(?:ing)?|glow(?:ing)?|halos?)\b/i,
+  flare: /\b(?:flare|streaks?)\b/i,
+  haze: /\b(?:haze|hazy|veiling|veil|v[ée]u|glare|diffusion|difus[aã]o)\b/i,
+};
+function negativeOpticalPart(value) {
+  return String(value).split(/\b(?:but|with|com|mas|por[ée]m|however)\b/i)[0];
+}
+function isOpticalEffectList(value) {
+  let rest = String(value).replace(/\b(?:and|or|nor|e|ou|nem|optical|[oó]ptic[oa]s?|lens|visible|vis[ií]ve[il]s?|added|additional)\b/gi, ' ');
+  let hasEffect = false;
+  for (const rx of Object.values(OPTICAL_EFFECT_TERMS)) {
+    if (rx.test(rest)) hasEffect = true;
+    rest = rest.replace(new RegExp(rx.source, 'gi'), ' ');
+  }
+  return hasEffect && !rest.trim();
+}
+function opticalNegationRanges(value) {
+  const text = String(value || '');
+  return [...text.matchAll(RX_OPTICAL_NEGATION)].map(match => {
+    const start = match.index;
+    let end = start + negativeOpticalPart(match[0]).length;
+    const startsWithEffect = Object.values(OPTICAL_EFFECT_TERMS).some(rx => rx.test(text.slice(start, end)));
+    // A comma may continue a list of effects, but not an unrelated direction:
+    // "sem flare, bloom ou halation" vs "sem pessoas, halation forte".
+    if (startsWithEffect) {
+      let next;
+      while ((next = /^,\s*([^,.;:]+)/.exec(text.slice(end))) && isOpticalEffectList(next[1])) end += next[0].length;
+    }
+    return { start, end, text: text.slice(start, end) };
+  });
+}
+function opticalEffectExclusions(value) {
+  const clauses = opticalNegationRanges(value).map(range => range.text);
+  return Object.fromEntries(Object.entries(OPTICAL_EFFECT_TERMS).map(([effect, rx]) => [effect, clauses.some(clause => rx.test(clause))]));
+}
+function textureAuthorityText(value) {
+  // "Sem halation" is an optical veto, not "sem grão". Keep all other
+  // texture words in that clause so an explicit grain choice still owns it.
+  let text = String(value || '');
+  for (const range of opticalNegationRanges(text).reverse()) {
+    text = text.slice(0, range.start) + range.text.replace(/\bhalation\b/gi, '') + text.slice(range.end);
+  }
+  return text;
+}
+function withoutForbiddenOpticalEffects(value, exclusions) {
+  const forbidden = Object.entries(OPTICAL_EFFECT_TERMS).filter(([effect]) => exclusions[effect]);
+  if (!value || !forbidden.some(([, rx]) => rx.test(value))) return value || '';
+  return String(value).split(/[.;,]\s+/).filter(part => {
+    const refusals = opticalEffectExclusions(part);
+    return !forbidden.some(([effect, rx]) => rx.test(part) && !refusals[effect]);
+  }).map(part => part.replace(/[.;,]+$/, '')).filter(Boolean).join('; ');
+}
 
 function houseSafeText(value) {
   // Styling is a default, never authority to rewrite an explicit brief.
@@ -1860,13 +1942,15 @@ function sceneLocks(raw, finalText) {
     const had = rx.test(String(raw || ''));
     return had && (finalText == null || finalText === raw || rx.test(String(finalText || '')));
   };
+  const textureTest = value => RX_TEXTURE_IN_SCENE.test(textureAuthorityText(value));
   return {
     scale: test(RX_SHOT_SCALE_IN_SCENE), framing: test(RX_FRAMING_IN_SCENE), light: test(RX_LIGHT_IN_SCENE),
-    optics: test(RX_OPTICS_IN_SCENE), dof: test(RX_DOF_IN_SCENE),
+    optics: test(RX_OPTICS_IN_SCENE) || test(RX_OPTICAL_EFFECT_IN_SCENE), dof: test(RX_DOF_IN_SCENE),
     color: test(RX_COLOR_IN_SCENE) || test(RX_BW_IN_SCENE),
     bw: test(RX_BW_IN_SCENE),
-    texture: test(RX_TEXTURE_IN_SCENE) || RX_NO_GRAIN.test(String(raw || '')) || RX_NO_GRAIN.test(String(finalText || '')),
+    texture: (textureTest(raw) && (finalText == null || finalText === raw || textureTest(finalText))) || RX_NO_GRAIN.test(String(raw || '')) || RX_NO_GRAIN.test(String(finalText || '')),
     tonality: RX_TONAL_IN_SCENE.test(String(raw || '')) || RX_TONAL_IN_SCENE.test(String(finalText || '')),
+    layout: test(RX_LAYOUT_IN_SCENE),
   };
 }
 
@@ -1923,13 +2007,13 @@ function progDef(pr) {
   if (cfg.directionMode === 'standard') return { intent: 'Follow the written brief and assigned references without adding a house style', auto: {}, finish: '' };
   if (cfg.directionMode === 'auteur') {
     const profile = window.TipoFotogramaDirection.byId(cfg.auteurProfile);
-    return { intent: 'Photographic rendering guided only by the selected visual profile; the brief defines all content', auto: { ...profile.slots }, finish: 'Preserve the requested geometry, scale and material detail' };
+    return { intent: 'Photographic rendering guided only by the selected visual profile; the brief defines all content', auto: { ...profile.slots }, artDirection: profile.artDirection || '', finish: 'Preserve the requested geometry, scale and material detail' };
   }
   return P;
 }
 
 function directionLabel(pr) {
-  if (pr.directionMode === 'standard') return 'Somente meu brief';
+  if (pr.directionMode === 'standard') return 'Modelo direto';
   if (pr.directionMode === 'auteur') return `Diretor + fotografia · ${window.TipoFotogramaDirection.byId(pr.auteurProfile).label}`;
   return `Looks Tipó · ${(PROGRAMAS[pr.prog] || PROGRAMAS.cinema).nome}`;
 }
@@ -1968,7 +2052,7 @@ function resolvePrompt(sceneText, rawScene, job, model) {
   const composition = [
     manualComposition,
     (locks.scale || (manualComposition && focalLocks.scale)) ? '' : (shotScale.id === 'auto' && hasCompositionRef ? '' : selected(shotScale, auto.scale)),
-    (locks.framing || (manualComposition && focalLocks.framing)) ? '' : (framing.id === 'auto' && hasCompositionRef ? '' : selected(framing, auto.framing)),
+    (locks.framing || locks.layout || (manualComposition && (focalLocks.framing || focalLocks.layout))) ? '' : (framing.id === 'auto' && hasCompositionRef ? '' : selected(framing, auto.framing)),
   ].filter(Boolean).join('; ');
 
   // One voice per slot; every look uses the same explicit/manual overrides.
@@ -1993,7 +2077,7 @@ function resolvePrompt(sceneText, rawScene, job, model) {
   const deepFocusEffective = /\b(deep focus|f\/?\s?16|tudo em foco|foreground.+background.+(?:sharp|readable))\b/i.test([raw, sceneText, F.dof, slots.dof].filter(Boolean).join(' '));
   if (deepFocusEffective && slots.optics && !F.otica) {
     const deepOptics = {
-      anghr: 'vintage Angénieux 25-250 rendering with glowing spherical aberration and source-local veiling glare while overall blacks remain dense and separated',
+      anghr: 'vintage Angénieux 25-250 rendering with imperfect peripheral definition. Spherical glow stays local. Gentle veiling glare occurs only with an existing light source aligned into the lens. Overall blacks remain dense and separated',
       helios: 'Helios 44-2 rendering with vintage contrast, mild spherical character and imperfect peripheral definition',
       cookeana: 'Cooke anamorphic geometry with restrained squeeze character and controlled edge distortion',
       kowa: 'vintage Kowa anamorphic geometry with imperfect edges and strong squeeze character',
@@ -2030,6 +2114,10 @@ function resolvePrompt(sceneText, rawScene, job, model) {
       : (stock.id !== 'auto' ? (stockTexture || '') : (auto.texture || ''));
   }
 
+  const opticalExclusions = opticalEffectExclusions([raw, sceneText, ...Object.values(F)].filter(Boolean).join('. '));
+  if (!F.otica) slots.optics = withoutForbiddenOpticalEffects(slots.optics, opticalExclusions);
+  if (!F.textura) slots.texture = withoutForbiddenOpticalEffects(slots.texture, opticalExclusions);
+
   const moodAspects = [
     (!F.grade && !locks.color) ? 'color' : '',
     (!F.luz && !locks.light && !sceneOwnsTonality && !fichaGradeOwnsTonality) ? 'light response' : '',
@@ -2045,15 +2133,25 @@ function resolvePrompt(sceneText, rawScene, job, model) {
     !isProImage(model || pr.model || '') || !mood.desc || moodMonochrome || !measuredMood || !measuredMoodComplete
   );
   const moodText = moodClause(mood, moodAttached, moodStrength, moodAspects, moodMonochrome, hasCompositionRef);
-  const moodOwnsTonality = moodDominant && moodAspects.includes('light response');
   // One description per slot. Never add a second mandatory grain/exposure layer.
   const captureTexture = slots.texture;
-  const protectHighlights = (!pr.directionMode || pr.directionMode === 'signature') && !RX_BLOWN_HIGHLIGHTS.test([raw, F.luz, F.grade].join(' '));
+  // A profile may organize only already-described design elements. Explicit
+  // layout or a location/composition reference owns this area completely.
+  const artDirection = !hasEnvironmentLook && !hasCompositionRef && !locks.layout && !manualComposition
+    ? (P.artDirection || '') : '';
+  // Highlight protection is a house default, never a second tonal authority
+  // over a reference, manual treatment, Emulsão or an explicit written choice.
+  const hasExplicitTonalTreatment = locks.light || locks.tonality || locks.texture ||
+    F.luz || F.grade || F.textura || F.otica || light.id !== 'auto' ||
+    palette.id !== 'auto' || stock.id !== 'auto' || hasEnvironmentLook || moodText;
+  const protectHighlights = (!pr.directionMode || pr.directionMode === 'signature') &&
+    !hasExplicitTonalTreatment && !RX_BLOWN_HIGHLIGHTS.test([raw, F.luz, F.grade].join(' '));
   const sections = [
     scene,
     `Content boundary: ${LOOK_CONTENT_BOUNDARY}`,
     `Visual intent: ${P.intent}`,
     slots.framing ? `Composition: ${slots.framing}` : '',
+    artDirection ? `Art direction: ${artDirection} ${window.TipoFotogramaDirection.ART_DIRECTION_SCOPE || ''}` : '',
     slots.optics ? `Optics: ${slots.optics}` : '',
     slots.dof ? `Focus: ${slots.dof}` : '',
     slots.light ? `Lighting: ${slots.light}` : '',
@@ -2068,7 +2166,7 @@ function resolvePrompt(sceneText, rawScene, job, model) {
   ].filter(Boolean).map(x => cleanPromptText(x));
 
   const text = cleanPromptText(sections.map(s => /[.!?]$/.test(s) ? s : `${s}.`).join(' '));
-  return { text, slots, locks, moodAttached, program: P, refs };
+  return { text, slots, artDirection, locks, moodAttached, program: P, refs };
 }
 
 function buildFinalPrompt(sceneText, rawScene, job, model) {
@@ -2374,6 +2472,7 @@ async function normalizeFicha(job) {
 }
 
 async function diretor(subject, job) {
+  assertFotogramaInput(job, subject);
   const refs = (job && job.refs) || [];
   const briefs = referenceBriefs(refs);
   const data = await callModel(state.textModel, {
@@ -2433,6 +2532,7 @@ function isProImage(model) {
 }
 
 async function tryImageModel(model, prompt, job, spec) {
+  assertFotogramaInput(job, prompt);
   const isPro = isProImage(model);
   const hiResInput = supportsImageSize(model);
   // As partes são 100% do snapshot. Cada imagem recebe um rótulo textual
@@ -2512,10 +2612,12 @@ async function tryImageModel(model, prompt, job, spec) {
 }
 
 async function generateGoogleImage(scene, rawScene, job) {
+  assertFotogramaInput(job, scene, rawScene);
   const catalog = (job.modelOptions && job.modelOptions.length) ? job.modelOptions : FALLBACK_IMG_MODELS;
   const chosen = job.model || catalog[0].name;
   const label = (catalog.find(option => (option.name || option.value) === chosen) || {}).label || chosen;
   const spec = resolvePrompt(scene, rawScene, job, chosen);
+  assertFotogramaInput(job, spec.text);
   try {
     const inlineData = await tryImageModel(chosen, spec.text, job, spec);
     state.lastModelLabel = label;
@@ -2548,7 +2650,7 @@ function higgsfieldInputs(job, spec) {
 }
 
 async function generateHiggsfieldImage(scene, rawScene, job) {
-  const adapter = await ensureHiggsfieldConnection();
+  assertFotogramaInput(job, scene, rawScene);
   const config = PROVIDER_API.modelByName(job.model);
   if (!config) throw new Error('Modelo Higgsfield não permitido');
   const spec = resolvePrompt(scene, rawScene, job, config.name);
@@ -2556,6 +2658,9 @@ async function generateHiggsfieldImage(scene, rawScene, job) {
   state.lastMoodAttached = refs.images.some(image => image.role === 'style');
   job.inputLabels = [...refs.notes];
   const prompt = cleanPromptText([refs.notes.join(' '), spec.text].filter(Boolean).join(' '));
+  assertFotogramaInput(job, prompt);
+  const adapter = await ensureHiggsfieldConnection();
+  assertFotogramaInput(job, scene, rawScene, prompt);
   state.lastPayloadPrompt = prompt;
   let result;
   try {
@@ -2591,6 +2696,7 @@ imageRouter
   .register('higgsfield', { generate: ({ scene, rawScene, job }) => generateHiggsfieldImage(scene, rawScene, job) });
 
 function generateImage(scene, rawScene, job) {
+  assertFotogramaInput(job, scene, rawScene);
   return imageRouter.generate(job.provider || 'google', { scene, rawScene, job });
 }
 
@@ -2702,9 +2808,9 @@ function setPendingRunning(job) {
   if (card) {
     card.dataset.status = 'running';
     const message = card.querySelector('.pending-msg');
-    const prompt = card.querySelector('.take-prompt');
+    const status = card.querySelector('.take-status');
     if (message) message.textContent = pending.msg;
-    if (prompt) prompt.textContent = 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.';
+    if (status) status.textContent = 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.';
   }
   updatePendingProgress();
 }
@@ -2775,7 +2881,7 @@ function applyParams(pr) {
   $('directionMode').value = pr.directionMode || 'signature';
   $('auteurProfile').value = pr.auteurProfile || window.TipoFotogramaDirection.DIRECTIONS[0].id;
   syncDirectionMode();
-  $('scene').value = pr.scene;
+  $('scene').value = pr.scene || '';
   syncSceneCount();
   setImageProvider(pr.provider || 'google', pr.model);
   state.genero = pr.genero || 'geral';
@@ -2840,7 +2946,8 @@ function syncQueueUI() {
 function revelar() {
   const subject = $('scene').value.trim();
   if (!subject) { TipoUI.showToast('Descreva a cena primeiro'); return; }
-  if (looksLikeInjection(subject)) { TipoUI.showToast('Descreva uma CENA pra fotografar — pedidos sobre o sistema são bloqueados'); return; }
+  try { assertFotogramaInput({ scene: subject, ficha: fichaVals() }); }
+  catch (error) { $('genStatus').textContent = error.message; TipoUI.showToast(error.message); return; }
   if (currentProvider() === 'google' && !state.connected) { TipoUI.showToast('Conecte a chave Google — 🔑'); $('keyPop').classList.add('open'); return; }
   if (currentProvider() === 'higgsfield' && !state.higgsConnected) { TipoUI.showToast(state.higgsConnectionState === 'auth-required' ? 'Entre no Higgsfield — 🔑' : 'Higgsfield reconectando automaticamente'); $('keyPop').classList.add('open'); return; }
   try { localSceneForImage(subject); }
@@ -2931,6 +3038,7 @@ function pump() {
 const batchPreparations = new Map();
 
 async function prepareJobForGeneration(job) {
+  assertFotogramaInput(job);
   const canUseGoogleAssist = !!job.googleAssist && !!state.connected && !!key();
   if (job.mood && !job.mood.desc && canUseGoogleAssist) {
     devMsg('lendo a emulsão da referência…', job);
@@ -3066,12 +3174,9 @@ async function revealJob(job) {
     const gradeLabel = job.mood && (job.moodStrength ?? 100) >= 50 ? 'grade da referência' : stockLabel;
     const cap = `${lookLabel}${gradeLabel ? ' · ' + gradeLabel : ''} · ${job.ar} · ${result.label}${job.mood ? (state.lastMoodAttached ? ' · emulsão 🧪' : ' · emulsão 🧪 desc') + ((job.moodStrength ?? 100) !== 100 ? ' ' + (job.moodStrength ?? 100) + '%' : '') : ''}${fichaCount(job.ficha) ? ' · ficha ✍' + fichaCount(job.ficha) : ''}${state.lastCfgNote ? ' · ⚠ ' + state.lastCfgNote : ''}`;
     $('stillCaption').textContent = cap;
-    showPrompt(result.prompt);
-    $('pvTxt').textContent = result.prompt;
-    $('pvWarn').textContent = '✓ prompt efetivamente enviado ao modelo';
     $('dlBtn').disabled = false;
     // params enxutos pro take/IDB: sem os dataURLs de refs/emulsão (peso)
-    const slim = { ...originalJob, prompt: result.prompt, generatedModel: result.model, inputLabels: job.inputLabels || [], directionLabel: lookLabel, promptVersion: '20260905-looks1' }; delete slim.refs; delete slim.mood; delete slim.modelOptions;
+    const slim = { ...originalJob, prompt: result.prompt, generatedModel: result.model, inputLabels: job.inputLabels || [], directionLabel: lookLabel, promptVersion: '20260905-cinema3' }; delete slim.refs; delete slim.mood; delete slim.modelOptions;
     addTake(url, cap, blob, slim);
     completed = true;
     TipoUI.showToast('Fotograma revelado');
@@ -3146,7 +3251,14 @@ async function idbPut(rec) {
   }
 }
 async function idbDelete(id) {
-  try { const d = await db(); d.transaction('takes', 'readwrite').objectStore('takes').delete(id); } catch (e) {}
+  const d = await db();
+  await new Promise((resolve, reject) => {
+    const tx = d.transaction('takes', 'readwrite');
+    tx.objectStore('takes').delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error || new Error('Falha ao excluir do armazenamento local'));
+    tx.onabort = () => reject(tx.error || new Error('Exclusão local interrompida'));
+  });
 }
 async function idbAll() {
   try {
@@ -3178,30 +3290,6 @@ function addTake(url, caption, blob, params) {
   renderGallery(0);
 }
 
-/** faixa do prompt: exatamente o texto enviado ao modelo naquele take. */
-function showPrompt(scene) {
-  const box = $('stillPrompt');
-  if (!scene) { box.style.display = 'none'; return; }
-  box.style.display = 'flex';
-  $('stillPromptTxt').textContent = scene;
-  box.dataset.scene = scene;
-}
-async function copyPromptText(text) {
-  const t = text || '';
-  try {
-    await navigator.clipboard.writeText(t);
-    TipoUI.showToast('Prompt copiado');
-  } catch (e) {
-    const ta = document.createElement('textarea');
-    ta.value = t;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-    TipoUI.showToast('Prompt copiado');
-  }
-}
-$('promptCopy').addEventListener('click', () => copyPromptText($('stillPrompt').dataset.scene));
 
 const GALLERY_GRID_LS = 'tipo_fotograma_gallery_columns';
 let galleryQuery = '';
@@ -3241,9 +3329,31 @@ syncGalleryGrid();
 let selectedTakeId = '';
 let lightboxTakeId = '';
 let lightboxPreviousFocus = null;
+let lightboxComparing = false;
+let lightboxCompareTakeId = '';
+let lightboxLastIndex = 0;
 
-function takePromptText(take) {
-  return (take && take.params && (take.params.prompt || take.params.scene)) || '';
+function galleryOriginalBrief(take) {
+  const params = take?.params || {};
+  const value = params.utilityTool ? params.brief : params.scene;
+  // Only user-authored input belongs in the gallery. Legacy records without
+  // that input must never fall back to the compiled generation prompt.
+  return typeof value === 'string' ? value : '';
+}
+
+function visibleGalleryEntries() {
+  const query = galleryQuery.trim().toLowerCase();
+  return state.takes.map((take, index) => ({ take, index })).filter(({ take }) => {
+    if (!take.id || !take.url || ['queued', 'running', 'pending', 'processing'].includes(take.status)) return false;
+    if (!query) return true;
+    const params = take.params || {};
+    return [take.caption, galleryOriginalBrief(take), params.utilityTool, params.model, params.generatedModel, params.directionLabel]
+      .filter(Boolean).join(' ').toLowerCase().includes(query);
+  });
+}
+
+function visibleGalleryTakes() {
+  return visibleGalleryEntries().map(entry => entry.take);
 }
 
 function downloadTake(take) {
@@ -3272,31 +3382,119 @@ function selectTake(take) {
   $('stillCaption').textContent = take.caption;
   state.lastBlob = take.blob;
   $('dlBtn').disabled = false;
-  showPrompt(takePromptText(take));
 }
 
 function lightboxTake() {
   return state.takes.find(take => take.id === lightboxTakeId) || null;
 }
 
+function lightboxNeighbor(delta, takes = visibleGalleryTakes()) {
+  const step = delta < 0 ? -1 : 1;
+  const index = takes.findIndex(take => take.id === lightboxTakeId);
+  if (index < 0) return null;
+  for (let next = index + step; next >= 0 && next < takes.length; next += step) {
+    if (!lightboxComparing || takes[next].id !== lightboxCompareTakeId) return takes[next];
+  }
+  return null;
+}
+
+function syncLightboxComparison(takes, take) {
+  const reference = lightboxComparing && takes.find(item => item.id === lightboxCompareTakeId && item.id !== take.id);
+  const comparing = !!reference;
+  $('lightbox').classList.toggle('comparing', comparing);
+  $('lightbox').setAttribute('aria-label', comparing ? 'Comparação: imagem A e referência fixa B' : 'Imagem expandida');
+  $('lightboxComparePanel').hidden = !comparing;
+  $('lightboxCompareFigure').hidden = !comparing;
+  $('lightboxActionScope').hidden = !comparing;
+  $('lightboxCompareToggle').disabled = takes.length < 2;
+  $('lightboxCompareToggle').textContent = comparing ? 'Sair da comparação' : 'Comparar';
+  $('lightboxCompareToggle').setAttribute('aria-pressed', String(comparing));
+  $('lightboxCompareToggle').classList.toggle('on', comparing);
+  $('lightboxCompareHelp').textContent = takes.length < 2
+    ? 'É preciso ter duas imagens concluídas neste filtro para comparar.'
+    : (comparing ? '← → percorrem A; a referência B é pulada e permanece fixa.' : '← → navegam na galeria filtrada. Compare duas imagens lado a lado.');
+  const index = takes.findIndex(item => item.id === take.id);
+  $('lightboxPrimaryLabel').textContent = comparing ? `A · imagem atual · ${index + 1} de ${takes.length}` : 'Imagem atual';
+  if (!reference) {
+    $('lightboxCompareSelect').replaceChildren();
+    $('lightboxCompareImg').removeAttribute('src');
+    $('lightboxCompareLabel').textContent = 'B · referência fixa';
+    return;
+  }
+  const options = takes.map((item, index) => {
+    if (item.id === take.id) return null;
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = `${index + 1} de ${takes.length} · ${item.caption || 'Fotograma'}`;
+    return option;
+  }).filter(Boolean);
+  $('lightboxCompareSelect').replaceChildren(...options);
+  $('lightboxCompareSelect').value = reference.id;
+  if ($('lightboxCompareImg').getAttribute('src') !== reference.url) $('lightboxCompareImg').src = reference.url;
+  $('lightboxCompareImg').alt = `Referência fixa B: ${reference.caption || 'Fotograma'}`;
+  $('lightboxCompareLabel').textContent = `B · referência fixa · ${takes.indexOf(reference) + 1} de ${takes.length} · ${reference.caption || 'Fotograma'}`;
+  $('lightboxCompareLabel').title = reference.caption || 'Fotograma';
+}
+
 function syncLightbox(take) {
   if (!take) return;
-  $('lightboxImg').src = take.url;
+  const previousFocus = document.activeElement;
+  const takes = visibleGalleryTakes();
+  lightboxLastIndex = Math.max(0, takes.findIndex(item => item.id === take.id));
+  if ($('lightboxImg').getAttribute('src') !== take.url) $('lightboxImg').src = take.url;
+  $('lightboxImg').alt = `Imagem ${lightboxComparing ? 'A' : 'atual'}: ${take.caption || 'Fotograma'}`;
   $('lightboxTitle').textContent = take.caption || 'Fotograma';
+  $('lightboxTitle').title = take.caption || 'Fotograma';
   $('lightboxDate').textContent = new Date(take.ts || Date.now()).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-  $('lightboxPromptText').textContent = takePromptText(take) || 'Este processamento não usa prompt textual.';
   $('lightboxLike').textContent = take.liked ? '♥ Curtido' : '♡ Curtir';
   $('lightboxLike').classList.toggle('on', !!take.liked);
+  $('lightboxLike').setAttribute('aria-pressed', String(!!take.liked));
+  $('lightboxCounter').textContent = `${lightboxLastIndex + 1} de ${takes.length}`;
+  syncLightboxComparison(takes, take);
+  $('lightboxPrev').disabled = !lightboxNeighbor(-1, takes);
+  $('lightboxNext').disabled = !lightboxNeighbor(1, takes);
+  if ($('lightbox').classList.contains('open') && previousFocus?.closest('#lightbox') && (previousFocus.matches(':disabled') || !previousFocus.getClientRects().length)) {
+    ($('lightboxNext').disabled ? $('lightboxClose') : $('lightboxNext')).focus();
+  }
+}
+
+function navigateLightbox(delta) {
+  if (!$('lightbox').classList.contains('open')) return;
+  const take = lightboxNeighbor(delta);
+  if (!take) return;
+  lightboxTakeId = take.id;
+  selectTake(take);
+  syncLightbox(take);
+}
+
+function reconcileLightbox() {
+  if (!$('lightbox').classList.contains('open')) return;
+  const takes = visibleGalleryTakes();
+  if (!takes.length) { closeLightbox(); return; }
+  if (lightboxComparing && (takes.length < 2 || !takes.some(take => take.id === lightboxCompareTakeId))) {
+    lightboxComparing = false;
+    lightboxCompareTakeId = '';
+    $('lightboxStatus').textContent = 'Comparação encerrada: a referência B não está mais disponível neste filtro.';
+  }
+  let take = takes.find(item => item.id === lightboxTakeId);
+  if (!take) {
+    const available = takes.filter(item => !lightboxComparing || item.id !== lightboxCompareTakeId);
+    take = available[Math.min(lightboxLastIndex, available.length - 1)];
+    if (!take) { closeLightbox(); return; }
+    lightboxTakeId = take.id;
+    selectTake(take);
+  }
+  syncLightbox(take);
 }
 
 function openTakeLightbox(take) {
-  if (!take) return;
+  if (!take || !visibleGalleryTakes().some(item => item.id === take.id)) return;
   selectTake(take);
   lightboxTakeId = take.id;
+  lightboxComparing = false;
+  lightboxCompareTakeId = '';
   lightboxPreviousFocus = document.activeElement;
-  $('lightboxPromptPanel').hidden = true;
-  $('lightboxPromptToggle').classList.remove('on');
-  $('lightboxPromptToggle').setAttribute('aria-expanded', 'false');
+  $('lightboxStatus').textContent = '';
   syncLightbox(take);
   $('lightbox').classList.add('open');
   $('lightbox').setAttribute('aria-hidden', 'false');
@@ -3308,31 +3506,58 @@ function closeLightbox() {
   $('lightbox').classList.remove('open');
   $('lightbox').setAttribute('aria-hidden', 'true');
   lightboxTakeId = '';
+  lightboxComparing = false;
+  lightboxCompareTakeId = '';
+  $('lightbox').classList.remove('comparing');
+  $('lightboxCompareImg').removeAttribute('src');
   if (lightboxPreviousFocus && document.contains(lightboxPreviousFocus)) lightboxPreviousFocus.focus();
+  else {
+    const card = [...document.querySelectorAll('#gallery .take')].find(item => item.dataset.takeId === selectedTakeId);
+    (card?.querySelector('img') || $('gallerySearch')).focus();
+  }
   lightboxPreviousFocus = null;
 }
 
-function deleteTake(take) {
-  if (!take) return;
+const deletingTakeIds = new Set();
+async function deleteTake(take) {
+  if (!take || deletingTakeIds.has(take.id) || !state.takes.some(item => item.id === take.id)) return;
+  deletingTakeIds.add(take.id);
+  try {
+    // Keep the visible result until the durable deletion commits. A reload
+    // must not resurrect an image that the UI already reported as removed.
+    await idbDelete(take.id);
+  } catch (error) {
+    TipoUI.showToast('Não foi possível excluir do armazenamento local. A imagem foi mantida; tente novamente.');
+    return;
+  } finally { deletingTakeIds.delete(take.id); }
   const index = state.takes.findIndex(item => item.id === take.id);
-  if (index < 0) return;
+  if (index >= 0) state.takes.splice(index, 1);
   URL.revokeObjectURL(take.url);
-  idbDelete(take.id);
-  state.takes.splice(index, 1);
-  if (lightboxTakeId === take.id) closeLightbox();
   if (selectedTakeId === take.id) selectedTakeId = '';
   renderGallery(-1);
 }
 
 $('lightboxClose').addEventListener('click', closeLightbox);
-$('lightboxDownload').addEventListener('click', () => downloadTake(lightboxTake()));
-$('lightboxPromptToggle').addEventListener('click', () => {
-  const open = $('lightboxPromptPanel').hidden;
-  $('lightboxPromptPanel').hidden = !open;
-  $('lightboxPromptToggle').classList.toggle('on', open);
-  $('lightboxPromptToggle').setAttribute('aria-expanded', String(open));
+$('lightboxPrev').addEventListener('click', () => navigateLightbox(-1));
+$('lightboxNext').addEventListener('click', () => navigateLightbox(1));
+$('lightboxCompareToggle').addEventListener('click', () => {
+  const take = lightboxTake();
+  const takes = visibleGalleryTakes();
+  if (!take || takes.length < 2) return;
+  lightboxComparing = !lightboxComparing;
+  const index = takes.findIndex(item => item.id === take.id);
+  lightboxCompareTakeId = lightboxComparing ? (takes[index + 1] || takes[index - 1]).id : '';
+  $('lightboxStatus').textContent = '';
+  syncLightbox(take);
 });
-$('lightboxPromptCopy').addEventListener('click', () => copyPromptText(takePromptText(lightboxTake())));
+$('lightboxCompareSelect').addEventListener('change', event => {
+  const take = lightboxTake();
+  const reference = visibleGalleryTakes().find(item => item.id === event.target.value && item.id !== lightboxTakeId);
+  if (!take || !reference || !lightboxComparing) return;
+  lightboxCompareTakeId = reference.id;
+  syncLightbox(take);
+});
+$('lightboxDownload').addEventListener('click', () => downloadTake(lightboxTake()));
 $('lightboxLike').addEventListener('click', () => {
   const take = lightboxTake();
   if (!take) return;
@@ -3360,14 +3585,7 @@ function renderGallery(selIdx = -1) {
   const g = $('gallery');
   g.innerHTML = '';
   const normalizedQuery = galleryQuery.trim().toLowerCase();
-  const visibleTakes = state.takes
-    .map((take, index) => ({ take, index }))
-    .filter(({ take }) => {
-      if (!normalizedQuery) return true;
-      const params = take.params || {};
-      return [take.caption, params.prompt, params.scene, params.utilityTool, params.model]
-        .filter(Boolean).join(' ').toLowerCase().includes(normalizedQuery);
-    });
+  const visibleTakes = visibleGalleryEntries();
   const pendingLabel = state.pending.length ? ` · ${state.pending.length} gerando` : '';
   $('galleryCount').textContent = normalizedQuery
     ? `${visibleTakes.length} de ${state.takes.length} ${state.takes.length === 1 ? 'imagem' : 'imagens'}${pendingLabel}`
@@ -3376,15 +3594,15 @@ function renderGallery(selIdx = -1) {
   $('galleryEmpty').hidden = state.pending.length > 0 || visibleTakes.length > 0;
   $('galleryEmpty').querySelector('.gallery-empty-title').textContent = normalizedQuery ? 'Nenhum resultado encontrado' : 'Sua galeria começa aqui';
   $('galleryEmpty').querySelector('.gallery-empty-copy').textContent = normalizedQuery
-    ? 'Tente buscar por outro trecho do prompt, modelo ou estética.'
-    : 'Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com prompt, modelo e ações.';
+    ? 'Tente buscar por outro trecho da cena, modelo ou look.'
+    : 'Crie um fotograma ou processe uma imagem. Cada resultado aparecerá neste grid com seu brief original, modelo e ações.';
   state.pending.forEach(pn => {
     const d = document.createElement('div');
     d.className = 'take pending';
     d.dataset.pid = pn.id;
     d.dataset.status = pn.status || 'queued';
     d.setAttribute('aria-live', 'polite');
-    d.innerHTML = `<div class="take-media"><div class="pending-stage"><div class="pending-spinner" aria-hidden="true"></div><div class="pending-msg"></div><div class="pending-progress-track"><div class="pending-progress-bar"></div></div><div class="pending-progress-meta"><span class="pending-percent"></span><span class="pending-time"></span></div></div></div><div class="take-meta"><div class="take-caption"></div><div class="take-prompt"></div></div>`;
+    d.innerHTML = `<div class="take-media"><div class="pending-stage"><div class="pending-spinner" aria-hidden="true"></div><div class="pending-msg"></div><div class="pending-progress-track"><div class="pending-progress-bar"></div></div><div class="pending-progress-meta"><span class="pending-percent"></span><span class="pending-time"></span></div></div></div><div class="take-meta"><div class="take-caption"></div><div class="take-status"></div></div>`;
     const config = PROVIDER_API.modelByName(pn.model);
     const progress = pendingProgress(pn);
     d.querySelector('.pending-msg').textContent = pn.msg;
@@ -3392,7 +3610,7 @@ function renderGallery(selIdx = -1) {
     d.querySelector('.pending-percent').textContent = pn.status === 'running' ? `${progress.percent}% estimado` : 'na fila';
     d.querySelector('.pending-time').textContent = progress.time;
     d.querySelector('.take-caption').textContent = `${pn.utilityTool ? UTILITY_META[pn.utilityTool].title + ' · ' : ''}${config ? config.label : (pn.utilityTool ? 'Higgsfield' : 'Fotograma')}${pn.batchTotal > 1 ? ` · ${pn.batchIndex}/${pn.batchTotal}` : ''}${pn.ar ? ` · ${pn.ar}` : ''}`;
-    d.querySelector('.take-prompt').textContent = pn.status === 'running'
+    d.querySelector('.take-status').textContent = pn.status === 'running'
       ? 'Estimativa local baseada no tempo deste modelo; o resultado substitui este cartão automaticamente.'
       : (pn.provider === 'higgsfield' && !state.higgsConnected
         ? 'A Tipó retoma este job depois da reconexão, sem reenviar uma cobrança incerta.'
@@ -3407,7 +3625,6 @@ function renderGallery(selIdx = -1) {
         <img src="${t.url}" loading="lazy" decoding="async" alt="${t.caption ? 'Resultado: ' + t.caption.replace(/"/g, '&quot;') : 'Resultado do Fotograma'}">
         <div class="take-acts">
           <button data-a="like" title="curtir" aria-label="${t.liked ? 'Descurtir' : 'Curtir'} imagem">${t.liked ? '♥' : '♡'}</button>
-          <button data-a="copy" title="copiar prompt" aria-label="Copiar prompt">⧉</button>
           <button data-a="dl" title="baixar" aria-label="Baixar imagem">⬇</button>
           <button data-a="reuse" title="reusar estes parâmetros" aria-label="Reusar parâmetros">↺</button>
           <button data-a="del" title="excluir" aria-label="Excluir imagem">✕</button>
@@ -3418,13 +3635,13 @@ function renderGallery(selIdx = -1) {
     const caption = document.createElement('div');
     caption.className = 'take-caption';
     caption.textContent = t.caption || 'Fotograma';
-    const prompt = document.createElement('div');
-    prompt.className = 'take-prompt';
-    prompt.textContent = (t.params && (t.params.prompt || t.params.scene)) || 'Processamento especializado a partir de imagem.';
+    const brief = document.createElement('div');
+    brief.className = 'take-brief';
+    brief.textContent = galleryOriginalBrief(t) || (t.params?.utilityTool ? (UTILITY_META[t.params.utilityTool]?.title || 'Processamento de imagem') : 'Fotograma');
     const date = document.createElement('div');
     date.className = 'take-date';
     date.textContent = new Date(t.ts || Date.now()).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    meta.append(caption, prompt, date);
+    meta.append(caption, brief, date);
     d.appendChild(meta);
     d.querySelector('img').addEventListener('click', () => openTakeLightbox(t));
     // arrastar o take pra REFERÊNCIAS ou EMULSÃO (Daniel 23/07)
@@ -3443,12 +3660,12 @@ function renderGallery(selIdx = -1) {
       e.dataTransfer.effectAllowed = 'copy';
     });
     d.querySelector('[data-a="like"]').addEventListener('click', () => { t.liked = !t.liked; idbPut({ id: t.id, caption: t.caption, params: t.params, liked: t.liked, ts: t.ts, blob: t.blob }); renderGallery(selIdx); });
-    d.querySelector('[data-a="copy"]').addEventListener('click', () => copyPromptText(t.params && (t.params.prompt || t.params.scene)));
     d.querySelector('[data-a="dl"]').addEventListener('click', () => downloadTake(t));
     d.querySelector('[data-a="reuse"]').addEventListener('click', () => reuseTake(t));
     d.querySelector('[data-a="del"]').addEventListener('click', () => deleteTake(t));
     g.appendChild(d);
   });
+  reconcileLightbox();
 }
 
 // ---- UI boot ----
@@ -3468,7 +3685,7 @@ function reorderPanelForDirectionFlow() {
   });
   [
     'secScene', 'secProgram', 'refsSection', 'engineGroup',
-    'advancedDirection', 'secPreview', 'secGenerate',
+    'advancedDirection', 'secGenerate',
   ].forEach(id => {
     const el = $(id);
     if (el) panel.insertBefore(el, spacer);
@@ -3541,47 +3758,9 @@ function setProg(p) {
   refreshPreview();
 }
 
-// ---- PROMPT FINAL ao vivo: a exata noção do que vai ser gerado ----
-// (pedido do Daniel 23/07: "controle total... ir entendendo o que tá
-//  selecionado, pra onde tá indo a imagem")
+// Keep status hints synchronized without rendering internal instructions.
 function refreshPreview() {
-  if ($('pvBody').style.display === 'none') return;
-  const raw = $('scene').value.trim();
-  const pr = snapshotParams();
-  const spec = resolvePrompt(raw || '(describe the scene)', raw || '', pr, pr.model);
-  $('pvTxt').textContent = spec.text;
-  const dir = spec.locks;
-  const moodCmd = !!state.mood && (state.moodStrength ?? 100) >= 50;
-  const w = [];
-  if (dir.scale || dir.framing) w.push('↳ enquadramento descrito na Cena assume a composição');
-  if (dir.optics) w.push('⚠ cena ocupa ÓTICA → lente fica em espera');
-  if (dir.dof) w.push('⚠ cena ocupa FOCO → profundidade fica em espera');
-  if (dir.light && !moodCmd) w.push('⚠ cena ocupa LUZ → seletor fica em espera');
-  if (dir.tonality) w.push('⚠ cena ocupa EXPOSIÇÃO / CONTRASTE → baseline e tom automático ficam em espera; direção de luz e matiz explícitos sobrevivem');
-  if (dir.color) w.push('⚠ cena ocupa COR → paleta fica em espera');
-  if (dir.texture) w.push('⚠ cena ocupa TEXTURA → stock fica em espera');
-  if (RX_NO_GRAIN.test(raw)) w.push('↳ “sem grão” preservado: textura automática não é adicionada');
-  if (RX_BLOWN_HIGHLIGHTS.test(raw)) w.push('↳ altas luzes seguem seu pedido explícito');
-  if (moodCmd) w.push('🧪 Emulsão ocupa cor, resposta de luz e textura restantes');
-  const fNow = fichaVals();
-  const fN = fichaCount(fNow);
-  if (fN) w.push(`✍ Ficha: ${fN} slot${fN > 1 ? 's' : ''} sob controle manual`);
-  if (RX_TONAL_IN_SCENE.test(`${fNow.luz || ''} ${fNow.grade || ''}`)) w.push('↳ Ficha ocupa EXPOSIÇÃO / CONTRASTE → defaults tonais ficam em espera');
-  const F = pr.ficha || {};
-  const FL = sceneLocks(F.focal || '', F.focal || '');
-  const sceneWins = [
-    (F.focal && ((dir.scale && FL.scale) || (dir.framing && FL.framing) || (dir.optics && FL.optics))) ? 'distância/focal' : '',
-    (dir.optics && F.otica) ? 'ótica' : '', (dir.dof && F.dof) ? 'foco' : '',
-    (dir.light && F.luz) ? 'luz' : '', (dir.color && F.grade) ? 'cor' : '',
-    (dir.texture && F.textura) ? 'textura' : '',
-  ].filter(Boolean);
-  if (sceneWins.length) w.push(`⚠ Cena vence a Ficha em: ${sceneWins.join(', ')}`);
-  if (state.refs.length) w.push(`🖼 ${state.refs.length} referência${state.refs.length > 1 ? 's' : ''} com função semântica no payload`);
-  if (/lite/i.test($('model').value || '') && state.refs.length > 1) w.push('⚠ Nano Banana 2 Lite não é a melhor escolha para múltiplas identidades; prefira Pro ou Nano Banana 2');
-  w.push($('diretor').checked && !$('diretor').disabled && state.connected && raw.length <= 350
-    ? '↳ prévia antes do enriquecimento opcional; depois de gerar, este painel mostra o prompt exato enviado'
-    : '↳ direção determinística local da Tipó; o texto pode permanecer em pt-BR');
-  $('pvWarn').innerHTML = w.join('<br>');
+  syncAuteurStatus();
 }
 
 // ficha técnica: toggle + badge com contagem de campos ativos
@@ -3597,17 +3776,7 @@ $('fichaToggle').addEventListener('click', () => {
   syncFichaBadge();
 });
 $('fichaBody').addEventListener('input', syncFichaBadge);
-$('pvToggle').addEventListener('click', () => {
-  const open = $('pvBody').style.display === 'none';
-  if (open) $('secPreview').classList.remove('sec-collapsed');
-  $('pvBody').style.display = open ? '' : 'none';
-  $('pvToggle').textContent = open ? 'fechar' : 'ver';
-  refreshPreview();
-});
-$('pvCopy').addEventListener('click', () => {
-  navigator.clipboard.writeText($('pvTxt').textContent).then(() => TipoUI.showToast('prompt copiado'));
-});
-// qualquer input/seleção/chip re-renderiza (barato: early-return se fechado)
+// Input changes update user-facing parameter status, never an instruction preview.
 document.addEventListener('input', () => { refreshPreview(); syncFichaBadge(); }, true);
 document.addEventListener('change', refreshPreview, true);
 document.addEventListener('click', () => setTimeout(refreshPreview, 0), true);
@@ -4079,7 +4248,6 @@ function restoreWorkspace(name) {
     $('stillImg').src = utilityState.workspaces.create.src;
     $('stillCaption').textContent = 'adicione uma imagem no painel para começar';
   }
-  showPrompt('');
 }
 
 function setFotogramaTool(name) {
@@ -4127,7 +4295,6 @@ function setFotogramaTool(name) {
   if (UTILITY_META[next].generator) loadGenerationSettings(next);
   restoreWorkspace(next);
   renderUtilityDrop();
-  refreshUtilityPrompt();
   utilityStatus('');
   utilityButtonState();
   startHiggsfieldSupervisor();
@@ -4174,7 +4341,6 @@ async function setUtilityFile(file) {
   $('stillCaption').textContent = `${file.name || 'imagem'} · origem`;
   utilityState.workspaces[utilityState.active] = { src: ref.dataUrl, caption: $('stillCaption').textContent };
   utilityStatus('Imagem pronta. O arquivo só será enviado ao Higgsfield quando você gerar.');
-  refreshUtilityPrompt();
   utilityButtonState();
 }
 
@@ -4247,7 +4413,12 @@ function renderToolChoices(containerId, items, dataName, selected, onSelect) {
   });
 }
 
+function utilityOriginalBrief(tool = utilityState.active) {
+  const field = { cast: 'castDescription', product: 'productDirection', sheets: 'sheetDirection', styleShift: 'styleDirection' }[tool];
+  return field ? $(field).value : '';
+}
 function utilityPromptFor(tool = utilityState.active) {
+  assertFotogramaInput({ brief: utilityOriginalBrief(tool) });
   if (tool === 'styleShift') return TOOL_API.buildStylePrompt(utilityState.styleId, $('styleDirection').value);
   if (tool === 'cast') return TOOL_API.buildCastPrompt({ description: $('castDescription').value, styleId: utilityState.castStyleId, backgroundId: utilityState.castBackgroundId, hasReference: !!utilityState.image });
   if (tool === 'product') return TOOL_API.buildProductPrompt({ direction: $('productDirection').value, styleId: utilityState.productStyleId, hasReference: !!utilityState.image });
@@ -4255,17 +4426,6 @@ function utilityPromptFor(tool = utilityState.active) {
   return '';
 }
 
-function refreshUtilityPrompt() {
-  const tool = utilityState.active;
-  if (!UTILITY_META[tool]) return;
-  const generator = UTILITY_META[tool].generator;
-  $('utilityPromptHint').textContent = generator
-    ? 'Este é o prompt completo enviado ao modelo selecionado, junto da imagem de origem. Não é uma garantia de fidelidade: revise o resultado.'
-    : 'Processamento dedicado do Higgsfield, sem system prompt. Só os parâmetros abaixo são enviados com a imagem.';
-  try {
-    $('utilityPromptText').textContent = generator ? utilityPromptFor(tool) : JSON.stringify(utilityToolPayload(tool, []), null, 2);
-  } catch (error) { $('utilityPromptText').textContent = error.message; }
-}
 
 function utilityToolPayload(tool, images) {
   if (tool === 'multiAngle') return { tool, images, rotate: Number($('angleRotate').value), vertical: Number($('angleVertical').value), forward: Number($('angleForward').value), removeBg: $('angleRemoveBg').checked };
@@ -4314,7 +4474,7 @@ function utilityParams(prompt) {
     sheetTypeId: utilityState.sheetTypeId,
     expandRatio: utilityState.expandRatio,
     generation: generation ? { ...generation } : null,
-    brief: utilityState.active === 'cast' ? $('castDescription').value : utilityState.active === 'product' ? $('productDirection').value : utilityState.active === 'sheets' ? $('sheetDirection').value : utilityState.active === 'styleShift' ? $('styleDirection').value : '',
+    brief: utilityOriginalBrief(),
     prompt: prompt || '',
   };
 }
@@ -4336,7 +4496,6 @@ async function showUtilityResult(result, job, operationAdapter) {
     $('stillImg').src = url;
     $('stillCaption').textContent = caption;
     $('utilityDownload').disabled = false;
-    showPrompt(job.prompt || '');
     utilityStatus(`Concluído${Number.isFinite(Number(result.creditsRemaining)) ? ` · saldo ${Number(result.creditsRemaining).toFixed(2)}` : ''}.`);
   } else TipoUI.showToast(`${meta.title} concluído · resultado na galeria`);
   if ((!operationAdapter || state.higgsAdapter === operationAdapter) && Number.isFinite(Number(result.creditsRemaining))) {
@@ -4359,6 +4518,7 @@ async function generateUtility() {
       ? { model: styleConfig().name, prompt, aspectRatio: $('styleRatio').value, resolution: $('styleResolution').value, images }
       : utilityToolPayload(tool, images);
     job = { tool, prompt, payload, params: utilityParams(prompt), pendingId: nextLocalId('utility') };
+    assertFotogramaInput(job.params, job.prompt);
   } catch (error) { utilityStatus(error.message, true); return; }
   utilityState.busy = true;
   utilityState.activeJob = job;
@@ -4372,6 +4532,7 @@ async function generateUtility() {
   ensurePendingTicker();
   try {
     adapter = await ensureHiggsfieldForTool();
+    assertFotogramaInput(job.params, job.payload.prompt);
     if (utilityState.active === job.tool) utilityStatus('Processando no Higgsfield · acompanhe na galeria.');
     setPendingRunning({ ...job, model: job.payload.model || job.tool });
     devMsg(`processando ${UTILITY_META[job.tool].title}`, job);
@@ -4523,15 +4684,21 @@ Object.entries(utilityFieldNames).forEach(([id, label]) => {
 function syncFotogramaSelectionState() {
   document.querySelectorAll('.rail-tool[data-fotograma-tool], .tool-choice, .fchip, .prog-btn').forEach(button => button.setAttribute('aria-pressed', String(button.classList.contains('on'))));
 }
-$('utilityControls').addEventListener('input', () => { utilityButtonState(); refreshUtilityPrompt(); });
-$('utilityControls').addEventListener('change', refreshUtilityPrompt);
-$('utilityControls').addEventListener('click', () => setTimeout(() => { refreshUtilityPrompt(); syncFotogramaSelectionState(); }, 0));
+$('utilityControls').addEventListener('input', utilityButtonState);
+$('utilityControls').addEventListener('change', utilityButtonState);
+$('utilityControls').addEventListener('click', () => setTimeout(syncFotogramaSelectionState, 0));
 $('panel').addEventListener('click', () => setTimeout(syncFotogramaSelectionState, 0));
 $('fotogramaRail').addEventListener('click', syncFotogramaSelectionState);
 $('lightbox').addEventListener('keydown', event => {
+  if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeLightbox(); return; }
+  const editing = event.target.closest('select, input, textarea, [contenteditable="true"]');
+  if (!editing && !event.altKey && !event.ctrlKey && !event.metaKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    event.preventDefault(); navigateLightbox(event.key === 'ArrowLeft' ? -1 : 1); return;
+  }
   if (event.key !== 'Tab') return;
-  const controls = [...$('lightbox').querySelectorAll('button:not([disabled])')].filter(button => button.getClientRects().length);
+  const controls = [...$('lightbox').querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')].filter(control => control.getClientRects().length);
   const first = controls[0], last = controls[controls.length - 1];
+  if (!first || !last) return;
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 });
@@ -4655,12 +4822,58 @@ function syncDirectionMode() {
   const mode = $('directionMode').value;
   $('auteurControls').hidden = mode !== 'auteur';
   $('signatureControls').hidden = mode !== 'signature';
+  $('standardControls').hidden = mode !== 'standard';
+  document.querySelectorAll('[data-direction-mode]').forEach(button => {
+    const selected = button.dataset.directionMode === mode;
+    button.classList.toggle('on', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
   const profile = window.TipoFotogramaDirection.byId($('auteurProfile').value);
-  $('auteurNote').textContent = `${profile.note} ${profile.cameraNote} Interpretação visual, não reprodução garantida. Motor recomendado: Nano Banana Pro.`;
+  $('auteurNote').textContent = `${profile.note} Interpretação visual da Tipó, não reprodução garantida. Motor recomendado: Nano Banana Pro.`;
   $('diretor').disabled = mode === 'standard';
   // Keep the selected look for when the user returns. progDef ensures that
   // neither it nor a legacy campaign sector can stack with other modes.
+  syncCreationMotorStatus();
+  syncAuteurStatus();
   refreshPreview();
+}
+
+function syncCreationMotorStatus() {
+  const output = $('creationMotorStatus');
+  if (!output) return;
+  const model = $('model').value;
+  const label = $('model').selectedOptions[0]?.textContent || 'Escolha o modelo em Saída';
+  const provider = currentProvider() === 'higgsfield' ? 'Higgsfield CLI' : (state.backend === 'vertex' ? 'Google Vertex' : 'Google AI Studio');
+  const connected = currentProvider() === 'higgsfield' ? state.higgsConnected && wantsHiggsfieldConnection() : state.connected;
+  output.textContent = `${provider} · ${connected ? 'conectado' : 'desconectado'} · ${label}${model ? ' · ID: ' + model : ''}. Modelo e formato em Saída; conta em Conexões.`;
+}
+
+function chooseCreationMode(mode) {
+  if (!['signature', 'auteur', 'standard'].includes(mode)) return;
+  $('directionMode').value = mode;
+  // Only this intentional UI action selects Higgsfield. Restore and boot do
+  // not change a saved provider, and connection still requires prior opt-in.
+  if (mode === 'standard') {
+    const selectedModel = $('model').value;
+    setImageProvider('higgsfield', PROVIDER_API.modelByName(selectedModel) ? selectedModel : undefined);
+  }
+  syncDirectionMode();
+}
+document.querySelectorAll('[data-direction-mode]').forEach(button => {
+  button.addEventListener('click', () => chooseCreationMode(button.dataset.directionMode));
+});
+function syncAuteurStatus() {
+  if ($('directionMode').value !== 'auteur') return;
+  const selected = [['lente', 'ótica'], ['apertura', 'foco'], ['luz', 'luz'], ['stock', 'textura'], ['paleta', 'cor']]
+    .filter(([id]) => $(id).value && $(id).value !== 'auto').map(([, label]) => label);
+  const notes = [];
+  if (selected.length) notes.push(`Seleções manuais mantidas: ${selected.join(', ')}. Use Auto para recuperar essas escolhas do perfil.`);
+  if (fichaCount()) notes.push('A Ficha preenchida substitui as categorias correspondentes do perfil.');
+  if (state.mood && (state.moodStrength ?? 100) >= 50) notes.push('Emulsão forte ativa: cor, luz e textura vêm da referência onde Cena/Ficha não as definem; os seletores correspondentes ficam em espera.');
+  if (state.refs.some(ref => refHasRole(ref, 'composition') || refHasRole(ref, 'environment'))) notes.push('Referência de composição/ambiente preservada; direção de arte automática em espera.');
+  if (!notes.length) notes.push('Auto usa a assinatura completa do perfil nas categorias livres. Instruções explícitas da Cena continuam prioritárias.');
+  const text = notes.join(' ');
+  if ($('auteurStatus').textContent !== text) $('auteurStatus').textContent = text;
 }
 window.TipoFotogramaDirection.DIRECTIONS.forEach(profile => {
   const option = document.createElement('option'); option.value = profile.id; option.textContent = profile.label; $('auteurProfile').appendChild(option);
@@ -4716,27 +4929,7 @@ if (saved) {
 
 loadGallery();
 TipoUI.initChrome('visual');
-window.TipoFotogramaStudio.mount({
-  getTakes: () => state.takes,
-  describePrompt: id => {
-    const job = snapshotParams();
-    if (id === 'create') {
-      const spec = resolvePrompt(job.scene || '(descreva sua cena)', job.scene, job, job.model);
-      const input = higgsfieldInputs(job, spec);
-      const labels = job.provider === 'higgsfield' ? input.notes : [
-        ...(job.refs || []).map((ref, index) => `REFERENCE ${index + 1} — ${referenceRolePayload(ref)}. The following image is Reference ${index + 1}.`),
-        ...(input.images.some(image => image.role === 'style') ? ['STYLE REFERENCE — cor, resposta de luz e textura, sem importar conteúdo.'] : []),
-      ];
-      return { title: `Create · ${directionLabel(job)}`, note: 'Prévia antes de análises opcionais Google. O brief e as funções das referências definem o conteúdo. Looks e perfis preenchem apenas a fotografia não especificada; ajustes explícitos têm prioridade. Enriquecer a cena é uma opção separada. Para o texto realmente enviado, abra um resultado salvo abaixo. Só afeta Create.', body: [labels.join('\n'), spec.text].filter(Boolean).join('\n\n') };
-    }
-    if (id === 'director') return { title: 'Enriquecer a cena · systemInstruction Google', note: 'Opcional e desligado por padrão. Apenas ideias até 350 caracteres, com Google conectado e esta opção ligada; não roda em Somente meu brief. Neutro e independente do look: detalha elementos existentes, sem inventar conteúdo. O brief original permanece no prompt.', body: buildDiretorSystem(job) };
-    if (id === 'mood') return { title: 'Leitura de Emulsão · systemInstruction Google', note: 'Estima atributos visuais da referência; não mede câmera, película, LUT ou exposição reais.', body: EMULSAO_SYSTEM };
-    if (id === 'refs') return { title: 'Leitura de referências · systemInstruction Google', note: 'Somente referências em Auto. A função manual tem prioridade; dados visuais não são instruções de sistema.', body: REF_ANALYSIS_SYSTEM };
-    if (id === 'ficha') return { title: 'Ficha técnica · valores literais', note: 'Não há mais tradução intermediária: números e palavras são enviados como escritos. Cada campo ocupa seu próprio slot.', body: JSON.stringify(job.ficha, null, 2) };
-    if (['cast', 'product', 'sheets', 'styleShift'].includes(id)) return { title: `${UTILITY_META[id].title} · contrato + brief`, note: 'Prompt completo enviado ao modelo selecionado no Higgsfield, não um systemInstruction separado. Usa os campos e a origem atuais dessa ferramenta; não herda o look do Create.', body: utilityPromptFor(id) };
-    return { title: `${UTILITY_META[id].title} · operação dedicada`, note: 'Sem system prompt escrito pela Tipó. O motor recebe imagem e parâmetros próprios; não simulamos a operação com geração de imagem.', body: JSON.stringify(utilityToolPayload(id, ['(imagem de origem)']), null, 2) };
-  },
-});
+window.TipoFotogramaStudio.mount({ getTakes: () => state.takes });
 </script>
 </body>
 </html>

@@ -8,11 +8,43 @@ Deploy: Vercel (auto-deploy on push).
 
 ## Status por Fase
 
+### FASE 24.8 — LIBERAÇÃO DO BLOCO FOTOGRAMA (2026-09-05)
+- Daniel autorizou expressamente a publicação: “faz push e vamo ser feliz”, depois de informado que o backend privado ainda não está pronto. Essa autorização encerra a suspensão de push registrada nas fases anteriores; não é implementação nem promessa de sigilo.
+- Publicar looks/perfis, três modos, galeria com setas/comparação/input original, Uso e defesa complementar de entrada. Receitas continuam acessíveis no código público; backend privado permanece pendente e contas/CLI não mudam.
+- Release gate: revisão de arquivos/credenciais, smoke isolado e `test-production.mjs` após deploy (34 arquivos exatos, 41 ferramentas, desktop/mobile e visitante sem contas). Base de rollback: `b1ec154`, por revert auditável se necessário, nunca reset destrutivo.
+- Excluir seis PNGs pessoais untracked e todos os estudos/baselines privados. Não gerar imagens nem reiniciar a bridge pessoal neste push.
+
+### FASE 24.7 — FOTOGRAMA: DEFESA DE ENTRADA, SEM FALSA PROMESSA DE SIGILO (2026-09-05, LOCAL)
+- Detector compartilhado browser/Node de intenção de extração/bypass, com normalização Unicode/acentos/invisíveis. Create/Cena/Ficha, quatro briefs de ferramentas e envios diretos revalidam antes de fila/análise/geração; bridge valida antes de slots/temp/CLI.
+- Erro genérico sem eco. “Copie a pose”, folha em branco e cartaz com instruções reais não são barrados só por palavras isoladas. Pedir a receita/compilador interno ou imprimir o system prompt continua bloqueado mesmo junto de um cartaz legítimo.
+- Gate final combinado: 1.413 verificações + audit ALL PASS; 137 do guard. AppSec independente: 16 verificações/8 casos. Todos os provedores/CLIs simulados; processo pessoal da bridge não reiniciado. Teste de deploy preparado com 34 arquivos, não executado antes da publicação.
+- Filtro é defesa complementar, não sigilo nem detector perfeito. Backend privado, integração por usuário e separação do histórico Git ainda pendentes; nenhum novo commit/push. Ver `docs/fotograma-recipe-security.md`. Não inserir receitas novas num commit que será publicado depois, mesmo que removidas do arquivo final.
+
+### FASE 24.6 — FOTOGRAMA: REFINAMENTO VISUAL E PRIORIDADES (2026-09-05, LOCAL)
+- Aplicadas leituras originais das seis capturas de referências fornecidas por Daniel; não foi estudado nem coletado o catálogo inteiro do ShotDeck. Nenhum novo acesso/coleta nesta rodada, nem imagens de referência adicionadas ao repositório.
+- Naturalista: grão 35mm irregular perceptível, foco proporcional à escala do plano, luz motivada e halation restrita a realces existentes. Editorial mantém acabamento limpo; Experimental separa composição/cor/textura sem impor flare, bloom, músicos ou acessórios.
+- Três looks e seis pares de cinema diferenciam hierarquia visual, composição, luz e resposta de materiais. Arte organiza somente os elementos existentes quando o usuário/referências não controlam o layout. Planos abertos não recebem uma câmera próxima à força.
+- Revisão independente de prioridades: Ficha/Emulsão/brief explícitos podem controlar altas luzes; recusar halos em um campo também remove defaults ópticos contraditórios nos outros, sem recusar o grão por associação. Defaults condensados para não aumentar o contrato com instruções repetidas.
+- Baseline e pós preservados privadamente em 27 combinações, com briefs/parâmetros idênticos. Testes isolados cobrem os dois caminhos de envio; comparativo fotográfico real depende de formato/quantidade autorizados. Não confundir contrato validado com qualidade estética comprovada.
+- Gate do refino: 1.160 verificações + tools/audit; QC independente 99 verificações/28 cenários, zero provedores reais. Limitação anterior separada: Cena recusando halos e Ficha livre pedindo halation ainda precisam ser conciliadas pelo usuário; não reescrever prosa livre com filtro de oração que possa apagar grão/material.
+- Pedido de push recebido; Daniel reafirmou que quer esconder as receitas e bloquear pedidos de extração. Não presumir aceite de publicação com receitas expostas. A receita continua no cliente de um repositório público, não em backend privado; é preciso definir a integração por usuário no servidor. A rodada pode ser inspecionada no preview local; contas e histórico não foram migrados.
+
+### FASE 24.5 — FOTOGRAMA: ASSINATURA, MODOS, COMPARAÇÃO E USO (2026-09-05, LOCAL)
+- Três caminhos visíveis: Looks Tipó / Diretores / Modelo direto. O clique em Modelo direto seleciona Higgsfield sem autorizar conta automaticamente; boot/reuso preservam provedor antigo. Modelo real continua visível; Google continua em Conexões.
+- Naturalista recupera grão fotoquímico 35mm perceptível, foco com separação contextual e halation local. Cena explícita, Ficha e Emulsão mantêm precedência; sem camada universal que force grão em qualquer modo.
+- Seis pares diretor/fotógrafo com decisões contrastantes fundamentadas em fontes primárias; arte separada, somente sobre elementos existentes e quando layout/referências não a controlam. Interface avisa quando seletores/Ficha/Emulsão substituem o perfil.
+- Visualizador: setas/teclado/contador da galeria filtrada e comparação A/B com B fixa; ações sobre A, mobile sem deformar imagens. Exclusão aguarda commit no IndexedDB antes de remover da UI.
+- A pedido de Daniel, removidas da interface as prévias, cópia e leitura de prompts compilados, inclusive cards, visualizador e utilitários. **Uso** mantém somente o inventário local por provedor/ferramenta/modelo. Cards e busca usam o input original (`params.scene` no Create, `params.brief` nos utilitários) e metadados públicos, sem recorrer ao prompt compilado.
+- Compatibilidade: prompts históricos continuam armazenados com os resultados, sem apagar ou reescrever dados da galeria. Navegação, comparação, download, curtida, reuso e Sheets preservados.
+- Validação desta revisão: looks 198, modos 46, visualizador 84, perfis 34, Studio 61 e ausência de exposição na UI 70; ferramentas/auditoria passaram novamente. Regressões anteriores: contratos 28, contas 9, Vertex 12, lotes 22 e reconexão 51. Provedores simulados, nenhuma geração real.
+- **Publicação adiada durante alinhamento da arquitetura de prompts:** repositório confirmado público; remover controles de UI não torna as instruções confidenciais. Compilação ainda no cliente e histórico local permanecem inspecionáveis. O fluxo desejado por Daniel é input simples → backend com instrução do preset → Nano Banana Pro → galeria mostrando somente o input. Migração ainda em avaliação, inclusive compatibilidade com Higgsfield CLI local; sem push enquanto essa escolha estiver em aberto. Um checkpoint Git local não publica as receitas. Produção anterior em b1ec154. Fidelidade estética precisa de geração comparativa autorizada. Relatórios: `docs/audit-fotograma-prompts-2026-09.md`, `docs/fotograma-auteur-sources.md`.
+- Limite da bridge local: mover a compilação para ela retira as instruções do JavaScript público, mas não as esconde do dono do computador. Proteção efetiva exige backend Tipó que componha **e envie** ao provedor sem retornar a receita; hospedagem e migração das contas privadas ainda não definidas.
+
 ### FASE 24.4 — FOTOGRAMA: PROMPTS, DIREÇÃO E CONTAS (2026-09-05)
 - Daniel aprovou os ajustes finais e o commit/push conjunto com Imagem & Efeitos. Validação final antes da publicação; imagens pessoais fora do commit.
 - Looks Tipó: Naturalista, Editorial e Experimental alteram somente fotografia, sem presumir músicos, atletas, produtos, ações ou cenários. Enriquecer a cena é independente, neutro e desligado para visitantes novos. Setores publicitários retirados; controles manuais disponíveis nos três looks.
 - Compatibilidade: IDs dos looks preservados para reuso da galeria; gêneros antigos não injetam conteúdo; texto dos prompts históricos não é reescrito. Diretor + fotografia permanece alternativa sem empilhar outro look.
-- Prompts & uso: contratos reais por ferramenta, prompt efetivamente salvo, inventário local sem preço inventado e seis perfis diretor/fotógrafo fundamentados.
+- Naquela revisão, Prompts & uso reunia contratos, prompts salvos, inventário local e fontes dos seis perfis. A Fase 24.5 substituiu esse painel por **Uso**, sem leitores de prompt ou catálogo técnico na UI.
 - Brief não é mais reescrito para impor grão/shoulder; assinatura opcional, Ficha literal, referencias numeradas consistentemente; contratos especializados mais concisos.
 - Conexões no topo, visitante limpo sem vinculação automática, sessão existente preservada, disconnect/forget propagados entre abas, bridge restrita a loopback.
 - 171 checks de looks, 67 Studio, 28 contratos, 9 isolamento; regressões de ferramentas, Vertex, fila/galeria, reconexão, GIF e efeitos passaram. Corrigido status 401 perdido na preparação de ferramenta. Sem geração paga; validação estética real dos perfis pendente.

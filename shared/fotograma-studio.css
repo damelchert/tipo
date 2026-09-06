@@ -24,18 +24,8 @@ body #workspaceHeader { padding-top: 64px; padding-right: 24px; flex-wrap: wrap;
 .studio-heading { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
 .studio-eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-size: 11px; }
 #studioReview h2 { font: 500 clamp(28px, 4vw, 44px)/1.15 var(--font-display, var(--font-ui)); margin: 10px 0 22px; letter-spacing: -1px; }
-.studio-tabs { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--border-2); }
 .studio-intro { max-width: 78ch; color: var(--text-3); margin: 24px 0; }
-.studio-picker { display: grid; gap: 8px; margin: 22px 0; }
-.studio-picker label { font-weight: 600; }
-.studio-picker select { width: 100%; min-width: 0; min-height: 42px; font: inherit; color: var(--text-1); background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 6px; padding: 8px 12px; }
-.studio-prompt-card { padding: 22px; border: 1px solid var(--border-2); border-radius: 8px; margin-bottom: 18px; }
-.studio-card-head { display: flex; gap: 16px; justify-content: space-between; align-items: center; }
-#studioReview h3 { font-size: 17px; line-height: 1.4; margin: 0 0 12px; }
-#studioReview pre { font: 12px/1.8 var(--font-mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); }
 #studioReview p { color: var(--text-3); }
-#studioReview a { display: inline-block; margin-right: 16px; color: var(--accent); }
-#studioPromptCount, #studioTakeNote { font-size: 11px; color: var(--text-3); white-space: pre-wrap; }
 .studio-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
 .studio-metrics article { border: 1px solid var(--border-2); border-radius: 8px; padding: 24px; }
 .studio-metrics strong { display: block; font-size: clamp(22px, 3vw, 36px); font-weight: 500; margin: 12px 0; }
@@ -44,7 +34,6 @@ body #workspaceHeader { padding-top: 64px; padding-right: 24px; flex-wrap: wrap;
 #studioReview table { width: 100%; text-align: left; border-collapse: collapse; font-size: 12px; }
 #studioReview caption { text-align: left; font-weight: 600; margin-bottom: 12px; }
 #studioReview td, #studioReview th { border-bottom: 1px solid var(--border-2); padding: 12px 14px 12px 0; }
-#studioReviewStatus { display: block; color: var(--accent); margin-top: 16px; }
 @media (max-width: 700px) {
   #studioReviewOpen { top: 10px; right: 153px; min-height: 34px; padding: 8px 10px; }
   body #workspaceHeader { padding-top: 60px; padding-right: 16px; }
@@ -54,7 +43,6 @@ body #workspaceHeader { padding-top: 64px; padding-right: 24px; flex-wrap: wrap;
   .studio-metrics { grid-template-columns: 1fr; }
   .studio-heading { gap: 8px; }
   .studio-heading .studio-button { flex: none; }
-  .studio-prompt-card { padding: 16px; }
 }
 @media (max-width: 760px) {
   body #workspaceHeader .gallery-search-wrap { flex-basis: 100%; width: 100%; max-width: none; margin-right: 0; }

@@ -90,7 +90,7 @@ check('Direction catalogue: six verified pairs with immutable, single-value slot
     assert.match(profile.note, /[Ii]nterpreta|[Ll]eitura visual/);
     for (const text of Object.values(profile.slots)) {
       assert.equal(typeof text, 'string');
-      assert.ok(text.length < 140);
+      assert.ok(text.length <= 320, 'Each visual slot stays bounded without truncating useful photographic direction');
       assert.doesNotMatch(text, /\b(?:ARRI|Kodak|RED|IMAX|Canon|Nikon)\b|\b\d+(?:mm|K)\b|masterpiece|award.winning/i);
     }
     for (const source of profile.sources) {

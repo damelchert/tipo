@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 const { HIGGSFIELD_MODELS, HIGGSFIELD_TOOLS, estimateCost, modelByName } = require('./shared/fotograma-providers.js');
 const { EXPAND_RATIOS, TOOL_COSTS } = require('./shared/fotograma-tools.js');
+const INPUT_GUARD = require('./shared/fotograma-input-guard.js');
 
 const HOST = process.env.TIPO_HIGGSFIELD_HOST || '127.0.0.1';
 // The bridge acts with the local CLI account. Never expose that account on a
@@ -202,6 +203,7 @@ function validateGenerate(body) {
   if (!model) throw inputError('Modelo Higgsfield não permitido');
   const prompt = String(body.prompt || '').trim();
   if (!prompt || prompt.length > 24_000) throw inputError('Prompt vazio ou grande demais');
+  INPUT_GUARD.assertAllowed(prompt);
   const aspectRatio = String(body.aspectRatio || '16:9');
   if (!model.aspectRatios.includes(aspectRatio)) throw inputError(`Aspect ratio indisponível no ${model.label}`);
   const images = Array.isArray(body.images) ? body.images : [];

@@ -20,14 +20,44 @@ verification:
 report: docs/audit-platform-2026-09.md
 features:
   fotograma_prompt_review:
-    phase: verified-release-approved
-    components: [prompt-inspector, saved-prompt-reader, local-usage-table, auteur-profiles, account-popover, visual-only-looks]
+    phase: release-approved
+    components: [usage-only-dialog, local-usage-table, auteur-selector, account-popover, visual-only-looks]
+    prompt_visibility: removed-from-ui
+    prompt_visibility_checks: 70
+    gallery_input: create-scene-or-utility-brief-never-compiled-prompt
+    stored_generation_history: preserved
+    recipe_confidentiality: not-protected-client-side
+    repository_visibility: public
+    publication: explicitly-approved-with-client-recipe-exposure
+    server_side_recipe_protection: not-implemented
+    local_bridge_confidentiality: not-protected-from-computer-owner
+    private_backend_contract: compose-and-send-without-returning-recipe
+    private_account_migration_and_hosting: undefined
     looks: [naturalista, editorial, experimental]
+    refinement: contextual-focus-motivated-optics-distinct-art-hierarchy
+    reference_scope: six-user-supplied-screenshots-not-full-shotdeck-catalogue
+    reference_collection_this_round: none
+    baseline_comparisons: 27-identical-brief-and-parameter-pairs
+    preset_refinement_checks: 667
+    refinement_regression_checks: 1160
+    independent_preset_qc: 99-checks-28-scenarios
+    explicit_scene_ficha_conflicts: preexisting-manual-resolution-required
+    extraction_input_guard: implemented-defense-in-depth-not-confidentiality
+    extraction_guard_checks: 137
+    final_combined_checks: 1413
+    independent_guard_qc: 16-checks-8-cases
+    personal_bridge_restarted: false
+    deployment_file_checks_prepared: 34
     scene_enrichment: separate-opt-in-neutral
     patterns: existing-tipo-tokens-native-dialog-semantic-table
     profiles: 6
-    look_checks: 171
-    studio_checks: 69
+    look_checks: 198
+    auteur_checks: 34
+    creation_modes: [looks-tipo, diretores, modelo-direto]
+    creation_mode_checks: 46
+    gallery_viewer: filtered-arrows-and-fixed-reference-comparison
+    gallery_viewer_checks: 84
+    studio_checks: 61
     contract_checks: 28
     account_isolation_cases: 9
     reconnection_regression: passed-expired-session-keeps-login

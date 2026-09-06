@@ -36,10 +36,10 @@ try {
   const original = await page.evaluate(() => resolvePrompt($('scene').value, $('scene').value, snapshotParams()).text);
   assert.match(original, /digital sem grão, altas luzes estouradas/);
   assert.doesNotMatch(original, /Always retain|film shoulder|head-to-toe silhouette|half a stop below/); checks += 2;
-  await page.selectOption('#directionMode', 'standard');
+  await page.locator('[data-direction-mode="standard"]').click();
   const standard = await page.evaluate(() => resolvePrompt('Um quadrado vermelho abstrato.', 'Um quadrado vermelho abstrato.', snapshotParams()).text);
   assert.doesNotMatch(standard, /grain|cinema optics|photorealistic|anatomy|half a stop|film shoulder/i); checks++;
-  await page.selectOption('#directionMode', 'auteur');
+  await page.locator('[data-direction-mode="auteur"]').click();
   for (const profile of require('./shared/fotograma-direction.js').DIRECTIONS) {
     await page.selectOption('#auteurProfile', profile.id);
     const result = await page.evaluate(() => {
@@ -66,18 +66,10 @@ try {
   await page.locator('#studioReviewOpen').click();
   await page.waitForFunction(() => document.getElementById('studioReview').open);
   assert.equal(await page.locator('#studioReviewClose').evaluate(el => el === document.activeElement), true); checks++;
-  const optionValues = await page.locator('#studioPromptSelect option').evaluateAll(els => els.map(el => el.value));
-  for (const value of optionValues) {
-    await page.selectOption('#studioPromptSelect', value);
-    assert.ok((await page.locator('#studioPromptBody').textContent()).length > 10);
-    assert.doesNotMatch(await page.locator('#studioPromptBody').textContent(), /apiKey|Bearer|AIza|AQ\./); checks++;
-  }
-  await page.selectOption('#studioPromptSelect', 'create');
-  await page.screenshot({ path: path.join(dir, 'prompts-desktop.png') });
-  await page.locator('#studioLooksTab').click();
-  assert.equal(await page.locator('#studioLookCards article').count(), 6); checks++;
-  await page.screenshot({ path: path.join(dir, 'looks-desktop.png') });
-  await page.locator('#studioUsageTab').click();
+  assert.equal(await page.locator('#studioPromptSelect, #studioPromptBody, #studioLookCards, #studioLooksTab, #studioUsageTab').count(), 0); checks++;
+  assert.match(await page.locator('#studioReviewOpen').textContent(), /Uso/); checks++;
+  assert.equal(await page.locator('#studioReview [role="tab"]').count(), 0); checks++;
+  await page.screenshot({ path: path.join(dir, 'usage-desktop.png') });
   assert.equal(await page.locator('#studioSavedCount').textContent(), '0');
   assert.match(await page.locator('#studioUsage').textContent(), /desconhecido não significa US\$ 0/); checks += 2;
   await page.keyboard.press('Escape');
@@ -91,8 +83,9 @@ try {
   });
   await page.reload(); await page.waitForFunction(() => state.takes.length === 1);
   await page.locator('#studioReviewOpen').click();
-  assert.match(await page.locator('#studioTakePrompt').textContent(), /<script>alert\(1\)<\/script> REAL_SENT_919/);
-  assert.equal(await page.locator('#studioTakePrompt script').count(), 0); checks += 2;
+  assert.doesNotMatch(await page.locator('body').innerHTML(), /REAL_SENT_919/);
+  assert.equal(await page.locator('#studioTakePrompt').count(), 0);
+  assert.equal(await page.evaluate(() => state.takes[0].params.prompt), '<script>alert(1)</script> REAL_SENT_919'); checks += 3;
   await page.locator('#studioReviewClose').click();
   await page.locator('#keyBtn').click();
   const overlap = await page.evaluate(() => {
@@ -109,7 +102,7 @@ try {
   await page.locator('#studioReviewOpen').click();
   const fit = await page.locator('#studioReview').evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; });
   assert.equal(fit, true); checks++;
-  await page.screenshot({ path: path.join(dir, 'prompts-mobile.png') });
+  await page.screenshot({ path: path.join(dir, 'usage-mobile.png') });
   assert.deepEqual(errors, []); checks++;
   assert.equal(calls.filter(url => /127\.0\.0\.1|googleapis/.test(url)).length, 0); checks++;
   for (const theme of ['light', 'dark']) {

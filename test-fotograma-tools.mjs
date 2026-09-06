@@ -203,9 +203,8 @@ const expanded = await page.evaluate(() => ({
   closeVisible: getComputedStyle(document.getElementById('lightboxClose')).display !== 'none',
   actions: [...document.querySelectorAll('#lightboxActions button')].map(button => button.textContent.trim()),
 }));
-check('clique em qualquer parte da imagem abre o inspector completo', expanded.open && expanded.closeVisible && ['Baixar', 'Prompt', 'Curtir', 'Reusar', 'Usar no Sheets'].every(label => expanded.actions.some(action => action.includes(label))), JSON.stringify(expanded));
-await page.click('#lightboxPromptToggle');
-check('prompt completo permanece acessível no modo expandido', await page.locator('#lightboxPromptPanel').isVisible() && /one canonical adult character/i.test(await page.locator('#lightboxPromptText').textContent()));
+check('clique na imagem abre ações sem expor prompt interno', expanded.open && expanded.closeVisible && ['Baixar', 'Curtir', 'Reusar', 'Usar no Sheets'].every(label => expanded.actions.some(action => action.includes(label))) && !expanded.actions.some(action => /prompt/i.test(action)), JSON.stringify(expanded));
+check('inspector não possui superfícies de prompt', await page.locator('#lightboxPromptToggle, #lightboxPromptPanel, #lightboxPromptText').count() === 0);
 await page.click('#lightboxClose');
 check('X fecha o modo expandido', await page.locator('#lightbox').isHidden());
 await castCard.locator('img').click();
@@ -251,7 +250,6 @@ if (process.argv.includes('--screenshot')) {
   await page.locator('#gridDensity').dispatchEvent('input');
   await page.screenshot({ path: '/private/tmp/tipo-fotograma-gallery.png', animations: 'disabled' });
   await page.locator('#gallery .take img').first().click();
-  await page.click('#lightboxPromptToggle');
   await page.screenshot({ path: '/private/tmp/tipo-fotograma-lightbox.png', animations: 'disabled' });
   await page.click('#lightboxClose');
   console.log('screenshot: /private/tmp/tipo-fotograma-gallery.png');
